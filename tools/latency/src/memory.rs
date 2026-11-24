@@ -58,13 +58,34 @@ fn memory(engine: &Engine) -> Result<Memory, String> {
             heap: false,
         });
     }
-    let zones = output("vmmap", &["--summary", &pid])?;
     let footprint = output("footprint", &["-f", "bytes", "--noCategories", &pid])?;
-    Ok(Memory {
-        in_use: allocated(&zones)?,
-        footprint: number_after(&footprint, "phys_footprint:")?,
-        heap: true,
-    })
+    let footprint = number_after(&footprint, "phys_footprint:")?;
+    let zones = Command::new("vmmap")
+        .args(["--summary", &pid])
+        .output()
+        .map_err(|e| format!("cannot run vmmap: {e}"))?;
+    match allocated(&String::from_utf8_lossy(&zones.stdout)) {
+        Ok(in_use) => Ok(Memory {
+            in_use,
+            footprint,
+            heap: true,
+        }),
+        // vmmap may not examine another process, as on a hosted runner: the footprint stands
+        // for the cache, as the resident set does on Linux.
+        Err(missing) => {
+            static SAID: std::sync::Once = std::sync::Once::new();
+            SAID.call_once(|| {
+                let said = String::from_utf8_lossy(&zones.stderr);
+                let first = said.lines().next().unwrap_or("no message");
+                println!("{missing} ({first}): the footprint stands for the cache");
+            });
+            Ok(Memory {
+                in_use: footprint,
+                footprint,
+                heap: false,
+            })
+        }
+    }
 }
 
 fn output(program: &str, args: &[&str]) -> Result<String, String> {
@@ -176,7 +197,8 @@ pub(crate) fn report(held: &Held) -> Vec<String> {
     let mut missed = Vec::new();
     if !held.built.heap {
         println!(
-            "the cache is the resident set here, which overstates it: only the footprint is judged"
+            "the cache is measured as the process's whole memory here, which overstates it: only the \
+             footprint is judged"
         );
     }
     let most = held
