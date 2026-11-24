@@ -34,19 +34,19 @@ runs:
         brew install pkgconf
         sudo DevToolsSecurity -enable
 
-    - name: Install clang (Linux)
-      if: runner.os == 'Linux' && inputs.clang == 'true'
-      uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
-      with:
-        version: '23.1.5'
-
-    - name: Install clang (macOS)
-      if: runner.os == 'macOS' && inputs.clang == 'true'
+    - name: Install clang
+      if: inputs.clang == 'true'
       shell: bash
       run: |
         # The pinned clang of the release toolchains, checked by the digest toolchains.txt gives
-        # it, rather than whatever version Homebrew has.
-        read -r _ url digest < <(grep '^aarch64-macos ' compiler/stilt-cli/src/release/toolchains.txt)
+        # it, rather than whatever version the system's packages have.
+        case "$RUNNER_OS-$(uname -m)" in
+          macOS-arm64) host=aarch64-macos ;;
+          Linux-x86_64) host=x86_64-linux ;;
+          Linux-aarch64) host=aarch64-linux ;;
+          *) echo "::error::no pinned clang for $RUNNER_OS on $(uname -m)"; exit 1 ;;
+        esac
+        read -r _ url digest < <(grep "^$host " compiler/stilt-cli/src/release/toolchains.txt)
         curl -fsSL --retry 3 "$url" -o "$RUNNER_TEMP/clang.tar.gz"
         echo "$digest  $RUNNER_TEMP/clang.tar.gz" | shasum -a 256 -c -
         mkdir -p "$RUNNER_TEMP/clang"
