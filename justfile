@@ -747,6 +747,11 @@ _playground: build
     set -euo pipefail
     out=target/playground
     mkdir -p "$out"
+    # ring's C for WebAssembly needs an LLVM clang with its headers: Apple's has no WebAssembly
+    # target, so on a Mac it is Homebrew's, which `just setup` asks for.
+    if [ "$(uname)" = Darwin ] && [ -z "${CC_wasm32_wasip1:-}" ]; then
+        export CC_wasm32_wasip1="$(brew --prefix llvm 2>/dev/null || echo /opt/homebrew/opt/llvm)/bin/clang"
+    fi
     RUSTC=$(rustup which rustc 2>/dev/null || command -v rustc) cargo build -q --profile playground \
         -p stilt-playground --target wasm32-wasip1 --target-dir "$out/cargo"
     built=$out/cargo/wasm32-wasip1/playground/stilt-playground.wasm

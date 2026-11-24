@@ -32,7 +32,8 @@ runs:
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        brew install pkgconf
+        # llvm: the playground's C for WebAssembly needs an LLVM clang, which Apple's isn't.
+        brew install pkgconf llvm
         sudo DevToolsSecurity -enable
 
     - name: Install clang
