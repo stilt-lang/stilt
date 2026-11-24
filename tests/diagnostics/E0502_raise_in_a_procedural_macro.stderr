@@ -1,0 +1,9 @@
+── EFFECT THAT DOESN'T FIT THE ROW ── E0502_raise_in_a_procedural_macro.lt:10:15  [E0502]
+
+This raises `Missing`, which the row doesn't declare:
+
+  10 │   let n = try lookup("width")
+     │               ^^^^^^^^^^^^^^^
+
+A macro raises only `meta.Error`, which stops the compile at the use: `raise
+meta.error(span, message)`. Catch the other error and raise one of those.

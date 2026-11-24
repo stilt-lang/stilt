@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: cycles.through-shared-values, cycles.freeing, cycles.check-at-exit
+//~ stdout:
+//~ | 36
+
+// Tasks under `task.threads()` that each link two handles and let them go.
+
+use std.sync
+use std.task
+
+type Node = { n: i64, next: Option<sync.Shared<Node>> }
+
+fn link(n: i64) -> i64 {
+  let a = sync.Shared.new(Node { n, next: None })
+  let b = sync.Shared.new(Node { n: n + 1, next: Some(a) })
+  when a { a.next = Some(b) }
+  when b { b.n }
+}
+
+fn main() / io {
+  with task.threads() {
+    let ts = List.generate(8, |i| task.spawn(|| link(i)))
+    print("{ts.map(|t| t.await()).fold(0, |a, b| a + b)}")
+  }
+}

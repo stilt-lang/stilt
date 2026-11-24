@@ -1,0 +1,18 @@
+id = "stilt"
+name = "Stilt"
+version = "0.1.0"
+schema_version = 1
+authors = ["The Stilt Project Contributors"]
+description = "Stilt: highlighting, and a language server that shows each function's inferred facts with the lines that cause them and runs tests and programs from their lines"
+repository = "https://github.com/stilt-lang/stilt"
+
+# The grammar of editors/tree-sitter/ at a commit of the repository, which the release updates
+# to the tagged commit (RELEASING.md).
+[grammars.stilt]
+repository = "https://github.com/stilt-lang/stilt"
+rev = "b64333b0eeafe62a3f6cba201da408d3742f5711"
+path = "editors/tree-sitter"
+
+[language_servers.stilt]
+name = "stilt lsp"
+languages = ["Stilt"]

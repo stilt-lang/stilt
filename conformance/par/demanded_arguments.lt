@@ -1,0 +1,59 @@
+//~ tier: advanced
+//~ rule: par.what-runs-in-parallel, shared.tasks-and-modes, modes.fixed-values, modes.contended-values
+//~ run-output: "[2, 4] 4"
+
+// Each function of `std.par` demands that its function arguments be calm and portable, and a
+// scope's `spawn` that its function be portable: a closure that captures a view is neither, at
+// whichever position the function takes it, and one that runs a `when` isn't calm. A closure
+// that captures neither may run on another thread, and so may a task's that runs a `when`.
+
+use std.par
+use std.sync
+use std.task
+use std.view
+
+type Stop = { n: i64 }
+
+fn scoped(xs: List<i64>) -> i64 / {io, async, raise<Stop>} {
+  let v = view.View.all(xs)
+  try task.scope(|s| {
+    let t = try s.spawn(|| v.len()) //~ ERROR E0432
+    t.await()
+  })
+}
+
+fn mapped(xs: List<i64>) -> List<i64> {
+  let v = view.View.all(xs)
+  par.map(xs, |x| x + v.len()) //~ ERROR E0431
+}
+
+fn first(xs: List<i64>) -> (i64, i64) {
+  let v = view.View.all(xs)
+  par.both(|| v.len(), || 1) //~ ERROR E0431
+}
+
+fn second(xs: List<i64>) -> (i64, i64) {
+  let v = view.View.all(xs)
+  par.both(|| 1, || v.len()) //~ ERROR E0431
+}
+
+fn folded(xs: List<i64>) -> i64 {
+  let v = view.View.all(xs)
+  par.fold(xs, 0, |a, x| a + x + v.len()) //~ ERROR E0431
+}
+
+fn locking(a: sync.Shared<i64>) -> (i64, i64) {
+  par.both(|| { when a { a } }, || 1) //~ ERROR E0431
+}
+
+fn counted(a: sync.Shared<i64>) / {io, async} {
+  let t = task.spawn(|| { when a { a += 1 } })
+  t.await()
+}
+
+fn main() / {io, async} {
+  let a = sync.Shared.new(3)
+  counted(a)
+  let n = when a { a }
+  print("{par.map([1, 2], |x| x * 2)} {n}")
+}

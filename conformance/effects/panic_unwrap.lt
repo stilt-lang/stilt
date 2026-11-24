@@ -1,0 +1,11 @@
+//~ rule: program.panic-detail, effects.panic-kinds, std.option-result-and-ordering
+//~ run-output: "7"
+//~ panic: unwrap
+//~ panic-at: panic_unwrap.lt:10:11
+
+fn main() / io {
+  let n = "7".to_i64()
+  print("{n.unwrap()}")
+  let m = "x".to_i64()
+  print("{m.unwrap()}")
+}

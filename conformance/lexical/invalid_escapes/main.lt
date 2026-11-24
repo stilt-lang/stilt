@@ -1,0 +1,2 @@
+//~ rule: lexical.escapes, errors.syntax-errors
+fn f() -> str { "\a" } //~ ERROR E0006

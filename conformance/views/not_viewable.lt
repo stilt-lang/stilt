@@ -1,0 +1,13 @@
+//~ tier: advanced
+//~ rule: views.viewable-types
+
+use std.view
+
+fn count(v: view.View<i64>) -> i64 { v.len() } //~ ERROR E0420
+
+fn main() / io {
+  let v = view.View.all(1) //~ ERROR E0420
+  var m: Map<str, i64> = Map.new()
+  let w = view.View.of(m, 0, 1) //~ ERROR E0420
+  print("{v.len()} {w.len()} {count(v)}")
+}

@@ -1,0 +1,14 @@
+//~ rule: expressions.inout-arguments, expressions.places, errors.phases
+
+fn bump(inout x: i64) { x += 1 }
+
+fn unmarked() {
+  var n = 1
+  bump(n) //~ ERROR E0400
+  let s: str = 1 //~ ERROR E0311
+}
+
+fn not_a_place() {
+  bump(inout 3) //~ ERROR E0401
+  let t: str = 2 //~ ERROR E0311
+}

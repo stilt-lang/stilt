@@ -1,0 +1,31 @@
+//~ tier: advanced
+//~ rule: tasks.sequential-run, tasks.same-output-under-every-handler
+//~ exit: 3
+//~ stdout:
+//~ | before
+//~ | in a
+//~ | in b
+
+use std.task
+
+// The second task exits: the sequential run never starts the third, nor prints after them.
+fn main() / io {
+  with task.threads() {
+    print("before")
+    let a = task.spawn(|| {
+      print("in a")
+      1
+    })
+    task.spawn(|| {
+      print("in b")
+      exit(3)
+      0
+    })
+    task.spawn(|| {
+      print("in c")
+      let xs: List<i64> = []
+      xs[0]
+    })
+    print("after {a.await()}")
+  }
+}

@@ -1,0 +1,13 @@
+//~ tier: advanced
+
+// Declaring a macro puts the module in the advanced tier (macros.advanced-tier).
+
+/// Runs a block unless a condition holds.
+pub syntax unless {
+  ($cond: expr) $body: block => if !($cond) $body
+}
+
+/// A list of two.
+pub syntax both {
+  ($a: expr, $b: expr) => [$a, $b]
+}

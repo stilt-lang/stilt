@@ -1,0 +1,8 @@
+//~ rule: effects.repeated-elements, effects.effect-names, facts.implicit-effects
+
+fn f() / {io, io} {} //~ ERROR E0500
+fn g() / {raise<str>, raise<i64>} {} //~ ERROR E0500
+fn h<e, d>() / {e, d} {} //~ ERROR E0500
+fn k() / panic {} //~ ERROR E0501
+fn m<alloc>() {} //~ ERROR E0501
+fn n<io>() {} //~ ERROR E0501

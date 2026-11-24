@@ -1,0 +1,9 @@
+type Point = { x: i64, y: i64 }
+
+fn sum(p: Point) -> i64 {
+  let Point {
+    x //~ ERROR E0100
+    y
+  } = p
+  x + y
+}

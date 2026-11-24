@@ -1,0 +1,18 @@
+//~ rule: syntax.doc-examples, program.running-tests, program.doc-examples, traits.methods
+
+type Opaque = { run: fn() }
+
+type Point = { x: i64 }
+
+impl Point {
+  /// ex: self.x == 0 //~ ERROR E0215
+  pub fn at_origin(self) -> bool { self.x == 0 }
+}
+
+fn fails() / raise<Opaque> { raise Opaque { run: || () } }
+
+/// ex: { try fails(); true } //~ ERROR E0318
+/// ex: missing() //~ ERROR E0211
+/// ex: 1 + 1 //~ ERROR E0311
+/// ex: true
+fn documented() {}

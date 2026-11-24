@@ -1,0 +1,11 @@
+//~ rule: traits.inherent-names
+
+type Wrapper<T> = { inner: T }
+
+impl<T> Wrapper<T> {
+  fn map<U>(self, f: fn(T) -> U) -> Wrapper<U> { Wrapper { inner: f(self.inner) } }
+
+  fn replace<T>(self, x: T) -> T { //~ ERROR E0208
+    x
+  }
+}

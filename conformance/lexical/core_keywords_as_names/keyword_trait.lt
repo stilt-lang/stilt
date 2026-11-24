@@ -1,0 +1,1 @@
+fn trait() {} //~ ERROR E0100

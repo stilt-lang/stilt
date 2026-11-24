@@ -1,0 +1,3613 @@
+# The registry of diagnostic codes.
+#
+# Every implementation reports these codes. A code is never reused: a retired code keeps its
+# entry with `retired = true`. `cargo run -p stilt-registry` generates from it the codes of
+# both implementations, the language server's links to the error index, the list of codes
+# that the coverage report expects and the error index, docs/errors/, and `just diagnostics`
+# and `just coverage` check that they are current.
+#
+# Each entry gives a short title, the paragraph of the Reference that defines the code, its
+# home, the tier in which the diagnostic can first occur, the phase in which it is checked
+# (errors.registry-phases), the help that the compiler prints under the diagnostic, and its
+# primary span: the place it is reported at, whose line conformance tests compare
+# (conformance.diagnostic-lines). Its examples, `[[CODE.examples]]`, each give a program
+# `wrong` that makes the mistake, the `line` at which the code is reported, and the program
+# `right` fixed, which has no diagnostic; `just guide` checks them. A code whose mistake one
+# file can't show, such as one about a manifest, has none.
+#
+# Ranges: E00xx and W00xx lexical structure; E01xx syntax; E02xx modules and names;
+# E03xx types and traits; E04xx modes and exclusivity; E05xx effects and failure; E06xx
+# packages and the profiles beside their manifests; E07xx edits that a command refuses.
+
+[E0001]
+title = "invalid source text"
+reference = "lexical.source-text"
+tier = "core"
+phase = "syntax"
+help = "Save the file as UTF-8, without a byte-order mark and with `\\n` or `\\r\\n` line endings; editors offer these in their encoding settings."
+span = "The offending character: the byte-order mark, the first byte that isn't valid UTF-8, or the lone carriage return."
+
+[[E0001.examples]]
+wrong = '''
+﻿fn main() / io {
+  print("hello")
+}
+'''
+line = 1
+right = '''
+fn main() / io {
+  print("hello")
+}
+'''
+
+[E0002]
+title = "unexpected character"
+reference = "lexical.whitespace"
+tier = "core"
+phase = "syntax"
+help = "Outside strings and comments, Stilt reads only ASCII, so a curly quote or a symbol pasted from a document isn't code. Retype it, or put it inside a string."
+span = "The unexpected character."
+
+[[E0002.examples]]
+wrong = '''
+fn main() / io {
+  print(“hello”)
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  print("hello")
+}
+'''
+
+[E0003]
+title = "identifier without a letter"
+reference = "lexical.case"
+tier = "core"
+phase = "syntax"
+help = "A name needs a letter, since the case of its first letter says whether it names a value or a type: write `first`, not `_1`."
+span = "The identifier."
+
+[[E0003.examples]]
+wrong = '''
+fn main() / io {
+  let _1 = 5
+  print("{_1}")
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  let first = 5
+  print("{first}")
+}
+'''
+
+[E0004]
+title = "malformed number literal"
+reference = "lexical.integer-literals"
+tier = "core"
+phase = "syntax"
+help = "A number literal has no suffix and no leading zero, and `_` stands only between digits. Give the type with an annotation instead, as `let small: u8 = 10`."
+span = "The first character at which the literal breaks its grammar: an `_` that isn't between two digits, a leading zero, the character after a base prefix, or the character that directly follows the literal."
+
+[[E0004.examples]]
+wrong = '''
+fn main() / io {
+  let small = 10u8
+  print("{small}")
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  let small: u8 = 10
+  print("{small}")
+}
+'''
+
+[E0005]
+title = "unterminated string literal"
+reference = "lexical.string-literals"
+tier = "core"
+phase = "syntax"
+help = "A string closes on the line where it opens. For text over several lines, write `\\n` inside it."
+span = "The string literal's opening quote."
+
+[[E0005.examples]]
+wrong = '''
+fn greeting(name: str) -> str {
+  "Hello, {name}
+}
+'''
+line = 2
+right = '''
+fn greeting(name: str) -> str {
+  "Hello, {name}"
+}
+'''
+
+[E0006]
+title = "invalid escape"
+reference = "lexical.escapes"
+tier = "core"
+phase = "syntax"
+help = "Inside a string, `{` starts an interpolation, so a brace is written `\\{`. The other escapes are `\\n`, `\\t`, `\\r`, `\\0`, `\\\\`, `\\\"` and `\\u{…}`."
+span = "The backslash that starts the escape, or the first brace of `{{`."
+
+[[E0006.examples]]
+wrong = '''
+fn braced(x: i64) -> str {
+  "{{x}}"
+}
+'''
+line = 2
+right = '''
+fn braced(x: i64) -> str {
+  "\{{x}}"
+}
+'''
+
+[E0007]
+title = "malformed format spec"
+reference = "lexical.format-specs"
+tier = "core"
+phase = "syntax"
+help = "A format spec gives an alignment, a width, a precision and a kind, each optional, as in `{x:>8.2}` or `{n:x}`. A float's precision is `.2`, with no `f`."
+span = "The `:` that starts the spec."
+
+[[E0007.examples]]
+wrong = '''
+fn price(x: f64) -> str {
+  "{x:.2f}"
+}
+'''
+line = 2
+right = '''
+fn price(x: f64) -> str {
+  "{x:.2}"
+}
+'''
+
+[E0008]
+title = "nesting too deep"
+reference = "lexical.nesting"
+tier = "core"
+phase = "syntax"
+help = "Brackets and interpolations nest at most 256 deep. Name the inner parts with `let` bindings, functions or types; generated code can do the same."
+span = "The bracket that opens the 257th level, or the `\"` that begins the string literal whose interpolation opens it."
+
+[[E0008.examples]]
+wrong = '''
+fn main() / io {
+  print("{((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))}")
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  let inner = (((1)))
+  print("{inner}")
+}
+'''
+
+[E0100]
+title = "syntax error"
+reference = "syntax.grammar-errors"
+tier = "core"
+phase = "syntax"
+help = "The code from this token on isn't Stilt. The cause is often just before it, such as a bracket left open or a word from another language."
+span = "Where syntax.grammar-errors places it: the first token from which no program can continue, or a misplaced doc comment's first comment."
+
+[[E0100.examples]]
+wrong = '''
+fn main() / io {
+  let mut count = 0
+  print("{count}")
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  var count = 0
+  print("{count}")
+}
+'''
+
+[[E0100.examples]]
+wrong = '''
+fn main() / io {
+  var n = 0
+  match 3 {
+    3 => n = 1
+    _ => {}
+  }
+  print("{n}")
+}
+'''
+line = 4
+right = '''
+fn main() / io {
+  var n = 0
+  match 3 {
+    3 => { n = 1 }
+    _ => {}
+  }
+  print("{n}")
+}
+'''
+
+[E0200]
+title = "invalid module name"
+reference = "program.module-names"
+tier = "core"
+phase = "items"
+help = "A module's name is its file's path, so each file and directory is named with a lowercase identifier, as `order_lines.lt`, and not `std` or a dependency's name."
+span = "The first line of the file."
+
+[E0201]
+title = "module header doesn't match its file"
+reference = "program.module-header"
+tier = "core"
+phase = "items"
+help = "A module's name comes from its file's path, so its header names the module the file is. Change the header, or rename the file."
+span = "The module path in the header."
+
+[[E0201.examples]]
+wrong = '''
+module orders
+
+fn main() {}
+'''
+line = 1
+right = '''
+module main
+
+fn main() {}
+'''
+
+[E0202]
+title = "`without` given twice"
+reference = "program.header-limits"
+tier = "core"
+phase = "items"
+help = "A module's header holds one `without`, which names each limit once, as `without panic, alloc`."
+span = "The second `without` of a header, or the limit named again."
+
+[[E0202.examples]]
+wrong = '''
+module main
+without panic, alloc, panic
+
+pub fn halve(n: i64) -> i64 { n / 2 }
+'''
+line = 2
+right = '''
+module main
+without panic, alloc
+
+pub fn halve(n: i64) -> i64 { n / 2 }
+'''
+
+[E0203]
+title = "feature of an unsupported tier"
+reference = "program.unsupported-tiers"
+tier = "advanced"
+phase = "items"
+help = "This implementation doesn't support that tier of the language yet. Write the code without the feature."
+span = "The feature."
+
+[E0204]
+title = "fact beyond a `without` limit"
+reference = "facts.without"
+tier = "core"
+phase = "analyses"
+help = "A `without` promises that the code, and everything it calls, never does what the limit names. Change the code so that it can't, or remove the limit if the code needs it."
+span = "The fact: an operation that panics, allocates, may not end or copies shared data, such as a `while`, a call that recurses or goes through a stored function value, an argument copied for a callee that updates it in place, or a write while a copy lasts; a call, a function named as a value, a comparison, an interpolated value or a store that uses a function or impl that does; or the `unsafe` of a block."
+
+[[E0204.examples]]
+wrong = '''
+module main
+without panic
+
+pub fn first(prices: List<i64>) -> i64 { prices[0] }
+'''
+line = 4
+right = '''
+module main
+without panic
+
+pub fn first(prices: List<i64>) -> i64 { prices.get(0) else 0 }
+'''
+
+[[E0204.examples]]
+wrong = '''
+fn ratio(part: i64, whole: i64) -> i64 { part * 100 / whole }
+
+pub fn share(part: i64, whole: i64) -> i64 without panic { ratio(part, whole) }
+'''
+line = 3
+right = '''
+fn ratio(part: i64, whole: i64) -> i64 {
+  if whole == 0 { 0 } else { part * 100 / whole }
+}
+
+pub fn share(part: i64, whole: i64) -> i64 without panic { ratio(part, whole) }
+'''
+
+[E0205]
+title = "unknown module"
+reference = "program.namespaces"
+tier = "core"
+phase = "items"
+help = "`use` names a module, as `use std.fs`. A dependency's modules are named after it, once stilt.toml lists it under `[dependencies]`."
+span = "The `use` declaration."
+
+[[E0205.examples]]
+wrong = '''
+use std.fss
+
+fn main() {}
+'''
+line = 1
+right = '''
+use std.fs
+
+fn main() {}
+'''
+
+[E0206]
+title = "import cycle"
+reference = "program.no-cycles"
+tier = "core"
+phase = "items"
+help = "Modules can't import one another in a cycle. Move what both need into a third module, which each imports."
+span = "The last of the `use` declarations and paths through which the modules of the cycle depend on one another (errors.several-places). A path is placed at its first name."
+
+[E0207]
+title = "local named after an imported module"
+reference = "program.one-value-namespace"
+tier = "core"
+phase = "types"
+help = "A local can't take the name of an imported module, since `fs.exists` would then mean two things. Rename the local."
+span = "The binding's name."
+
+[[E0207.examples]]
+wrong = '''
+use std.fs
+
+fn main() / io {
+  let fs = "notes.txt"
+  print(fs)
+}
+'''
+line = 4
+right = '''
+use std.fs
+
+fn main() / io {
+  let path = "notes.txt"
+  print(path)
+}
+'''
+
+[E0208]
+title = "name defined twice"
+reference = "declarations.unique-names"
+tier = "core"
+phase = "types"
+help = "A name is defined once in its scope, and Stilt has no overloading. Give the second definition a name of its own."
+span = "The later of the two names. For a `use` declaration, the declaration, and for a test, its `test` keyword."
+
+[[E0208.examples]]
+wrong = '''
+fn total(prices: List<i64>) -> i64 { prices.fold(0, |sum, p| sum + p) }
+
+fn total(prices: List<f64>) -> f64 { prices.fold(0.0, |sum, p| sum + p) }
+'''
+line = 3
+right = '''
+fn total(prices: List<i64>) -> i64 { prices.fold(0, |sum, p| sum + p) }
+
+fn total_f64(prices: List<f64>) -> f64 { prices.fold(0.0, |sum, p| sum + p) }
+'''
+
+[E0209]
+title = "name of a prelude item"
+reference = "program.prelude-names"
+tier = "core"
+phase = "items"
+help = "The prelude's names, such as `print`, `Option` and `List`, mean the same thing in every module, so nothing else takes them. Choose another name."
+span = "The declared name, or the `use` declaration that binds it."
+
+[[E0209.examples]]
+wrong = '''
+fn print(message: str) {}
+
+fn main() {}
+'''
+line = 1
+right = '''
+fn log(message: str) {}
+
+fn main() {}
+'''
+
+[E0210]
+title = "primitive type name used as a name"
+reference = "lexical.primitive-type-names"
+tier = "core"
+phase = "types"
+help = "Type names such as `str`, `i64` and `bool` can't name anything else. Choose another name, such as `text`."
+span = "The name."
+
+[[E0210.examples]]
+wrong = '''
+fn label() -> str {
+  let str = "a"
+  str
+}
+'''
+line = 2
+right = '''
+fn label() -> str {
+  let text = "a"
+  text
+}
+'''
+
+[E0211]
+title = "unknown name"
+reference = "declarations.unknown-names"
+tier = "core"
+phase = "types"
+help = "Check the spelling. A local is visible after its `let`, and an item of another module is named through it, as `fs.exists` after `use std.fs`."
+span = "The name that doesn't resolve."
+
+[[E0211.examples]]
+wrong = '''
+fn average(count: i64, sum: i64) -> i64 { sum / cuont }
+'''
+line = 1
+right = '''
+fn average(count: i64, sum: i64) -> i64 { sum / count }
+'''
+
+[[E0211.examples]]
+wrong = '''
+fn first(xs: List<i64>) -> Option<i64> { if xs.is_empty() { null } else { Some(xs[0]) } }
+'''
+line = 1
+right = '''
+fn first(xs: List<i64>) -> Option<i64> { if xs.is_empty() { None } else { Some(xs[0]) } }
+'''
+
+[E0212]
+title = "wrong kind of name"
+reference = "declarations.wrong-kind-of-name"
+tier = "core"
+phase = "types"
+help = "A name is a value, a type, a trait or a module, and this one is of another kind than the place needs. A record is built with its fields, as `Point { x: 1, y: 2 }`."
+span = "The name that refers to the wrong kind of thing."
+
+[[E0212.examples]]
+wrong = '''
+type Point = { x: i64, y: i64 }
+
+fn origin() -> Point { Point(1, 2) }
+'''
+line = 3
+right = '''
+type Point = { x: i64, y: i64 }
+
+fn origin() -> Point { Point { x: 1, y: 2 } }
+'''
+
+[E0213]
+title = "private item"
+reference = "program.visibility"
+tier = "core"
+phase = "types"
+help = "Only an item marked `pub` can be named outside its module. Mark it `pub` in its module, or use what that module exports."
+span = "The private item's or member's name."
+
+[E0214]
+title = "private item in a public signature"
+reference = "program.private-in-signatures"
+tier = "core"
+phase = "items"
+help = "Code outside the module couldn't name a type that a `pub` signature mentions. Mark the type `pub` too, or keep the function private."
+span = "The path that names the private type or trait."
+
+[[E0214.examples]]
+wrong = '''
+type Config = { port: i64 }
+
+pub fn default_config() -> Config { Config { port: 8080 } }
+'''
+line = 3
+right = '''
+pub type Config = { port: i64 }
+
+pub fn default_config() -> Config { Config { port: 8080 } }
+'''
+
+[E0215]
+title = "`self` or `Self` where it doesn't exist"
+reference = "traits.methods"
+tier = "core"
+phase = "types"
+help = "`self` exists only in a method, which takes it as its first parameter, and `Self` only in impl and trait blocks. Add `self` to the parameters."
+span = "The `self` or `Self`."
+
+[[E0215.examples]]
+wrong = '''
+type Rect = { w: f64, h: f64 }
+
+impl Rect {
+  fn width() -> f64 { self.w }
+}
+'''
+line = 4
+right = '''
+type Rect = { w: f64, h: f64 }
+
+impl Rect {
+  fn width(self) -> f64 { self.w }
+}
+'''
+
+[E0216]
+title = "`break` or `continue` outside a loop"
+reference = "expressions.break-and-continue"
+tier = "core"
+phase = "types"
+help = "`break` and `continue` act on a `for` or `while` loop, and can't cross a closure. To stop at the first match, use a method such as `find` or `any`."
+span = "The `break` or `continue`."
+
+[[E0216.examples]]
+wrong = '''
+fn first_negative(xs: List<i64>) -> Option<i64> {
+  xs.find(|x| {
+    if x < 0 { break }
+    false
+  })
+}
+'''
+line = 3
+right = '''
+fn first_negative(xs: List<i64>) -> Option<i64> {
+  xs.find(|x| x < 0)
+}
+'''
+
+[E0217]
+title = "alternatives bind different names"
+reference = "patterns.or-patterns"
+tier = "core"
+phase = "types"
+help = "Each alternative of a `|` pattern binds the same names, so the arm's body can use them whichever one matched. Give the bindings one name."
+span = "The alternative."
+
+[[E0217.examples]]
+wrong = '''
+type Shape = | Circle(radius: f64) | Square(side: f64)
+
+fn size(s: Shape) -> f64 {
+  match s {
+    Circle(r) | Square(side) => r
+  }
+}
+'''
+line = 5
+right = '''
+type Shape = | Circle(radius: f64) | Square(side: f64)
+
+fn size(s: Shape) -> f64 {
+  match s {
+    Circle(r) | Square(r) => r
+  }
+}
+'''
+
+[E0218]
+title = "package that isn't a dependency"
+reference = "packages.imports"
+tier = "core"
+phase = "items"
+help = "A module imports only from its own package, the standard library and the packages that stilt.toml lists. Add the package to `[dependencies]`."
+span = "The `use` declaration."
+
+[E0219]
+title = "exported name used twice"
+reference = "c.exported-names"
+tier = "core"
+phase = "items"
+help = "An exported function's name is its C symbol, and C has one namespace, so no two exported functions of a package share a name. Rename one of them."
+span = "The name of the second function, in the order of the modules' paths and of the functions in each."
+
+[E0220]
+title = "malformed macro pattern"
+reference = "macros.pattern-checks"
+tier = "advanced"
+phase = "items"
+help = "A pattern names each fragment once, with a kind such as `expr` or `name`. An `expr`, `pattern` or `type` fragment is followed by `,`, `;`, `=>` or the end of its group, which tells it where to stop."
+span = "The fragment, or the repetition's `$`."
+
+[[E0220.examples]]
+wrong = '''
+syntax total {
+  ($first: expr $($rest: expr),*) => $first $(+ $rest)*
+}
+
+fn main() / io {
+  print("{total!(1, 2, 3)}")
+}
+'''
+line = 2
+right = '''
+syntax total {
+  ($first: expr, $($rest: expr),*) => $first $(+ $rest)*
+}
+
+fn main() / io {
+  print("{total!(1, 2, 3)}")
+}
+'''
+
+[E0221]
+title = "malformed macro template"
+reference = "macros.templates"
+tier = "advanced"
+phase = "items"
+help = "A template uses only the fragments that its arm's pattern binds, inside as many repetitions, and it parses as an expression or a pattern. Check the fragment's spelling."
+span = "The fragment, the repetition's `$`, or the template's first token when it parses as neither."
+
+[[E0221.examples]]
+wrong = '''
+syntax double {
+  ($number: expr) => $numbr * 2
+}
+
+fn main() / io {
+  print("{double!(3)}")
+}
+'''
+line = 2
+right = '''
+syntax double {
+  ($number: expr) => $number * 2
+}
+
+fn main() / io {
+  print("{double!(3)}")
+}
+'''
+
+[E0222]
+title = "use that no arm matches"
+reference = "macros.matching"
+tier = "advanced"
+phase = "types"
+help = "A use matches one of the macro's arms token for token. Compare it with the arm that the message names."
+span = "The furthest token any arm reached."
+
+[[E0222.examples]]
+wrong = '''
+syntax between {
+  ($x: expr, $low: expr, $high: expr) => $low <= $x && $x <= $high
+}
+
+fn main() / io {
+  let n = 5
+  print("{between!(n, 1)}")
+}
+'''
+line = 7
+right = '''
+syntax between {
+  ($x: expr, $low: expr, $high: expr) => $low <= $x && $x <= $high
+}
+
+fn main() / io {
+  let n = 5
+  print("{between!(n, 1, 10)}")
+}
+'''
+
+[E0223]
+title = "macro out of place"
+reference = "macros.uses"
+tier = "advanced"
+phase = "types"
+help = "A macro whose arms give expressions stands where an expression does, and one whose arms give patterns where a pattern does, as in `let pair!(a, b) = p`."
+span = "The use's path."
+
+[[E0223.examples]]
+wrong = '''
+syntax pair {
+  ($a: pattern, $b: pattern) => ($a, $b)
+}
+
+fn main() / io {
+  let p = pair!(1, 2)
+  print("{p}")
+}
+'''
+line = 6
+right = '''
+syntax pair {
+  ($a: pattern, $b: pattern) => ($a, $b)
+}
+
+fn main() / io {
+  let pair!(a, b) = (1, 2)
+  print("{a} {b}")
+}
+'''
+
+[E0224]
+title = "expansion too deep"
+reference = "macros.nested-expansions"
+tier = "advanced"
+phase = "types"
+help = "A macro may use itself, but each expansion must get closer to an arm that stops, and expansions nest at most 128 deep."
+span = "The use the user wrote."
+
+[[E0224.examples]]
+wrong = '''
+syntax sum {
+  ($x: expr) => $x + sum!($x)
+}
+
+fn main() / io {
+  print("{sum!(1)}")
+}
+'''
+line = 6
+right = '''
+syntax sum {
+  ($x: expr) => $x
+  ($x: expr, $($rest: expr),+) => $x + sum!($($rest),+)
+}
+
+fn main() / io {
+  print("{sum!(1, 2, 3)}")
+}
+'''
+
+[E0225]
+title = "error raised by a macro"
+reference = "macros.raised-errors"
+tier = "meta"
+phase = "types"
+help = "The macro rejected its input, and its message says why. Change the use to give it what it expects."
+span = "The raised error's span, or the string literal that names the file it lies in."
+
+[E0226]
+title = "macro that didn't finish"
+reference = "macros.step-limits"
+tier = "meta"
+phase = "types"
+help = "The macro's code ran too long, ran out of memory or panicked, so it was stopped. Look in the macro for a loop that doesn't end on this input."
+span = "The use's path."
+
+[E0227]
+title = "use whose parts don't fit its macro"
+reference = "macros.parts"
+tier = "meta"
+phase = "types"
+help = "A use gives one part per parameter of the macro, separated by commas, and each part has the form its parameter's type asks for: an expression, a pattern, a type or a plain string."
+span = "The first token of the part that doesn't fit, the second comma of an empty part, the extra part, or the group's closing bracket when a part is missing."
+
+[E0228]
+title = "malformed macro declaration"
+reference = "macros.procedural-declarations"
+tier = "meta"
+phase = "items"
+help = "A procedural macro works on code, not values: it takes `meta.Expr`, `meta.Pattern`, `meta.Type`, `meta.Text`, `meta.File` or a last `meta.Tokens`, and gives a `meta.Expr`, `meta.Pattern` or `meta.Type`."
+span = "The part of the declaration that breaks the rule."
+
+[[E0228.examples]]
+wrong = '''
+use std.meta
+
+/// The number, doubled.
+pub macro double(n: i64) -> meta.Expr { quote { $n * 2 } }
+'''
+line = 4
+right = '''
+use std.meta
+
+/// The number, doubled.
+pub macro double(n: meta.Expr) -> meta.Expr { quote { $n * 2 } }
+'''
+
+[E0229]
+title = "file that a macro can't be given"
+reference = "macros.named-files"
+tier = "meta"
+phase = "types"
+help = "A macro reads only a regular UTF-8 file inside the package, named by a relative path spelled exactly as on disk, so that every machine builds the same program."
+span = "The string literal that names the file."
+
+[E0230]
+title = "`use` of an item"
+reference = "program.what-use-binds"
+tier = "core"
+phase = "items"
+help = "`use` imports a module, never an item: write `use std.sync`, then name the item through the module, as `sync.Shared`."
+span = "The `use` declaration."
+
+[[E0230.examples]]
+wrong = '''
+use std.sync.Shared
+
+fn counter() -> Shared<i64> { Shared.new(0) }
+'''
+line = 1
+right = '''
+use std.sync
+
+fn counter() -> sync.Shared<i64> { sync.Shared.new(0) }
+'''
+
+[E0231]
+title = "expansion too large"
+reference = "macros.expansion-size"
+tier = "advanced"
+phase = "types"
+help = "A use's expansions, its own and those nested in it, hold at most 100,000 tokens in all. A macro that uses another several times at each level multiplies its code at each one: use it once and reuse its result, or build the repeated part in a function."
+span = "The use the user wrote."
+
+[[E0231.examples]]
+wrong = '''
+syntax q0 { () => 1 }
+syntax q1 { () => q0!() + q0!() + q0!() + q0!() }
+syntax q2 { () => q1!() + q1!() + q1!() + q1!() }
+syntax q3 { () => q2!() + q2!() + q2!() + q2!() }
+syntax q4 { () => q3!() + q3!() + q3!() + q3!() }
+syntax q5 { () => q4!() + q4!() + q4!() + q4!() }
+syntax q6 { () => q5!() + q5!() + q5!() + q5!() }
+syntax q7 { () => q6!() + q6!() + q6!() + q6!() }
+syntax q8 { () => q7!() + q7!() + q7!() + q7!() }
+
+fn main() / io {
+  print("{q8!()}")
+}
+'''
+line = 12
+right = '''
+syntax q0 { () => 1 }
+syntax q1 { () => 4 * q0!() }
+syntax q2 { () => 4 * q1!() }
+syntax q3 { () => 4 * q2!() }
+syntax q4 { () => 4 * q3!() }
+syntax q5 { () => 4 * q4!() }
+syntax q6 { () => 4 * q5!() }
+syntax q7 { () => 4 * q6!() }
+syntax q8 { () => 4 * q7!() }
+
+fn main() / io {
+  print("{q8!()}")
+}
+'''
+
+[E0300]
+title = "wrong number of type arguments"
+reference = "declarations.type-arguments"
+tier = "core"
+phase = "types"
+help = "A generic type takes one type argument per parameter, as `Map<str, i64>` for a map from strings to integers."
+span = "The type."
+
+[[E0300.examples]]
+wrong = '''
+fn count(words: Map<str>) -> i64 { words.len() }
+'''
+line = 1
+right = '''
+fn count(words: Map<str, i64>) -> i64 { words.len() }
+'''
+
+[E0301]
+title = "inherent impl outside the type's module"
+reference = "traits.impl-blocks"
+tier = "core"
+phase = "items"
+help = "A type's own methods live in the type's module. Move the impl block there, or write a function in this module instead."
+span = "The impl's type."
+
+[E0302]
+title = "invalid impl type"
+reference = "traits.impl-blocks"
+tier = "core"
+phase = "items"
+help = "An impl block applies to the whole generic type, as `impl<A, B> Pair<A, B>`. For one instantiation alone, write a function that takes it."
+span = "The impl's type."
+
+[[E0302.examples]]
+wrong = '''
+type Pair<A, B> = { first: A, second: B }
+
+impl Pair<i64, i64> {
+  fn sum(self) -> i64 { self.first + self.second }
+}
+'''
+line = 3
+right = '''
+type Pair<A, B> = { first: A, second: B }
+
+fn sum(p: Pair<i64, i64>) -> i64 { p.first + p.second }
+'''
+
+[E0303]
+title = "orphan impl"
+reference = "traits.orphan-rule"
+tier = "core"
+phase = "items"
+help = "An impl of a trait lives in the trait's module or the type's module, so that a type never gets two impls of one trait from two places. Move it to one of them."
+span = "The impl's `impl` keyword."
+
+[E0304]
+title = "overlapping impls"
+reference = "traits.coherence"
+tier = "core"
+phase = "items"
+help = "A type has at most one impl of each trait, so a call always means one thing. Delete one of the impls, or merge them."
+span = "The later impl's `impl` keyword."
+
+[[E0304.examples]]
+wrong = '''
+trait Named {
+  fn name(self) -> str
+}
+
+type Thing = {}
+
+impl Named for Thing {
+  fn name(self) -> str { "a" }
+}
+
+impl Named for Thing {
+  fn name(self) -> str { "b" }
+}
+'''
+line = 11
+right = '''
+trait Named {
+  fn name(self) -> str
+}
+
+type Thing = {}
+
+impl Named for Thing {
+  fn name(self) -> str { "a" }
+}
+'''
+
+[E0305]
+title = "missing trait member"
+reference = "traits.impl-members"
+tier = "core"
+phase = "items"
+help = "A trait impl defines every method and constant of the trait that has no default. Add the missing member."
+span = "The impl's `impl` keyword."
+
+[[E0305.examples]]
+wrong = '''
+trait Shape {
+  fn area(self) -> f64
+  fn name(self) -> str
+}
+
+type Circle = { radius: f64 }
+
+impl Shape for Circle {
+  fn area(self) -> f64 { 3.14 * self.radius * self.radius }
+}
+'''
+line = 8
+right = '''
+trait Shape {
+  fn area(self) -> f64
+  fn name(self) -> str
+}
+
+type Circle = { radius: f64 }
+
+impl Shape for Circle {
+  fn area(self) -> f64 { 3.14 * self.radius * self.radius }
+  fn name(self) -> str { "circle" }
+}
+'''
+
+[E0306]
+title = "member not in the trait"
+reference = "traits.impl-members"
+tier = "core"
+phase = "items"
+help = "A trait impl holds only the trait's members. Move the other methods to an inherent `impl` block of the type."
+span = "The member's name."
+
+[[E0306.examples]]
+wrong = '''
+trait Shape {
+  fn area(self) -> f64
+}
+
+type Circle = { radius: f64 }
+
+impl Shape for Circle {
+  fn area(self) -> f64 { 3.14 * self.radius * self.radius }
+  fn perimeter(self) -> f64 { 6.28 * self.radius }
+}
+'''
+line = 9
+right = '''
+trait Shape {
+  fn area(self) -> f64
+}
+
+type Circle = { radius: f64 }
+
+impl Shape for Circle {
+  fn area(self) -> f64 { 3.14 * self.radius * self.radius }
+}
+
+impl Circle {
+  fn perimeter(self) -> f64 { 6.28 * self.radius }
+}
+'''
+
+[E0307]
+title = "method signature differs from the trait's"
+reference = "traits.impl-signatures"
+tier = "core"
+phase = "items"
+help = "Callers rely on the signature that the trait declares, so the impl's method takes the same parameters and returns the same result, with `Self` as the impl's type."
+span = "The method's name."
+
+[[E0307.examples]]
+wrong = '''
+trait Shape {
+  fn area(self) -> f64
+}
+
+type Square = { side: i64 }
+
+impl Shape for Square {
+  fn area(self) -> i64 { self.side * self.side }
+}
+'''
+line = 8
+right = '''
+trait Shape {
+  fn area(self) -> f64
+}
+
+type Square = { side: f64 }
+
+impl Shape for Square {
+  fn area(self) -> f64 { self.side * self.side }
+}
+'''
+
+[E0308]
+title = "inherent method hides a trait method"
+reference = "traits.name-clashes"
+tier = "core"
+phase = "items"
+help = "A method's name means one member of a type, so an inherent method and a trait's method can't share it. Rename the inherent method."
+span = "The trait impl's `impl` keyword, or the inherent method's name when the impl is structural."
+
+[[E0308.examples]]
+wrong = '''
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  fn show(self) -> str { "({self.x}, {self.y})" }
+}
+
+impl Show for Point {
+  fn show(self) -> str { "Point({self.x}, {self.y})" }
+}
+'''
+line = 7
+right = '''
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  fn pair(self) -> str { "({self.x}, {self.y})" }
+}
+
+impl Show for Point {
+  fn show(self) -> str { "Point({self.x}, {self.y})" }
+}
+'''
+
+[E0309]
+title = "record that contains itself"
+reference = "declarations.recursive-types"
+tier = "core"
+phase = "items"
+help = "Building such a record would need one already built, forever. Make the field optional, as `next: Option<Node>`, or a list."
+span = "The name of the last record of the group that contains itself (errors.several-places)."
+
+[[E0309.examples]]
+wrong = '''
+type Node = { value: i64, next: Node }
+'''
+line = 1
+right = '''
+type Node = { value: i64, next: Option<Node> }
+'''
+
+[E0310]
+title = "invalid `main`"
+reference = "program.main"
+tier = "core"
+phase = "items"
+help = "`main` takes no parameters and returns nothing, and its row allows only `io` and raising an error that can be shown. Read the command line with `std.cli`'s `args()`."
+span = "The name of `main`."
+
+[[E0310.examples]]
+wrong = '''
+fn main(args: List<str>) / io {
+  print("{args.len()}")
+}
+'''
+line = 1
+right = '''
+use std.cli
+
+fn main() / io {
+  print("{cli.args().len()}")
+}
+'''
+
+[E0311]
+title = "mismatched types"
+reference = "types.mismatch"
+tier = "core"
+phase = "types"
+help = "Stilt never converts a value to another type on its own. Give a value of the expected type, convert it with a method such as `to_f64()`, or change what expects it."
+span = "The expression or pattern whose type differs. A block without a final expression is reported at the function's name, the `test` keyword, or the `if` or block whose value it gives."
+
+[[E0311.examples]]
+wrong = '''
+fn discounted(price: i64) -> i64 { price * 0.9 }
+'''
+line = 1
+right = '''
+fn discounted(price: i64) -> i64 { price * 9 / 10 }
+'''
+
+[[E0311.examples]]
+wrong = '''
+fn main() / io {
+  let n: i64 = "3"
+  print("{n}")
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  let n: i64 = 3
+  print("{n}")
+}
+'''
+
+[E0312]
+title = "type that can't be inferred"
+reference = "types.known-types"
+tier = "core"
+phase = "types"
+help = "A type is inferred from how its value is used within its body, and nothing here says which it is. Write it, as `let orders: List<i64> = []`."
+span = "The expression whose type isn't known. For a type the body leaves undecided, the expression that introduced it."
+
+[[E0312.examples]]
+wrong = '''
+fn main() / io {
+  let orders = []
+  print("{orders.len()} orders")
+}
+'''
+line = 2
+right = '''
+fn main() / io {
+  let orders: List<i64> = []
+  print("{orders.len()} orders")
+}
+'''
+
+[E0313]
+title = "no such field"
+reference = "types.field-access"
+tier = "core"
+phase = "types"
+help = "Check the field's name against the type's declaration. A `Shared<T>`'s fields are read inside `when`, and a field read through an `Option` is the field of the value inside it."
+span = "The field's name."
+
+[[E0313.examples]]
+wrong = '''
+type Order = { id: i64, total: i64 }
+
+fn amount(o: Order) -> i64 { o.totl }
+'''
+line = 3
+right = '''
+type Order = { id: i64, total: i64 }
+
+fn amount(o: Order) -> i64 { o.total }
+'''
+
+[E0314]
+title = "no such method or member"
+reference = "traits.method-resolution"
+tier = "core"
+phase = "types"
+help = "Check the method's name and the receiver's type. A function without `self` is named on its type, as `List.new()`, and a trait's method needs an impl of the trait for the type."
+span = "The method's or member's name."
+
+[[E0314.examples]]
+wrong = '''
+fn count(names: List<str>) -> i64 { names.size() }
+'''
+line = 1
+right = '''
+fn count(names: List<str>) -> i64 { names.len() }
+'''
+
+[E0315]
+title = "wrong number of arguments"
+reference = "expressions.arguments"
+tier = "core"
+phase = "types"
+help = "A call gives one argument per parameter, in order, since Stilt has no default arguments and no overloading."
+span = "The call, the closure or the variant pattern."
+
+[[E0315.examples]]
+wrong = '''
+fn area(width: i64, height: i64) -> i64 { width * height }
+
+fn square(side: i64) -> i64 { area(side) }
+'''
+line = 3
+right = '''
+fn area(width: i64, height: i64) -> i64 { width * height }
+
+fn square(side: i64) -> i64 { area(side, side) }
+'''
+
+[E0316]
+title = "field given twice or left out"
+reference = "expressions.struct-literal-fields"
+tier = "core"
+phase = "types"
+help = "A record literal gives every field once, and a record pattern names every field, or ends with `..` to leave the others out."
+span = "The repeated field's name. For a field left out, the literal's or pattern's type."
+
+[[E0316.examples]]
+wrong = '''
+type Order = { id: i64, total: i64 }
+
+fn first() -> Order { Order { id: 1 } }
+'''
+line = 3
+right = '''
+type Order = { id: i64, total: i64 }
+
+fn first() -> Order { Order { id: 1, total: 0 } }
+'''
+
+[E0317]
+title = "operator not defined on a type"
+reference = "expressions.left-operand-first"
+tier = "core"
+phase = "types"
+help = "Arithmetic works on numbers, bitwise operators on integers, and `!`, `&&` and `||` on `bool`. A string is built with interpolation, as `\"Hello, {name}\"`, not with `+`."
+span = "The operation. For a compound assignment, the assigned place; for a range, its start."
+
+[[E0317.examples]]
+wrong = '''
+fn greeting(name: str) -> str { "Hello, " + name }
+'''
+line = 1
+right = '''
+fn greeting(name: str) -> str { "Hello, {name}" }
+'''
+
+[E0318]
+title = "unsatisfied bound"
+reference = "traits.unsatisfied-bounds"
+tier = "core"
+phase = "types"
+help = "Using a trait's operation on a type parameter needs the bound, as `<T: Show>` to interpolate a `T`. A type passed in implements the trait: write its `impl`, or choose a type that has one."
+span = "Where the bound is needed: the function's or method's name, the operation, the interpolated expression, or the test or doc example."
+
+[[E0318.examples]]
+wrong = '''
+fn describe<T>(x: T) -> str { "{x}" }
+'''
+line = 1
+right = '''
+fn describe<T: Show>(x: T) -> str { "{x}" }
+'''
+
+[E0319]
+title = "ambiguous method"
+reference = "traits.ambiguous-methods"
+tier = "core"
+phase = "types"
+help = "Two traits give the type a method of that name, so the call names the trait it means, as `Report.describe(o)`."
+span = "The method's name."
+
+[[E0319.examples]]
+wrong = '''
+trait Report {
+  fn describe(self) -> str
+}
+
+trait Audit {
+  fn describe(self) -> str
+}
+
+type Order = { id: i64 }
+
+impl Report for Order {
+  fn describe(self) -> str { "order {self.id}" }
+}
+
+impl Audit for Order {
+  fn describe(self) -> str { "audited order {self.id}" }
+}
+
+fn summary(o: Order) -> str { o.describe() }
+'''
+line = 19
+right = '''
+trait Report {
+  fn describe(self) -> str
+}
+
+trait Audit {
+  fn describe(self) -> str
+}
+
+type Order = { id: i64 }
+
+impl Report for Order {
+  fn describe(self) -> str { "order {self.id}" }
+}
+
+impl Audit for Order {
+  fn describe(self) -> str { "audited order {self.id}" }
+}
+
+fn summary(o: Order) -> str { Report.describe(o) }
+'''
+
+[E0320]
+title = "literal out of range"
+reference = "numbers.integer-literals"
+tier = "core"
+phase = "types"
+help = "The literal doesn't fit its type. Choose a wider type, as `u16` for 300, or a value that fits."
+span = "The literal, including a `-` written directly before it."
+
+[[E0320.examples]]
+wrong = '''
+fn volume() -> u8 { 300 }
+'''
+line = 1
+right = '''
+fn volume() -> u16 { 300 }
+'''
+
+[E0321]
+title = "refutable pattern"
+reference = "patterns.irrefutable-positions"
+tier = "core"
+phase = "types"
+help = "This pattern can fail to match, so the code needs a way out: write `let Some(n) = name else return …`, or use `match` or `if let`."
+span = "The pattern."
+
+[[E0321.examples]]
+wrong = '''
+fn first_name(name: Option<str>) -> str {
+  let Some(n) = name
+  n
+}
+'''
+line = 2
+right = '''
+fn first_name(name: Option<str>) -> str {
+  let Some(n) = name else return "nobody"
+  n
+}
+'''
+
+[E0322]
+title = "unused value"
+reference = "expressions.unused-values"
+tier = "core"
+phase = "types"
+help = "A value that a statement computes and drops is usually a mistake, such as calling a method that returns a new list instead of changing the old one. Use the value, or write `let _ = …` to drop it on purpose."
+span = "The expression statement."
+
+[[E0322.examples]]
+wrong = '''
+fn report(prices: List<i64>) -> str {
+  prices.len()
+  "{prices}"
+}
+'''
+line = 2
+right = '''
+fn report(prices: List<i64>) -> str {
+  "{prices.len()} prices: {prices}"
+}
+'''
+
+[E0323]
+title = "value of an `if` without `else`"
+reference = "expressions.if"
+tier = "core"
+phase = "types"
+help = "An `if` without `else` gives no value, so it can't end a block that gives one. Add the `else` branch."
+span = "The `if`."
+
+[[E0323.examples]]
+wrong = '''
+fn label(n: i64) -> str {
+  if n > 0 { "positive" }
+  "zero or less"
+}
+'''
+line = 2
+right = '''
+fn label(n: i64) -> str {
+  if n > 0 { "positive" } else { "zero or less" }
+}
+'''
+
+[E0324]
+title = "key path where no function is expected"
+reference = "expressions.key-paths"
+tier = "core"
+phase = "types"
+help = "A key path such as `.total` is short for `|x| x.total`, and stands only where a function is expected, as in `orders.map(.total)`."
+span = "The key path."
+
+[[E0324.examples]]
+wrong = '''
+type Order = { total: i64 }
+
+fn totals(orders: List<Order>) -> List<i64> {
+  let get = .total
+  orders.map(get)
+}
+'''
+line = 4
+right = '''
+type Order = { total: i64 }
+
+fn totals(orders: List<Order>) -> List<i64> {
+  orders.map(.total)
+}
+'''
+
+[E0325]
+title = "invalid format spec"
+reference = "std.invalid-specs"
+tier = "core"
+phase = "types"
+help = "A precision and `e` apply to floats, and `x`, `X`, `o` and `b` to integers. Convert the value first, or use a spec that fits its type."
+span = "The interpolated expression."
+
+[[E0325.examples]]
+wrong = '''
+fn hex(n: f64) -> str { "{n:x}" }
+'''
+line = 1
+right = '''
+fn hex(n: i64) -> str { "{n:x}" }
+'''
+
+[E0326]
+title = "constant's value isn't a constant expression"
+reference = "declarations.constant-expressions"
+tier = "core"
+phase = "types"
+help = "A constant is built from literals and other constants, with no arithmetic and no calls. Write the value itself, as `600`, or compute it in a function."
+span = "The first part of the value, in evaluation order, that a constant expression can't hold."
+
+[[E0326.examples]]
+wrong = '''
+const TIMEOUT: i64 = 10 * 60
+'''
+line = 1
+right = '''
+const TIMEOUT: i64 = 600
+'''
+
+[E0327]
+title = "constants in a cycle"
+reference = "declarations.constant-cycles"
+tier = "core"
+phase = "items"
+help = "A constant's value can't depend on itself. Give one of them a value that doesn't refer back."
+span = "The name of the last constant of the cycle (errors.several-places)."
+
+[[E0327.examples]]
+wrong = '''
+const WIDTH: i64 = HEIGHT
+const HEIGHT: i64 = WIDTH
+'''
+line = 2
+right = '''
+const WIDTH: i64 = 80
+const HEIGHT: i64 = WIDTH
+'''
+
+[E0328]
+title = "float in a pattern"
+reference = "patterns.floats"
+tier = "core"
+phase = "types"
+help = "Floats don't compare reliably for equality, so a pattern can't match one. Compare it with `<` or `<=` in an `if`, or in a guard."
+span = "The pattern."
+
+[[E0328.examples]]
+wrong = '''
+fn describe(temperature: f64) -> str {
+  match temperature {
+    0 => "freezing"
+    _ => "not freezing"
+  }
+}
+'''
+line = 3
+right = '''
+fn describe(temperature: f64) -> str {
+  if temperature <= 0.0 { "freezing" } else { "not freezing" }
+}
+'''
+
+[E0329]
+title = "patterns that don't cover every value"
+reference = "patterns.non-exhaustive-matches"
+tier = "core"
+phase = "analyses"
+help = "A `match` covers every value of its type. Add an arm for each case that the message names, or a last `_ => …` arm."
+span = "The `match` or the `try`."
+
+[[E0329.examples]]
+wrong = '''
+type Status = | Pending | Paid | Shipped
+
+fn label(s: Status) -> str {
+  match s {
+    Pending => "pending"
+    Paid => "paid"
+  }
+}
+'''
+line = 4
+right = '''
+type Status = | Pending | Paid | Shipped
+
+fn label(s: Status) -> str {
+  match s {
+    Pending => "pending"
+    Paid => "paid"
+    Shipped => "shipped"
+  }
+}
+'''
+
+[E0330]
+title = "trait function or constant named without a type"
+reference = "traits.functions-without-self"
+tier = "advanced"
+phase = "types"
+help = "A trait's function without `self` is named on a type, as `Count.empty()`, since the trait alone doesn't say which impl to call."
+span = "The path that names the trait."
+
+[[E0330.examples]]
+wrong = '''
+trait Empty {
+  fn empty() -> Self
+}
+
+type Count = { n: i64 }
+
+impl Empty for Count {
+  fn empty() -> Count { Count { n: 0 } }
+}
+
+fn fresh() -> Count { Empty.empty() }
+'''
+line = 11
+right = '''
+trait Empty {
+  fn empty() -> Self
+}
+
+type Count = { n: i64 }
+
+impl Empty for Count {
+  fn empty() -> Count { Count { n: 0 } }
+}
+
+fn fresh() -> Count { Count.empty() }
+'''
+
+[E0331]
+title = "constant with a written `Eq` in a pattern"
+reference = "patterns.constants-with-written-eq"
+tier = "core"
+phase = "types"
+help = "A pattern compares values field by field, which could disagree with the `eq` you wrote. Compare the constant with `==` in an `if` or a guard."
+span = "The pattern."
+
+[[E0331.examples]]
+wrong = '''
+type Money = { cents: i64 }
+
+impl Eq for Money {
+  fn eq(self, other: Money) -> bool { self.cents == other.cents }
+}
+
+const FREE: Money = Money { cents: 0 }
+
+fn label(price: Money) -> str {
+  match price {
+    FREE => "free"
+    _ => "paid"
+  }
+}
+'''
+line = 11
+right = '''
+type Money = { cents: i64 }
+
+impl Eq for Money {
+  fn eq(self, other: Money) -> bool { self.cents == other.cents }
+}
+
+const FREE: Money = Money { cents: 0 }
+
+fn label(price: Money) -> str {
+  if price == FREE { "free" } else { "paid" }
+}
+'''
+
+[E0332]
+title = "property that isn't a closure with typed parameters"
+reference = "tests.property-form"
+tier = "core"
+phase = "types"
+help = "A property is a closure with typed parameters that returns a `bool`, as `/// prop: |xs: List<i64>| …`, since `stilt test` generates values of each type. A check without parameters is an example, `/// ex:`."
+span = "The property's expression, or the parameter without a type or marked `inout`."
+
+[[E0332.examples]]
+wrong = '''
+/// prop: |xs| reverse(reverse(xs)) == xs
+fn reverse(xs: List<i64>) -> List<i64> { xs.fold([], |acc, x| [x].concat(acc)) }
+'''
+line = 1
+right = '''
+/// prop: |xs: List<i64>| reverse(reverse(xs)) == xs
+fn reverse(xs: List<i64>) -> List<i64> { xs.fold([], |acc, x| [x].concat(acc)) }
+'''
+
+[E0333]
+title = "parameter type that can't be generated"
+reference = "tests.generable-types"
+tier = "core"
+phase = "types"
+help = "`stilt test` can't generate functions, values of a type that has none, or maps whose keys aren't `Eq` and `Hash`. Take values that it can generate, and build the rest inside the property."
+span = "The parameter's type."
+
+[[E0333.examples]]
+wrong = '''
+/// Applies `f` twice.
+/// prop: |f: fn(i64) -> i64, x: i64| twice(f, x) == f(f(x))
+fn twice(f: fn(i64) -> i64, x: i64) -> i64 { f(f(x)) }
+'''
+line = 2
+right = '''
+/// Applies `f` twice.
+/// prop: |x: i64| twice(|n| n +% 1, x) == x +% 2
+fn twice(f: fn(i64) -> i64, x: i64) -> i64 { f(f(x)) }
+'''
+
+[E0334]
+title = "member type that names nothing"
+reference = "traits.member-types"
+tier = "advanced"
+phase = "types"
+help = "A member type such as `C.Item` names a parameter of a trait that bounds `C`. Check the name against the trait's parameters."
+span = "The member type."
+
+[[E0334.examples]]
+wrong = '''
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+fn first<C: Collection>(c: C) -> Option<C.Key> { None }
+'''
+line = 5
+right = '''
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+fn first<C: Collection>(c: C) -> Option<C.Item> { c.at(0) }
+'''
+
+[E0335]
+title = "ambiguous member type"
+reference = "traits.member-types"
+tier = "advanced"
+phase = "types"
+help = "Two bounds give the type parameter a member of that name. Name the one you mean with a generic, as `C: Collection<T>`, and write `T`."
+span = "The member type."
+
+[[E0335.examples]]
+wrong = '''
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+trait Stream<Item> {
+  fn next(self) -> Option<Item>
+}
+
+fn first<C: Collection + Stream>(c: C) -> Option<C.Item> { None }
+'''
+line = 9
+right = '''
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+trait Stream<Item> {
+  fn next(self) -> Option<Item>
+}
+
+fn first<C: Collection<T> + Stream, T>(c: C) -> Option<T> { None }
+'''
+
+[E0336]
+title = "`where` bound that isn't on a member type"
+reference = "traits.where"
+tier = "advanced"
+phase = "types"
+help = "A type parameter's bound goes beside it, as `<T: Show>`. A `where` clause bounds only member types, such as `C.Item`."
+span = "The bounded type, or the `where` keyword on a function of a trait or a trait impl."
+
+[[E0336.examples]]
+wrong = '''
+fn shown<T>(x: T) -> str where T: Show { "{x}" }
+'''
+line = 1
+right = '''
+fn shown<T: Show>(x: T) -> str { "{x}" }
+'''
+
+[E0337]
+title = "type of the wrong kind"
+reference = "traits.constructor-traits"
+tier = "advanced"
+phase = "types"
+help = "A constructor trait's parameter stands for a generic type, so it is written with its type arguments, as `F<i64>`."
+span = "The type, or the bound that mixes kinds."
+
+[[E0337.examples]]
+wrong = '''
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+}
+
+fn size<F: Mappable>(xs: F) -> i64 { 0 }
+'''
+line = 5
+right = '''
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+}
+
+fn size<F: Mappable>(xs: F<i64>) -> i64 { 0 }
+'''
+
+[E0338]
+title = "receiver's type written or missing"
+reference = "traits.receiver-types"
+tier = "advanced"
+phase = "items"
+help = "A method's receiver is written `self`, without a type. Only a constructor trait's methods write one, as `self: Self<A>`."
+span = "The `self` parameter."
+
+[[E0338.examples]]
+wrong = '''
+trait Named {
+  fn name(self: Self) -> str
+}
+'''
+line = 2
+right = '''
+trait Named {
+  fn name(self) -> str
+}
+'''
+
+[E0339]
+title = "type parameter of a function type that nothing uses"
+reference = "polymorphism.function-types"
+tier = "advanced"
+phase = "types"
+help = "A function type's type parameter appears in its parameters or its result, so that each call can tell what it is. Delete the one that doesn't."
+span = "The type parameter."
+
+[[E0339.examples]]
+wrong = '''
+fn first(f: fn<T, U>(T) -> T) -> i64 { f(1) }
+'''
+line = 1
+right = '''
+fn first(f: fn<T>(T) -> T) -> i64 { f(1) }
+'''
+
+[E0340]
+title = "polymorphic function type out of place"
+reference = "polymorphism.placement"
+tier = "advanced"
+phase = "types"
+help = "A generic function type is only the type of a parameter or a field. Return a function of known types, as `fn(i64) -> i64`, or make the outer function generic."
+span = "The polymorphic function type."
+
+[[E0340.examples]]
+wrong = '''
+fn make() -> fn<T>(T) -> T { |x| x }
+'''
+line = 1
+right = '''
+fn make() -> fn(i64) -> i64 { |x| x }
+'''
+
+[E0341]
+title = "open record type out of place"
+reference = "records.open-parameter-types"
+tier = "advanced"
+phase = "types"
+help = "A record bound ends with `..`, as `P: { name: str, .. }`, and an open record type is only a parameter's type. Elsewhere, name a type parameter with that bound."
+span = "The record bound or the open record type."
+
+[[E0341.examples]]
+wrong = '''
+fn name_of<P: { name: str }>(p: P) -> str { p.name }
+'''
+line = 1
+right = '''
+fn name_of<P: { name: str, .. }>(p: P) -> str { p.name }
+'''
+
+[E0342]
+title = "operation on a tuple whose arity isn't known"
+reference = "variadics.pack-tuples"
+tier = "advanced"
+phase = "types"
+help = "A tuple whose type spreads a pack has a number of elements that the body doesn't know, so it is passed whole or mapped with a spread, never indexed or matched."
+span = "The pattern, the element access or the `for`."
+
+[[E0342.examples]]
+wrong = '''
+fn first<..Ts>(xs: (..Ts)) -> i64 { xs.0 }
+'''
+line = 1
+right = '''
+fn first<A, B>(xs: (A, B)) -> A { xs.0 }
+'''
+
+[E0343]
+title = "malformed spread"
+reference = "variadics.type-spreads"
+tier = "advanced"
+phase = "types"
+help = "A spread maps a tuple whose type spreads a pack, once per element, as `[..lists.len()]`. It names exactly one such tuple, and can't stand inside another spread."
+span = "The pack, the spread, or the tuple named."
+
+[[E0343.examples]]
+wrong = '''
+fn sizes<..Ts>(lists: (..List<Ts>)) -> List<i64> { [..1] }
+'''
+line = 1
+right = '''
+fn sizes<..Ts>(lists: (..List<Ts>)) -> List<i64> { [..lists.len()] }
+'''
+
+[E0344]
+title = "pack out of place"
+reference = "variadics.packs"
+tier = "advanced"
+phase = "types"
+help = "Only the last type parameter of a function or a type can be a pack, and a trait's parameters never are."
+span = "The pack."
+
+[[E0344.examples]]
+wrong = '''
+trait Wrap<..Ts> {}
+'''
+line = 1
+right = '''
+trait Wrap<T> {}
+'''
+
+[E0345]
+title = "value parameter of a type that can't be compared"
+reference = "generics.value-parameters"
+tier = "meta"
+phase = "items"
+help = "Two types are one type when their value arguments are equal, so a value parameter is an integer or a `bool`, which compare exactly. Use an integer, scaled if you need fractions."
+span = "The value parameter's type."
+
+[[E0345.examples]]
+wrong = '''
+type Scaled<k: f64> = { value: f64 }
+'''
+line = 1
+right = '''
+type Scaled<k: i64> = { value: f64 }
+'''
+
+[E0346]
+title = "value parameter that nothing determines"
+reference = "generics.value-parameters-determined"
+tier = "meta"
+phase = "items"
+help = "A call writes no value arguments, so a value parameter is found from the types of the arguments or of the result. Use it in one of them, as in `array.Array<i64, n>`."
+span = "The value parameter."
+
+[[E0346.examples]]
+wrong = '''
+fn zeros<n: i64>() -> i64 { n }
+'''
+line = 1
+right = '''
+use std.array
+
+fn count<n: i64>(a: array.Array<i64, n>) -> i64 { n }
+'''
+
+[E0347]
+title = "invalid value argument"
+reference = "generics.value-argument-names"
+tier = "meta"
+phase = "types"
+help = "A value argument is a literal, a constant or a value parameter, never a type, a local or a computation, and an array's size is 0 or more."
+span = "The argument."
+
+[[E0347.examples]]
+wrong = '''
+use std.array
+
+fn empty(a: array.Array<i64, -1>) -> i64 { a.len() }
+'''
+line = 3
+right = '''
+use std.array
+
+fn empty(a: array.Array<i64, 0>) -> i64 { a.len() }
+'''
+
+[E0348]
+title = "binding named like a value parameter"
+reference = "generics.value-parameters-in-body"
+tier = "meta"
+phase = "types"
+help = "A type written after this binding would still mean the value parameter, not the binding. Give the binding another name."
+span = "The binding's name."
+
+[[E0348.examples]]
+wrong = '''
+use std.array
+
+fn last<n: i64>(a: array.Array<i64, n>) -> i64 {
+  let n = n - 1
+  a[n]
+}
+'''
+line = 4
+right = '''
+use std.array
+
+fn last<n: i64>(a: array.Array<i64, n>) -> i64 {
+  let i = n - 1
+  a[i]
+}
+'''
+
+[E0349]
+title = "staging annotation on a value known only at run time"
+reference = "meta.not-static"
+tier = "meta"
+phase = "analyses"
+help = "`comptime` asserts that a value is known while compiling, which this one isn't. Delete `comptime`, which changes nothing the program does, or make the value a value parameter."
+span = "The first part of the annotated expression that isn't static."
+
+[[E0349.examples]]
+wrong = '''
+fn report(n: i64) / io {
+  comptime if n > 0 { print("positive") }
+}
+'''
+line = 2
+right = '''
+fn report(n: i64) / io {
+  if n > 0 { print("positive") }
+}
+'''
+
+[E0350]
+title = "type without a shape given to a function that reflects"
+reference = "meta.types-without-shape"
+tier = "meta"
+phase = "analyses"
+help = "A function that reflects reads the shape of each type it reaches, and function types, handlers and native types such as `Shared` have none. Leave such fields out, or give the type an impl of a trait the function checks first."
+span = "The first argument whose type holds the type without a shape, or the call or the name when none does."
+
+[[E0350.examples]]
+wrong = '''
+use std.meta
+
+type Job = { name: str, run: fn() -> i64 }
+
+fn leaves<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var total = 0
+      for f in fields { total += leaves(f.get(value)) }
+      total
+    }
+    _ => 1
+  }
+}
+
+fn main() / io {
+  let job = Job { name: "build", run: || 1 }
+  print("{leaves(job)}")
+}
+'''
+line = 18
+right = '''
+use std.meta
+
+type Job = { name: str, tries: i64 }
+
+fn leaves<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var total = 0
+      for f in fields { total += leaves(f.get(value)) }
+      total
+    }
+    _ => 1
+  }
+}
+
+fn main() / io {
+  let job = Job { name: "build", tries: 1 }
+  print("{leaves(job)}")
+}
+'''
+
+[E0351]
+title = "value of a fresh type leaving its arm"
+reference = "meta.leaving-arm"
+tier = "meta"
+phase = "types"
+help = "A value whose type is fresh to a reflecting arm can't leave it, since no code outside can name that type. Compute what you need inside the arm, such as a count, and give that."
+span = "The expression whose value would leave."
+
+[[E0351.examples]]
+wrong = '''
+use std.meta
+
+fn elements<T>(value: T) -> i64 {
+  var acc = []
+  match T.shape() {
+    List(c) => { for x in c.get(value) { acc.push(x) } }
+    _ => {}
+  }
+  acc.len()
+}
+
+fn main() / io {
+  print("{elements([1, 2])}")
+}
+'''
+line = 6
+right = '''
+use std.meta
+
+fn elements<T>(value: T) -> i64 {
+  match T.shape() {
+    List(c) => c.get(value).len()
+    _ => 0
+  }
+}
+
+fn main() / io {
+  print("{elements([1, 2])}")
+}
+'''
+
+[E0352]
+title = "exported function C can't call"
+reference = "c.exported-signatures"
+tier = "core"
+phase = "types"
+help = "C calls an exported function, so it takes and returns only numbers and `bool`, and its name is a C symbol of its own. Keep the rest of the code inside Stilt."
+span = "The part of the signature that C can't take, or the name."
+
+[[E0352.examples]]
+wrong = '''
+/// The checksum of a line of text.
+pub extern fn checksum(line: str) -> u32 {
+  line.len().to_u32() else 0
+}
+'''
+line = 2
+right = '''
+/// The checksum of a line of text of `len` bytes.
+pub extern fn checksum(len: u64) -> u32 {
+  len.to_u32() else 0
+}
+'''
+
+[E0353]
+title = "type C can't take"
+reference = "c.types-c-takes"
+tier = "systems"
+phase = "types"
+help = "A foreign function takes what C passes: numbers, `bool`, a `c.Ptr<T>` of them and a `c.Str`. Lend a list's elements with `with_ptr`, as a `c.Ptr<u8>`."
+span = "The part of the signature that C can't take: the type, the generic's name, `self`, the parameter's name or the row's element; or the call whose `T` C can't hold."
+
+[[E0353.examples]]
+wrong = '''
+use std.c
+
+/// zlib's CRC-32 of `len` bytes from `buf`, continuing `crc`.
+pub extern fn crc32(crc: u64, buf: List<u8>, len: u32) -> u64
+'''
+line = 4
+right = '''
+use std.c
+
+/// zlib's CRC-32 of `len` bytes from `buf`, continuing `crc`.
+pub extern fn crc32(crc: u64, buf: c.Ptr<u8>, len: u32) -> u64
+'''
+
+[E0400]
+title = "`inout` argument marked wrongly"
+reference = "expressions.inout-arguments"
+tier = "core"
+phase = "types"
+help = "An argument for an `inout` parameter is marked `inout` at the call, as `bump(inout count)`, so that a change to it is visible there; no other argument is."
+span = "The argument."
+
+[[E0400.examples]]
+wrong = '''
+fn bump(inout count: i64) { count += 1 }
+
+fn twice(inout count: i64) {
+  bump(inout count)
+  bump(count)
+}
+'''
+line = 5
+right = '''
+fn bump(inout count: i64) { count += 1 }
+
+fn twice(inout count: i64) {
+  bump(inout count)
+  bump(inout count)
+}
+'''
+
+[E0401]
+title = "not a place"
+reference = "modes.places"
+tier = "core"
+phase = "types"
+help = "Only a variable, a field or an element can be assigned or passed `inout`. Put the value in a `var` first, and pass that."
+span = "The expression that isn't a place."
+
+[[E0401.examples]]
+wrong = '''
+fn bump(inout count: i64) { count += 1 }
+
+fn next(count: i64) -> i64 {
+  bump(inout count + 1)
+  count
+}
+'''
+line = 4
+right = '''
+fn bump(inout count: i64) { count += 1 }
+
+fn next(count: i64) -> i64 {
+  var n = count
+  bump(inout n)
+  n
+}
+'''
+
+[E0402]
+title = "overlapping `inout` arguments"
+reference = "modes.overlapping-inout"
+tier = "core"
+phase = "analyses"
+help = "Two places that one call modifies can't overlap, since the result would depend on which one is written back last. Use a method made for it, such as `xs.swap(i, j)`, or copy one of them first."
+span = "The later of the two overlapping places."
+
+[[E0402.examples]]
+wrong = '''
+fn swap(inout a: i64, inout b: i64) {
+  let t = a
+  a = b
+  b = t
+}
+
+fn mixed(inout xs: List<i64>) { swap(inout xs[0], inout xs[1]) }
+'''
+line = 7
+right = '''
+fn mixed(inout xs: List<i64>) { xs.swap(0, 1) }
+'''
+
+[E0403]
+title = "modifying what can't be modified"
+reference = "modes.what-can-be-modified"
+tier = "core"
+phase = "analyses"
+help = "A `let` binding or a parameter never changes. Declare the binding with `var`, or copy the parameter into one, as `var x = x`; a closure can't change what it captures."
+span = "The place that is modified."
+
+[[E0403.examples]]
+wrong = '''
+fn total(prices: List<i64>) -> i64 {
+  let sum = 0
+  for p in prices { sum += p }
+  sum
+}
+'''
+line = 3
+right = '''
+fn total(prices: List<i64>) -> i64 {
+  var sum = 0
+  for p in prices { sum += p }
+  sum
+}
+'''
+
+[E0404]
+title = "changing a list while reading it"
+reference = "modes.change-while-iterating"
+tier = "core"
+phase = "analyses"
+help = "Changing a list while a `for` loop reads it would silently copy it. Build the changes in another list and apply them after the loop, or loop over its indexes."
+span = "The modification: the place assigned, the argument passed `inout`, or the receiver taken by `inout self`."
+
+[[E0404.examples]]
+wrong = '''
+fn doubled(inout orders: List<i64>) { for o in orders { orders.push(o) } }
+'''
+line = 1
+right = '''
+fn doubled(inout orders: List<i64>) { orders = orders.concat(orders) }
+'''
+
+[E0500]
+title = "repeated row element"
+reference = "effects.repeated-elements"
+tier = "core"
+phase = "types"
+help = "A row names each effect once. Delete the repeated one."
+span = "The repeated element."
+
+[[E0500.examples]]
+wrong = '''
+fn log(message: str) / {io, io} { print(message) }
+'''
+line = 1
+right = '''
+fn log(message: str) / io { print(message) }
+'''
+
+[E0501]
+title = "effect name as a row variable"
+reference = "effects.effect-names"
+tier = "core"
+phase = "items"
+help = "`panic` and `alloc` are inferred, never written in a row. To forbid one, write `without alloc` after the signature."
+span = "The row variable, where it is declared or written."
+
+[[E0501.examples]]
+wrong = '''
+fn squares(n: i64) -> List<i64> / alloc { [n * n] }
+'''
+line = 1
+right = '''
+fn squares(n: i64) -> List<i64> { [n * n] }
+'''
+
+[E0502]
+title = "effect that doesn't fit the row"
+reference = "effects.inference"
+tier = "core"
+phase = "types"
+help = "A function's row lists the effects it performs, as `/ io` for printing, so that its callers see them. Add the effect to the row."
+span = "The first call or `raise` in the body that performs the effect."
+
+[[E0502.examples]]
+wrong = '''
+fn log(message: str) { print(message) }
+'''
+line = 1
+right = '''
+fn log(message: str) / io { print(message) }
+'''
+
+[E0503]
+title = "two error types"
+reference = "effects.one-error-type"
+tier = "core"
+phase = "types"
+help = "Code raises one error type. Declare one type with a variant for each failure, or convert one error into the other where they meet."
+span = "The call or `raise` that raises the second error type."
+
+[[E0503.examples]]
+wrong = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> {
+  if text == "" { raise Empty }
+  raise "not a number: {text}"
+}
+'''
+line = 5
+right = '''
+type ParseError = | Empty | NotANumber(str)
+
+fn parse(text: str) -> i64 / raise<ParseError> {
+  if text == "" { raise Empty }
+  raise NotANumber(text)
+}
+'''
+
+[E0504]
+title = "reason on an arm that isn't a catch-all"
+reference = "effects.reasons-only-on-catch-alls"
+tier = "core"
+phase = "types"
+help = "Only a catch-all arm, `_` or a binding, gives a reason with `because`, saying why dropping every error is right. Delete the reason from this arm."
+span = "The reason."
+
+[[E0504.examples]]
+wrong = '''
+type ParseError = | Empty | NotANumber
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise NotANumber }
+
+fn count(text: str) -> i64 {
+  try parse(text) catch {
+    Empty because "an empty line counts zero" => 0
+    NotANumber => 1
+  }
+}
+'''
+line = 7
+right = '''
+type ParseError = | Empty | NotANumber
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise NotANumber }
+
+fn count(text: str) -> i64 {
+  try parse(text) catch {
+    Empty => 0
+    NotANumber => 1
+  }
+}
+'''
+
+[E0505]
+title = "raising call without `try`"
+reference = "effects.marking"
+tier = "core"
+phase = "analyses"
+help = "A call that can raise is marked, so the places where a function can stop are visible: write `try` before it, and `catch` after it to handle the error here."
+span = "The call."
+
+[[E0505.examples]]
+wrong = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn total(lines: List<str>) -> i64 / raise<ParseError> { parse(lines[0]) }
+'''
+line = 5
+right = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn total(lines: List<str>) -> i64 / raise<ParseError> { try parse(lines[0]) }
+'''
+
+[E0506]
+title = "`catch` around a failure that belongs to the caller"
+reference = "effects.catch-around-row-variables"
+tier = "core"
+phase = "analyses"
+help = "The failures of a function parameter belong to your caller, unless its type names their error. Write `raise<E>` in the parameter's row to handle them here."
+span = "The call."
+
+[[E0506.examples]]
+wrong = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn safe(text: str, fallback: fn() -> i64) -> i64 {
+  try {
+    let n = parse(text)
+    n + fallback()
+  }
+    catch _ because "a failure counts as zero" => 0
+}
+'''
+line = 8
+right = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn safe(text: str, fallback: fn() -> i64) -> i64 {
+  let n = try parse(text) catch _ because "a failure counts as zero" => 0
+  n + fallback()
+}
+'''
+
+[E0507]
+title = "failures passed on without their error type"
+reference = "effects.passing-to-paired-variables"
+tier = "core"
+phase = "analyses"
+help = "This would take your caller's failures for an error of its own type. Write `raise<E>` in the parameter's row, so that callers pass only those."
+span = "The use of the function: the call, or its name taken as a value."
+
+[[E0507.examples]]
+wrong = '''
+type Box = { v: i64 }
+
+fn wrap(g: fn() -> i64) -> Result<i64, Box> { Result.of(g) }
+'''
+line = 3
+right = '''
+type Box = { v: i64 }
+
+fn wrap(g: fn() -> i64 / raise<Box>) -> Result<i64, Box> { Result.of(g) }
+'''
+
+[E0508]
+title = "function parameter that escapes"
+reference = "effects.no-escape"
+tier = "core"
+phase = "analyses"
+help = "A function parameter passes its effects through to the caller, so it is only called during the call. Mark it `escaping` to keep it, and its row is then exactly the one written."
+span = "The first use that keeps the parameter: the parameter's name, or the closure literal that names it."
+
+[[E0508.examples]]
+wrong = '''
+type Button = { label: str, on_click: fn() / io }
+
+fn button(label: str, on_click: fn() / io) -> Button { Button { label, on_click } }
+'''
+line = 3
+right = '''
+type Button = { label: str, on_click: fn() / io }
+
+fn button(label: str, escaping on_click: fn() / io) -> Button { Button { label, on_click } }
+'''
+
+[E0509]
+title = "row variable on a parameter that passes its effects through"
+reference = "effects.row-variables"
+tier = "core"
+phase = "items"
+help = "A function parameter passes the effects its row doesn't name through to the caller, so a row variable adds nothing. Delete it, or mark the parameter `escaping` if the function keeps it."
+span = "The first row variable written in the parameter's type."
+
+[[E0509.examples]]
+wrong = '''
+fn apply<e>(x: i64, f: fn(i64) -> i64 / e) -> i64 / e { f(x) }
+'''
+line = 1
+right = '''
+fn apply(x: i64, f: fn(i64) -> i64) -> i64 { f(x) }
+'''
+
+[E0510]
+title = "property that performs `io`"
+reference = "tests.property-io"
+tier = "core"
+phase = "types"
+help = "A property runs on generated cases and gives the same verdict on every run, so it can't read or write the world. Remove the `print`."
+span = "The first call that performs `io`."
+
+[[E0510.examples]]
+wrong = '''
+/// prop: |a: i64, b: i64| { print("{a} {b}"); add(a, b) == add(b, a) }
+fn add(a: i64, b: i64) -> i64 { a +% b }
+'''
+line = 1
+right = '''
+/// prop: |a: i64, b: i64| add(a, b) == add(b, a)
+fn add(a: i64, b: i64) -> i64 { a +% b }
+'''
+
+[E0511]
+title = "handler that doesn't match its effect"
+reference = "handlers.handler-literals"
+tier = "advanced"
+phase = "types"
+help = "A handler implements every operation of its effect, with the parameter and result types that the effect declares. Add the missing operations."
+span = "The handler's effect, or `async` in an `async` literal."
+
+[[E0511.examples]]
+wrong = '''
+effect Ask {
+  fn ask() -> i64
+  fn tell(n: i64)
+}
+
+fn answer() -> i64 {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { Ask.ask() }
+}
+'''
+line = 7
+right = '''
+effect Ask {
+  fn ask() -> i64
+  fn tell(n: i64)
+}
+
+fn answer() -> i64 {
+  let h = handler Ask {
+    fn ask() -> i64 { 1 }
+    fn tell(n: i64) {}
+  }
+  with h { Ask.ask() }
+}
+'''
+
+[E0512]
+title = "effect that reaches `main`"
+reference = "handlers.no-effect-reaches-main"
+tier = "advanced"
+phase = "types"
+help = "A user-defined effect is handled before `main`, a test or an example ends. Wrap the code in `with (handler …) { … }`."
+span = "The effect in the row, or the first performance outside every `with` of its effect."
+
+[[E0512.examples]]
+wrong = '''
+effect Log {
+  fn log(msg: str)
+}
+
+fn main() / io {
+  Log.log("start")
+}
+'''
+line = 6
+right = '''
+effect Log {
+  fn log(msg: str)
+}
+
+fn main() / io {
+  with (handler Log { fn log(msg: str) { print(msg) } }) { Log.log("start") }
+}
+'''
+
+[E0513]
+title = "`resume` outside a handler's operation"
+reference = "handlers.resume-outside-operation"
+tier = "advanced"
+phase = "types"
+help = "`resume` stands only in an operation of a handler written `handler Name -> R`, which takes control. An operation of any other handler gives its value, which resumes the code."
+span = "The `resume`."
+
+[[E0513.examples]]
+wrong = '''
+effect Ask {
+  fn ask() -> i64
+}
+
+fn answer() -> i64 {
+  let h = handler Ask { fn ask() -> i64 { resume(1) } }
+  with h { Ask.ask() }
+}
+'''
+line = 6
+right = '''
+effect Ask {
+  fn ask() -> i64
+}
+
+fn answer() -> i64 {
+  let h = handler Ask { fn ask() -> i64 { 1 } }
+  with h { Ask.ask() }
+}
+'''
+
+[E0514]
+title = "operation that may resume twice"
+reference = "handlers.resume-at-most-once"
+tier = "advanced"
+phase = "analyses"
+help = "A handler resumes at most once on every path. Resume once, and combine the values after."
+span = "The `resume` that could run a second time."
+
+[[E0514.examples]]
+wrong = '''
+effect Ask {
+  fn ask() -> i64
+}
+
+fn answer() -> i64 {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      let a = resume(1)
+      a + resume(2)
+    }
+  }
+  with h { Ask.ask() }
+}
+'''
+line = 9
+right = '''
+effect Ask {
+  fn ask() -> i64
+}
+
+fn answer() -> i64 {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      let a = resume(1)
+      a + 2
+    }
+  }
+  with h { Ask.ask() }
+}
+'''
+
+[E0515]
+title = "effect given twice in a row"
+reference = "handlers.effects-in-rows"
+tier = "advanced"
+phase = "types"
+help = "A row holds one instance of each effect. Use one, or declare two effects."
+span = "The second instance."
+
+[[E0515.examples]]
+wrong = '''
+effect State<S> {
+  fn get() -> S
+}
+
+fn count() -> i64 / {State<i64>, State<str>} {
+  State.get()
+}
+'''
+line = 5
+right = '''
+effect State<S> {
+  fn get() -> S
+}
+
+fn count() -> i64 / State<i64> {
+  State.get()
+}
+'''
+
+[E0516]
+title = "handler around an effect that belongs to the caller"
+reference = "handlers.with-pairing"
+tier = "advanced"
+phase = "analyses"
+help = "A call of a function parameter performs your caller's effects, which this `with` would capture. Name the effect in the parameter's row to handle it here."
+span = "The call."
+
+[[E0516.examples]]
+wrong = '''
+effect Ask {
+  fn ask() -> i64
+}
+
+fn run(f: fn() -> i64) -> i64 {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { f() }
+}
+'''
+line = 6
+right = '''
+effect Ask {
+  fn ask() -> i64
+}
+
+fn run(f: fn() -> i64 / Ask) -> i64 {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { f() }
+}
+'''
+
+[E0517]
+title = "operation with an `inout` parameter"
+reference = "handlers.no-inout-parameter"
+tier = "advanced"
+phase = "items"
+help = "An operation takes values, not places. Take the value and return the new one, which the code that performs it assigns."
+span = "The parameter's name."
+
+[[E0517.examples]]
+wrong = '''
+effect Counter {
+  fn bump(inout n: i64)
+}
+'''
+line = 2
+right = '''
+effect Counter {
+  fn bump(n: i64) -> i64
+}
+'''
+
+[E0518]
+title = "effect with no operations"
+reference = "handlers.declaring-effect"
+tier = "advanced"
+phase = "items"
+help = "An effect is its operations, so one with none can never be performed. Declare its operations."
+span = "The effect's name."
+
+[[E0518.examples]]
+wrong = '''
+effect Audited {
+}
+'''
+line = 1
+right = '''
+effect Audited {
+  fn audit(note: str)
+}
+'''
+
+[E0600]
+title = "malformed manifest"
+reference = "packages.manifest"
+tier = "core"
+phase = "items"
+help = "stilt.toml holds a `[package]` table with `name` and `edition`, and `link` for C libraries, and a `[dependencies]` table whose entries give `path`, or `from`, `version` and `hash`, and `may`. Fix the line it points at."
+span = "The key or the value it is about: the unknown key or table's name, the value of the wrong type or form, the entry's key for a combination of keys that isn't allowed; for a file that isn't TOML 1.0, the first character from which no TOML document can continue."
+
+[E0601]
+title = "dependency that can't be fetched"
+reference = "packages.fetch-failures"
+tier = "core"
+phase = "items"
+help = "A dependency comes from a directory that holds its stilt.toml, with `path`, or from a git repository, with `from`, whose versions are tags such as `v1.2.0`."
+span = "The entry's key, in the manifest that holds it; for a fetched package that can't be built from its content, the first entry of the root's manifest through which it arrives."
+
+[E0602]
+title = "content that doesn't match its hash"
+reference = "packages.checked-content"
+tier = "core"
+phase = "items"
+help = "A dependency is pinned by its content's hash, so a changed release is caught, and nothing was built from it. If its author retagged the version on purpose, remove `hash`, and the next `stilt check` pins the new content."
+span = "The `hash` value that the content doesn't match, when the root's manifest or a path dependency's gives it; otherwise, and for two hashes of one version, the first entry of the root's manifest through which the package arrives."
+
+[E0603]
+title = "dependency named unlike its package"
+reference = "packages.dependency-names"
+tier = "core"
+phase = "items"
+help = "A dependency's entry has its package's own name, so that its modules have one name everywhere. Rename the entry."
+span = "The entry's key."
+
+[E0604]
+title = "version that understates its API change"
+reference = "versions.checked-versions"
+tier = "core"
+phase = "items"
+help = "A release that removes or changes what other packages use needs a new major version, and one that only adds needs a new minor one. Nothing was written to stilt.toml."
+span = "The entry's key."
+
+[E0605]
+title = "versions that don't agree"
+reference = "versions.compatible-selections"
+tier = "core"
+phase = "items"
+help = "A program holds one version of each package, the highest that any manifest asks for, and that version removes what another manifest needs. Ask for a version that keeps it, or change the code that needs it."
+span = "The first entry of the root's manifest through which the requests arrive."
+
+[E0606]
+title = "two packages with one name"
+reference = "packages.one-name-one-package"
+tier = "core"
+phase = "items"
+help = "A package's modules are named after it, so a program can't hold two packages of one name. Remove one of them."
+span = "The first entry of the root's manifest that, with the entries before it, brings both packages."
+
+[E0607]
+title = "dependency with errors"
+reference = "packages.dependencies-with-errors"
+tier = "core"
+phase = "items"
+help = "A fetched dependency with errors can't be used where they are. Use another version, or tell its author; `stilt show` with the error's code explains it."
+span = "The first entry of the root's manifest through which the dependency arrives."
+
+[E0608]
+title = "effect that the manifest doesn't grant"
+reference = "packages.ungranted-effects"
+tier = "core"
+phase = "items"
+help = "A dependency performs only the effects and capabilities that its entry grants with `may`, as `may = [\"fs\"]`, and `unsafe` code only with `unsafe`. Grant what it needs, if you trust it with that."
+span = "The entry's key, in the manifest that holds it."
+
+[E0609]
+title = "dependency cycle"
+reference = "packages.dependency-cycles"
+tier = "core"
+phase = "items"
+help = "A package can't depend on itself, even through others. Move what both packages use into a package of its own."
+span = "The first entry of the root's manifest through which a package of the cycle arrives."
+
+[E0610]
+title = "malformed profile"
+reference = "builds.profile-form"
+tier = "core"
+phase = "items"
+help = "A release build reads a profile whole or not at all. Fix the line, or delete the profile and write it again with `stilt run --profile`."
+span = "The line, from its first character to its last."
+
+[E0611]
+title = "C library that isn't found"
+reference = "c.finding-libraries"
+tier = "systems"
+phase = "items"
+help = "The system's loader finds each library of `link` as `libNAME.dylib` on macOS and `libNAME.so` on Linux. Install the library, or check its name: `link = [\"z\"]` names zlib."
+span = "The library's string in `link`."
+
+[E0612]
+title = "C libraries for another target"
+reference = "c.build-targets"
+tier = "systems"
+phase = "items"
+help = "A program that links C libraries builds only for the machine it is built on. Build it without `--target`, or run it with `stilt run`."
+span = "The first library of the program's packages in `link`: the root's first, then each dependency's."
+
+[E0700]
+title = "malformed edit"
+reference = "edits.refusals"
+tier = "core"
+phase = "refusal"
+help = "An edit's address is a path, with `/body` for a body, then `#` and the part's four-digit hash, as `stilt show --json` gives it. Nothing was written."
+span = "The part of the address that is malformed, in the command line; the second `-` of an edit that reads standard input again."
+
+[E0701]
+title = "address that names no part"
+reference = "edits.refusals"
+tier = "core"
+phase = "refusal"
+help = "An edit replaces a declaration or a body in the program's own files. Find the path with `stilt show`. Nothing was written."
+span = "The path of the address, in the command line."
+
+[E0702]
+title = "ambiguous address"
+reference = "edits.refusals"
+tier = "core"
+phase = "refusal"
+help = "The path names two declarations, so the address adds the hash of the one you mean, as `stilt show --json` gives it. Nothing was written."
+span = "The second declaration that the address names."
+
+[E0703]
+title = "stale address"
+reference = "edits.refusals"
+tier = "core"
+phase = "refusal"
+help = "The code changed after the edit's author read it, so the edit isn't applied. Read it again with `stilt show`, and write the edit against what it is now. Nothing was written."
+span = "The first token of the part, as it is now."
+
+[E0704]
+title = "edit that doesn't parse as its part"
+reference = "edits.refusals"
+tier = "core"
+phase = "refusal"
+help = "A body's new text is a block, and a declaration's is one declaration of the same kind. Nothing was written."
+span = "The first syntax error of the new text, in the edit's text; the start of the text when it parses but is not the part."
+
+[E0705]
+title = "overlapping edits"
+reference = "edits.refusals"
+tier = "core"
+phase = "refusal"
+help = "Two edits can't change the same code. Make them one edit. Nothing was written."
+span = "The address of the later of the two edits, in the command line."
+
+[W0001]
+title = "commented-out code"
+reference = "lexical.commented-out-code"
+tier = "core"
+phase = "warnings"
+help = "Commented-out code goes stale while readers take it as true. Delete it; version control keeps it."
+span = "The comment."
+
+[[W0001.examples]]
+wrong = '''
+fn total(prices: List<i64>) -> i64 {
+  // let discount = 10
+  prices.fold(0, |sum, p| sum + p)
+}
+'''
+line = 2
+right = '''
+fn total(prices: List<i64>) -> i64 {
+  prices.fold(0, |sum, p| sum + p)
+}
+'''
+
+[W0002]
+title = "stale doc"
+reference = "docs.stale"
+tier = "core"
+phase = "warnings"
+help = "The doc was written for the old signature. Update it, or, if it still holds, send the declaration back as it is, which pins it again."
+span = "The first line of the doc."
+
+[W0300]
+title = "hole"
+reference = "declarations.typed-holes"
+tier = "core"
+phase = "warnings"
+help = "A hole `?` stands for code not written yet: the program checks and runs, and panics if it reaches the hole."
+span = "The hole."
+
+[[W0300.examples]]
+wrong = '''
+fn shipping(weight: i64) -> i64 { ? }
+'''
+line = 1
+right = '''
+fn shipping(weight: i64) -> i64 { 5 + weight / 1000 }
+'''
+
+[W0301]
+title = "unreachable arm"
+reference = "patterns.unreachable-arms"
+tier = "core"
+phase = "warnings"
+help = "An earlier arm already matches every value that this one matches, so it never runs. Move it before that arm, or delete it."
+span = "The arm's pattern."
+
+[[W0301.examples]]
+wrong = '''
+fn label(n: i64) -> str {
+  match n {
+    _ => "any"
+    0 => "zero"
+  }
+}
+'''
+line = 4
+right = '''
+fn label(n: i64) -> str {
+  match n {
+    0 => "zero"
+    _ => "any"
+  }
+}
+'''
+
+[W0302]
+title = "duplicate body"
+reference = "docs.duplicate-bodies"
+tier = "core"
+phase = "warnings"
+help = "Two copies of one body drift apart when only one is fixed. Call the first function, or move what both do into a function that each calls."
+span = "The name of the later function, in the file whose path sorts last, then at its last position."
+
+[[W0302.examples]]
+wrong = '''
+type Order = { qty: i64, grams: i64, box: i64 }
+
+fn mass(o: Order) -> i64 { o.qty * o.grams + o.box * 2 + o.qty - 1 }
+
+fn heft(p: Order) -> i64 { p.qty * p.grams + p.box * 2 + p.qty - 1 }
+
+fn main() / io {
+  let o = Order { qty: 2, grams: 300, box: 50 }
+  print("{mass(o)} {heft(o)}")
+}
+'''
+line = 5
+right = '''
+type Order = { qty: i64, grams: i64, box: i64 }
+
+fn mass(o: Order) -> i64 { o.qty * o.grams + o.box * 2 + o.qty - 1 }
+
+fn main() / io {
+  let o = Order { qty: 2, grams: 300, box: 50 }
+  print("{mass(o)} {mass(o)}")
+}
+'''
+
+[W0303]
+title = "`if let` that always matches"
+reference = "expressions.if-let-always"
+tier = "core"
+phase = "warnings"
+help = "The pattern matches every value, so the first block always runs with the whole value bound. To match what an `Option` holds, write `if let Some(x) = …`; to bind the value, write `let`."
+span = "The pattern."
+
+[[W0303.examples]]
+wrong = '''
+fn first_or_zero(xs: List<i64>) -> i64 {
+  if let x = xs.first() { x else 0 } else { 0 }
+}
+'''
+line = 2
+right = '''
+fn first_or_zero(xs: List<i64>) -> i64 {
+  if let Some(x) = xs.first() { x } else { 0 }
+}
+'''
+
+[W0500]
+title = "`try` with nothing to mark"
+reference = "effects.empty-try"
+tier = "core"
+phase = "warnings"
+help = "`try` marks calls that can raise, and nothing here can. Delete it."
+span = "The `try`."
+
+[[W0500.examples]]
+wrong = '''
+fn double(n: i64) -> i64 { try n * 2 }
+'''
+line = 1
+right = '''
+fn double(n: i64) -> i64 { n * 2 }
+'''
+
+[W0501]
+title = "catch-all without a reason"
+reference = "effects.catch-alls-need-reason"
+tier = "core"
+phase = "warnings"
+help = "An arm that drops every error hides failures. Raise the error again, use it, or say why dropping it is right, as `catch _ because \"…\" => …`."
+span = "The arm's pattern."
+
+[[W0501.examples]]
+wrong = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn count(text: str) -> i64 { try parse(text) catch _ => 0 }
+'''
+line = 5
+right = '''
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn count(text: str) -> i64 { try parse(text) catch _ because "an empty line counts zero" => 0 }
+'''
+
+[E0420]
+title = "not a viewable type"
+reference = "views.viewable-types"
+tier = "advanced"
+phase = "analyses"
+help = "Only a `str` or a `List` can be viewed. Take the value itself."
+span = "The type argument of `View` or `Iter.of`'s argument, where it is written or inferred."
+
+[[E0420.examples]]
+wrong = '''
+use std.view
+
+fn count(v: view.View<i64>) -> i64 { v.len() }
+'''
+line = 3
+right = '''
+use std.view
+
+fn count(v: view.View<List<i64>>) -> i64 { v.len() }
+'''
+
+[E0421]
+title = "a view can't be stored"
+reference = "views.view-types"
+tier = "advanced"
+phase = "analyses"
+help = "A view reads a value that someone else holds, so it can't be stored where it could outlive it. Store the value, or the range it covers."
+span = "The view type where it is written in a field, a payload, an element, a component or a type argument of a declared type, or the expression that builds such a value from a view."
+
+[[E0421.examples]]
+wrong = '''
+use std.view
+
+type Line = { text: view.View<str> }
+'''
+line = 3
+right = '''
+type Line = { text: str }
+'''
+
+[E0422]
+title = "a view outlives its source"
+reference = "views.escaping"
+tier = "advanced"
+phase = "analyses"
+help = "The view reads a local that is gone when the function returns. Return a value of its own, or view a parameter instead."
+span = "The expression that makes the view escape: the value returned, or the closure literal that captures it."
+
+[[E0422.examples]]
+wrong = '''
+use std.view
+
+fn rest(xs: List<i64>) -> view.View<List<i64>> {
+  let ys = xs.slice(1, xs.len())
+  let v = view.View.all(ys)
+  v
+}
+'''
+line = 6
+right = '''
+fn rest(xs: List<i64>) -> List<i64> {
+  xs.slice(1, xs.len())
+}
+'''
+
+[E0423]
+title = "changing a value while a view reads it"
+reference = "views.change-while-viewed"
+tier = "advanced"
+phase = "analyses"
+help = "A view reads its source for as long as it lives. Finish with the view before changing the source."
+span = "The modification: the place assigned, the argument passed `inout`, or the receiver taken by `inout self`."
+
+[[E0423.examples]]
+wrong = '''
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  let v = view.View.all(xs)
+  print("{v.len()}")
+  xs.push(4)
+  print("{xs.len()}")
+}
+'''
+line = 7
+right = '''
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  print("{view.View.all(xs).len()}")
+  xs.push(4)
+  print("{xs.len()}")
+}
+'''
+
+[E0424]
+title = "a projection yields exactly once"
+reference = "projections.once-on-every-path"
+tier = "advanced"
+phase = "analyses"
+help = "A projection hands its caller one place on every path. Yield on each path, or raise or panic on the others."
+span = "The `yield` inside a loop, the second `yield` of a path, or the end of the body or the `return` that a path reaches without one."
+
+[[E0424.examples]]
+wrong = '''
+fn at(inout xs: List<i64>, i: i64) -> inout i64 {
+  if i < xs.len() {
+    yield xs[i]
+  }
+}
+'''
+line = 5
+right = '''
+fn at(inout xs: List<i64>, i: i64) -> inout i64 {
+  yield xs[i]
+}
+'''
+
+[E0425]
+title = "`yield` outside a projection"
+reference = "projections.yield"
+tier = "advanced"
+phase = "types"
+help = "`yield` hands a place to the caller, which only a projection, a function whose result is written `inout T`, does. Write the result as `-> inout T`, or return a value."
+span = "The `yield`."
+
+[[E0425.examples]]
+wrong = '''
+fn first(inout xs: List<i64>) {
+  yield xs[0]
+}
+'''
+line = 2
+right = '''
+fn first(inout xs: List<i64>) -> inout i64 {
+  yield xs[0]
+}
+'''
+
+[E0426]
+title = "a projection isn't a value"
+reference = "projections.not-a-value"
+tier = "advanced"
+phase = "types"
+help = "A projection's call is a place, not a value, so it can only be called. Call it where you use it."
+span = "The projection's name, where it is used other than to call it."
+
+[[E0426.examples]]
+wrong = '''
+fn at(inout xs: List<i64>, i: i64) -> inout i64 {
+  yield xs[i]
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  let cell = at
+  cell(inout xs, 0) = 3
+  print("{xs}")
+}
+'''
+line = 7
+right = '''
+fn at(inout xs: List<i64>, i: i64) -> inout i64 {
+  yield xs[i]
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  at(inout xs, 0) = 3
+  print("{xs}")
+}
+'''
+
+[E0427]
+title = "a projection can't raise"
+reference = "projections.cannot-raise"
+tier = "advanced"
+phase = "items"
+help = "A projection's call is a place, which `try` can't mark, so a projection can't raise. Check before calling it, or panic on a bad index."
+span = "The `raise<E>` element of the projection's row."
+
+[[E0427.examples]]
+wrong = '''
+type OutOfRange = | OutOfRange
+
+fn at(inout xs: List<i64>, i: i64) -> inout i64 / raise<OutOfRange> {
+  yield xs[i]
+}
+'''
+line = 3
+right = '''
+fn at(inout xs: List<i64>, i: i64) -> inout i64 {
+  yield xs[i]
+}
+'''
+
+[E0428]
+title = "a view reads what it must write"
+reference = "projections.writable-bindings"
+tier = "advanced"
+phase = "analyses"
+help = "A view that the code writes through is made writable, with `view.into(inout xs, …)`."
+span = "The view given to the `var` binding, yielded or returned."
+
+[[E0428.examples]]
+wrong = '''
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var head = view.View.of(xs, 0, 2)
+  head[0] = 9
+  print("{head}")
+}
+'''
+line = 5
+right = '''
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var head = view.into(inout xs, 0, 2)
+  head[0] = 9
+  print("{head}")
+}
+'''
+
+[E0429]
+title = "reaching a value while a view writes it"
+reference = "projections.reaching-written-source"
+tier = "advanced"
+phase = "analyses"
+help = "While a view writes its source, the source is the view's. Use the view, or let it end before reading the source."
+span = "The access: the place read, assigned or passed, or the receiver of a method."
+
+[[E0429.examples]]
+wrong = '''
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var head = view.into(inout xs, 0, 2)
+  head[0] = 9
+  print("{xs.len()}")
+}
+'''
+line = 7
+right = '''
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var head = view.into(inout xs, 0, 2)
+  head[0] = 9
+  print("{head.len()}")
+}
+'''
+
+[E0430]
+title = "`when` inside a `when`"
+reference = "shared.locks"
+tier = "advanced"
+phase = "analyses"
+help = "Holding one shared value while waiting for another could deadlock. Hold both in one `when`, as `when a, b { … }`."
+span = "The inner `when`, or the call of a function that has `locks`."
+
+[[E0430.examples]]
+wrong = '''
+use std.sync
+
+type Account = { balance: i64 }
+
+fn moved(a: sync.Shared<Account>, b: sync.Shared<Account>, n: i64) {
+  when a {
+    a.balance -= n
+    when b { b.balance += n }
+  }
+}
+'''
+line = 8
+right = '''
+use std.sync
+
+type Account = { balance: i64 }
+
+fn moved(a: sync.Shared<Account>, b: sync.Shared<Account>, n: i64) {
+  when a, b {
+    a.balance -= n
+    b.balance += n
+  }
+}
+'''
+
+[E0431]
+title = "closure that can't run in parallel"
+reference = "par.what-runs-in-parallel"
+tier = "advanced"
+phase = "analyses"
+help = "`std.par` runs the closure on other threads, so it can't reach a `Shared` value. Read the shared value once before the call, and capture the copy."
+span = "The argument."
+
+[[E0431.examples]]
+wrong = '''
+use std.par
+use std.sync
+
+fn scaled(factor: sync.Shared<i64>, xs: List<i64>) -> List<i64> {
+  par.map(xs, |x| when factor { factor * x })
+}
+'''
+line = 5
+right = '''
+use std.par
+use std.sync
+
+fn scaled(factor: sync.Shared<i64>, xs: List<i64>) -> List<i64> {
+  let f = when factor { factor }
+  par.map(xs, |x| f * x)
+}
+'''
+
+[E0432]
+title = "value that can't reach another task"
+reference = "shared.tasks-and-modes"
+tier = "advanced"
+phase = "analyses"
+help = "A view can't reach another task, since it must not outlive its source. Capture the value it views."
+span = "The value given to `Shared.new`, or the capture of the task's function."
+
+[[E0432.examples]]
+wrong = '''
+use std.task
+use std.view
+
+fn counted(xs: List<i64>) -> i64 / async {
+  let v = view.View.all(xs)
+  task.spawn(|| v.len()).await()
+}
+'''
+line = 6
+right = '''
+use std.task
+
+fn counted(xs: List<i64>) -> i64 / async {
+  task.spawn(|| xs.len()).await()
+}
+'''
+
+[E0433]
+title = "`when` on something that isn't shared"
+reference = "shared.when"
+tier = "advanced"
+phase = "types"
+help = "`when` holds shared values, of type `Shared<T>`. Use an ordinary value directly."
+span = "The name."
+
+[[E0433.examples]]
+wrong = '''
+fn bumped(n: i64) -> i64 {
+  when n { n + 1 }
+}
+'''
+line = 2
+right = '''
+fn bumped(n: i64) -> i64 {
+  n + 1
+}
+'''
+
+[E0434]
+title = "scope that escapes"
+reference = "tasks.scope-that-escapes"
+tier = "advanced"
+phase = "analyses"
+help = "A scope ends when its `task.scope` call returns, so it is used there to start tasks, as `s.spawn(f)`, and never kept or captured by a task."
+span = "The first use that keeps the scope: its name, or the closure literal that names it."
+
+[[E0434.examples]]
+wrong = '''
+use std.task
+
+fn started() -> i64 / {io, async, raise<str>} {
+  try task.scope(|s| {
+    let t = try s.spawn(|| try s.spawn(|| 1).await())
+    t.await()
+  })
+}
+'''
+line = 5
+right = '''
+use std.task
+
+fn started() -> i64 / {io, async, raise<str>} {
+  try task.scope(|s| {
+    let t = try s.spawn(|| 1)
+    t.await()
+  })
+}
+'''
+
+[E0435]
+title = "`when` in a lazy value's function"
+reference = "polymorphism.lazy-waits-for-nothing"
+tier = "advanced"
+phase = "analyses"
+help = "A `Lazy` computes its value whenever it is first asked for, so its function must not wait for shared values. Read them before, and capture the copy."
+span = "The `when`, or the call of a function that has `locks`, inside the function that `Lazy.new` keeps."
+
+[[E0435.examples]]
+wrong = '''
+use std.sync
+use std.lazy
+
+type Rates = { euro: f64 }
+
+fn priced(rates: sync.Shared<Rates>, amount: f64) -> lazy.Lazy<f64> {
+  lazy.Lazy.new(|| when rates { amount * rates.euro })
+}
+'''
+line = 7
+right = '''
+use std.sync
+use std.lazy
+
+type Rates = { euro: f64 }
+
+fn priced(rates: sync.Shared<Rates>, amount: f64) -> lazy.Lazy<f64> {
+  let euro = when rates { rates.euro }
+  lazy.Lazy.new(|| amount * euro)
+}
+'''
+
+[E0436]
+title = "unsafe operation outside `unsafe`"
+reference = "c.unsafe-operations"
+tier = "systems"
+phase = "types"
+help = "Calling C, or reading through a pointer, can break every guarantee Stilt makes, so it stands inside `unsafe because \"…\" { … }`, whose reason says why the code is sound."
+span = "The call, or the name of the function used as a value."
+
+[[E0436.examples]]
+wrong = '''
+use std.c
+
+extern fn strlen(s: c.Str) -> u64
+
+pub fn length(text: str) -> u64 {
+  text.with_c_str(|s| strlen(s))
+}
+'''
+line = 6
+right = '''
+use std.c
+
+extern fn strlen(s: c.Str) -> u64
+
+pub fn length(text: str) -> u64 {
+  unsafe because "with_c_str ends s with a NUL" { text.with_c_str(|s| strlen(s)) }
+}
+'''
+
+[E0437]
+title = "`unsafe` with no reason"
+reference = "c.unsafe-because"
+tier = "systems"
+phase = "types"
+help = "An `unsafe` block's reason says why its code is sound, and `stilt show` prints it beside the block. Write the reason."
+span = "The reason."
+
+[[E0437.examples]]
+wrong = '''
+use std.c
+
+extern fn strlen(s: c.Str) -> u64
+
+pub fn length(text: str) -> u64 {
+  unsafe because " " { text.with_c_str(|s| strlen(s)) }
+}
+'''
+line = 6
+right = '''
+use std.c
+
+extern fn strlen(s: c.Str) -> u64
+
+pub fn length(text: str) -> u64 {
+  unsafe because "with_c_str ends s with a NUL" { text.with_c_str(|s| strlen(s)) }
+}
+'''

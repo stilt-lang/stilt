@@ -1,0 +1,71 @@
+//~ rule: generics.array-effects, facts.own-storage, facts.last-use, facts.writes-in-place, facts.in-place-parameters, facts.copy-at-call, facts.in-place-promise
+//~ run-output: "0.0 0.5 2.0 (5, 3) true [(1, (3.0, false))] On(3) 1 [1, 7, 3] [1, 2, 4] 10.0 0.5"
+
+use std.array
+
+// Elements of types that aren't copy-on-write hold nothing that another element shares, so a
+// write through an element's fields, tuple elements and array elements is in place, as a write
+// of the element itself is.
+type Particle = { x: f64, v: f64 }
+
+type Pos = { at: (i64, i64), on: bool }
+
+type State = | Off | On(i64)
+
+type Cell = { state: State, n: i64 }
+
+type Grid = { cells: array.Array<i64, 3> }
+
+fn step(inout ps: List<Particle>, dt: f64) without alloc {
+  for i in 0..ps.len() { ps[i].x += ps[i].v * dt }
+}
+
+// Nested fields.
+fn moved(inout ps: List<Pos>) without alloc {
+  ps[0].at.0 = 5
+  ps[0].at.1 += 1
+  ps[0].on = true
+}
+
+fn tuples(inout ts: List<(i64, (f64, bool))>) without alloc {
+  ts[0].0 = 1
+  ts[0].1.0 *= 2.0
+}
+
+// A field of a variant type that isn't recursive.
+fn switched(inout cs: List<Cell>) without alloc {
+  cs[0].state = On(3)
+  cs[0].n -= 1
+}
+
+// An array's elements are stored inline, in a field and as a list's element.
+fn arrays(inout gs: List<Grid>, inout rows: List<array.Array<i64, 3>>) without alloc {
+  gs[0].cells[1] = 7
+  rows[0][2] += 1
+}
+
+// A `let` parameter rebound by `var` at its last use holds its own storage too.
+fn stepped(ps: List<Particle>) -> List<Particle> without alloc {
+  var qs = ps
+  qs[0].x = 10.0
+  qs
+}
+
+fn main() / io {
+  var ps = [Particle { x: 0.0, v: 1.0 }, Particle { x: 1.0, v: 2.0 }]
+  // A copy of `ps` lasts at the call, so the call copies it, and `keep` keeps its value.
+  let keep = ps
+  step(inout ps, 0.5)
+  var qs = [Pos { at: (1, 2), on: false }]
+  moved(inout qs)
+  var ts = [(0, (1.5, false))]
+  tuples(inout ts)
+  var cs = [Cell { state: Off, n: 2 }]
+  switched(inout cs)
+  var gs = [Grid { cells: [1, 2, 3] }]
+  var rows: List<array.Array<i64, 3>> = [[1, 2, 3]]
+  arrays(inout gs, inout rows)
+  // `ps` is used after the call, so the call copies it, and `ps` keeps its value.
+  let s = stepped(ps)
+  print("{keep[0].x} {ps[0].x} {ps[1].x} {qs[0].at} {qs[0].on} {ts} {cs[0].state} {cs[0].n} {gs[0].cells} {rows[0]} {s[0].x} {ps[0].x}")
+}

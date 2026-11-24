@@ -1,0 +1,22 @@
+//~ rule: types.option-field-not-place, expressions.places, traits.methods
+//~ run-output: "[9, 2] None"
+
+type Slot = { i: i64 }
+type Holder = { slot: Option<Slot> }
+
+trait Reset {
+  fn reset(inout self)
+}
+
+impl<T> Reset for Option<T> {
+  fn reset(inout self) { self = None }
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  let pick: Option<Slot> = Some(Slot { i: 0 })
+  xs[pick.i else 1] = 9
+  var holder = Holder { slot: pick }
+  holder.slot.reset()
+  print("{xs} {holder.slot}")
+}

@@ -1,0 +1,7 @@
+//~ rule: traits.bound-reported-once, std.map-key-bounds
+
+fn build(k: f64) -> i64 {
+  var m = Map.new() //~ ERROR E0318
+  m[k] = 1
+  m.len()
+}

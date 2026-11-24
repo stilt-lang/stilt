@@ -1,0 +1,18 @@
+//~ rule: values.inout-argument-order, std.finding-keys
+//~ stdout:
+//~ | key
+//~ panic: missing-key
+//~ panic-at: inout_missing_key.lt:16:14
+
+fn bump(inout n: i64) { n += 1 }
+
+fn key(s: str) -> str / io {
+  print("key")
+  s
+}
+
+fn main() / io {
+  var m: Map<str, i64> = Map.new()
+  bump(inout m[key("k")])
+  print("not reached")
+}

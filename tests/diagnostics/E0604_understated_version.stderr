@@ -1,0 +1,12 @@
+── VERSION THAT UNDERSTATES ITS API CHANGE ───────────── stilt.toml:5:1  [E0604]
+
+The highest version of `json`, 1.5.0, removes `json.decode.parse_int`, which
+1.4.2 has, so it needs a new major version, 2.0.0; 1.4.2 is the highest version
+that checks:
+
+  5 │ json = { from = "file:///repos/json" }
+    │ ^^^^
+
+A release that removes or changes what other packages use needs a new major
+version, and one that only adds needs a new minor one. Nothing was written to
+stilt.toml.

@@ -1,0 +1,10 @@
+// Closure parameters marked `inout`: one space after `inout`, none inside the bars, and a type
+// after a colon and a space, as on any parameter.
+fn main() {
+  step(|inout b, dt| { b.x += b.v * dt }, inout b, 3)
+  let rules: List<fn(inout i64)> = [|inout n| { n += 1 }, |inout n: i64| { n *= 10 }]
+  apply(|inout state: State, x| {
+    state.count += x
+    state.last = x
+  })
+}

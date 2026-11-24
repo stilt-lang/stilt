@@ -1,0 +1,38 @@
+//~ rule: numbers.conversions, numbers.printing-integers, numbers.printing-floats
+//~ stdout:
+//~ | 255 -128 65535 -1 4294967295 18446744073709551615 -5
+//~ | Some(127) None Some(-128) None Some(255) None None Some(0)
+//~ | Some(32767) None Some(9223372036854775807) None Some(2147483647) None Some(0) None
+//~ | 16777216.0 16777220.0 16777215.0 9.223372036854776e18 -9.223372036854776e18 1.8446744073709552e19 1.8446744e19
+
+fn main() / io {
+  let a: u8 = 255
+  let b: i8 = -128
+  let c: u16 = 65535
+  let d: i32 = -1
+  let e = u32.MAX
+  let f = u64.MAX
+  let g: i16 = -5
+  print("{a.to_i16()} {b.to_i64()} {c.to_u32()} {d.to_i64()} {e.to_u64()} {f.to_u64()} {g.to_i16()}")
+  let h: i64 = 127
+  let i: i64 = 128
+  let j: i16 = -128
+  let k: i16 = -129
+  let l: u16 = 255
+  let m: u16 = 256
+  let n: i8 = -1
+  let o: i8 = 0
+  print("{h.to_i8()} {i.to_i8()} {j.to_i8()} {k.to_i8()} {l.to_u8()} {m.to_u8()} {n.to_u8()} {o.to_u64()}")
+  let p: i32 = 32767
+  let q: i32 = 32768
+  let r: u64 = 9223372036854775807
+  let s: u64 = 9223372036854775808
+  let t: i64 = 2147483647
+  let u: i64 = -2147483649
+  let v = i64.MIN
+  print("{p.to_i16()} {q.to_i16()} {r.to_i64()} {s.to_i64()} {t.to_i32()} {u.to_i32()} {o.to_u8()} {v.to_u64()}")
+  let w: i32 = 16777217
+  let x: i64 = 16777219
+  let y: u32 = 16777215
+  print("{w.to_f32()} {x.to_f32()} {y.to_f32()} {i64.MAX.to_f64()} {v.to_f64()} {f.to_f64()} {f.to_f32()}")
+}

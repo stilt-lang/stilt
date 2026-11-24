@@ -1,0 +1,99 @@
+//~ tier: core
+
+// Locality (modes.escaping, modes.not-escaping): a local escapes at the first line where its value
+// leaves the function, and a parameter's locality is its consumption (values.consumed-parameters).
+
+type Pair = { left: List<i64>, right: List<i64> }
+
+fn grown(xs: List<i64>, x: i64) -> List<i64> {
+  var out = xs //~ CONSUMES xs
+  out.push(x) //~ ALLOC
+  out //~ ESCAPES out
+}
+
+// Returning a local makes it escape.
+fn returned() -> List<i64> {
+  let xs = [1, 2] //~ ALLOC
+  xs //~ ESCAPES xs
+}
+
+// Raising a local makes it escape.
+fn raised(flag: bool) / raise<str> {
+  let msg = "no"
+  if flag { raise msg } //~ ESCAPES msg
+}
+
+// Storing a local in a record literal makes it escape.
+fn in_a_record() -> Pair {
+  let xs = [1] //~ ALLOC
+  Pair { left: xs, right: [] } //~ ESCAPES xs ALLOC
+}
+
+// Storing a local in a tuple literal makes it escape.
+fn in_a_tuple() -> (List<i64>, i64) {
+  let xs = [1] //~ ALLOC
+  (xs, 1) //~ ESCAPES xs
+}
+
+// Storing a local in a list literal makes it escape.
+fn in_a_list() -> List<List<i64>> {
+  let xs = [1] //~ ALLOC
+  [xs] //~ ESCAPES xs ALLOC
+}
+
+// Passing a local to a variant constructor makes it escape.
+fn in_a_variant() -> Option<List<i64>> {
+  let xs = [1] //~ ALLOC
+  Some(xs) //~ ESCAPES xs
+}
+
+// Assigning a local into another place makes it escape.
+fn assigned() -> Map<str, List<i64>> {
+  let xs = [1] //~ ALLOC
+  var m: Map<str, List<i64>> = Map.new() //~ ALLOC
+  m["k"] = xs //~ ESCAPES xs ALLOC
+  m //~ ESCAPES m
+}
+
+// A local captured by a closure that is returned escapes where it is captured, and the closure
+// escapes where it is returned.
+fn captured_and_returned() -> fn() -> i64 {
+  let xs = [1] //~ ALLOC
+  let f = || xs.len() //~ ESCAPES xs ALLOC
+  f //~ ESCAPES f
+}
+
+// Passing a local to a consumed parameter makes it escape.
+fn passed_on() -> List<i64> {
+  let xs = [1] //~ ALLOC
+  grown(xs, 2) //~ ESCAPES xs ALLOC
+}
+
+// A local passed `inout` comes back, so it doesn't escape.
+fn passed_inout() -> i64 {
+  var xs = [1] //~ ALLOC
+  xs.push(2) //~ ALLOC
+  xs.len()
+}
+
+// A local captured by a closure that is only called in the function doesn't escape.
+fn captured_locally() -> i64 {
+  let xs = [1] //~ ALLOC
+  let f = || xs.len() //~ ALLOC
+  f() + f() //~ OVERFLOW DIV
+}
+
+// A local that is only read doesn't escape, and nor does one rebound by `let` or `var`. The push
+// copies, since `xs` still reads the list after it (modes.shared-writes).
+fn only_read() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  var ys = xs
+  ys.push(3) //~ SHARED ys ALLOC COPY
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// A parameter's locality is its consumption, printed as such and not as escaping.
+fn parameter(xs: List<i64>) -> List<i64> {
+  var ys = xs //~ CONSUMES xs
+  ys //~ ESCAPES ys
+}

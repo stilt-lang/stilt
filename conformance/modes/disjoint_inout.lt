@@ -1,0 +1,21 @@
+//~ rule: values.inout-argument-order, modes.overlap, modes.law, modes.overlapping-inout
+//~ run-output: "Outer { a: 3, b: Inner { c: 2, d: 1 } } [(4, 3)]"
+
+type Inner = { c: i64, d: i64 }
+type Outer = { a: i64, b: Inner }
+
+fn swap(inout x: i64, inout y: i64) {
+  let t = x
+  x = y
+  y = t
+}
+
+fn main() / io {
+  var p = Outer { a: 1, b: Inner { c: 2, d: 3 } }
+  swap(inout p.a, inout p.b.c)
+  swap(inout p.b.c, inout p.b.d)
+  swap(inout p.b.c, inout p.a)
+  var pairs = [(3, 4)]
+  swap(inout pairs[0].0, inout pairs[0].1)
+  print("{p} {pairs}")
+}

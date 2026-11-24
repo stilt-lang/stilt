@@ -1,0 +1,15 @@
+// The elements of the row that an effect doesn't fit.
+
+type Problem = Bad | Worse
+
+fn quiet(n: i64) -> i64 / raise<Problem> {
+  print("{n}") //~ E0502
+  //~ alternative: effect raise<Problem>
+  n
+}
+
+// A row that holds nothing allows nothing.
+fn pure(n: i64) -> i64 {
+  print("{n}") //~ E0502
+  n
+}

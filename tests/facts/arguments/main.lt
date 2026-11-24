@@ -1,0 +1,13 @@
+//~ tier: core
+
+// Passing arguments to a parameter of a polymorphic function type that another module declares
+// doesn't make a module advanced (polymorphism.advanced-tier).
+
+use strategies
+
+fn quoted<T: Show>(x: T) -> str { "'{x}'" } //~ ALLOC
+
+fn main() / io {
+  print(strategies.both(quoted, 1, "a")) //~ ALLOC CONSOLE
+  print(strategies.both(|x| "<{x}>", 2, "b")) //~ ALLOC CONSOLE
+}

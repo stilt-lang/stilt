@@ -1,0 +1,14 @@
+── UNKNOWN NAME ─────────────────────── E0211_rust_println_macro.lt:3:3  [E0211]
+
+Stilt has no `println!`: `print` is a function, called as `print("…")`:
+
+  3 │   println!("hello, {name}")
+    │   ^^^^^^^
+
+`print` writes its string and a newline. A string shows a value inside braces,
+as `"total: {n}"`.
+
+To fix it, call `print`:
+
+  3 │   print("hello, {name}")
+    │   ~~~~~

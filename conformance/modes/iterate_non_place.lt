@@ -1,0 +1,11 @@
+//~ rule: expressions.for-iterables, modes.durations, modes.change-while-iterating
+//~ run-output: "[1, 2, 2, 1, 0, 1, 2, 3] [10, 20]"
+
+fn main() / io {
+  var xs = [1, 2]
+  for x in xs.reversed() { xs.push(x) }
+  for i in 0..xs.len() { xs.push(i) }
+  var other = [10]
+  for x in [20] { other.push(x) }
+  print("{xs} {other}")
+}

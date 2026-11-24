@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: shared.when-on-value-already-held
+//~ stdout:
+//~ | 0 1
+
+use std.sync
+
+type Counter = { n: i64 }
+
+fn bump(c: sync.Shared<Counter>) { when c { c.n += 1 } }
+
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 0 })
+  let d = sync.Shared.new(Counter { n: 0 })
+  let f = || bump(d)
+  // The function value runs a `when` on another value, which nothing holds.
+  when c { f() }
+  when c, d { print("{c.n} {d.n}") }
+}

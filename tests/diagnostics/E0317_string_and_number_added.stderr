@@ -1,0 +1,16 @@
+── OPERATOR NOT DEFINED ON A TYPE ── E0317_string_and_number_added.lt:3:9  [E0317]
+
+This operator isn't defined on `str`; build strings with interpolation, as in
+"{a}{b}":
+
+  3 │   print("count: " + n)
+    │         ^^^^^^^^^^^^^
+
+Arithmetic works on numbers, bitwise operators on integers, and `!`, `&&` and
+`||` on `bool`. A string is built with interpolation, as `"Hello, {name}"`, not
+with `+`.
+
+To fix it, build the string with interpolation:
+
+  3 │   print("count: {n}")
+    │                 ~ ++

@@ -1,0 +1,22 @@
+//~ rule: numbers.literal-defaults, numbers.shift-amounts
+//~ stdout:
+//~ | 8 64 2 2
+//~ | 9223372036854775808 1 1
+//~ | 12 24
+
+fn bit(square: i64) -> u64 { 1 << square }
+
+fn main() / io {
+  let one: i8 = 1
+  let three: u64 = 3
+  let six: u8 = 6
+  let big: i64 = 1
+  print("{one << three} {big << six} {one << 1} {128 >> six}")
+  let byte: u8 = 128
+  print("{bit(63)} {bit(0)} {byte >> 7}")
+  var x: i32 = 3
+  let two: u8 = 2
+  x <<= two
+  let y = x << 1
+  print("{x} {y}")
+}

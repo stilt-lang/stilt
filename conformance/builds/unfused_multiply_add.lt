@@ -1,0 +1,16 @@
+//~ rule: numbers.ieee-754, builds.same-meaning
+//~ args: 0.1 10 1
+//~ run-output: "0.0 0.0"
+
+// `a * b - c` rounds twice, so 0.1 * 10, which is 1 + 2^-54 before rounding, is 1 and the
+// difference 0, where one rounding of the fused operation would give 5.551115123125783e-17.
+// The operands come from the arguments, so that no compiler computes them first.
+
+use std.cli
+
+fn main() / io {
+  let a = (cli.arg(0) else "").to_f64() else 0.0
+  let b = (cli.arg(1) else "").to_f64() else 0.0
+  let c = (cli.arg(2) else "").to_f64() else 0.0
+  print("{a * b - c} {c - a * b}")
+}

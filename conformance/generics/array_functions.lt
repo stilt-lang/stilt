@@ -1,0 +1,28 @@
+//~ tier: meta
+//~ rule: generics.arrays, generics.array-literals
+//~ stdout:
+//~ | ["ab", "ab", "ab"]
+//~ | None Some([4, 5]) None
+//~ | 3 [4, 5, 6] [8, 10, 12]
+//~ | [] 0 []
+//~ | 3
+
+use std.array
+
+fn main() / io {
+  let filled: array.Array<str, 3> = array.fill("ab")
+  print("{filled}")
+  // `from_list` of a list shorter than the size, of its length, and longer.
+  let short: Option<array.Array<i64, 2>> = array.from_list([4])
+  let exact: Option<array.Array<i64, 2>> = array.from_list([4, 5])
+  let long: Option<array.Array<i64, 2>> = array.from_list([4, 5, 6])
+  print("{short} {exact} {long}")
+  let v: array.Array<i64, 3> = [4, 5, 6]
+  print("{v.len()} {v.to_list()} {v.map(|x| x * 2)}")
+  let none: array.Array<i64, 0> = []
+  let empty: array.Array<i64, 0> = array.fill(7)
+  print("{none} {none.len()} {empty}")
+  // Where no array is expected, a list literal is a `List`.
+  let xs = [1, 2, 3]
+  print("{xs.len()}")
+}

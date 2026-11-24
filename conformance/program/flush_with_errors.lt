@@ -1,0 +1,17 @@
+//~ rule: program.output-flushing, program.programs-with-errors
+//~ stdout:
+//~ | ab
+//~ | c
+
+use std.io
+
+fn unused() -> i64 { missing } //~ ERROR E0211
+
+// A program with errors exits with status 2 however it ends, and what it wrote reaches stdout
+// first, the text that `io.write` wrote after its last newline among it.
+fn main() / io {
+  io.write("a")
+  print("b")
+  io.write("c\n")
+  exit(4)
+}

@@ -1,0 +1,13 @@
+── KEY PATH WHERE NO FUNCTION IS EXPECTED ── E0324_spread_with_three_dots.lt:3:15  [E0324]
+
+Stilt spreads a record with two dots, as `{ ..p, x: 3 }`:
+
+  3 │   let q = { ...p, x: 3 }
+    │               ^^
+
+An update copies the record after `..` with the fields written changed.
+
+To fix it, write `..`:
+
+  3 │   let q = { ...p, x: 3 }
+    │               -

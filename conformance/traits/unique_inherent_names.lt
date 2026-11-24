@@ -1,0 +1,15 @@
+//~ rule: traits.inherent-names
+
+type Pair<T> = { a: T, b: T }
+
+impl<T> Pair<T> {
+  fn first(self) -> T { self.a }
+}
+
+impl<T: Ord> Pair<T> {
+  fn first(self) -> T { //~ ERROR E0208
+    self.b
+  }
+
+  fn second(self) -> T { self.b }
+}

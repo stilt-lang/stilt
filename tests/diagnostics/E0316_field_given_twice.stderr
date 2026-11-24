@@ -1,0 +1,14 @@
+── FIELD GIVEN TWICE OR LEFT OUT ────── E0316_field_given_twice.lt:3:49  [E0316]
+
+The field `id` is given twice:
+
+  3 │ fn first() -> Order { Order { id: 1, total: 20, id: 2 } }
+    │                                                 ^^
+
+A record literal gives every field once, and a record pattern names every field,
+or ends with `..` to leave the others out.
+
+To fix it, delete the repeated field:
+
+  3 │ fn first() -> Order { Order { id: 1, total: 20, id: 2 } }
+    │                                               -------

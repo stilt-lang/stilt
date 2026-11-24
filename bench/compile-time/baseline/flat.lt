@@ -1,0 +1,143 @@
+// Entries as flat `path=value` pairs, written out by hand for each type an entry holds: a
+// record's fields by name, a list's elements and a payload's values by index, a variant's
+// payload under its name, and an option's value where the option is, or nothing for `None`.
+
+use events.access
+use events.entry
+use events.ops
+use events.time
+use events.web
+
+/// The leaves of an entry, each as its path from the entry and its text.
+/// ex: pairs(sample()).take(2) == ["at.date.year=2026", "at.date.month=11"]
+/// ex: pairs(sample()).last() == Some("event.Disk.percent=91")
+pub fn pairs(e: entry.Entry) -> List<str> {
+  var out = stamp(e.at, "at")
+  out.extend(source(e.source, "source"))
+  out.push("level={e.level.name()}")
+  out.extend(event(e.event, "event"))
+  out
+}
+
+// A field's path under `path`.
+fn joined(path: str, name: str) -> str { if path == "" { name } else { "{path}.{name}" } }
+
+// The leaf of the field `name` under `path`.
+fn leaf(path: str, name: str, text: str) -> str { "{joined(path, name)}={text}" }
+
+fn stamp(s: time.Stamp, path: str) -> List<str> {
+  let d = joined(path, "date")
+  [
+    leaf(d, "year", "{s.date.year}"),
+    leaf(d, "month", "{s.date.month}"),
+    leaf(d, "day", "{s.date.day}"),
+    leaf(path, "hour", "{s.hour}"),
+    leaf(path, "minute", "{s.minute}"),
+    leaf(path, "second", "{s.second}"),
+  ]
+}
+
+fn source(s: time.Source, path: str) -> List<str> {
+  [leaf(path, "host", s.host), leaf(path, "index", "{s.index}")]
+}
+
+fn event(e: entry.Event, path: str) -> List<str> {
+  let at = joined(path, e.name())
+  match e {
+    Http(r) => request(r, at)
+    Sql(q) => [
+      leaf(at, "table", q.table),
+      leaf(at, "millis", "{q.millis}"),
+      leaf(at, "rows", "{q.rows}"),
+    ]
+    Auth(l) => login(l, at)
+    Cache(c) => cache(c, at)
+    Job(j) => job(j, at)
+    Disk(d) => [leaf(at, "mount", d.mount), leaf(at, "percent", "{d.percent}")]
+    Deploy(d) => deploy(d, at)
+    Config(s) => [leaf(at, "key", s.key), leaf(at, "before", s.before), leaf(at, "after", s.after)]
+    Panic(c) => [leaf(at, "thread", c.thread), leaf(at, "message", c.message)]
+    Retry(r) => [
+      leaf(at, "op", r.op),
+      leaf(at, "attempt", "{r.attempt}"),
+      leaf(at, "limit", "{r.limit}"),
+      leaf(at, "wait", "{r.wait}"),
+    ]
+  }
+}
+
+fn request(r: web.Request, path: str) -> List<str> {
+  var out = [leaf(path, "method", r.method.name()), leaf(path, "path", r.path)]
+  if let Some(q) = r.query { out.push(leaf(path, "query", q)) }
+  out.push(leaf(path, "status", "{r.status}"))
+  out.push(leaf(path, "millis", "{r.millis}"))
+  out.push(leaf(path, "bytes", "{r.bytes}"))
+  out
+}
+
+fn login(l: access.Login, path: str) -> List<str> {
+  let ip = joined(path, "ip")
+  var out = [
+    leaf(path, "user", l.user),
+    leaf(ip, "a", "{l.ip.a}"),
+    leaf(ip, "b", "{l.ip.b}"),
+    leaf(ip, "c", "{l.ip.c}"),
+    leaf(ip, "d", "{l.ip.d}"),
+    leaf(path, "ok", "{l.ok}"),
+  ]
+  if let Some(n) = l.attempts { out.push(leaf(path, "attempts", "{n}")) }
+  out
+}
+
+fn key(k: access.Key, path: str) -> List<str> {
+  [leaf(path, "space", k.space), leaf(path, "id", "{k.id}")]
+}
+
+fn cache(c: access.Cache, path: str) -> List<str> {
+  match c {
+    Hit(k) => key(k, joined(path, "Hit"))
+    Miss(k) => key(k, joined(path, "Miss"))
+    Evict(k, n) => {
+      let at = joined(path, "Evict")
+      key(k, "{at}[0]").concat(["{at}[1]={n}"])
+    }
+  }
+}
+
+fn job(j: ops.Job, path: str) -> List<str> {
+  match j {
+    Started(n) => ["{joined(path, "Started")}={n}"]
+    Finished(n, ms) => {
+      let at = joined(path, "Finished")
+      ["{at}[0]={n}", "{at}[1]={ms}"]
+    }
+    Failed(n, why) => {
+      let at = joined(path, "Failed")
+      ["{at}[0]={n}", "{at}[1]={why}"]
+    }
+  }
+}
+
+fn deploy(d: ops.Deploy, path: str) -> List<str> {
+  let v = joined(path, "version")
+  var out = [
+    leaf(v, "major", "{d.version.major}"),
+    leaf(v, "minor", "{d.version.minor}"),
+    leaf(v, "patch", "{d.version.patch}"),
+  ]
+  out.push(leaf(path, "by", d.by))
+  let hosts = joined(path, "hosts")
+  for (i, h) in d.hosts.enumerate(0) { out.push("{hosts}[{i}]={h}") }
+  out
+}
+
+// The entry the examples above flatten.
+fn sample() -> entry.Entry {
+  let date = time.Date { year: 2026, month: 11, day: 3 }
+  entry.Entry {
+    at: time.Stamp { date, hour: 8, minute: 22, second: 49 },
+    source: time.Source { host: "ops", index: 1 },
+    level: time.Warn,
+    event: entry.Disk(ops.Disk { mount: "/var", percent: 91 }),
+  }
+}

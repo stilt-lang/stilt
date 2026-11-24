@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────── E0100_optional_type_with_a_question_mark.lt:1:31  [E0100]
+
+Stilt writes a type whose value may be missing as `Option<T>`:
+
+  1 │ fn first(xs: List<i64>) -> i64? { xs.first() }
+    │                               ^
+
+A value that may be missing has the type `Option<T>`: `None`, or `Some(x)`.
+
+To fix it, write `Option<…>`:
+
+  1 │ fn first(xs: List<i64>) -> Option<i64> { xs.first() }
+    │                            +++++++   ~

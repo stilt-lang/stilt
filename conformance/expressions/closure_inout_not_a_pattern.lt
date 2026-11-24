@@ -1,0 +1,5 @@
+//~ rule: syntax.closure-parameters, expressions.inout-closure-parameters, patterns.irrefutable-positions
+
+fn main() {
+  let f = |inout (a, b): (i64, i64)| { a += b } //~ ERROR E0100
+}

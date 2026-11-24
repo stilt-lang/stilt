@@ -1,0 +1,43 @@
+//~ rule: types.mismatch, expressions.inout-arguments, expressions.option-fallback, patterns.pattern-types
+
+fn pair(n: i64) -> i64 {
+  let (a, b) = n //~ ERROR E0311
+  a.abs()
+}
+
+fn fallback(n: i64) -> i64 {
+  let x = n else return 0 //~ ERROR E0311
+  x.abs()
+}
+
+fn variant(n: i64) -> i64 {
+  let Some(x) = n else return 0 //~ ERROR E0311
+  x.abs()
+}
+
+fn elements(n: i64) -> i64 {
+  match n {
+    [x, ..] => x.abs() //~ ERROR E0311
+    _ => 0
+  }
+}
+
+fn annotated() -> i64 {
+  let f: fn(i64) -> i64 = |x: str| 1 //~ ERROR E0311
+  f(2)
+}
+
+fn marked(n: i64) -> str { "{n}" }
+
+fn call_marked() -> str {
+  marked(inout 5) //~ ERROR E0400
+}
+
+type Signal = | Stop | Go
+
+// A record pattern names a record type.
+fn record_of_variants(s: Signal) -> i64 {
+  match s {
+    Signal { .. } => 1 //~ ERROR E0311
+  }
+}

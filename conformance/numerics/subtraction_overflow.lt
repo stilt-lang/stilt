@@ -1,0 +1,11 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ run-output: "254"
+//~ panic: overflow
+//~ panic-at: subtraction_overflow.lt:10:11
+
+fn main() / io {
+  let x: u8 = 255
+  print("{x - 1}")
+  let zero: u8 = 0
+  print("{zero - 1}")
+}

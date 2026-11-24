@@ -1,0 +1,9 @@
+//~ rule: expressions.range-iteration
+
+fn count() -> i64 {
+  var n = 0
+  for x in 0.0..1.5 { //~ ERROR E0317
+    n += 1
+  }
+  n
+}

@@ -1,0 +1,3 @@
+[package]
+name = "zl"
+link = ["z"]

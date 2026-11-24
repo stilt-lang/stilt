@@ -1,0 +1,21 @@
+//~ rule: expressions.capture, modes.closures, modes.what-can-be-modified
+
+fn bump(inout n: i64) { n += 1 }
+
+fn main() {
+  var v = 1
+  var xs = [1]
+  let a = || {
+    v += 1 //~ ERROR E0403
+  }
+  let b = || bump(inout v) //~ ERROR E0403
+  let c = || xs.push(2) //~ ERROR E0403
+  let e = |n: i64| {
+    n += 1 //~ ERROR E0403
+  }
+  let d = || {
+    var v = v
+    v += 1
+    v
+  }
+}

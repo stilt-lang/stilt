@@ -1,0 +1,17 @@
+//~ rule: std.option-result-functions
+//~ stdout:
+//~ | called 3
+//~ | true false
+
+fn main() / io {
+  let none: Option<i64> = None
+  let a = Some(3).is_some_and(|x| {
+    print("called {x}")
+    x > 2
+  })
+  let b = none.is_some_and(|x| {
+    print("called {x}")
+    x > 2
+  })
+  print("{a} {b}")
+}

@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: syntax.rows, syntax.effect-forms, handlers.rows-pass-effects-on, handlers.with-pairing
+//~ stdout:
+//~ | 6
+//~ | 2
+
+effect Ask {
+  fn ask() -> i64
+}
+
+// `apply` is generic in its row, and passes `Ask` through.
+fn apply<e>(escaping f: fn() -> i64 / e) -> i64 / e { f() + f() }
+
+// The signature pairs `e` with `Ask`, so the `with` may handle a call through it.
+fn handled<e>(escaping f: fn() -> i64 / {Ask, e}) -> i64 / e {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { f() }
+}
+
+fn main() / io {
+  let three = handler Ask { fn ask() -> i64 { 3 } }
+  with three {
+    print("{apply(|| Ask.ask())}")
+  }
+  print("{handled(|| Ask.ask() + Ask.ask())}")
+}

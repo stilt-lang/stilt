@@ -1,0 +1,26 @@
+//~ rule: syntax.if-let-heads
+
+// A line that ends with the pattern or the head of an `if let` inserts a terminator.
+fn after_pattern(a: Option<i64>) -> i64 {
+  if let Some(x) //~ ERROR E0100
+    = a { return x }
+  0
+}
+
+fn after_head(a: Option<i64>) -> i64 {
+  if let Some(x) = a //~ ERROR E0100
+  { return x }
+  0
+}
+
+// A line that ends with `let` or `=` continues, as does one before another alternative.
+fn continued(a: Option<i64>) -> i64 {
+  if let
+    Some(x) =
+      a { return x }
+  if let Some(1)
+    | Some(2) = a { return 2 }
+  0
+}
+
+fn main() {}

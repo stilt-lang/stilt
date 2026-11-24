@@ -1,0 +1,27 @@
+//~ rule: numbers.conversions, numbers.printing-floats
+//~ stdout:
+//~ | Some(127) None Some(-128) None Some(0) Some(0) None None None
+//~ | Some(9223372036854774784) None Some(-9223372036854775808) Some(18446744073709549568) None None
+//~ | 16777216.0 3.4028235e38 inf inf -inf 0.0 -0.0 1e-45 nan
+//~ | 0.10000000149011612 0.1 0.1 inf Some(16777216) Some(-3)
+
+fn main() / io {
+  let zero = 0.0
+  let nan = zero / zero
+  let inf = 1.0 / zero
+  print("{(127.9).to_i8()} {(128.0).to_i8()} {(-128.9).to_i8()} {(-129.0).to_i8()} {(-0.9).to_u8()} {(-0.0).to_i8()} {nan.to_i8()} {inf.to_u8()} {(-inf).to_i64()}")
+  let a = 9223372036854774784.0
+  let b = 9223372036854775808.0
+  let c = -9223372036854775808.0
+  let d = 18446744073709549568.0
+  let e = 18446744073709551616.0
+  print("{a.to_i64()} {b.to_i64()} {c.to_i64()} {d.to_u64()} {e.to_u64()} {(-1.0).to_u64()}")
+  let f = 16777217.0
+  let below: f64 = 340282356779733623858607532500980858880
+  let middle: f64 = 340282356779733661637539395458142568448
+  print("{f.to_f32()} {below.to_f32()} {middle.to_f32()} {(1e39).to_f32()} {(-1e39).to_f32()} {(1e-50).to_f32()} {(-1e-50).to_f32()} {(1e-45).to_f32()} {nan.to_f32()}")
+  let tenth: f32 = 0.1
+  let big: f32 = 16777216.0
+  let small: f32 = -3.99
+  print("{tenth.to_f64()} {tenth.to_f32()} {(0.1).to_f64()} {f32.INFINITY.to_f64()} {big.to_i32()} {small.to_i8()}")
+}

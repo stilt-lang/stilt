@@ -1,0 +1,29 @@
+//~ tier: meta
+//~ rule: generics.value-parameter-inference
+//~ stdout:
+//~ | 3 10
+//~ | [0, 0, 0, 0]
+//~ | 3
+
+use std.array
+
+type Mod<p: u64> = { value: u64 }
+
+// One body, which every modulus runs.
+fn add<p: u64>(a: Mod<p>, b: Mod<p>) -> Mod<p> { Mod { value: (a.value + b.value) % p } }
+
+fn zeros<n: i64>() -> array.Array<i64, n> { array.fill(0) }
+
+fn main() / io {
+  // Each record literal takes its modulus from its annotation, and each
+  // call from its arguments.
+  let a: Mod<7> = Mod { value: 5 }
+  let b: Mod<11> = Mod { value: 5 }
+  print("{add(a, a).value} {add(b, b).value}")
+  // From the type the call is expected to have.
+  let z: array.Array<i64, 4> = zeros()
+  print("{z}")
+  // From the function type it is expected to have.
+  let f: fn(Mod<7>, Mod<7>) -> Mod<7> = add
+  print("{f(a, a).value}")
+}

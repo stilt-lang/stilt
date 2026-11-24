@@ -1,0 +1,21 @@
+// A block on one line takes the blocks inside it onto its line, and a block that doesn't fit
+// lets each block inside it go on one line of its own when that one fits.
+fn clamp(n: i64) -> i64 {
+  if n < 0 {
+    0
+  } else {
+    if n > 9 {
+      9
+    } else {
+      n
+    }
+  }
+}
+
+fn grid(rows: i64, cols: i64) / io {
+  for r in 0..rows {
+    for c in 0..cols {
+      print("cell {r} {c} ccccccccccccccccccccccccccccccccccccccccccccccccc")
+    }
+  }
+}

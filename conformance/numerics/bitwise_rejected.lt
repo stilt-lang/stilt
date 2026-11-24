@@ -1,0 +1,47 @@
+//~ rule: numbers.wrapping, numbers.shifts, numbers.bitwise-operators
+
+fn logical(a: bool, b: bool) -> bool { (a && b) || (a != b) || !a }
+
+fn bits(a: u8, b: i16) -> (u8, i16) { (!a & 0x0f | a ^ 1, b << 2 >> 1) }
+
+fn both(a: bool, b: bool) -> bool {
+  a & b //~ ERROR E0317
+}
+
+fn either(a: bool, b: bool) -> bool {
+  a | b //~ ERROR E0317
+}
+
+fn differ(a: bool, b: bool) -> bool {
+  a ^ b //~ ERROR E0317
+}
+
+fn float_and(x: f64) -> f64 {
+  x & 1.0 //~ ERROR E0317
+}
+
+fn float_not(x: f64) -> f64 {
+  !x //~ ERROR E0317
+}
+
+fn float_shift(x: f32) -> f32 {
+  x << 1.0 //~ ERROR E0317
+}
+
+fn float_wrap(x: f32) -> f32 {
+  x *% 2.0 //~ ERROR E0317
+}
+
+fn float_wrap_assign(x: f64) -> f64 {
+  var y = x
+  y -%= 1.0 //~ ERROR E0317
+  y
+}
+
+fn bool_wrap(a: bool) -> bool {
+  a +% a //~ ERROR E0317
+}
+
+fn string_xor(s: str) -> str {
+  s ^ s //~ ERROR E0317
+}

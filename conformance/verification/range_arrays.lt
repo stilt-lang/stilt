@@ -1,0 +1,39 @@
+//~ tier: meta
+//~ rule: generics.array-elements, facts.rules-of-acceptance, facts.range-loops
+//~ run-output: "9 2 6 12 5 4"
+
+use std.array
+
+type Board = { cells: array.Array<i64, 9> }
+
+// An array's element at a literal below its size, through a binding or a
+// field, in any code.
+fn corner(b: Board) -> i64 without panic { b.cells[8] }
+
+fn middle(v: array.Array<i64, 3>) -> i64 without panic { v[1] }
+
+fn set(inout v: array.Array<i64, 3>) without panic {
+  v[0] = 5
+  v[1] += 2
+}
+
+// For an array of size `n`, `n` stands for its length.
+fn sum<n: i64>(v: array.Array<i64, n>) -> i64 without panic {
+  var s = 0
+  for i in 0..n { s += v[i] }
+  s
+}
+
+fn total(v: array.Array<i64, 3>) -> i64 without panic {
+  var s = 0
+  for i in 0..3 { s += v[i] }
+  for i in 0..v.len() { s += v[i] }
+  s
+}
+
+fn main() / io {
+  let v: array.Array<i64, 3> = [1, 2, 3]
+  var w: array.Array<i64, 3> = [1, 2, 3]
+  set(inout w)
+  print("{corner(Board { cells: [1, 2, 3, 4, 5, 6, 7, 8, 9] })} {middle(v)} {sum(v)} {total(v)} {w[0]} {w[1]}")
+}

@@ -1,0 +1,31 @@
+//~ rule: traits.impl-blocks, traits.method-resolution, errors.root-causes, errors.error-type, errors.unknown-names
+
+type Pair<T> = { a: T, b: T }
+
+impl Pair<i64> { //~ ERROR E0302
+  fn sum(self) -> i64 { self.a + self.b }
+}
+
+fn total(p: Pair<i64>) -> i64 { p.sum() }
+
+fn missing() -> Unknown { //~ ERROR E0211
+  []
+}
+
+fn takes(x: Unknown) {} //~ ERROR E0211
+
+fn gives() { takes(List.new()) }
+
+fn annotated() {
+  let xs: List<Unknown> = [] //~ ERROR E0211
+  let ys = []
+}
+
+fn unpacked() -> i64 {
+  let (a, b) = unknown() //~ ERROR E0211
+  a.len()
+}
+
+fn misspelled(words: List<str>) -> List<i64> {
+  words.mapp(|w| w.len()) //~ ERROR E0314
+}

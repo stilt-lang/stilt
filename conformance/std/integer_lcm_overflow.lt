@@ -1,0 +1,8 @@
+//~ rule: std.integers
+//~ panic: overflow
+//~ panic-at: integer_lcm_overflow.lt:7:11
+
+fn main() / io {
+  let a: u8 = 16
+  print("{a.lcm(17)}")
+}

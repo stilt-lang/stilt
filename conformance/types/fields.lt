@@ -1,0 +1,26 @@
+//~ rule: types.field-access, expressions.struct-literal-fields, patterns.pattern-types
+
+type Order = { id: i64, total: f64, paid: bool }
+
+fn amount(o: Order) -> f64 {
+  o.amount //~ ERROR E0313
+}
+
+fn name(pair: (str, i64)) -> str { pair.0 }
+
+fn third(pair: (str, i64)) -> i64 {
+  pair.2 //~ ERROR E0313
+}
+
+fn make(id: i64) -> Order {
+  let a = Order { id, total: 0.0, paid: false }
+  let b = Order { id, total: 0.0, paid: false, note: "" } //~ ERROR E0313
+  let c = Order { id, id: 2, total: 0.0, paid: false } //~ ERROR E0316
+  Order { id, total: 1.0 } //~ ERROR E0316
+}
+
+fn is_paid(o: Order) -> bool {
+  let Order { paid, .. } = o
+  let Order { id, total } = o //~ ERROR E0316
+  paid
+}

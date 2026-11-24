@@ -1,0 +1,29 @@
+// Procedural macros (macros.formatting): a macro is formatted as a function, a quote's contents as
+// the form they hold, a splice written against its `$`, and a use's group as written, in a type
+// too, as macros.formatting leaves it.
+
+meta use tools
+
+use std.meta
+
+/// Twice the expression.
+pub macro twice(e: meta.Expr) -> meta.Expr { quote { $e * 2 } }
+
+macro listed(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  let xs = [quote { 1 }, quote { 2 }]
+  quote {
+    let x = 1
+    [x, $..xs]
+  }
+}
+
+macro pair(a: meta.Pattern, b: meta.Pattern) -> meta.Pattern { quote pattern { ($a, $b) } }
+
+macro list_of(t: meta.Type) -> meta.Type { quote type { List<$t> } }
+
+macro labelled(n: meta.Expr) -> meta.Expr {
+  let fs = [quote field { label: $(n) }]
+  quote { { $..fs } }
+}
+
+fn main() { let xs: tools.list_of!( i64 ) = [] }

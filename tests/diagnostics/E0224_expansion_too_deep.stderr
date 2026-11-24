@@ -1,0 +1,9 @@
+── EXPANSION TOO DEEP ──────────────── E0224_expansion_too_deep.lt:6:11  [E0224]
+
+Expansions of `sum!` nest more than 128 deep:
+
+  6 │   print("{sum!(1)}")
+    │           ^^^^^^^
+
+A macro may use itself, but each expansion must get closer to an arm that stops,
+and expansions nest at most 128 deep.

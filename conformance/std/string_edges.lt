@@ -1,0 +1,22 @@
+//~ rule: std.bytes-and-scalars, std.str-search, std.str-splitting, std.str-building, std.show-names-and-escapes
+//~ stdout:
+//~ | 6 0 true false true true true false true false
+//~ | Some(0) Some(0) None Some(3) Some(1) None Some(4)
+//~ | ["", "a", ""] [] ["a", "b"] ["", "a"] ["abc"] ["a", "😀", "b"]
+//~ | ["a\rb"] ["a\r"] [""] ["a"] ["a"] ["", ""] ["a", "", "b"]
+//~ | ["x", "\u{b}x\u{b}", "", "x y", " x"]
+//~ | ["xx", "aa", "-é-", "abc", "abc", "aaaaaa", ""]
+//~ | [] ["a", "é", "😀"] [240, 159, 152, 128] [] STRAßE École [] a ab
+//~ | ["", "é", "", "abc", "😀"]
+
+fn main() / io {
+  print("{"héllo".len()} {"".len()} {"".is_empty()} {" ".is_empty()} {"".contains("")} {"abc".starts_with("ab")} {"abc".ends_with("bc")} {"abc".starts_with("abcd")} {"".ends_with("")} {"abc".contains("ac")}")
+  print("{"".find("")} {"abc".find("")} {"".find("a")} {"héllo".find("l")} {"aXbX".find("X")} {"abc".find("abcd")} {"😀x".find("x")}")
+  print("{",a,".split(",")} {"".split("")} {"a--b".split("--")} {"aaa".split("aa")} {"abc".split("x")} {"a😀b".split("")}")
+  print("{"a\rb".lines()} {"a\r\r\n".lines()} {"\n".lines()} {"a".lines()} {"a\r".lines()} {"\r\n\r\n".lines()} {"a\n\nb".lines()}")
+  print("{["\u{c} x \u{c}".trim(), "\u{b}x\u{b}".trim(), "  ".trim(), "\r\n\tx y\t\r\n".trim(), "\u{a0}x".trim()]}")
+  print("{["abab".replace("ab", "x"), "aaaa".replace("aa", "a"), "é".replace("", "-"), "abc".replace("x", "y"), "a.b.c".replace(".", ""), "aaa".replace("a", "aa"), "".replace("a", "b")]}")
+  let none: List<str> = []
+  print("{"".chars()} {"aé😀".chars()} {"😀".bytes()} {"".bytes()} {"straße".ascii_upper()} {"ÉCOLE".ascii_lower()} [{", ".join(none)}] {"-".join(["a"])} {"".join(["a", "b"])}")
+  print("{["héllo".slice(0, 0), "héllo".slice(1, 3), "héllo".slice(6, 6), "abc".slice(0, 3), "😀".slice(0, 4)]}")
+}

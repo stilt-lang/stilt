@@ -1,0 +1,1 @@
+const A: i64 = 1_ //~ ERROR E0004

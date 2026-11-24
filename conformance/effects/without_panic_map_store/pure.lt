@@ -1,0 +1,12 @@
+module pure
+without panic
+
+use lib
+
+pub fn store(inout m: Map<lib.Key, i64>, k: lib.Key) {
+  m[k] = 1 //~ ERROR E0204
+}
+
+pub fn store_name(inout m: Map<lib.Name, i64>, k: lib.Name) { m[k] = 1 }
+
+pub fn store_text(inout m: Map<str, i64>) { m["a"] = 1 }

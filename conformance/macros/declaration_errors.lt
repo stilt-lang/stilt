@@ -1,0 +1,29 @@
+//~ tier: advanced
+//~ rule: syntax.macro-checks, macros.pattern-checks, macros.templates, macros.checked-templates
+
+syntax named_twice { ($x: expr, $x: expr) => $x } //~ ERROR E0220
+
+syntax runs_on { ($x: expr $y: expr) => $x } //~ ERROR E0220
+
+syntax no_fragment { ($(a),*) => 0 } //~ ERROR E0220
+
+syntax no_separator { ($($e: expr)*) => 0 } //~ ERROR E0220
+
+syntax unknown_kind { ($x: thing) => 0 } //~ ERROR E0220
+
+syntax unbound { ($x: expr) => $y } //~ ERROR E0221
+
+syntax too_shallow { ($($x: expr),*) => $x } //~ ERROR E0221
+
+syntax two_lengths { ($($a: expr),*; $($b: expr),*) => [$(($a, $b)),*] } //~ ERROR E0221
+
+syntax neither { ($x: expr) => let y = $x } //~ ERROR E0221
+
+// A fragment stands as one form when the template is checked, so a
+// fragment after an expression is a second expression, not a call's
+// arguments.
+syntax side_by_side { ($x: expr) => 100 $x } //~ ERROR E0221
+
+syntax unknown_function { ($x: expr) => nowhere($x) } //~ ERROR E0211
+
+fn main() {}

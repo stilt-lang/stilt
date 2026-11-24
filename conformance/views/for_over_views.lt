@@ -1,0 +1,14 @@
+//~ tier: advanced
+//~ rule: views.for-over-view
+//~ run-output: "2 3 | 0 1 | 6"
+
+use std.view
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  var out = ""
+  for x in view.View.of(xs, 1, 3) { out = "{out}{x} " }
+  out = "{out}| "
+  for i in view.range(0, 2) { out = "{out}{i} " }
+  print("{out}| {view.Iter.of(xs).fold(0, |s, x| s + x)}")
+}

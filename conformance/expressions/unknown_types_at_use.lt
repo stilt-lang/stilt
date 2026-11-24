@@ -1,0 +1,32 @@
+//~ rule: types.known-types, traits.method-resolution
+
+fn receiver() -> i64 {
+  let measure = |s| s.len() //~ ERROR E0312
+  0
+}
+
+fn field() -> i64 {
+  let get = |p| p.x //~ ERROR E0312
+  0
+}
+
+fn index() -> i64 {
+  let first = |xs| xs[0] //~ ERROR E0312
+  0
+}
+
+fn iterate() {
+  let each = |xs| {
+    for x in xs {} //~ ERROR E0312
+  }
+}
+
+fn literal_receiver() -> i64 {
+  let n = -7
+  n.abs() + (-2).abs()
+}
+
+fn annotated() -> i64 {
+  let measure = |s: str| s.len()
+  measure("abc")
+}

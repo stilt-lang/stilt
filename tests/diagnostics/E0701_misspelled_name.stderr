@@ -1,0 +1,14 @@
+── ADDRESS THAT NAMES NO PART ──────────────────────────── command line  [E0701]
+
+The program has no part `main.total/body`:
+
+  --edit 'main.total/body#45bc' '{ orders.len() }'
+          ^^^^^^^^^^^^^^^
+
+An edit replaces a declaration or a body in the program's own files. Find the
+path with `stilt show`. Nothing was written.
+
+To fix it, address `main.totals`, the closest name:
+
+  --edit 'main.totals/body#45bc' '{ orders.len() }'
+          ~~~~~~~~~~~~~~~~

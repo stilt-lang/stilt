@@ -1,0 +1,4 @@
+use std.meta
+
+/// Twice the expression.
+pub macro twice(e: meta.Expr) -> meta.Expr { quote { $e * 2 } }

@@ -1,0 +1,14 @@
+//~ rule: facts.spelling
+//~ run-output: "3 4"
+
+// `div` and `copy` are limits only after `without`: elsewhere they are names.
+fn pass<div>(escaping f: fn() -> i64 / div) -> i64 / div { f() }
+
+fn copy(div: i64) -> i64 { div + 1 }
+
+fn twice(n: i64) -> i64 without div, copy { n * 2 }
+
+fn main() / io {
+  let copy_of = copy(2)
+  print("{pass(|| copy_of)} {twice(2)}")
+}

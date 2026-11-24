@@ -1,0 +1,24 @@
+//~ tier: meta
+//~ rule: std.json, std.json-rendering
+//~ stdout:
+//~ | "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f"
+//~ | "\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f"
+//~ | "\"\\/ é😀"
+//~ | {"":[1.50,"x"],"b\"":{}}
+//~ | ["é"]
+
+use std.json
+
+fn main() / io {
+  // Every character below U+0020: five by their names, and the others as
+  // `\u` and four lowercase hexadecimal digits.
+  let low = str.from_code_points(List.generate(16, |i| i.to_u32() else 0)) else ""
+  let high = str.from_code_points(List.generate(16, |i| (i + 16).to_u32() else 0)) else ""
+  print(json.render(json.Text(low)))
+  print(json.render(json.Text(high)))
+  // `"` and `\` escaped, and every other character as itself.
+  print(json.render(json.Text("\"\\/ é\u{1f600}")))
+  // No whitespace, and a number written as its text, unchecked.
+  print(json.render(json.Object([("", json.Array([json.Number("1.50"), json.Text("x")])), ("b\"", json.Object([]))])))
+  print(json.to_text(["é"]))
+}

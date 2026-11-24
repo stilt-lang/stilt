@@ -1,0 +1,10 @@
+── TYPE C CAN'T TAKE ─────────────────── E0353_type_c_cant_take.lt:4:36  [E0353]
+
+C can't take this type: a foreign function takes an integer, a float, `bool`, a
+`c.Ptr` or a `c.Str`:
+
+  4 │ pub extern fn crc32(crc: u64, buf: List<u8>, len: u32) -> u64
+    │                                    ^^^^^^^^
+
+A foreign function takes what C passes: numbers, `bool`, a `c.Ptr<T>` of them
+and a `c.Str`. Lend a list's elements with `with_ptr`, as a `c.Ptr<u8>`.

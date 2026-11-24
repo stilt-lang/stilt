@@ -1,0 +1,25 @@
+//~ rule: std.str-search, std.str-splitting, std.str-building
+//~ stdout:
+//~ | ["a b \n", " \t a b", "", ""]
+//~ | [Some("1.2"), None, Some("main"), Some("")]
+//~ | [Some(("k", "v=w")), Some(("k=v", "w")), None, Some(("", "abc")), Some(("abc", ""))]
+//~ | [Some(1), Some(3), Some(1), None, Some(3), Some(0)]
+//~ | [2, 1, 3, 2, 0]
+//~ | ["a+b-c", "-ab", "abc", "ababab", "", ""]
+//~ | [["a", "b", "c"], [], ["x"]]
+//~ | ["007", "aba7", "7", "abc", "ab-+-", "éé"]
+//~ | [5, 0, 3]
+//~ | ["cba", "", "ét"]
+
+fn main() / io {
+  print("{[" \t a b \n".trim_start(), " \t a b \n".trim_end(), "  ".trim_start(), "".trim_end()]}")
+  print("{["v1.2".strip_prefix("v"), "1.2".strip_prefix("v"), "main.lt".strip_suffix(".lt"), "x".strip_prefix("x")]}")
+  print("{["k=v=w".split_once("="), "k=v=w".rsplit_once("="), "kvw".split_once("="), "abc".split_once(""), "abc".rsplit_once("")]}")
+  print("{["banana".find("an"), "banana".rfind("an"), "aaa".rfind("aa"), "abc".rfind("x"), "abc".rfind(""), "".rfind("")]}")
+  print("{["banana".count("an"), "aaa".count("aa"), "ab".count(""), "é".count(""), "abc".count("x")]}")
+  print("{["a-b-c".replace_first("-", "+"), "ab".replace_first("", "-"), "abc".replace_first("x", "y"), "ab".repeat(3), "ab".repeat(0), "ab".repeat(-1)]}")
+  print("{[" a  b\tc\n".split_whitespace(), " \t\n".split_whitespace(), "x".split_whitespace()]}")
+  print("{["7".pad_start(3, "0"), "7".pad_start(4, "ab"), "7".pad_start(3, ""), "abc".pad_end(2, "*"), "ab".pad_end(5, "-+"), "é".pad_end(2, "é")]}")
+  print("{["héllo".char_count(), "".char_count(), "日本語".char_count()]}")
+  print("{["abc".reversed(), "".reversed(), "té".reversed()]}")
+}

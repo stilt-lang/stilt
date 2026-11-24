@@ -1,0 +1,14 @@
+── UNKNOWN MODULE ───────────────────────────────────── src/main.lt:1:1  [E0205]
+
+There is no module `jsn`, in this package or in its dependency `json`:
+
+  1 │ use jsn
+    │ ^^^^^^^
+
+`use` names a module, as `use std.fs`. A dependency's modules are named after
+it, once stilt.toml lists it under `[dependencies]`.
+
+To fix it, import `json`:
+
+  1 │ use json
+    │ ~~~~~~~~

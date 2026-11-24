@@ -1,0 +1,14 @@
+── SYNTAX ERROR ────────────────── E0100_typescript_result_type.lt:1:23  [E0100]
+
+Stilt writes a function's result type after `->`, not `:`:
+
+  1 │ fn add(a: i64, b: i64): i64 { a + b }
+    │                       ^
+
+A signature is the parameters, then `->` and the result type, then the row after
+`/`.
+
+To fix it, write `->`:
+
+  1 │ fn add(a: i64, b: i64) -> i64 { a + b }
+    │                       ~~~

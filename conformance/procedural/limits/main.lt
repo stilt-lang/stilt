@@ -1,0 +1,29 @@
+//~ tier: meta
+//~ rule: macros.literal-splices, macros.step-limits, macros.nested-expansions
+
+// A macro's run stops after 10,000,000 steps, 10,000 frames or a panic; a
+// splice of a NaN stops it as a panic does; and uses nest at most 128 deep,
+// procedural and pattern macros together.
+meta use endless
+
+fn spin() -> i64 { endless.spin!() } //~ ERROR E0226
+
+fn dive() -> i64 { endless.dive!() } //~ ERROR E0226
+
+// A macro's own body is the first of its frames.
+fn within() -> i64 { endless.within!() }
+
+fn beyond() -> i64 { endless.beyond!() } //~ ERROR E0226
+
+// A macro's own body is the first of its steps too.
+fn all_steps() -> i64 { endless.all_steps!() }
+
+fn one_more() -> i64 { endless.one_more!() } //~ ERROR E0226
+
+fn past() -> i64 { endless.past!() } //~ ERROR E0226
+
+fn nan() -> f64 { endless.nan!() } //~ ERROR E0226
+
+fn deep() -> i64 { endless.deep!() } //~ ERROR E0224
+
+fn main() {}

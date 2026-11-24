@@ -1,0 +1,9 @@
+//~ rule: program.prelude-functions, effects.panic-kinds
+//~ run-output: "start"
+//~ panic: explicit
+//~ panic-at: panic_explicit.lt:8:3
+
+fn main() / io {
+  print("start")
+  panic("stopped on purpose")
+}

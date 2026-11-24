@@ -1,0 +1,16 @@
+// A record type that doesn't fit in 100 columns puts each field on a line of its own, followed by
+// a comma, the last field too, whose type here ends in `>`, whether the source has the comma or
+// not.
+type Line = {
+  score: i64,
+  depth_of_the_search: i64,
+  nodes_searched_so_far: i64,
+  pv: List<moves.Move>,
+}
+
+type Search = {
+  score: i64,
+  depth_of_the_search: i64,
+  nodes_searched_so_far: i64,
+  principal_variation: List<moves.Move>,
+}

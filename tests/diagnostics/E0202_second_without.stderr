@@ -1,0 +1,16 @@
+── `without` GIVEN TWICE ────────────────── E0202_second_without.lt:3:1  [E0202]
+
+This header already has a `without`:
+
+  3 │ without alloc
+    │ ^^^^^^^
+
+A module's header holds one `without`, which names each limit once, as `without
+panic, alloc`.
+
+To fix it, name its limits in the first `without`:
+
+  2 │ without panic, alloc
+    │              +++++++
+  3 │ without alloc
+    │ -------------

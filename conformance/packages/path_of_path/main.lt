@@ -1,0 +1,2 @@
+//~ rule: packages.dependencies, packages.path-dependencies, packages.modules-of-dependencies
+//~ run-output: "mid and leaf"

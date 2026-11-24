@@ -1,0 +1,13 @@
+//~ rule: expressions.option-fallback, declarations.never
+
+fn pair() -> (i64, i64) { (panic("unfinished"), 1) }
+
+fn flag() -> bool { panic("unfinished") && true }
+
+fn sum() -> i64 { panic("unfinished") + 1 }
+
+fn first(o: Option<i64>) -> i64 { panic("unfinished") else 1 }
+
+fn mixed() -> (i64, str) {
+  (1, 2) //~ ERROR E0311
+}

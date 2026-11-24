@@ -1,0 +1,15 @@
+── UNSATISFIED BOUND ────────────────────── E0318_missing_bound.lt:1:33  [E0318]
+
+`T` doesn't implement `Show`:
+
+  1 │ fn describe<T>(x: T) -> str { "{x}" }
+    │                                 ^
+
+Using a trait's operation on a type parameter needs the bound, as `<T: Show>` to
+interpolate a `T`. A type passed in implements the trait: write its `impl`, or
+choose a type that has one.
+
+To fix it, require `Show` of `T`:
+
+  1 │ fn describe<T: Show>(x: T) -> str { "{x}" }
+    │              ++++++

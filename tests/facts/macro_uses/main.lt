@@ -1,0 +1,13 @@
+//~ tier: core
+
+// A module that only uses a macro declared in another module stays in its tier, whatever forms
+// the expansion writes (macros.advanced-tier). The expansion's facts are this module's own, at the
+// use (macros.expansion-effects).
+
+use sugar
+
+fn main() / io {
+  sugar.unless!(1 > 2) { print("no") } //~ CONSOLE ALLOC
+  let pair = sugar.both!(1, 2) //~ ALLOC
+  print("{pair.len()}") //~ ALLOC CONSOLE
+}

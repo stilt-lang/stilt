@@ -1,0 +1,11 @@
+//~ rule: effects.passing-to-paired-variables
+
+type Box = { v: i64 }
+
+fn guarded(g: fn() -> i64 / raise<Box>) -> i64 {
+  try g() catch b because "a Box gives its value" => b.v
+}
+
+fn caller(g: fn() -> i64, xs: List<i64>) -> List<i64> {
+  xs.map(|x| guarded(g) + x) //~ ERROR E0507
+}

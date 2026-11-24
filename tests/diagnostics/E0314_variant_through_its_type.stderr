@@ -1,0 +1,14 @@
+── NO SUCH METHOD OR MEMBER ──── E0314_variant_through_its_type.lt:4:17  [E0314]
+
+`Circle` is a variant, named alone rather than through `Shape`:
+
+  4 │   let s = Shape.Circle(1.0)
+    │                 ^^^^^^
+
+A variant's name is visible wherever its type is, in patterns and in expressions
+alike.
+
+To fix it, name the variant alone:
+
+  4 │   let s = Shape.Circle(1.0)
+    │           ------

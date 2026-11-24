@@ -1,0 +1,33 @@
+//~ rule: patterns.guards-and-constants, patterns.non-exhaustive-matches, effects.catch
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> { raise Missing }
+
+fn partial(key: str) -> i64 {
+  try fetch(key) catch { //~ ERROR E0329
+    Missing => 0
+  }
+}
+
+fn guarded(key: str) -> i64 {
+  try fetch(key) catch { //~ ERROR E0329
+    Missing => 0
+    Invalid(text) if text == "" => 1
+  }
+}
+
+fn complete(key: str) -> i64 {
+  try fetch(key) catch {
+    Missing => 0
+    Invalid(text) if text == "" => 1
+    Invalid(_) => 2
+  }
+}
+
+fn rethrows(key: str) -> i64 / raise<str> {
+  try fetch(key) catch {
+    Missing => 0
+    Invalid(text) => raise text
+  }
+}

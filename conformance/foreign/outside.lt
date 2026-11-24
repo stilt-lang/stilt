@@ -1,0 +1,35 @@
+//~ tier: systems
+//~ rule: c.unsafe-operations
+
+// A call of a foreign function, a use of one as a value, and a read or a write through an
+// address stand only inside an `unsafe` block, in a test body too.
+
+use std.c
+
+extern fn abs(n: i32) -> i32
+
+fn magnitude(n: i32) -> i32 {
+  abs(n) //~ ERROR E0436
+}
+
+fn chosen() -> fn(i32) -> i32 {
+  abs //~ ERROR E0436
+}
+
+fn first(xs: List<u8>) -> u8 {
+  xs.with_ptr(|p| p.read()) //~ ERROR E0436
+}
+
+fn put(inout xs: List<u8>) {
+  xs.with_mut_ptr(|p| p.write(1)) //~ ERROR E0436
+}
+
+fn text(s: c.Str) -> str {
+  s.to_str() //~ ERROR E0436
+}
+
+test "a test body" {
+  assert abs(-1) == 1 //~ ERROR E0436
+}
+
+fn main() {}

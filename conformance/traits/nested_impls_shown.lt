@@ -1,0 +1,35 @@
+//~ rule: traits.show, traits.structural-impls, std.show-output
+//~ stdout:
+//~ | #1 [tag 2, tag 3] (tag 4,) (1, tag 4, true)
+//~ | Some(tag 7) None {2: tag 5, 1: tag 6} [[<3>]] [Some(<4>)]
+//~ | [(tag 1, 2.5)]
+
+type Tag = | Tag(i64)
+
+impl Show for Tag {
+  fn show(self) -> str {
+    let Tag(t) = self
+    "#{t}"
+  }
+
+  fn show_nested(self) -> str {
+    let Tag(t) = self
+    "tag {t}"
+  }
+}
+
+type Plain = { n: i64 }
+
+impl Show for Plain {
+  fn show(self) -> str { "<{self.n}>" }
+}
+
+fn main() / io {
+  var m: Map<i64, Tag> = Map.new()
+  m[2] = Tag(5)
+  m[1] = Tag(6)
+  let none: Option<Tag> = None
+  print("{Tag(1)} {[Tag(2), Tag(3)]} {(Tag(4),)} {(1, Tag(4), true)}")
+  print("{Some(Tag(7))} {none} {m} {[[Plain { n: 3 }]]} {[Some(Plain { n: 4 })]}")
+  print("{[(Tag(1), 2.5)]}")
+}

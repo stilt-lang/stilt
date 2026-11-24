@@ -1,0 +1,55 @@
+# The goals that are times and ratios, judged on one dedicated and quiet machine, on main only: a
+# shared runner would add its neighbours' load to every number. The runner is registered with the
+# labels below, and pull requests, which may come from forks, never reach it.
+
+name: Performance
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: performance
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  performance:
+    name: latency and benchmarks
+    if: ${{ !github.event.repository.private && github.ref == 'refs/heads/main' }}
+    runs-on: [self-hosted, macOS, ARM64, stilt-dedicated]
+    timeout-minutes: 120
+    env:
+      STILT_DEDICATED: '1'
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Create the opam switch if the machine has none
+        run: |
+          if [ ! -d _opam ]; then
+            opam switch create . 5.5.2 --deps-only --with-test --with-dev-setup --yes
+          fi
+      - name: Build everything once
+        run: |
+          just build
+          cargo build --release --workspace
+      - name: Latency
+        env:
+          STILT_BUILT: '1'
+        run: |
+          mkdir -p target/performance
+          just latency 2>&1 | tee target/performance/latency.log
+      - name: Benchmarks
+        env:
+          STILT_BUILT: '1'
+        run: just bench 2>&1 | tee target/performance/bench.log
+      - name: Keep the logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: performance-${{ github.sha }}
+          path: target/performance
+          if-no-files-found: ignore

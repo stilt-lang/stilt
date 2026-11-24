@@ -1,0 +1,23 @@
+//~ tier: meta
+//~ rule: meta.types-without-shape, std.json
+
+use std.json
+
+type Button = { label: str, on_press: fn() }
+
+// A function field with an impl of the writer's guard.
+type Action = { run: fn() -> i64 }
+
+impl json.ToJson for Action {
+  fn to_json(self) -> json.Value { json.Text("action") }
+}
+
+type Menu = { title: str, action: Action }
+
+fn main() / io {
+  let b = Button { label: "ok", on_press: || {} }
+  print(json.to_text(b)) //~ ERROR E0350
+  print(json.to_text(Menu { title: "m", action: Action { run: || 1 } }))
+  let read: Result<Button, json.Error> = Result.of(|| try json.from_text("\{}")) //~ ERROR E0350
+  let write: fn(fn() -> i64) -> str = json.to_text //~ ERROR E0350
+}

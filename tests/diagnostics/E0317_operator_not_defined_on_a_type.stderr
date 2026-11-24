@@ -1,0 +1,16 @@
+── OPERATOR NOT DEFINED ON A TYPE ── E0317_operator_not_defined_on_a_type.lt:1:33  [E0317]
+
+This operator isn't defined on `str`; build strings with interpolation, as in
+"{a}{b}":
+
+  1 │ fn greeting(name: str) -> str { "Hello, " + name }
+    │                                 ^^^^^^^^^^^^^^^^
+
+Arithmetic works on numbers, bitwise operators on integers, and `!`, `&&` and
+`||` on `bool`. A string is built with interpolation, as `"Hello, {name}"`, not
+with `+`.
+
+To fix it, build the string with interpolation:
+
+  1 │ fn greeting(name: str) -> str { "Hello, {name}" }
+    │                                         ~    ++

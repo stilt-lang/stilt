@@ -1,0 +1,60 @@
+// pick: runs a query, in a part of jq's language, on the JSON value of a file or of standard
+// input, and prints each value it gives.
+
+use std.cli
+use std.fs
+use std.io
+use std.json
+use eval
+use pretty
+use query
+
+const USAGE: str = "usage: pick [-c] [-r] QUERY [FILE]"
+
+/// What the arguments ask for: one line per value, strings with no quotes, the query, and the
+/// file, when there is one.
+type Options = { compact: bool, raw: bool, query: str, file: Option<str> }
+
+fn main() / {io, raise<str>} {
+  let o = try options(cli.args())
+  let q = try query.parse(o.query) catch e => raise "column {e.column} of the query: {e.message}"
+  let text = match o.file {
+    Some(path) => try fs.read(path) catch _ => raise "cannot read {path}"
+    None => io.read_all()
+  }
+  let v = try json.parse(text) catch e => raise "the input isn't JSON: {mistake(e)}"
+  for x in try eval.run(q, v) { print(pretty.shown(x, o.compact, o.raw)) }
+}
+
+/// The options that `args` give.
+/// ex: try options(["-c", ".a", "f.json"]) == Options { compact: true, raw: false, query: ".a", file: Some("f.json") }
+/// ex: Result.of(|| try options(["-x", "."])) == Err("unknown option -x\n{USAGE}")
+fn options(args: List<str>) -> Options / raise<str> {
+  var o = Options { compact: false, raw: false, query: "", file: None }
+  var rest = []
+  for arg in args {
+    match arg {
+      "-c" => { o.compact = true }
+      "-r" => { o.raw = true }
+      _ if arg.starts_with("-") && arg != "-" => raise "unknown option {arg}\n{USAGE}"
+      _ => rest.push(arg)
+    }
+  }
+  match rest {
+    [q] => { o.query = q }
+    [q, path] => {
+      o.query = q
+      o.file = Some(path)
+    }
+    _ => raise USAGE
+  }
+  o
+}
+
+/// Where JSON text goes wrong.
+fn mistake(e: json.Error) -> str {
+  match e {
+    Syntax(line, column) => "line {line}, column {column}"
+    Missing(path) | Mismatch(path, _, _) => path
+  }
+}

@@ -1,0 +1,11 @@
+//~ tier: meta
+//~ rule: generics.value-argument-names, errors.error-type
+
+// A path that goes on past a name that isn't a module names no type, so nothing
+// says which of its arguments are types and which are values, and none of them
+// is reported.
+fn helper() {}
+
+fn f(xs: helper.Array<i64, 3>) -> i64 { 0 } //~ ERROR E0212
+
+fn main() {}

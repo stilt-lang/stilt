@@ -1,0 +1,13 @@
+── WRONG KIND OF NAME ────────────────── E0212_rust_panic_macro.lt:2:14  [E0212]
+
+`panic` is a function, not a macro: call it as `panic("…")`:
+
+  2 │   if n < 0 { panic!("negative") } else { n }
+    │              ^^^^^
+
+`panic` and `unreachable` are functions, called without `!`.
+
+To fix it, delete the `!`:
+
+  2 │   if n < 0 { panic!("negative") } else { n }
+    │                   -

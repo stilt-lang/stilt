@@ -1,0 +1,1 @@
+fn next(n: str) -> i64 { n.to_i64() + 1 }

@@ -1,0 +1,13 @@
+trait Empty {
+  fn empty() -> Self
+}
+
+type Count = { n: i64 }
+
+impl Empty for Count {
+  fn empty() -> Count { Count { n: 0 } }
+}
+
+fn fresh() -> Count { Empty.empty() }
+
+fn main() {}

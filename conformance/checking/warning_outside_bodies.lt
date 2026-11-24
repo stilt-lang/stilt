@@ -1,0 +1,8 @@
+//~ rule: lexical.commented-out-code, errors.warnings-with-errors
+
+fn f() -> i64 {
+  let t = try 1
+  "text" //~ ERROR E0311
+}
+
+// let old = f() //~ WARN W0001

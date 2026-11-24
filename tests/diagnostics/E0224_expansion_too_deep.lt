@@ -1,0 +1,7 @@
+syntax sum {
+  ($x: expr) => $x + sum!($x)
+}
+
+fn main() / io {
+  print("{sum!(1)}")
+}

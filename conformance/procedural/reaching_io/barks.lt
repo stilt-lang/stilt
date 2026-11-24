@@ -1,0 +1,8 @@
+use noisy
+use std.meta
+
+/// Calls a method whose impl prints, which its row doesn't allow.
+pub macro barks() -> meta.Expr {
+  let n = noisy.dog().bark()
+  quote { $n }
+}

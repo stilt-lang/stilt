@@ -1,0 +1,22 @@
+── ROW VARIABLE ON A PARAMETER THAT PASSES ITS EFFECTS THROUGH ── E0509_row_variable_on_a_parameter_that_passes_its_effects_through.lt:1:41  [E0509]
+
+`f` passes its effects through, so its type names no row variable:
+
+  1 │ fn apply<e>(x: i64, f: fn(i64) -> i64 / e) -> i64 / e { f(x) }
+    │                                         ^ its effects pass through without it
+
+A function parameter passes the effects its row doesn't name through to the
+caller, so a row variable adds nothing. Delete it, or mark the parameter
+`escaping` if the function keeps it.
+
+Two ways to fix it:
+
+  1. Delete `e` from the signature:
+
+  1 │ fn apply<e>(x: i64, f: fn(i64) -> i64 / e) -> i64 / e { f(x) }
+    │         ---                          ----        ----
+
+  2. Mark `f` `escaping`, if the function keeps it:
+
+  1 │ fn apply<e>(x: i64, escaping f: fn(i64) -> i64 / e) -> i64 / e { f(x) }
+    │                     +++++++++

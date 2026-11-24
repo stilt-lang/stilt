@@ -1,0 +1,169 @@
+module std.encoding
+
+// Bytes as text and back (std.encoding): base64, hexadecimal, and UTF-8 read
+// with the place where it goes wrong (std.utf8-errors). Everything here is
+// written in Stilt.
+
+/// Where bytes stop being UTF-8: at the offset of the first byte of a sequence
+/// that no UTF-8 text holds, or of a sequence that the bytes end before it is
+/// whole.
+pub type Utf8Error = | Invalid(offset: i64) | Truncated(offset: i64)
+
+/// `bytes` in base64, with RFC 4648's alphabet of `A` to `Z`, `a` to `z`, `0`
+/// to `9`, `+` and `/`, padded with `=` to a multiple of four characters.
+/// ex: to_base64("Man".bytes()) == "TWFu" && to_base64("Ma".bytes()) == "TWE=" && to_base64([]) == ""
+pub fn to_base64(bytes: List<u8>) -> str { base64(bytes, 43, 47, true) }
+
+/// `bytes` in RFC 4648's base64 for URLs, with `-` and `_` in place of `+` and
+/// `/`, and no padding.
+/// ex: to_base64_url([251, 255]) == "-_8"
+pub fn to_base64_url(bytes: List<u8>) -> str { base64(bytes, 45, 95, false) }
+
+/// The bytes that `text` writes in base64, as `to_base64` writes them, or
+/// `None`.
+/// ex: from_base64("TWE=") == Some("Ma".bytes()) && from_base64("TWE") == None && from_base64("T@E=") == None
+pub fn from_base64(text: str) -> Option<List<u8>> {
+  let b = text.bytes()
+  if b.len() % 4 != 0 { return None }
+  var end = b.len()
+  for _ in 0..2 {
+    if end > 0 && b.get(end - 1) == Some(61) { end -= 1 }
+  }
+  unbase64(b.take(end), 43, 47)
+}
+
+/// The bytes that `text` writes in base64 for URLs, as `to_base64_url` writes
+/// them, or `None`.
+/// ex: from_base64_url("-_8") == Some([251, 255]) && from_base64_url("-_8=") == None
+pub fn from_base64_url(text: str) -> Option<List<u8>> { unbase64(text.bytes(), 45, 95) }
+
+/// `bytes` in hexadecimal, two lowercase digits for each.
+/// ex: to_hex([0, 15, 171]) == "000fab"
+pub fn to_hex(bytes: List<u8>) -> str {
+  var out: List<u8> = []
+  for x in bytes {
+    out.push(hex_digit(x >> 4))
+    out.push(hex_digit(x & 15))
+  }
+  str.from_utf8_lossy(out)
+}
+
+/// The bytes that `text` writes in hexadecimal, two digits of either case for
+/// each, or `None`.
+/// ex: from_hex("000fAB") == Some([0, 15, 171]) && from_hex("abc") == None && from_hex("zz") == None
+pub fn from_hex(text: str) -> Option<List<u8>> {
+  let b = text.bytes()
+  if b.len() % 2 != 0 { return None }
+  var out: List<u8> = []
+  for i in 0..b.len() / 2 {
+    let high = hex_value(b.get(2 * i) else 0) else return None
+    let low = hex_value(b.get(2 * i + 1) else 0) else return None
+    out.push((high << 4) | low)
+  }
+  Some(out)
+}
+
+/// The text whose UTF-8 is `bytes`, or a raise of where they stop being UTF-8.
+/// ex: try from_utf8([104, 195, 169]) == "hé"
+/// ex: Result.of(|| try from_utf8([104, 255, 105])) == Err(Invalid(1))
+/// ex: Result.of(|| try from_utf8([104, 195])) == Err(Truncated(1))
+/// ex: Result.of(|| try from_utf8([237, 160, 128])) == Err(Invalid(0))
+pub fn from_utf8(bytes: List<u8>) -> str / raise<Utf8Error> {
+  var i = 0
+  for _ in 0..bytes.len() {
+    if i >= bytes.len() { break }
+    i += try sequence(bytes, i)
+  }
+  str.from_utf8_lossy(bytes)
+}
+
+// The length of the UTF-8 sequence that starts at offset `i` of `bytes`, as the
+// Unicode Standard's table of well-formed sequences gives it (§3.9), or a raise.
+fn sequence(bytes: List<u8>, i: i64) -> i64 / raise<Utf8Error> {
+  let first = bytes.get(i) else 0
+  if first < 128 { return 1 }
+  let (n, low, high) = if first >= 194 && first <= 223 {
+    (2, 128, 191)
+  } else if first == 224 {
+    (3, 160, 191)
+  } else if first == 237 {
+    (3, 128, 159)
+  } else if first >= 225 && first <= 239 {
+    (3, 128, 191)
+  } else if first == 240 {
+    (4, 144, 191)
+  } else if first == 244 {
+    (4, 128, 143)
+  } else if first >= 241 && first <= 243 {
+    (4, 128, 191)
+  } else {
+    raise Invalid(i)
+  }
+  for k in 1..n {
+    let next = bytes.get(i + k) else raise Truncated(i)
+    let (lo, hi) = if k == 1 { (low, high) } else { (128, 191) }
+    if next < lo || next > hi { raise Invalid(i) }
+  }
+  n
+}
+
+// The ASCII byte of base64 digit `d`, from 0 to 63, with `plus` and `slash` for
+// the last two.
+fn base64_digit(d: u32, plus: u8, slash: u8) -> u8 {
+  if d < 26 { return (d + 65).wrap_to_u8() }
+  if d < 52 { return (d + 71).wrap_to_u8() }
+  if d < 62 { return (d - 4).wrap_to_u8() }
+  if d == 62 { plus } else { slash }
+}
+
+// The value of the base64 digit whose ASCII byte is `c`, or `None`.
+fn base64_value(c: u8, plus: u8, slash: u8) -> Option<u32> {
+  if c >= 65 && c <= 90 { return Some(c.to_u32() - 65) }
+  if c >= 97 && c <= 122 { return Some(c.to_u32() - 71) }
+  if c >= 48 && c <= 57 { return Some(c.to_u32() + 4) }
+  if c == plus { return Some(62) }
+  if c == slash { return Some(63) }
+  None
+}
+
+fn base64(bytes: List<u8>, plus: u8, slash: u8, padded: bool) -> str {
+  var out: List<u8> = []
+  for start in 0..(bytes.len() + 2) / 3 {
+    let at = 3 * start
+    let n = (bytes.len() - at).min(3)
+    var group: u32 = 0
+    for k in 0..3 { group = (group << 8) | (bytes.get(at + k) else 0).to_u32() }
+    for k in 0..n + 1 { out.push(base64_digit((group >> (18 - 6 * k).wrap_to_u32()) & 63, plus, slash)) }
+    if padded {
+      for _ in n..3 { out.push(61) }
+    }
+  }
+  str.from_utf8_lossy(out)
+}
+
+// The bytes of base64 digits without padding, or `None` for a byte that is no
+// digit, and for a number of digits that leaves one over.
+fn unbase64(b: List<u8>, plus: u8, slash: u8) -> Option<List<u8>> {
+  if b.len() % 4 == 1 { return None }
+  var out: List<u8> = []
+  for start in 0..(b.len() + 3) / 4 {
+    let at = 4 * start
+    let n = (b.len() - at).min(4)
+    var group: u32 = 0
+    for k in 0..4 {
+      let value = if k < n { base64_value(b.get(at + k) else 0, plus, slash) else return None } else { 0 }
+      group = (group << 6) | value
+    }
+    for k in 0..n - 1 { out.push((group >> (16 - 8 * k).wrap_to_u32()).wrap_to_u8()) }
+  }
+  Some(out)
+}
+
+fn hex_digit(d: u8) -> u8 { if d < 10 { d + 48 } else { d + 87 } }
+
+fn hex_value(c: u8) -> Option<u8> {
+  if c >= 48 && c <= 57 { return Some(c - 48) }
+  if c >= 97 && c <= 102 { return Some(c - 87) }
+  if c >= 65 && c <= 70 { return Some(c - 55) }
+  None
+}

@@ -1,0 +1,2 @@
+/// The largest `u64`.
+pub const LARGEST: u64 = 18_446_744_073_709_551_615

@@ -1,0 +1,8 @@
+# The queries that `examples/pick`, jq and jaq each run on the document of 300,000 books that
+# `stilt-bench compare` writes (bench/src/compare/input.rs), one to a line.
+.books[] | select(.price < 10 and .stock > 0) | {title, year}
+[.books[] | .year] | sort | unique | length
+.books | map(.author.name) | unique
+.books | sort_by(.price) | first | .title
+[.books[] | .tags[]] | length
+.books | map(select(.author.born < 1900)) | length

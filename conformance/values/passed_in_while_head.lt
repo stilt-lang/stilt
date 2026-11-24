@@ -1,0 +1,15 @@
+//~ rule: values.passing-values, expressions.loops
+//~ run-output: "2 [1]"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn main() / io {
+  var xs = [1]
+  var i = 0
+  while grown(xs).len() > i { i += 1 }
+  print("{i} {xs}")
+}

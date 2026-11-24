@@ -1,0 +1,7 @@
+use leaf
+use mid
+
+fn main() / io {
+  mid.greet()
+  leaf.say("bye")
+}

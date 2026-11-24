@@ -1,0 +1,6 @@
+//~ tier: advanced
+//~ rule: syntax.macro-checks, macros.templates
+
+fn main() {
+  let x = $y //~ ERROR E0100
+}

@@ -1,0 +1,5 @@
+//~ rule: expressions.match
+
+fn name(n: i64) -> str {
+  match n { 0 => "zero" _ => "many" } //~ ERROR E0100
+}

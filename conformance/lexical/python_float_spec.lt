@@ -1,0 +1,5 @@
+//~ rule: lexical.format-specs
+
+fn price(x: f64) -> str {
+  "{x:.2f}" //~ ERROR E0007
+}

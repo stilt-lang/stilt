@@ -1,0 +1,28 @@
+use std.meta
+
+/// The expression.
+pub macro same(e: meta.Expr) -> meta.Expr { e }
+
+/// The expression that the tokens hold, read by a cursor.
+pub macro read(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(ts)
+  let e = try c.expr()
+  try c.end()
+  e
+}
+
+/// The first part, then the expression of the trailing block.
+pub macro after(first: meta.Expr, e: meta.Expr) -> meta.Expr { quote { $first * 100 + $e } }
+
+/// How many tokens the first token, a group, holds, and whether the first of
+/// them is a written `;`.
+pub macro inside(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(ts)
+  let held = try c.group(meta.Paren)
+  let first = match held.items.first().map(.kind()) {
+    Some(meta.Punct(p)) => p
+    _ => ""
+  }
+  let s = "{held.items.len()} {first}"
+  quote { $s }
+}

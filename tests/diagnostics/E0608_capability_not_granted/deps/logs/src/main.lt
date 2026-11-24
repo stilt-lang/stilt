@@ -1,0 +1,5 @@
+use std.fs
+
+pub fn log(msg: str) / io {
+  if !fs.exists("quiet") { print(msg) }
+}

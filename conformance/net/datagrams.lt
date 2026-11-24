@@ -1,0 +1,49 @@
+//~ rule: std.net, std.net-datagrams
+//~ stdout:
+//~ | true true
+//~ | Some([104, 105]) true
+//~ | Some([]) Some([1, 2, 3])
+//~ | None
+//~ | Other(127.0.0.1:70000) NotFound(:9) Other(127.0.0.1:9)
+//~ | 0 None
+
+use std.io
+use std.net
+
+fn shown(e: io.IoError) -> str {
+  match e {
+    io.NotFound(at) => "NotFound({at})"
+    io.PermissionDenied(at) => "PermissionDenied({at})"
+    io.InvalidUtf8(at) => "InvalidUtf8({at})"
+    io.Other(at) => "Other({at})"
+  }
+}
+
+fn sent(inout s: net.Socket, host: str, port: i64) -> str / io {
+  try {
+    try s.send_to([1], host, port)
+    "sent"
+  }
+    catch e => shown(e)
+}
+
+fn main() / {io, raise<io.IoError>} {
+  var a = try net.socket("127.0.0.1", 0)
+  var b = try net.socket("127.0.0.1", 0)
+  print("{a.port() > 0} {a.port() != b.port()}")
+  try a.send_to([104, 105], "127.0.0.1", b.port())
+  let got = b.receive()
+  let from = got.map(|d| d.from)
+  print("{got.map(|d| d.bytes)} {from == Some("127.0.0.1:{a.port()}")}")
+  try a.send_to([], "127.0.0.1", b.port())
+  try a.send_to([1, 2, 3], "127.0.0.1", b.port())
+  print("{b.receive().map(|d| d.bytes)} {b.receive().map(|d| d.bytes)}")
+  b.set_timeout(50)
+  print("{b.receive().map(|d| d.bytes)}")
+  let far = sent(inout a, "127.0.0.1", 70000)
+  let none = sent(inout a, "", 9)
+  a.close()
+  let gone = sent(inout a, "127.0.0.1", 9)
+  print("{far} {none} {gone}")
+  print("{a.port()} {a.receive().map(|d| d.bytes)}")
+}

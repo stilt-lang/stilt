@@ -1,0 +1,10 @@
+── MALFORMED MANIFEST ────────────────────────────────── stilt.toml:1:9  [E0600]
+
+This manifest isn't TOML 1.0: expected `]`:
+
+  1 │ [package
+    │         ^
+
+stilt.toml holds a `[package]` table with `name` and `edition`, and `link` for C
+libraries, and a `[dependencies]` table whose entries give `path`, or `from`,
+`version` and `hash`, and `may`. Fix the line it points at.

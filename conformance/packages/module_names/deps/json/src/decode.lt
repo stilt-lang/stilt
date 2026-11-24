@@ -1,0 +1,3 @@
+use text.escape
+
+pub fn parse(s: str) -> str { "parsed {escape.wrap(s)}" }

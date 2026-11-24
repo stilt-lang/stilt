@@ -1,0 +1,35 @@
+//~ tier: advanced
+//~ rule: tasks.async, tasks.with-waits, tasks.sequential-run, tasks.same-output-under-every-handler
+//~ stdout:
+//~ | outer
+//~ | inner 3
+//~ | 4 4
+//~ | 3 8
+
+use std.task
+
+// A task that installs the other handler, each way round.
+fn main() / io {
+  let r = with task.threads() {
+    let a = task.spawn(|| {
+      print("outer")
+      with task.sequential() {
+        let x = task.spawn(|| 3)
+        print("inner {x.await()}")
+        x.await()
+      }
+    })
+    a.await()
+  }
+  let s = with task.sequential() {
+    let b = task.spawn(|| {
+      with task.threads() {
+        let y = task.spawn(|| 4)
+        print("{y.await()} {y.await()}")
+        y.await() + y.await()
+      }
+    })
+    b.await()
+  }
+  print("{r} {s}")
+}

@@ -1,0 +1,10 @@
+// The lines of a profile that a release build drops, since their bodies changed since they
+// were counted (builds.profile-use): every line of `profiled.profile`, whose hash is no body's.
+
+fn parity(n: i64) -> str { //~ ONCE
+  if n % 2 == 0 { "even" } else { "odd" } //~ PROVED divide-by-zero PROVED overflow
+}
+
+fn main() / io { //~ ONCE
+  print(parity(3))
+}

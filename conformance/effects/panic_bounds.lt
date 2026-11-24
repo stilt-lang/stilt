@@ -1,0 +1,11 @@
+//~ rule: effects.panic-kinds, std.lists
+//~ run-output: "2"
+//~ panic: bounds
+//~ panic-at: panic_bounds.lt:6:39
+
+fn at(xs: List<i64>, i: i64) -> i64 { xs[i] }
+
+fn main() / io {
+  print("{at([1, 2], 1)}")
+  print("{at([1, 2], 2)}")
+}

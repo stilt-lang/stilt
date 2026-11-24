@@ -1,0 +1,1 @@
+Options { width: 320, height: Some(200), quality: 85, scale: 1.0, fit: Cover, keep_metadata: false, tags: ["a", "b"], rest: ["x.png", "y.png"] }

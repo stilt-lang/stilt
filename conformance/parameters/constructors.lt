@@ -1,0 +1,51 @@
+//~ tier: advanced
+//~ rule: traits.constructor-traits, traits.constructor-impls, traits.constructor-parameters
+//~ stdout:
+//~ | Some(4)
+//~ | [2, 4, 6]
+//~ | None
+//~ | [1, 2]
+//~ | odd 3
+
+type Odd = | Odd(i64)
+
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+}
+
+impl Mappable for Option {
+  fn transform<A, B>(self: Option<A>, f: fn(A) -> B) -> Option<B> {
+    match self {
+      Some(x) => Some(f(x))
+      None => None
+    }
+  }
+}
+
+impl Mappable for List {
+  fn transform<A, B>(self: List<A>, f: fn(A) -> B) -> List<B> {
+    var out: List<B> = []
+    for x in self { out.push(f(x)) }
+    out
+  }
+}
+
+fn doubled<F: Mappable>(xs: F<i64>) -> F<i64> { xs.transform(|x| x * 2) }
+
+fn halve(x: i64) -> i64 / raise<Odd> {
+  if x % 2 == 0 { x / 2 } else { raise Odd(x) }
+}
+
+// The callback's `raise<Odd>` passes through `transform` to its caller.
+fn halved<F: Mappable>(xs: F<i64>) -> F<i64> / raise<Odd> { try xs.transform(halve) }
+
+fn main() / io {
+  print("{doubled(Some(2))}")
+  print("{doubled([1, 2, 3])}")
+  let none: Option<i64> = None
+  print("{doubled(none)}")
+  let halves = try halved([2, 4]) catch Odd(n) => [n]
+  print("{halves}")
+  let odd = try halved([2, 3]) catch Odd(n) => [n]
+  print("odd {odd[0]}")
+}

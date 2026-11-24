@@ -1,0 +1,16 @@
+//~ rule: values.inout-arguments, std.natives, std.list-changes
+//~ stdout:
+//~ | stopped at 2
+//~ | [1, 2, 3]
+
+type Stop = { at: i64 }
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  try xs.retain(|x| {
+    if x == 2 { raise Stop { at: x } }
+    true
+  })
+    catch s because "the list is kept as it was" => print("stopped at {s.at}")
+  print("{xs}")
+}

@@ -1,0 +1,17 @@
+//~ rule: conformance.commands, conformance.test-objects, conformance.inline-annotations, program.running-tests
+/// Doubles a number.
+///
+/// ex: double(1) == 2 //~ PASS
+fn double(x: i64) -> i64 { x * 2 }
+
+/// A documented test.
+test "documented" { //~ PASS
+  print("tests may print")
+  eprint("and write to stderr")
+  assert double(2) == 4
+}
+
+test //~ FAIL
+  "split over lines" {
+  assert double(2) == 5
+}

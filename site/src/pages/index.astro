@@ -1,0 +1,106 @@
+---
+// The front page: what Stilt is, in the README's first paragraph, an example with what the
+// compiler says of it, how to install it, and where to read on.
+import Hero from "../components/Hero.astro";
+import Base from "../layouts/Base.astro";
+import { install } from "../lib/stilt";
+import { lines } from "../lib/highlight";
+import { render } from "../lib/markdown";
+import { read } from "../lib/repo";
+
+/** The README's first paragraph after its title. */
+const intro = read("README.md").split("\n\n").find((p) => p.startsWith("Stilt is"))!;
+const pitch = render(intro, { from: "README.md" }).html;
+const command = install();
+const first = "stilt new hello && cd hello\nstilt run\nstilt test\nstilt show main";
+
+const docs = [
+  { name: "A tour", href: "/learn/tour/", text: "Build a small arena where creatures fight, in thirty minutes." },
+  { name: "The guide", href: "/learn/", text: "The language, chapter by chapter, from values to compile-time code." },
+  { name: "The Reference", href: "/reference/", text: "The exact rules of the language, each with the tests that check it." },
+  { name: "The standard library", href: "/library/", text: "Every module of std, with each function's facts and examples." },
+  { name: "The error index", href: "/errors/", text: "Every error code, with a program that makes the mistake and the fix." },
+  { name: "The playground", href: "/playground/", text: "Check, show and run a program in the browser." },
+];
+---
+
+<Base title="Stilt" section="home">
+  <div class="shell front">
+    <section class="intro">
+      <h1>Stilt</h1>
+      <div class="pitch" set:html={pitch} />
+      <div class="actions">
+        <a class="button" href="/learn/tour/">Take the tour</a>
+        <a class="button button-quiet" href="/playground/">Open the playground</a>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>What the compiler infers</h2>
+      <p>
+        <code>stilt show</code> prints a function the way the compiler sees it. After each
+        signature, in brackets, are the function's facts: whether it can panic, overflow or
+        allocate. At the end of each line, a comment names the operation behind each fact. You
+        don't write any of this. The one thing written by hand is <code>without alloc</code>, a
+        limit that the compiler checks.
+      </p>
+      <Hero />
+    </section>
+
+    <section class="block">
+      <h2>Install</h2>
+      <p>
+        The installer checks the release's signature, then puts <code>stilt</code> in
+        <code>~/.stilt/bin</code>. Then make a program, run it, test it, and ask the compiler what
+        it inferred. On macOS, an archive downloaded with a browser rather than the installer is
+        quarantined until <code>xattr -dr com.apple.quarantine</code> clears its directory.
+      </p>
+      <figure class="code">
+        <figcaption><span class="code-label">shell</span><span class="code-actions"><button type="button" class="code-action" data-copy>Copy</button></span></figcaption>
+        <pre><code set:html={lines(`${command}\n${first}`, "sh")} /></pre>
+      </figure>
+    </section>
+
+    <section class="block">
+      <h2>Documentation</h2>
+      <dl class="docs">
+        {
+          docs.map((d) => (
+            <div>
+              <dt><a class="go" href={d.href}>{d.name}</a></dt>
+              <dd>{d.text}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <p class="more">
+        If you know another language well, the guide maps what you know from
+        <a class="go" href="/learn/for-rust-programmers/">Rust</a>,
+        <a class="go" href="/learn/for-go-programmers/">Go</a>,
+        <a class="go" href="/learn/for-python-programmers/">Python</a>,
+        <a class="go" href="/learn/for-typescript-programmers/">TypeScript</a> and
+        <a class="go" href="/learn/for-swift-programmers/">Swift</a> onto Stilt.
+      </p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .front { padding-block: 4.5rem 0; }
+  @media (min-width: 48rem) { .front { padding-top: 6rem; } }
+  .front > section { max-width: 44rem; margin-inline: auto; }
+  h1 { font-size: 2.5rem; line-height: 1.1; letter-spacing: -0.03em; }
+  h2 { font-size: 1.4375rem; line-height: 1.3; letter-spacing: -0.015em; }
+  .intro { display: flex; flex-direction: column; gap: 1.25rem; }
+  .pitch { font-size: 1.125rem; line-height: 1.5; color: var(--ink-soft); }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; }
+  .block { display: flex; flex-direction: column; gap: 1rem; margin-top: 4rem; padding-top: 3rem; border-top: 1px solid var(--rule); }
+  .block > p { color: var(--ink-soft); }
+  .block :global(p code) { font-size: 0.86em; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 0.05em 0.3em; }
+  .block .code { margin: 0.5rem 0 0; }
+  .docs { display: grid; gap: 1.5rem 3rem; margin: 0.5rem 0 0; }
+  @media (min-width: 40rem) { .docs { grid-template-columns: 1fr 1fr; } }
+  .docs dd { margin: 0.25rem 0 0; font-size: 0.9375rem; line-height: 1.55; color: var(--muted); }
+  .more { margin-top: 0.75rem; font-size: 0.9375rem; color: var(--muted); }
+  .more .go { color: var(--ink-soft); }
+</style>

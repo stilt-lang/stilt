@@ -1,0 +1,8 @@
+use std.par
+use std.sync
+
+fn scaled(factor: sync.Shared<i64>, xs: List<i64>) -> List<i64> {
+  par.map(xs, |x| when factor { factor * x })
+}
+
+fn main() {}

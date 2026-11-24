@@ -1,0 +1,9 @@
+── MEMBER TYPE THAT NAMES NOTHING ── E0334_member_type_that_names_nothing.lt:5:41  [E0334]
+
+No bound of `C` has a parameter `Key`:
+
+  5 │ fn first<C: Collection>(c: C) -> Option<C.Key> { None }
+    │                                         ^^^^^
+
+A member type such as `C.Item` names a parameter of a trait that bounds `C`.
+Check the name against the trait's parameters.

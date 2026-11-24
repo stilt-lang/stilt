@@ -1,0 +1,3 @@
+fn steps(n: i64) -> i64 without div {
+  if n <= 1 { 0 } else { 1 + steps(n / 2) }
+}

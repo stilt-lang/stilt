@@ -1,0 +1,25 @@
+module lib
+
+pub type Tree = | Leaf | Node(Tree, i64, Tree)
+
+pub type Forest = { trees: List<Branch> }
+
+pub type Branch = | Twig | Fork(Forest)
+
+pub type Stream = { head: i64, rest: fn() -> Option<Stream> }
+
+pub fn build(n: i64) -> List<i64> {
+  var xs = List.new()
+  for i in 0..n { xs.push(i) }
+  xs
+}
+
+pub fn via(n: i64) -> i64 { build(n).len() }
+
+pub fn sum(xs: List<i64>) -> i64 {
+  var total = 0
+  for x in xs { total += x }
+  total
+}
+
+pub fn adder() -> fn(i64) -> i64 { |n| n + 1 }

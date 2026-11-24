@@ -1,0 +1,10 @@
+use std.c
+
+extern fn crc32(crc: u64, buf: c.Ptr<u8>, len: u32) -> u64
+
+pub fn checksum(data: List<u8>) -> u64 {
+  let len = data.len().wrap_to_u32()
+  unsafe because "crc32 reads len bytes from buf, which with_ptr keeps alive for the call" {
+    data.with_ptr(|p| crc32(0, p, len))
+  }
+}

@@ -1,0 +1,149 @@
+# What `just nightly` runs, divided between runners: a million generated programs under the debug
+# back end and the reference interpreter, a tenth of them under the release back end too, every
+# run test of the conformance suite as a release build, commands answered by engines, the whole
+# matrix of hosts and targets, the sanitizers and the debuggers.
+
+name: Nightly
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+
+jobs:
+  differential:
+    name: ${{ matrix.count }} generated programs from seed ${{ matrix.seed }}
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix:
+        count: [62500]
+        # Sixteen runs of 62,500 programs from consecutive seeds, a million together, offset by
+        # the date each night.
+        seed: [1, 62501, 125001, 187501, 250001, 312501, 375001, 437501, 500001, 562501, 625001,
+               687501, 750001, 812501, 875001, 937501]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: nightly-differential
+      - run: just build
+      - name: Run and compare the programs, a tenth of them as release builds
+        env:
+          STILT_BUILT: '1'
+        run: |
+          cargo build --release --workspace
+          # A new million programs each night: the shard's seed, offset by the date, logged so
+          # that a failure can be generated again.
+          seed=$(( $(date -u +%Y%m%d) * 1000000 + ${{ matrix.seed }} ))
+          echo "seed $seed" | tee -a "$GITHUB_STEP_SUMMARY"
+          just differential ${{ matrix.count }} "$seed" 10
+      - name: Keep the logs of a failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: differential-logs-${{ matrix.seed }}
+          path: target/differential-logs
+          if-no-files-found: ignore
+
+  release-builds:
+    name: every run test as a release build (${{ matrix.os }})
+    if: ${{ !github.event.repository.private }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: nightly-release
+      - run: just build
+      - name: Build and run every run test
+        env:
+          STILT_BUILT: '1'
+        run: target/bin/stilt-test --impl tools/runner/release.sh --kinds run --logs target/run-logs
+      - name: Commands answered by engines against the compiler alone
+        env:
+          STILT_BUILT: '1'
+        run: just engine
+      - name: Keep the logs of a failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-build-logs-${{ matrix.os }}
+          path: target/run-logs
+          if-no-files-found: ignore
+
+  cross:
+    name: the matrix of hosts and targets
+    # `just cross` runs on an aarch64 Mac with Docker, which hosted runners don't offer.
+    if: ${{ !github.event.repository.private }}
+    runs-on: [self-hosted, macOS, ARM64, stilt-dedicated]
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Create the opam switch if the machine has none
+        run: |
+          if [ ! -d _opam ]; then
+            opam switch create . 5.5.2 --deps-only --with-test --with-dev-setup --yes
+          fi
+      - run: just cross
+
+  sanitizers:
+    name: sanitizers
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: nightly-sanitizers
+      - run: just build
+      - name: The conformance suite's run tests under the sanitizers
+        env:
+          STILT_BUILT: '1'
+        run: just sanitizers
+      - name: Tasks, threads, std.par and shared values under ThreadSanitizer
+        env:
+          STILT_BUILT: '1'
+          STILT_SANITIZER: thread
+        run: just sanitizers
+      - name: Generated programs under the sanitizers
+        env:
+          STILT_BUILT: '1'
+        run: |
+          cargo build --release --workspace
+          just differential 5000 1 25
+          just sanitizers target/differential
+
+  debuggers:
+    name: debuggers
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: nightly-debuggers
+      - run: just build
+      - env:
+          STILT_BUILT: '1'
+        run: just debuggers

@@ -1,0 +1,23 @@
+//~ rule: traits.structural-calls, std.finding-keys
+//~ run-output: "start"
+//~ panic: assert
+//~ panic-at: structural_hash_reaches_component.lt:14:5
+
+type Bomb = { id: i64 }
+
+impl Eq for Bomb {
+  fn eq(self, other: Bomb) -> bool { panic("eq was called") }
+}
+
+impl Hash for Bomb {
+  fn hash(self) -> u64 {
+    assert false
+    0
+  }
+}
+
+fn main() / io {
+  var m: Map<(i64, Bomb), i64> = Map.new()
+  print("start")
+  m[(1, Bomb { id: 1 })] = 1
+}

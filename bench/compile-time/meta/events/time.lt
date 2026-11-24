@@ -1,0 +1,105 @@
+// When and where an entry of the log was written, and how severe it is.
+
+/// How severe an entry is, from the least.
+pub type Level = | Debug | Info | Warn | Error
+
+/// A day of the calendar.
+pub type Date = { year: i64, month: u8, day: u8 }
+
+/// When an entry was written, in UTC, to the second.
+pub type Stamp = { date: Date, hour: u8, minute: u8, second: u8 }
+
+/// The host that wrote an entry: its role and its number, as in `web-1`.
+pub type Source = { host: str, index: i64 }
+
+impl Level {
+  /// The level that a line writes, in capitals.
+  /// ex: Level.parse("WARN") == Some(Warn)
+  /// ex: Level.parse("warn") == None
+  pub fn parse(text: str) -> Option<Level> {
+    match text {
+      "DEBUG" => Some(Debug)
+      "INFO" => Some(Info)
+      "WARN" => Some(Warn)
+      "ERROR" => Some(Error)
+      _ => None
+    }
+  }
+
+  /// The level as a line writes it.
+  /// ex: Error.label() == "ERROR"
+  pub fn label(self) -> str {
+    match self {
+      Debug => "DEBUG"
+      Info => "INFO"
+      Warn => "WARN"
+      Error => "ERROR"
+    }
+  }
+
+  /// How severe the level is: 0 for `Debug`, up to 3 for `Error`.
+  /// ex: Warn.rank() == 2
+  pub fn rank(self) -> i64 {
+    match self {
+      Debug => 0
+      Info => 1
+      Warn => 2
+      Error => 3
+    }
+  }
+
+  /// Whether an entry of this level needs someone to look at it.
+  /// ex: Warn.notable() && !Info.notable()
+  pub fn notable(self) -> bool { self.rank() >= 2 }
+}
+
+/// Every level, from the least severe.
+pub const LEVELS: List<Level> = [Debug, Info, Warn, Error]
+
+impl Date {
+  /// The date as a line writes it.
+  /// ex: Date { year: 2026, month: 11, day: 3 }.text() == "2026-11-03"
+  pub fn text(self) -> str { "{self.year}-{self.month:0>2}-{self.day:0>2}" }
+
+  /// Whether the month and the day are ones a calendar has, not counting leap days.
+  /// ex: Date { year: 2026, month: 2, day: 29 }.valid() == false
+  /// ex: Date { year: 2026, month: 12, day: 31 }.valid()
+  pub fn valid(self) -> bool {
+    let days = match self.month {
+      1 | 3 | 5 | 7 | 8 | 10 | 12 => 31
+      4 | 6 | 9 | 11 => 30
+      2 => 28
+      _ => 0
+    }
+    self.day >= 1 && self.day.to_i64() <= days
+  }
+}
+
+impl Stamp {
+  /// The time as a line writes it.
+  /// ex: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 5, second: 9 }.text() == "2026-11-03T08:05:09Z"
+  pub fn text(self) -> str {
+    "{self.date.text()}T{self.hour:0>2}:{self.minute:0>2}:{self.second:0>2}Z"
+  }
+
+  /// The time of day, as hours and minutes.
+  /// ex: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 5, second: 9 }.clock() == "08:05"
+  pub fn clock(self) -> str { "{self.hour:0>2}:{self.minute:0>2}" }
+
+  /// The seconds since the day began.
+  /// ex: Stamp { date: Date { year: 2026, month: 1, day: 1 }, hour: 1, minute: 1, second: 1 }.seconds() == 3661
+  pub fn seconds(self) -> i64 {
+    self.hour.to_i64() * 3600 + self.minute.to_i64() * 60 + self.second.to_i64()
+  }
+
+  /// Whether the time is one a clock shows, and the date one a calendar has.
+  pub fn valid(self) -> bool {
+    self.date.valid() && self.hour < 24 && self.minute < 60 && self.second < 60
+  }
+}
+
+impl Source {
+  /// The host as a line writes it.
+  /// ex: Source { host: "web", index: 2 }.text() == "web-2"
+  pub fn text(self) -> str { "{self.host}-{self.index}" }
+}

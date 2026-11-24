@@ -1,0 +1,46 @@
+//~ tier: advanced
+//~ rule: projections.declaring-projection, projections.call-is-place, projections.nested
+//~ run-output: "[\"z\", \"b\"] 9 [8, 5] 5"
+
+type Node = { value: i64, kids: List<Node> }
+
+// A recursive projection, whose `else` arm yields a nested projection's call.
+fn at(inout n: Node, path: List<i64>) -> inout i64 {
+  if path.is_empty() {
+    yield n.value
+  } else {
+    yield at(inout n.kids[path[0]], path.slice(1, path.len()))
+  }
+}
+
+// A generic projection.
+fn first<T>(inout xs: List<T>) -> inout T {
+  yield xs[0]
+}
+
+trait Cell {
+  fn cell(inout self, i: i64) -> inout i64
+}
+
+type Row = { xs: List<i64> }
+
+impl Cell for Row {
+  fn cell(inout self, i: i64) -> inout i64 {
+    yield self.xs[i]
+  }
+}
+
+fn set_first<T: Cell>(inout c: T, v: i64) {
+  c.cell(0) = v
+}
+
+fn main() / io {
+  var names = ["a", "b"]
+  first(inout names) = "z"
+  var tree = Node { value: 1, kids: [Node { value: 2, kids: [Node { value: 3, kids: [] }] }] }
+  at(inout tree, [0, 0]) = 9
+  var r = Row { xs: [1, 2] }
+  set_first(inout r, 8)
+  r.cell(1) += 3
+  print("{names} {at(inout tree, [0, 0])} {r.xs} {r.cell(1)}")
+}

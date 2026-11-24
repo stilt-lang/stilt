@@ -1,0 +1,3 @@
+fn greet(name: str, greeting: str) -> str { "{greeting}, {name}" }
+
+fn main() / io { print(greet(name: "ada", greeting: "hi")) }

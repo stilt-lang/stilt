@@ -1,0 +1,5 @@
+effect Counter {
+  fn bump(inout n: i64)
+}
+
+fn main() {}

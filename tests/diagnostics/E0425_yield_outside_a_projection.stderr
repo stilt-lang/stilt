@@ -1,0 +1,11 @@
+── `yield` OUTSIDE A PROJECTION ── E0425_yield_outside_a_projection.lt:2:3  [E0425]
+
+`yield` belongs in a projection's body, a function whose result is written
+`inout T`:
+
+  2 │   yield xs[0]
+    │   ^^^^^^^^^^^
+
+`yield` hands a place to the caller, which only a projection, a function whose
+result is written `inout T`, does. Write the result as `-> inout T`, or return a
+value.

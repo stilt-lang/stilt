@@ -1,0 +1,473 @@
+# The edit script of the compile-time benchmark (goal compile-time-code-rebuilds): edits a person makes while
+# working on logscan, each made to both versions, the same where they share code and the
+# matching one where they don't. `stilt-latency compile-time` replays it, each edit followed by
+# its undoing, and times each from the files' change to the rebuilt executable.
+#
+# An edit starts with `edit KIND: what it does`. Each `in` line names a file of one version, and
+# the runs of lines after it each replace, in that file, the text that a run of `-` lines writes,
+# which the file holds once, with the text that the run of `+` lines after it writes. A `-` or a
+# `+` alone stands for an empty line.
+
+edit field: a panic gains the code its thread exited with
+in meta/alerts.lt
+-   let crash = entry.Panic(ops.Crash { thread: "t-1", message: "boom" })
++   let crash = entry.Panic(ops.Crash { thread: "t-1", message: "boom", code: 101 })
+in meta/events/ops.lt
+- pub type Crash = { thread: str, message: str }
++ pub type Crash = { thread: str, message: str, code: i64 }
+in meta/parse.lt
+-   Some(entry.Panic(ops.Crash { thread: c.get(1), message: c.get(2) }))
++   Some(entry.Panic(ops.Crash { thread: c.get(1), message: c.get(2), code: 101 }))
+in baseline/alerts.lt
+-   let crash = entry.Panic(ops.Crash { thread: "t-1", message: "boom" })
++   let crash = entry.Panic(ops.Crash { thread: "t-1", message: "boom", code: 101 })
+in baseline/events/ops.lt
+- pub type Crash = { thread: str, message: str }
++ pub type Crash = { thread: str, message: str, code: i64 }
+-       message: try decode.text(try decode.field(ms, "message", path), "{path}.message"),
++       message: try decode.text(try decode.field(ms, "message", path), "{path}.message"),
++       code: try decode.int(try decode.field(ms, "code", path), "{path}.code"),
+-     json.Object([("thread", json.Text(self.thread)), ("message", json.Text(self.message))])
++     json.Object(
++       [
++         ("thread", json.Text(self.thread)),
++         ("message", json.Text(self.message)),
++         ("code", decode.number(self.code)),
++       ],
++     )
+in baseline/flat.lt
+-     Panic(c) => [leaf(at, "thread", c.thread), leaf(at, "message", c.message)]
++     Panic(c) => [
++       leaf(at, "thread", c.thread),
++       leaf(at, "message", c.message),
++       leaf(at, "code", "{c.code}"),
++     ]
+in baseline/parse.lt
+-   Some(entry.Panic(ops.Crash { thread: c.get(1), message: c.get(2) }))
++   Some(entry.Panic(ops.Crash { thread: c.get(1), message: c.get(2), code: 101 }))
+
+edit field: a retry gains the jitter added to its wait
+in meta/events/ops.lt
+- pub type Retry = { op: str, attempt: i64, limit: i64, wait: i64 }
++ pub type Retry = { op: str, attempt: i64, limit: i64, wait: i64, jitter: i64 }
+-   /// ex: Retry { op: "fetch", attempt: 5, limit: 5, wait: 100 }.last()
++   /// ex: Retry { op: "fetch", attempt: 5, limit: 5, wait: 100, jitter: 0 }.last()
+in meta/operations.lt
+-     ops.Retry { op: "fetch", attempt, limit: 3, wait: 10 * attempt },
++     ops.Retry { op: "fetch", attempt, limit: 3, wait: 10 * attempt, jitter: 0 },
+in meta/parse.lt
+-   Some(entry.Retry(ops.Retry { op: c.get(1), attempt: c.int(2), limit: c.int(3), wait: c.int(4) }))
++   let r = ops.Retry { op: c.get(1), attempt: c.int(2), limit: c.int(3), wait: c.int(4), jitter: 0 }
++   Some(entry.Retry(r))
+in baseline/events/ops.lt
+- pub type Retry = { op: str, attempt: i64, limit: i64, wait: i64 }
++ pub type Retry = { op: str, attempt: i64, limit: i64, wait: i64, jitter: i64 }
+-   /// ex: Retry { op: "fetch", attempt: 5, limit: 5, wait: 100 }.last()
++   /// ex: Retry { op: "fetch", attempt: 5, limit: 5, wait: 100, jitter: 0 }.last()
+-       wait: try decode.int(try decode.field(ms, "wait", path), "{path}.wait"),
++       wait: try decode.int(try decode.field(ms, "wait", path), "{path}.wait"),
++       jitter: try decode.int(try decode.field(ms, "jitter", path), "{path}.jitter"),
+-         ("wait", decode.number(self.wait)),
++         ("wait", decode.number(self.wait)),
++         ("jitter", decode.number(self.jitter)),
+in baseline/flat.lt
+-       leaf(at, "wait", "{r.wait}"),
++       leaf(at, "wait", "{r.wait}"),
++       leaf(at, "jitter", "{r.jitter}"),
+in baseline/operations.lt
+-     ops.Retry { op: "fetch", attempt, limit: 3, wait: 10 * attempt },
++     ops.Retry { op: "fetch", attempt, limit: 3, wait: 10 * attempt, jitter: 0 },
+in baseline/parse.lt
+-   Some(entry.Retry(ops.Retry { op: c.get(1), attempt: c.int(2), limit: c.int(3), wait: c.int(4) }))
++   let r = ops.Retry { op: c.get(1), attempt: c.int(2), limit: c.int(3), wait: c.int(4), jitter: 0 }
++   Some(entry.Retry(r))
+
+edit field: a slow query says whether the cache answered it
+in meta/events/web.lt
+- pub type Query = { table: str, millis: i64, rows: i64 }
++ pub type Query = { table: str, millis: i64, rows: i64, cached: bool }
+-   /// ex: Query { table: "t", millis: 300, rows: 1000 }.per_row() == 300
++   /// ex: Query { table: "t", millis: 300, rows: 1000, cached: false }.per_row() == 300
+in meta/parse.lt
+-   Some(entry.Sql(web.Query { table: c.get(1), millis: c.int(2), rows: c.int(3) }))
++   Some(entry.Sql(web.Query { table: c.get(1), millis: c.int(2), rows: c.int(3), cached: false }))
+in baseline/events/web.lt
+- pub type Query = { table: str, millis: i64, rows: i64 }
++ pub type Query = { table: str, millis: i64, rows: i64, cached: bool }
+-   /// ex: Query { table: "t", millis: 300, rows: 1000 }.per_row() == 300
++   /// ex: Query { table: "t", millis: 300, rows: 1000, cached: false }.per_row() == 300
+-       rows: try decode.int(try decode.field(ms, "rows", path), "{path}.rows"),
++       rows: try decode.int(try decode.field(ms, "rows", path), "{path}.rows"),
++       cached: try decode.flag(try decode.field(ms, "cached", path), "{path}.cached"),
+-         ("rows", decode.number(self.rows)),
++         ("rows", decode.number(self.rows)),
++         ("cached", json.Bool(self.cached)),
+in baseline/flat.lt
+-       leaf(at, "rows", "{q.rows}"),
++       leaf(at, "rows", "{q.rows}"),
++       leaf(at, "cached", "{q.cached}"),
+in baseline/parse.lt
+-   Some(entry.Sql(web.Query { table: c.get(1), millis: c.int(2), rows: c.int(3) }))
++   Some(entry.Sql(web.Query { table: c.get(1), millis: c.int(2), rows: c.int(3), cached: false }))
+
+edit field: a setting gains the scope it applies to
+in meta/events/ops.lt
+- pub type Setting = { key: str, before: str, after: str }
++ pub type Setting = { key: str, before: str, after: str, scope: str }
+-   /// ex: Setting { key: "k", before: "30s", after: "45s" }.raised() == Some(true)
++   /// ex: Setting { key: "k", before: "30s", after: "45s", scope: "" }.raised() == Some(true)
+-   /// ex: Setting { key: "k", before: "on", after: "off" }.raised() == None
++   /// ex: Setting { key: "k", before: "on", after: "off", scope: "" }.raised() == None
+in meta/parse.lt
+-   Some(entry.Config(ops.Setting { key: c.get(1), before: c.get(2), after: c.get(3) }))
++   let setting = ops.Setting { key: c.get(1), before: c.get(2), after: c.get(3), scope: "global" }
++   Some(entry.Config(setting))
+in baseline/events/ops.lt
+- pub type Setting = { key: str, before: str, after: str }
++ pub type Setting = { key: str, before: str, after: str, scope: str }
+-   /// ex: Setting { key: "k", before: "30s", after: "45s" }.raised() == Some(true)
++   /// ex: Setting { key: "k", before: "30s", after: "45s", scope: "" }.raised() == Some(true)
+-   /// ex: Setting { key: "k", before: "on", after: "off" }.raised() == None
++   /// ex: Setting { key: "k", before: "on", after: "off", scope: "" }.raised() == None
+-       after: try decode.text(try decode.field(ms, "after", path), "{path}.after"),
++       after: try decode.text(try decode.field(ms, "after", path), "{path}.after"),
++       scope: try decode.text(try decode.field(ms, "scope", path), "{path}.scope"),
+-         ("after", json.Text(self.after)),
++         ("after", json.Text(self.after)),
++         ("scope", json.Text(self.scope)),
+in baseline/flat.lt
+-     Config(s) => [leaf(at, "key", s.key), leaf(at, "before", s.before), leaf(at, "after", s.after)]
++     Config(s) => [
++       leaf(at, "key", s.key),
++       leaf(at, "before", s.before),
++       leaf(at, "after", s.after),
++       leaf(at, "scope", s.scope),
++     ]
+in baseline/parse.lt
+-   Some(entry.Config(ops.Setting { key: c.get(1), before: c.get(2), after: c.get(3) }))
++   let setting = ops.Setting { key: c.get(1), before: c.get(2), after: c.get(3), scope: "global" }
++   Some(entry.Config(setting))
+
+edit variant: requests gain the method PATCH
+in meta/events/web.lt
+- pub type Method = | Get | Post | Put | Delete
++ pub type Method = | Get | Post | Put | Patch | Delete
+-       "PUT" => Some(Put)
++       "PUT" => Some(Put)
++       "PATCH" => Some(Patch)
+-       Put => "PUT"
++       Put => "PUT"
++       Patch => "PATCH"
+in meta/patterns.lt
+- rx.regex!("^(GET|POST|PUT|DELETE) 
++ rx.regex!("^(GET|POST|PUT|PATCH|DELETE) 
+in meta/requests.lt
+-   let methods = [web.Get, web.Post, web.Put, web.Delete]
++   let methods = [web.Get, web.Post, web.Put, web.Patch, web.Delete]
+in baseline/events/web.lt
+- pub type Method = | Get | Post | Put | Delete
++ pub type Method = | Get | Post | Put | Patch | Delete
+-       "PUT" => Some(Put)
++       "PUT" => Some(Put)
++       "PATCH" => Some(Patch)
+-       Put => "PUT"
++       Put => "PUT"
++       Patch => "PATCH"
+-       Put => "Put"
++       Put => "Put"
++       Patch => "Patch"
+-       Some("Put") => Put
++       Some("Put") => Put
++       Some("Patch") => Patch
+in baseline/patterns.lt
+-       .group(1, |r| either(r, ["GET", "POST", "PUT", "DELETE"]))
++       .group(1, |r| either(r, ["GET", "POST", "PUT", "PATCH", "DELETE"]))
+in baseline/requests.lt
+-   let methods = [web.Get, web.Post, web.Put, web.Delete]
++   let methods = [web.Get, web.Post, web.Put, web.Patch, web.Delete]
+
+edit variant: entries gain the level FATAL
+in meta/events/time.lt
+- pub type Level = | Debug | Info | Warn | Error
++ pub type Level = | Debug | Info | Warn | Error | Fatal
+-       "ERROR" => Some(Error)
++       "ERROR" => Some(Error)
++       "FATAL" => Some(Fatal)
+-       Error => "ERROR"
++       Error => "ERROR"
++       Fatal => "FATAL"
+-       Error => 3
++       Error => 3
++       Fatal => 4
+- pub const LEVELS: List<Level> = [Debug, Info, Warn, Error]
++ pub const LEVELS: List<Level> = [Debug, Info, Warn, Error, Fatal]
+in meta/patterns.lt
+- (DEBUG|INFO|WARN|ERROR)
++ (DEBUG|INFO|WARN|ERROR|FATAL)
+in baseline/events/time.lt
+- pub type Level = | Debug | Info | Warn | Error
++ pub type Level = | Debug | Info | Warn | Error | Fatal
+-       "ERROR" => Some(Error)
++       "ERROR" => Some(Error)
++       "FATAL" => Some(Fatal)
+-       Error => "ERROR"
++       Error => "ERROR"
++       Fatal => "FATAL"
+-       Error => 3
++       Error => 3
++       Fatal => 4
+- pub const LEVELS: List<Level> = [Debug, Info, Warn, Error]
++ pub const LEVELS: List<Level> = [Debug, Info, Warn, Error, Fatal]
+-       Error => "Error"
++       Error => "Error"
++       Fatal => "Fatal"
+-       Some("Error") => Error
++       Some("Error") => Error
++       Some("Fatal") => Fatal
+in baseline/patterns.lt
+-       .group(9, |r| either(r, ["DEBUG", "INFO", "WARN", "ERROR"]))
++       .group(9, |r| either(r, ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]))
+
+edit pattern: a request's path may hold capitals
+in meta/patterns.lt
+- (/[a-z0-9/_.-]*)
++ (/[a-zA-Z0-9/_.-]*)
+in baseline/patterns.lt
+-   let path = |c: str| lower(c) || digit(c) || c == "/" || c == "_" || c == "." || c == "-"
++   let path = |c: str| word(c) || c == "/" || c == "." || c == "-"
+
+edit pattern: a user's name may hold dots and dashes
+in meta/patterns.lt
+- user=(\\w+)
++ user=([\\w.-]+)
+in baseline/patterns.lt
+-       .group(2, |r| r.plus(|r| r.class(word)))
++       .group(2, |r| r.plus(|r| r.class(|c| word(c) || c == "." || c == "-")))
+
+edit pattern: a mount point may hold digits and underscores
+in meta/patterns.lt
+- ^(/[a-z/]*) at
++ ^(/[a-z0-9/_]*) at
+in baseline/patterns.lt
+-       .group(1, |r| r.text("/").star(|r| r.class(|c| lower(c) || c == "/")))
++       .group(1, |r| r.text("/").star(|r| r.class(|c| lower(c) || digit(c) || c == "/" || c == "_")))
+
+edit pattern: a retry's wait may have a space before its unit
+in meta/patterns.lt
+- after (\\d+)ms$
++ after (\\d+) ?ms$
+in baseline/patterns.lt
+-       .group(4, digits)
+-       .text("ms")
++       .group(4, digits)
++       .opt(|r| r.text(" "))
++       .text("ms")
+
+edit pattern: a host's role may hold digits after its first letter
+in meta/patterns.lt
+- Z ([a-z]+)-(\\d+) (
++ Z ([a-z][a-z0-9]*)-(\\d+) (
+in baseline/patterns.lt
+-       .group(7, |r| r.plus(|r| r.class(lower)))
++       .group(7, |r| r.class(lower).star(|r| r.class(|c| lower(c) || digit(c))))
+
+edit pattern: a job's name may hold digits
+in meta/patterns.lt
+- name=([a-z_]+)(
++ name=([a-z0-9_]+)(
+in baseline/patterns.lt
+-       .group(2, |r| r.plus(|r| r.class(|c| lower(c) || c == "_")))
++       .group(2, |r| r.plus(|r| r.class(|c| lower(c) || digit(c) || c == "_")))
+
+edit pattern: whoever deploys may be named with dots
+in meta/patterns.lt
+- by (\\w+) to
++ by ([\\w.]+) to
+in baseline/patterns.lt
+-       .group(4, |r| r.plus(|r| r.class(word)))
++       .group(4, |r| r.plus(|r| r.class(|c| word(c) || c == ".")))
+
+edit pattern: a thread that panics may be named without a number
+in meta/patterns.lt
+- thread ([a-z]+-\\d+) panicked
++ thread ([a-z0-9-]+) panicked
+in baseline/patterns.lt
+-       .group(1, |r| r.plus(|r| r.class(lower)).text("-").plus(|r| r.class(digit)))
++       .group(1, |r| r.plus(|r| r.class(|c| lower(c) || digit(c) || c == "-")))
+
+edit body: a user is alerted after five failed logins in a row
+in meta/alerts.lt
+- pub const FAILURES: i64 = 3
++ pub const FAILURES: i64 = 5
+in baseline/alerts.lt
+- pub const FAILURES: i64 = 3
++ pub const FAILURES: i64 = 5
+
+edit body: requests have 250 ms to be in time
+in meta/objectives.lt
+- pub const TARGET: i64 = 200
++ pub const TARGET: i64 = 250
+in baseline/objectives.lt
+- pub const TARGET: i64 = 200
++ pub const TARGET: i64 = 250
+
+edit body: deploys are compared with the fifteen minutes around them
+in meta/operations.lt
+- pub const AROUND: i64 = 600
++ pub const AROUND: i64 = 900
+in baseline/operations.lt
+- pub const AROUND: i64 = 600
++ pub const AROUND: i64 = 900
+
+edit body: the report lists the ten slowest requests
+in meta/requests.lt
+- /// the services that answered them, the methods, and the five slowest.
++ /// the services that answered them, the methods, and the ten slowest.
+- r.millis).take(5) {
++ r.millis).take(10) {
+in baseline/requests.lt
+- /// the services that answered them, the methods, and the five slowest.
++ /// the services that answered them, the methods, and the ten slowest.
+- r.millis).take(5) {
++ r.millis).take(10) {
+
+edit body: errors are kinds of events, not topics
+in meta/errors.lt
+- pub fn kind(e: entry.Entry) -> str { "{e.event.topic()}: {shape(e.event.summary())}" }
++ pub fn kind(e: entry.Entry) -> str { "{e.event.kind()}: {shape(e.event.summary())}" }
+in baseline/errors.lt
+- pub fn kind(e: entry.Entry) -> str { "{e.event.topic()}: {shape(e.event.summary())}" }
++ pub fn kind(e: entry.Entry) -> str { "{e.event.kind()}: {shape(e.event.summary())}" }
+
+edit body: a message is read without the spaces around it
+in meta/parse.lt
+-   let event = try event(head.get(10), head.get(11))
++   let event = try event(head.get(10), head.get(11).trim())
+in baseline/parse.lt
+-   let event = try event(head.get(10), head.get(11))
++   let event = try event(head.get(10), head.get(11).trim())
+
+edit body: the cache's line says what its rate is of
+in meta/people.lt
+- "{hits} hits, {misses} misses, {rate}% hit, {freed} bytes freed"
++ "{hits} hits, {misses} misses, {rate}% of lookups hit, {freed} bytes freed"
+in baseline/people.lt
+- "{hits} hits, {misses} misses, {rate}% hit, {freed} bytes freed"
++ "{hits} hits, {misses} misses, {rate}% of lookups hit, {freed} bytes freed"
+
+edit body: lines that start with `#` are comments
+in meta/tally.lt
+-     if text.trim().is_empty() {
++     if text.trim().is_empty() || text.starts_with("#") {
+in baseline/tally.lt
+-     if text.trim().is_empty() {
++     if text.trim().is_empty() || text.starts_with("#") {
+
+edit body: a group's digits are read without the spaces around them
+in meta/matcher.lt
+-   pub fn int(self, i: i64) -> i64 { self.get(i).to_i64() else 0 }
++   pub fn int(self, i: i64) -> i64 { self.get(i).trim().to_i64() else 0 }
+in baseline/matcher.lt
+-   pub fn int(self, i: i64) -> i64 { self.get(i).to_i64() else 0 }
++   pub fn int(self, i: i64) -> i64 { self.get(i).trim().to_i64() else 0 }
+
+edit body: the report's first line says the lines were read
+in meta/report.lt
+-     "{t.lines} lines: {n} entries,
++     "{t.lines} lines read: {n} entries,
+in baseline/report.lt
+-     "{t.lines} lines: {n} entries,
++     "{t.lines} lines read: {n} entries,
+
+edit body: a deploy's hosts go in parentheses
+in meta/operations.lt
+-       Deploy(d) => "deploy {d.text()}: {", ".join(d.hosts)}"
++       Deploy(d) => "deploy {d.text()} ({", ".join(d.hosts)})"
+in baseline/operations.lt
+-       Deploy(d) => "deploy {d.text()}: {", ".join(d.hosts)}"
++       Deploy(d) => "deploy {d.text()} ({", ".join(d.hosts)})"
+
+edit size: the histogram of latency gets 10 buckets
+in meta/charts.lt
+-   latency: histogram.Histogram<8>,
++   latency: histogram.Histogram<10>,
+in baseline/charts.lt
+-     latency: histogram.new(8, 0, 50),
++     latency: histogram.new(10, 0, 50),
+
+edit size: the histogram of sizes gets 8 buckets
+in meta/charts.lt
+-   sizes: histogram.Histogram<6>,
++   sizes: histogram.Histogram<8>,
+in baseline/charts.lt
+-     sizes: histogram.new(6, 0, 4096),
++     sizes: histogram.new(8, 0, 4096),
+
+edit size: the histogram of minutes gets 15 buckets
+in meta/charts.lt
+-   minutes: histogram.Histogram<12>,
++   minutes: histogram.Histogram<15>,
+in baseline/charts.lt
+-     minutes: histogram.new(12, 0, 5),
++     minutes: histogram.new(15, 0, 5),
+
+edit size: the histogram of statuses gets 6 buckets
+in meta/charts.lt
+-   statuses: histogram.Histogram<5>,
++   statuses: histogram.Histogram<6>,
+in baseline/charts.lt
+-     statuses: histogram.new(5, 100, 100),
++     statuses: histogram.new(6, 100, 100),
+
+edit size: the window of a spike holds ten requests
+in meta/spikes.lt
+- window.Window<6>
++ window.Window<10>
+in baseline/spikes.lt
+- else window.new(6)
++ else window.new(10)
+
+edit item: the report says which minute was the busiest
+in meta/report.lt
+-   out.extend(pace.lines(es))
++   out.extend(pace.lines(es))
++   out.extend(busiest(es))
+- // How many entries read back equal from their JSON,
++ // The minute that held the most entries, and how many it held.
++ fn busiest(es: List<entry.Entry>) -> List<str> {
++   let (minute, n) = es.count_by(|e| e.at.clock()).entries().sorted_desc_by(.1).first() else return []
++   ["busiest minute: {minute}, {n} entries"]
++ }
++
++ // How many entries read back equal from their JSON,
+in baseline/report.lt
+-   out.extend(pace.lines(es))
++   out.extend(pace.lines(es))
++   out.extend(busiest(es))
+- // How many entries read back equal from their JSON,
++ // The minute that held the most entries, and how many it held.
++ fn busiest(es: List<entry.Entry>) -> List<str> {
++   let (minute, n) = es.count_by(|e| e.at.clock()).entries().sorted_desc_by(.1).first() else return []
++   ["busiest minute: {minute}, {n} entries"]
++ }
++
++ // How many entries read back equal from their JSON,
+
+edit item: a pattern for the cache's flushes, not read yet
+in meta/patterns.lt
+- /// A time of day, as the command line writes one
++ /// A flush of the cache: the space it emptied.
++ pub fn flush(text: str) -> Option<matcher.Captures> {
++   let m = rx.regex!("^flush space=([a-z]+)$")
++   m(text)
++ }
++
++ /// A time of day, as the command line writes one
+in baseline/patterns.lt
+- /// A time of day, as the command line writes one
++ /// A flush of the cache: the space it emptied: `^flush space=([a-z]+)$`.
++ pub fn flush(text: str) -> Option<matcher.Captures> {
++   matcher.search(text, 1, true, |r| r.bol().text("flush space=").group(1, |r| r.plus(|r| r.class(lower))).eol())
++ }
++
++ /// A time of day, as the command line writes one

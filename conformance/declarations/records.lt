@@ -1,0 +1,27 @@
+//~ rule: declarations.records
+//~ stdout:
+//~ | Line { from: Point { x: 0, y: 0 }, to: Point { x: 3, y: 4 } }
+//~ | Pair { first: 1, second: "b" }
+//~ | Pair { first: [true], second: () }
+//~ | Empty {}
+
+type Point = { x: i64, y: i64 }
+
+type Line = { from: Point, to: Point }
+
+type Pair<A, B> = { first: A, second: B }
+
+type Empty = {}
+
+fn swap<A, B>(p: Pair<A, B>) -> Pair<B, A> { Pair { first: p.second, second: p.first } }
+
+fn main() / io {
+  let line = Line { from: Point { x: 0, y: 0 }, to: Point { x: 3, y: 4 } }
+  print("{line}")
+  let pair = Pair { first: 1, second: "b" }
+  print("{pair}")
+  let swapped = swap(Pair { first: (), second: [true] })
+  print("{swapped}")
+  let empty = Empty {}
+  print("{empty}")
+}

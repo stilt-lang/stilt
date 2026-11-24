@@ -1,0 +1,9 @@
+use std.meta
+
+// The quote names `print`, which no grant covers, so the macro's package has a
+// capability its manifest entry doesn't grant. Only the functions whose own code
+// has it are code with an error, and a macro is no function the program calls:
+// `rows` runs.
+pub macro stamped(e: meta.Expr) -> meta.Expr { quote { print("[stamp] {$e}") } }
+
+pub fn rows() -> i64 { 3 }

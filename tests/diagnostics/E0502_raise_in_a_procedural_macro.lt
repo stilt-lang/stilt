@@ -1,0 +1,14 @@
+use std.meta
+
+type Missing = | Missing
+
+fn lookup(name: str) -> i64 / raise<Missing> {
+  if name == "width" { 80 } else { raise Missing }
+}
+
+macro width(e: meta.Expr) -> meta.Expr {
+  let n = try lookup("width")
+  quote { $e + $n }
+}
+
+fn main() {}

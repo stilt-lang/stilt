@@ -1,0 +1,16 @@
+//~ rule: program.prelude-functions, program.panic-location
+//~ run-output: "zero"
+//~ panic: unreachable
+//~ panic-at: unreachable.lt:9:10
+
+fn name(n: i64) -> str {
+  match n {
+    0 => "zero"
+    _ => unreachable()
+  }
+}
+
+fn main() / io {
+  print(name(0))
+  print(name(1))
+}

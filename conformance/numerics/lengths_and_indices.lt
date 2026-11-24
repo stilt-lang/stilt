@@ -1,0 +1,19 @@
+//~ rule: numbers.lengths-are-i64, std.str, std.lists
+//~ stdout:
+//~ | 3 -2 c None 1
+//~ | 6 Some(3) é -5
+//~ | [(0, "a"), (1, "b"), (2, "c")] 2
+
+fn main() / io {
+  let xs = ["a", "b", "c"]
+  let n = xs.len()
+  let gap = n - 5
+  let last = xs[n - 1]
+  print("{n} {gap} {last} {xs.get(i64.MAX)} {n / 2}")
+  let s = "héllo"
+  let at = s.find("l") else -1
+  print("{s.len()} {s.find("l")} {s.slice(1, at)} {at - 8}")
+  let pairs = xs.enumerate(0)
+  let (index, _) = pairs[2]
+  print("{pairs} {index}")
+}

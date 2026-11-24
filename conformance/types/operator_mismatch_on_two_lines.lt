@@ -1,0 +1,6 @@
+//~ rule: lexical.continuing-expression, numbers.no-implicit-conversions, expressions.right-operand
+
+fn scale(x: i64) -> i64 {
+  x *
+    2.0 //~ ERROR E0311
+}

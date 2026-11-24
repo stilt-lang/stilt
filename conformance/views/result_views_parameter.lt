@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: views.across-calls, views.escaping
+//~ run-output: "to 2 ab"
+
+use std.view
+
+// The result views `line`, the one parameter it could view.
+fn first_word(line: str) -> view.View<str> {
+  view.View.of(line, 0, line.find(" ") else line.len())
+}
+
+// A view parameter's sources pass through to the result.
+fn pass(v: view.View<str>) -> view.View<str> { v }
+
+fn main() / io {
+  let text = "to be"
+  let w = first_word(text)
+  print("{w} {w.len()} {pass(first_word("ab"))}")
+}

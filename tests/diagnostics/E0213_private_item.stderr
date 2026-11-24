@@ -1,0 +1,9 @@
+── PRIVATE ITEM ────────────────────────────────────────── main.lt:3:32  [E0213]
+
+`helpers.greeting` is private to module `helpers`:
+
+  3 │ fn main() / io { print(helpers.greeting()) }
+    │                                ^^^^^^^^
+
+Only an item marked `pub` can be named outside its module. Mark it `pub` in its
+module, or use what that module exports.

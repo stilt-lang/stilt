@@ -1,0 +1,19 @@
+//~ rule: types.mismatch, expressions.inout-closure-parameters
+
+// A function type inside another type is that type exactly: its parameters' types and modes,
+// and its result's type.
+fn parameters(fs: List<fn(i64) -> i64>) -> List<fn(str) -> i64> {
+  fs //~ ERROR E0311
+}
+
+fn modes(fs: List<fn(i64) -> i64>) -> List<fn(inout i64) -> i64> {
+  fs //~ ERROR E0311
+}
+
+fn results(fs: List<fn(i64) -> i64>) -> List<fn(i64) -> str> {
+  fs //~ ERROR E0311
+}
+
+fn same(fs: List<fn(i64) -> i64>) -> List<fn(i64) -> i64> { fs }
+
+fn main() {}

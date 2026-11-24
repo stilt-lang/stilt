@@ -1,0 +1,88 @@
+//~ rule: std.callbacks, std.option-result-and-ordering
+//~ stdout:
+//~ | map 1
+//~ | map 2
+//~ | [2, 4]
+//~ | filter 1
+//~ | filter 2
+//~ | filter 3
+//~ | [1, 3]
+//~ | fold 0 1
+//~ | fold 1 2
+//~ | 3
+//~ | any 1
+//~ | any 2
+//~ | true
+//~ | all 1
+//~ | all 2
+//~ | true
+//~ | retain 1
+//~ | retain 2
+//~ | [2]
+//~ | key b
+//~ | key a
+//~ | key c
+//~ | ["c", "b", "a"]
+//~ | option 5
+//~ | Some(6) None
+//~ | error e
+//~ | Err("E")
+
+fn main() / io {
+  let doubled = [1, 2].map(|x| {
+    print("map {x}")
+    x * 2
+  })
+  print("{doubled}")
+  let odd = [1, 2, 3].filter(|x| {
+    print("filter {x}")
+    x % 2 == 1
+  })
+  print("{odd}")
+  let sum = [1, 2].fold(0, |acc, x| {
+    print("fold {acc} {x}")
+    acc + x
+  })
+  print("{sum}")
+  let some = [1, 2, 3].any(|x| {
+    print("any {x}")
+    x == 2
+  })
+  print("{some}")
+  let every = [1, 2].all(|x| {
+    print("all {x}")
+    x > 0
+  })
+  print("{every}")
+  var kept = [1, 2]
+  kept.retain(|x| {
+    print("retain {x}")
+    x > 1
+  })
+  print("{kept}")
+  let sorted = ["b", "a", "c"].sorted_desc_by(|s| {
+    print("key {s}")
+    s
+  })
+  print("{sorted}")
+  let five = Some(5).map(|x| {
+    print("option {x}")
+    x + 1
+  })
+  let none: Option<i64> = None
+  let still_none = none.map(|x| {
+    print("never {x}")
+    x
+  })
+  print("{five} {still_none}")
+  let failed: Result<i64, str> = Err("e")
+  let mapped = failed.map(|x| {
+    print("never {x}")
+    x
+  })
+  let renamed = mapped.map_err(|e| {
+    print("error {e}")
+    e.ascii_upper()
+  })
+  print("{renamed}")
+}

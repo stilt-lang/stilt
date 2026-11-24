@@ -1,0 +1,15 @@
+//~ rule: program.output-flushing, program.exit-statuses
+//~ stdout:
+//~ | out
+//~ stderr:
+//~ | err
+//~ exit: 5
+
+fn stop(code: u8) -> i64 / io { exit(code) }
+
+fn main() / io {
+  print("out")
+  eprint("err")
+  let n: i64 = stop(5)
+  print("after {n}")
+}

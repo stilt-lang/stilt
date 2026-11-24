@@ -1,0 +1,215 @@
+---
+// The proof map: the Lean model's one soundness theorem, what it covers of the Reference, and
+// every declaration behind it, all read from what `just proof-map` extracts from the compiled
+// model (src/lib/proofmap.ts), so nothing on this page is written by hand.
+import Explorer from "../../../components/ProofExplorer.astro";
+import Territory from "../../../components/ProofTerritory.astro";
+import Doc from "../../../layouts/Doc.astro";
+import { escape } from "../../../lib/highlight";
+import { place } from "../../../lib/map";
+import { render } from "../../../lib/markdown";
+import { sidebar } from "../../../lib/nav";
+import {
+  type Chapter, type Field, beside, counts, meaningChapters, paragraphHref, proofMap, sourceHref,
+} from "../../../lib/proofmap";
+
+const map = proofMap();
+const href = "/design/proof-map/";
+const blocks = sidebar("design");
+const doc = (text: string | undefined, from: string) => (text ? render(text, { from }).html : "");
+const sound = map ? map.decls[map.soundness] : null;
+const theorems = map ? map.decls.filter((d) => d.k === "theorem").length : 0;
+const reached = map ? map.decls.filter((d) => d.r).length : 0;
+const all = map ? map.chapters.flatMap((c) => c.paragraphs) : [];
+const parts = map ? meaningChapters(map) : { meaning: [], outside: [] };
+const meaning = counts(parts.meaning.flatMap((c) => c.paragraphs));
+const labels = { theorem: "In the theorem", model: "Modeled apart", described: "Described", none: "Not modeled" } as const;
+const statuses = ["theorem", "model", "described", "none"] as const;
+const headings = [
+  { depth: 2, id: "map", text: "The map" },
+  { depth: 2, id: "theorem", text: "The theorem" },
+  { depth: 2, id: "reference", text: "The Reference" },
+  { depth: 2, id: "beside", text: "Beside the theorem" },
+  { depth: 2, id: "explore", text: "Explore" },
+  { depth: 2, id: "checks", text: "Checks" },
+];
+const decl = (i: number) => map!.decls[i];
+const link = (i: number) => `#decl=${encodeURIComponent(decl(i).n)}`;
+const share = (c: Chapter) => {
+  const n = counts(c.paragraphs);
+  return statuses.map((s) => ({ s, n: n[s], w: (100 * n[s]) / Math.max(1, c.paragraphs.length) }));
+};
+---
+
+<Doc title="Proof map" section="design" href={href} blocks={blocks} headings={headings}>
+  <h1 slot="title" class="title">Proof map</h1>
+  {!map && <p>The map is written by <code>just proof-map</code>, which hasn't run before this build.</p>}
+  {map && sound && (
+    <Fragment>
+      <p>
+        <a href={place("formal/README.md") ?? "/source/formal/"}>The Lean model</a> states a core
+        calculus of Stilt and proves one theorem about it, <code>soundness</code>. This page is
+        generated from the compiled model each time the site is built: every statement, name and
+        citation below comes from the proofs themselves.
+      </p>
+      <div class="stats">
+        <div><b>{map.decls.length.toLocaleString("en")}</b><span>declarations</span></div>
+        <div><b>{theorems.toLocaleString("en")}</b><span>theorems</span></div>
+        <div><b>{reached.toLocaleString("en")}</b><span>behind <code>soundness</code></span></div>
+        <div><b>{meaning.theorem}</b><span>paragraphs in the theorem</span></div>
+        <div class={map.problems.length ? "bad" : "good"}><b>{map.problems.length ? map.problems.length : "0"}</b><span>{map.problems.length ? "problems" : "sorry, no axiom of its own"}</span></div>
+      </div>
+
+      <h2 id="map">The map</h2>
+      <p>
+        The model's parts, each above the parts it rests on: <code>soundness</code> at the top, the
+        syntax and the values at the bottom. A path is drawn only where no other path already leads.
+      </p>
+      <Territory />
+
+      <h2 id="theorem">The theorem</h2>
+      <p>Every program the checks accept keeps every promise, on every input and at every fuel.</p>
+      <pre class="lean"><code>theorem soundness : ∀ p fuel input, p.Accepted → p.Promises fuel input</code></pre>
+      <div class="split">
+        <section>
+          <h3>The checks <span class="sub">Program.Accepted</span></h3>
+          {map.accepted.map((f: Field) => (
+            <article class="field">
+              <h4><code>{f.n}</code></h4>
+              <div class="doc" set:html={doc(f.d, "formal/Stilt/Accepted.lean")} />
+              <pre class="lean small"><code>{f.t}</code></pre>
+              <p class="cites">{f.c.map((id) => <a class="chip" href={paragraphHref(map, id)}>{id}</a>)}</p>
+            </article>
+          ))}
+        </section>
+        <section>
+          <h3>The promises <span class="sub">Program.Promises</span></h3>
+          {map.promises.map((f: Field) => (
+            <article class="field">
+              <h4><code>{f.n}</code></h4>
+              <div class="doc" set:html={doc(f.d, "formal/Stilt/Accepted.lean")} />
+              <details><summary>Statement</summary><pre class="lean small"><code>{f.t}</code></pre></details>
+              <p class="cites">
+                Proved by {f.from.map((i) => <a class="go" href={link(i)} data-decl={decl(i).n}><code>{decl(i).n}</code></a>)}
+              </p>
+            </article>
+          ))}
+        </section>
+      </div>
+
+      <h2 id="reference">The Reference</h2>
+      <p>
+        Each paragraph of the Reference is <span class="key theorem">in the theorem</span> when a
+        declaration behind <code>soundness</code> cites it, <span class="key model">modeled apart</span>
+        when only declarations outside it do, <span class="key described">described</span> when only a
+        module's documentation does, and <span class="key none">not modeled</span> otherwise. The model
+        covers what programs mean; the chapters on their text, the tools and the builds are listed after.
+      </p>
+      {[{ title: "What programs mean", chapters: parts.meaning, open: true }, { title: "Text, tools and builds", chapters: parts.outside, open: false }].map((group) => (
+        <section class="chapters">
+          <h3>{group.title}</h3>
+          {group.chapters.map((c) => (
+            <details class="chapter">
+              <summary>
+                <span class="name">{c.title}</span>
+                <span class="bar">{share(c).map((x) => x.n > 0 && <i class={x.s} style={`width:${x.w}%`} title={`${x.n} ${labels[x.s].toLowerCase()}`} />)}</span>
+                <span class="num">{counts(c.paragraphs).theorem + counts(c.paragraphs).model}/{c.paragraphs.length}</span>
+              </summary>
+              <ul class="paras">
+                {c.paragraphs.map((p) => (
+                  <li>
+                    <i class={`dot ${p.status}`} title={labels[p.status]} />
+                    <a href={paragraphHref(map, p.id)}><code>{p.id}</code></a>
+                    <span class="text">{p.text}</span>
+                    {p.by.length > 0 && <span class="by">{p.by.slice(0, 4).map((i) => <a href={link(i)} data-decl={decl(i).n}><code>{decl(i).n}</code></a>)}{p.by.length > 4 && <span class="more">+{p.by.length - 4}</span>}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
+        </section>
+      ))}
+
+      <h2 id="beside">Beside the theorem</h2>
+      {beside(map).map((g) => g.modules.length > 0 && (
+        <section class="beside">
+          <h3>{g.title} <span class="sub">{g.modules.length} modules</span></h3>
+          <p class="about" set:html={render(g.about, { from: "formal/README.md" }).html.replace(/<\/?p>/g, "")} />
+          <ul class="mods">
+            {g.modules.map((m) => (
+              <li><a href={sourceHref({ f: m.f })}><code>{m.n}</code></a><span class="num">{m.decls}</span>{m.d && <span class="text">{m.d.split(/\n\n/).find((x) => x && !x.startsWith("#"))?.replace(/\s+/g, " ").slice(0, 180)}</span>}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <h2 id="explore">Explore</h2>
+      <p>Every declaration of the model, with what its statement and proof use and what uses it. Start from <code>soundness</code>, or search by name.</p>
+      <Explorer start={sound.n} />
+
+      <h2 id="checks">Checks</h2>
+      {map.problems.length === 0 ? (
+        <p class="ok">No problems: every citation in the model names a paragraph of the Reference, and nothing rests on <code>sorry</code> or on an axiom beyond Lean's three (<code>propext</code>, <code>Classical.choice</code>, <code>Quot.sound</code>).</p>
+      ) : (
+        <ul class="problems">{map.problems.map((p) => <li set:html={escape(p)} />)}</ul>
+      )}
+    </Fragment>
+  )}
+</Doc>
+
+<script>
+  // A link to a declaration selects it in the explorer.
+  for (const a of document.querySelectorAll<HTMLAnchorElement>("a[data-decl]")) {
+    a.addEventListener("click", () => document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" }));
+  }
+</script>
+
+<style>
+  .title { margin-bottom: 1.25rem; font-size: 1.75rem; line-height: 1.25; letter-spacing: -0.02em; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.75rem; margin: 1.75rem 0 0.5rem; }
+  .stats div { border: 1px solid var(--rule); border-radius: 0.5rem; padding: 0.75rem 0.875rem; display: flex; flex-direction: column; gap: 0.125rem; }
+  .stats b { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.02em; }
+  .stats span { font-size: 0.8125rem; color: var(--muted); line-height: 1.35; }
+  .stats .good b { color: var(--pass); }
+  .stats .bad b { color: var(--error); }
+  pre.lean { margin: 1rem 0; padding: 0.875rem 1rem; border: 1px solid var(--rule); border-radius: 0.5rem; background: var(--surface); overflow-x: auto; font-size: 0.875rem; line-height: 1.5; }
+  pre.lean.small { font-size: 0.8125rem; margin: 0.5rem 0; }
+  .split { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1.25rem; }
+  @media (min-width: 64rem) { .split { grid-template-columns: 1fr 1.4fr; } }
+  .split h3 { font-size: 1.0625rem; margin-bottom: 0.75rem; }
+  .sub { font-family: var(--mono); font-size: 0.75rem; font-weight: 400; color: var(--muted); margin-left: 0.375rem; }
+  .field { border: 1px solid var(--rule); border-radius: 0.5rem; padding: 0.875rem 1rem; margin-bottom: 0.75rem; }
+  .field h4 { margin: 0 0 0.375rem; font-size: 0.9375rem; }
+  .field h4 code { background: none; padding: 0; color: var(--sky); }
+  .field .doc :global(p) { margin: 0.25rem 0; font-size: 0.9375rem; line-height: 1.45; }
+  .field details summary { cursor: pointer; font-size: 0.8125rem; color: var(--muted); margin-top: 0.375rem; }
+  .cites { margin: 0.5rem 0 0; font-size: 0.8125rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: center; }
+  .chip { font-family: var(--mono); font-size: 0.75rem; padding: 0.0625rem 0.4375rem; border-radius: 999px; background: var(--sky-wash); color: var(--sky); text-decoration: none; }
+  .key { font-weight: 500; white-space: nowrap; }
+  .key::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 999px; margin-right: 0.3rem; vertical-align: 0.05rem; }
+  .key.theorem::before, .dot.theorem, .bar .theorem { background: var(--pass); }
+  .key.model::before, .dot.model, .bar .model { background: var(--sky); }
+  .key.described::before, .dot.described, .bar .described { background: var(--warning); }
+  .key.none::before, .dot.none, .bar .none { background: var(--rule-firm); }
+  .chapters h3, .beside h3 { font-size: 1.0625rem; margin: 1.75rem 0 0.5rem; }
+  .chapter { border-bottom: 1px solid var(--rule); }
+  .chapter summary { display: grid; grid-template-columns: minmax(0, 1fr) 10rem 3.5rem; gap: 0.75rem; align-items: center; padding: 0.5rem 0; cursor: pointer; font-size: 0.9375rem; }
+  .bar { display: flex; height: 0.5rem; border-radius: 999px; overflow: hidden; background: var(--rule); }
+  .bar i { display: block; height: 100%; }
+  .num { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); text-align: right; }
+  .paras { list-style: none; padding: 0 0 0.75rem; margin: 0; display: flex; flex-direction: column; gap: 0.375rem; }
+  .paras li { display: grid; grid-template-columns: 0.75rem 15rem minmax(0, 1fr); gap: 0.5rem; align-items: baseline; font-size: 0.8125rem; line-height: 1.45; }
+  .paras li > a code { background: none; padding: 0; font-size: 0.75rem; }
+  .paras .text { color: var(--ink-soft); }
+  .paras .by { grid-column: 3; display: flex; flex-wrap: wrap; gap: 0.375rem; }
+  .paras .by code { font-size: 0.6875rem; }
+  .more { color: var(--muted); font-size: 0.75rem; }
+  .dot { width: 0.5rem; height: 0.5rem; border-radius: 999px; display: inline-block; }
+  .about { font-size: 0.9375rem; color: var(--ink-soft); }
+  .mods { list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.25rem; }
+  .mods li { display: grid; grid-template-columns: 16rem 2.5rem minmax(0, 1fr); gap: 0.625rem; align-items: baseline; font-size: 0.8125rem; }
+  .mods li code { background: none; padding: 0; font-size: 0.75rem; }
+  .mods .text { color: var(--muted); }
+  .ok { color: var(--ink-soft); }
+  .problems li { color: var(--error); font-family: var(--mono); font-size: 0.8125rem; }
+</style>

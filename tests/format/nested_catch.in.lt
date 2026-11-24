@@ -1,0 +1,17 @@
+// A `catch` in a block nested in another keeps its brace on the line where the expression before
+// it ends, and what its braces hold goes a level deeper than that line, in an arm of another
+// `catch` too.
+fn main() / io {
+  let n = {
+    let m = try parse(text) catch e because "not a number" =>
+    {
+      eprint("not a number")
+      0
+    }
+    m + 1
+  }
+  let k = try parse(first) catch {
+    _ => try parse(second) catch { _ => 0 }
+  }
+  print("{n} {k}")
+}

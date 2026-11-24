@@ -1,0 +1,17 @@
+── EFFECT THAT DOESN'T FIT THE ROW ── E0502_effect_in_a_macro_template.lt:6:3  [E0502]
+
+This performs `io`, which the row doesn't declare:
+
+  2 │   ($message: expr) => print("log: {$message}")
+    │                       ──────────────────────── `log!` expands to this
+    ┆
+  6 │   log!(count)
+    │   ^^^^^^^^^^^
+
+A function's row lists the effects it performs, as `/ io` for printing, so that
+its callers see them. Add the effect to the row.
+
+To fix it, declare `io` in the signature:
+
+  5 │ fn record(count: i64) -> i64 / io {
+    │                             +++++

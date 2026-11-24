@@ -1,0 +1,33 @@
+//~ rule: numbers.no-implicit-conversions, numbers.wrapping, numbers.bitwise-operators, numbers.unsigned-negation, expressions.no-string-plus
+
+fn mean(xs: List<f64>) -> f64 {
+  var sum = 0.0
+  for x in xs { sum += x }
+  sum / xs.len().to_f64()
+}
+
+fn join(a: str, b: str) -> str {
+  a + b //~ ERROR E0317
+}
+
+fn both(a: bool, b: bool) -> bool {
+  a & b //~ ERROR E0317
+}
+
+fn negate(n: u32) -> u32 {
+  -n //~ ERROR E0317
+}
+
+fn scale(n: i64, f: f64) -> f64 {
+  n * f //~ ERROR E0311
+}
+
+fn wrap(x: f64) -> f64 {
+  x +% 1.0 //~ ERROR E0317
+}
+
+fn element(x: i64) -> i64 {
+  x[0] //~ ERROR E0317
+}
+
+fn bits(a: u8, b: bool) -> (u8, bool) { (!a & 0x0f, !b) }

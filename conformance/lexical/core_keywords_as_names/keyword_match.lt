@@ -1,0 +1,1 @@
+fn match() {} //~ ERROR E0100

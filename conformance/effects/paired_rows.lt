@@ -1,0 +1,34 @@
+//~ rule: effects.paired-row-variables, effects.catch-around-row-variables
+//~ run-output: "7 0 7 0"
+
+type Box = { v: i64 }
+
+fn apply(k: fn() / raise<Box>) / raise<Box> { try k() }
+
+// The parameter's row pairs `e` with `Box`.
+fn grown<e>(escaping g: fn() / {raise<Box>, e}) -> i64 / e {
+  let h: fn() / {raise<Box>, e} = g
+  try {
+    h()
+    7
+  }
+    catch x because "a Box is the only error" => x.v
+}
+
+// Only the function's own row pairs the implicit row variable of `g` with
+// `Box`.
+fn passed(g: fn()) -> i64 / raise<Box> {
+  try {
+    apply(g)
+    7
+  }
+    catch x because "a Box is the only error" => x.v
+}
+
+fn main() / {io, raise<Box>} {
+  let a = grown(|| {})
+  let b = grown(|| raise Box { v: 0 })
+  let c = try passed(|| {})
+  let d = try passed(|| raise Box { v: 0 })
+  print("{a} {b} {c} {d}")
+}

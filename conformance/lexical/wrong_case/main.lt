@@ -1,0 +1,2 @@
+//~ rule: lexical.case.wrong-case, syntax.token-classes, errors.syntax-errors
+fn main() {}

@@ -1,0 +1,22 @@
+//~ rule: std.encoding
+//~ stdout:
+//~ | ["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"]
+//~ | ["", "Zg", "Zm8", "Zm9v", "Zm9vYg", "Zm9vYmE", "Zm9vYmFy"]
+//~ | +/+/ -_-_
+//~ | [Some([]), Some([102]), Some([102, 111]), Some([102, 111, 111]), Some([102, 111, 111, 98])]
+//~ | [None, None, None, None, None, None]
+//~ | Some([102]) Some([251, 255, 191])
+//~ | [Some([102]), Some([102, 111]), None, None, None]
+
+use std.encoding
+
+fn main() / io {
+  let words = ["", "f", "fo", "foo", "foob", "fooba", "foobar"]
+  print("{words.map(|w| encoding.to_base64(w.bytes()))}")
+  print("{words.map(|w| encoding.to_base64_url(w.bytes()))}")
+  print("{encoding.to_base64([251, 255, 191])} {encoding.to_base64_url([251, 255, 191])}")
+  print("{["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg=="].map(|s| encoding.from_base64(s))}")
+  print("{["Zg", "Zg=", "Z===", "Zm9v====", "Zm 9v", "Zm=v"].map(|s| encoding.from_base64(s))}")
+  print("{encoding.from_base64("Zh==")} {encoding.from_base64("+/+/")}")
+  print("{["Zg", "Zm8", "Zg==", "Z", "+/+/"].map(|s| encoding.from_base64_url(s))}")
+}

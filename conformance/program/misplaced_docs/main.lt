@@ -1,0 +1,3 @@
+//~ rule: syntax.doc-comment-runs, syntax.doc-comment-placement, syntax.grammar-errors, program.doc-comments, errors.breaks
+
+fn f() {} /// After code on the same line. //~ ERROR E0100

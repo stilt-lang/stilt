@@ -1,0 +1,12 @@
+//~ rule: values.independent-copies
+//~ run-output: "(1, 1) ([1], [1, 2]) (\"a\", \"a\")"
+
+fn twice<T>(x: T) -> (T, T) { (x, x) }
+
+fn main() / io {
+  let n = twice(1)
+  var lists = twice([1])
+  lists.1.push(2)
+  let words = twice("a")
+  print("{n} {lists} {words}")
+}

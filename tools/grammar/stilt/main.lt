@@ -1,0 +1,93 @@
+// Publishes the grammar of `reference/03-syntax.md` as GBNF and as llguidance's Lark-like format.
+// Run from the repository root: `stilt run tools/grammar/stilt [--out DIR]`.
+
+use ebnf
+use expand
+use gbnf
+use heads
+use lark
+use lexicon
+use recursion
+use shape
+use std.cli
+use std.fs
+
+const GRAMMAR: str = "reference/03-syntax.md"
+const LEXICAL: str = "reference/02-lexical.md"
+
+/// The two published forms of the grammar, as `(file name, text)`, from the syntax chapter's text,
+/// `markdown`, and the lexical chapter's, `lexical`.
+fn published(markdown: str, lexical: str) -> List<(str, str)> / raise<str> {
+  var grammar = try expand.expand(try ebnf.extract(markdown))
+  try heads.derive(inout grammar)
+  try recursion.eliminate(inout grammar)
+  let shaped = try shape.publish(grammar, try lexicon.punctuation(lexical))
+  [("stilt.gbnf", gbnf.emit(shaped)), ("stilt.lark", lark.emit(shaped))]
+}
+
+/// The directory that `--out` names, or `reference/grammar`.
+fn out_directory(args: List<str>) -> str / raise<str> {
+  match args {
+    [] => "reference/grammar"
+    ["--out", dir] => dir
+    _ => raise "usage: stilt run tools/grammar/stilt [--out DIR]"
+  }
+}
+
+/// The text of `reference/03-syntax.md`.
+fn read_grammar() -> str / {io, raise<str>} {
+  try fs.read(GRAMMAR) catch e => raise "{GRAMMAR}: {e}"
+}
+
+/// The text of `reference/02-lexical.md`.
+fn read_lexical() -> str / {io, raise<str>} {
+  try fs.read(LEXICAL) catch e => raise "{LEXICAL}: {e}"
+}
+
+fn main() / {io, raise<str>} {
+  let out = try out_directory(cli.args())
+  let markdown = try read_grammar()
+  let lexical = try read_lexical()
+  try fs.create_dir(out) catch e => raise "{out}: {e}"
+  for (name, text) in try published(markdown, lexical) {
+    let path = fs.join(out, name)
+    try fs.write(path, text) catch e => raise "{path}: {e}"
+  }
+}
+
+/// The text of the file `name` among the published forms.
+fn form(markdown: str, lexical: str, name: str) -> str / raise<str> {
+  let found = (try published(markdown, lexical)).find(|entry| entry.0 == name)
+  let (_, text) = found else raise "no form {name}"
+  text
+}
+
+/// The lines of a rule of the Lark form: its first line and the lines indented after it.
+fn lark_rule(text: str, name: str) -> str {
+  let lines = text.lines().skip_while(|l| !l.starts_with("{name}:"))
+  let rest = lines.skip(1).take_while(|l| l.starts_with(" "))
+  "".join(lines.take(1).concat(rest))
+}
+
+test "heads lack the forms they cannot hold" {
+  let text = try form(try read_grammar(), try read_lexical(), "stilt.lark")
+  let head = lark_rule(text, "primary_h")
+  assert !head.contains("struct") && !head.contains("kw_match") && !head.contains("block")
+  let full = lark_rule(text, "primary")
+  assert full.contains("struct") && full.contains("kw_match") && full.contains("block")
+}
+
+test "gbnf rules do not begin with themselves" {
+  let text = try form(try read_grammar(), try read_lexical(), "stilt.gbnf")
+  for line in text.lines().filter(|l| l.contains(" ::= ")) {
+    let Some((name, body)) = line.split_once(" ::= ") else panic("a rule")
+    assert !body.starts_with("{name} ")
+  }
+}
+
+test "the forms are what the grammar gives" {
+  for (name, text) in try published(try read_grammar(), try read_lexical()) {
+    let committed = try fs.read("reference/grammar/{name}") catch e => raise "{name}: {e}"
+    assert committed == text
+  }
+}

@@ -1,0 +1,14 @@
+── EFFECT THAT DOESN'T FIT THE ROW ── E0502_effect_that_doesn_t_fit_the_row.lt:1:24  [E0502]
+
+This performs `io`, which the row doesn't declare:
+
+  1 │ fn log(message: str) { print(message) }
+    │                        ^^^^^^^^^^^^^^
+
+A function's row lists the effects it performs, as `/ io` for printing, so that
+its callers see them. Add the effect to the row.
+
+To fix it, declare `io` in the signature:
+
+  1 │ fn log(message: str) / io { print(message) }
+    │                     +++++

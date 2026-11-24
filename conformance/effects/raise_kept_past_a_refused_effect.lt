@@ -1,0 +1,30 @@
+//~ rule: effects.inference, effects.one-error-type, effects.escaping-parameters
+
+// A closure kept by an escaping parameter has the row its type writes. Its first call performs
+// `io`, which the row doesn't have, and raises `Box`, which it does: the code then raises `Box`,
+// so a later raise of `Other` is a second error type.
+
+type Box = { n: i64 }
+type Other = { s: str }
+
+fn both() -> i64 / {io, raise<Box>} {
+  print("x")
+  raise Box { n: 1 }
+}
+
+fn other() -> i64 / raise<Other> {
+  raise Other { s: "o" }
+}
+
+fn kept(escaping g: fn() -> i64 / raise<Box>) -> i64 {
+  0
+}
+
+fn main() / io {
+  let n = kept(|| {
+    let a = try both() //~ ERROR E0502
+    let b = try other() //~ ERROR E0503
+    a + b
+  })
+  print("{n}")
+}

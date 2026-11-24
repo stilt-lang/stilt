@@ -1,0 +1,37 @@
+//~ tier: meta
+//~ rule: generics.array-effects, facts.guards
+
+use std.array
+
+// Making, copying, reading and writing an array allocate nothing, even of
+// strings.
+fn inline(v: array.Array<i64, 3>, s: array.Array<str, 2>) -> i64 without alloc {
+  var w = v
+  w[0] = 5
+  w[1] += 2
+  var t = s
+  t[0] = t[1]
+  let pair: array.Array<i64, 2> = [1, 2]
+  let [a, b] = pair
+  w[2] + a + b
+}
+
+fn listed(v: array.Array<i64, 3>) -> List<i64> without alloc {
+  v.to_list() //~ ERROR E0204
+}
+
+// Reading or writing an element at an index not proved in range, and `fill`,
+// can panic.
+fn read(v: array.Array<i64, 3>, i: i64) -> i64 without panic {
+  v[i] //~ ERROR E0204
+}
+
+fn write(inout v: array.Array<i64, 3>, i: i64) without panic {
+  v[i] = 0 //~ ERROR E0204
+}
+
+fn filled() -> array.Array<i64, 3> without panic {
+  array.fill(0) //~ ERROR E0204
+}
+
+fn main() {}

@@ -1,0 +1,9 @@
+── INVALID FORMAT SPEC ────────────── E0325_invalid_format_spec.lt:1:32  [E0325]
+
+The format spec `x` doesn't apply to `str`:
+
+  1 │ fn shout(name: str) -> str { "{name:x}" }
+    │                                ^^^^
+
+A precision and `e` apply to floats, and `x`, `X`, `o` and `b` to integers.
+Convert the value first, or use a spec that fits its type.

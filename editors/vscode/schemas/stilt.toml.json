@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "stilt.toml",
+  "title": "stilt.toml",
+  "description": "A Stilt package's manifest: a TOML 1.0 document with at most two tables, `[package]` and `[dependencies]`. Any other table or key, and a value of another type, are E0600. An empty file is a manifest with no name and no dependencies (packages.manifest).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "package": {
+      "description": "The package (packages.package-table).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "The package's name: a valid first segment of a module's name, a lowercase identifier that is neither a keyword, a reserved word nor a primitive type name (program.module-names), other than `main`. A package that another depends on must have one (E0603), and one that only runs needs none (packages.package-table).",
+          "type": "string",
+          "pattern": "^_*[a-z][A-Za-z0-9_]*$",
+          "not": { "const": "main" }
+        }
+      }
+    },
+    "dependencies": {
+      "description": "The package's dependencies, each by its name, which must be the name its own manifest gives it (E0603), since there are no import aliases (packages.dependency-names).",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/dependency" }
+    }
+  },
+  "definitions": {
+    "dependency": {
+      "description": "A dependency: a `path` to a package developed beside this one, or a git repository it is fetched `from`, with the `version` and the `hash` that every command fills in (packages.dependencies, packages.path-dependencies and packages.filling-in).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "The directory that holds the dependency, relative to the manifest's directory, with `/` as the separator. It must hold a `stilt.toml` (E0601). Only the root package and its path dependencies may have path dependencies (packages.path-dependencies).",
+          "type": "string"
+        },
+        "from": {
+          "description": "The git repository that holds the dependency: `HOST/PATH`, fetched from `https://HOST/PATH`, whose host may give a port, as `HOST:PORT`, or a `file://` URL of a repository on the machine. Its versions are its tags `vMAJOR.MINOR.PATCH` (packages.dependencies and packages.versions).",
+          "type": "string"
+        },
+        "version": {
+          "description": "The dependency's version, `MAJOR.MINOR.PATCH`: three decimal numbers without leading zeros. A command fills it in when it is missing, with the repository's highest version (packages.dependencies and packages.filling-in).",
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "hash": {
+          "description": "The dependency's content hash: `b3:` and 64 lowercase hexadecimal digits, the BLAKE3 digest of its manifest and the `.lt` files under its `src/`. A command fills it in, and content whose hash differs is E0602 (packages.content-hash and packages.checked-content).",
+          "type": "string",
+          "pattern": "^b3:[0-9a-f]{64}$"
+        },
+        "may": {
+          "description": "The effects the dependency is granted: `io`, which grants every capability and `io` without one, or one or more of the capabilities below it, which grant those; and `unsafe`, which grants C code. A string listed twice, and `io` listed with a capability, are E0600. With no `may`, it is granted none (packages.grants; facts.capability-grants; c.granting-unsafe).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["io", "fs", "net", "clock", "env", "console", "rand", "spawn", "exec", "unsafe"],
+            "markdownEnumDescriptions": [
+              "Every capability, and `io` without one",
+              "Files, through `std.fs`",
+              "The network, through `std.net` and `std.http`",
+              "The clock, through `std.clock`",
+              "The environment, through `std.cli`",
+              "The console: `print`, `eprint` and the console functions of `std.io`",
+              "Randomness, through `random.entropy`",
+              "Starting tasks, through `std.task`'s `spawn`",
+              "Running other programs, through `std.process`",
+              "C code: the `unsafe` blocks of the dependency's own code, which `io` doesn't grant"
+            ]
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["path"], "not": { "anyOf": [{ "required": ["from"] }, { "required": ["version"] }, { "required": ["hash"] }] } },
+        { "required": ["from"], "dependencies": { "hash": ["version"] } }
+      ]
+    }
+  }
+}

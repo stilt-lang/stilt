@@ -1,0 +1,50 @@
+; Prints the primes below n, testing each by trial division.
+
+fn main 1               ; slot 0: n
+  push 2
+  store 1               ; slot 1: k
+next:
+  load 1
+  load 0
+  lt
+  jumpz end             ; while k < n
+  load 1
+  call prime
+  jumpz skip
+  load 1
+  print
+skip:
+  load 1
+  push 1
+  add
+  store 1
+  jump next
+end:
+  push 0
+  ret
+
+fn prime 1              ; slot 0: k; 1 when k is prime, 0 otherwise
+  push 2
+  store 1               ; slot 1: d
+try:
+  load 1
+  load 1
+  mul
+  load 0
+  le
+  jumpz yes             ; while d * d <= k
+  load 0
+  load 1
+  mod
+  jumpz no              ; d divides k
+  load 1
+  push 1
+  add
+  store 1
+  jump try
+yes:
+  push 1
+  ret
+no:
+  push 0
+  ret

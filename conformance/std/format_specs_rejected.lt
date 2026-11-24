@@ -1,0 +1,77 @@
+//~ rule: std.width-fill-and-alignment, std.precision, std.integer-kinds, std.scientific-notation, std.invalid-specs
+
+fn accepted(i: i64, u: u8, f: f64, g: f32, s: str, b: bool, xs: List<i64>, o: Option<f64>) -> str {
+  "{i:x}{u:X}{i:o}{u:b}{f:.2}{g:.1}{f:e}{g:.3e}{s:>5}{b:^7}{xs:*<9}{o:>12}{i:+>4}{f:.0}{u:0>8}"
+}
+
+fn integer_precision(i: i64) -> str {
+  "{i:.2}" //~ ERROR E0325
+}
+
+fn unsigned_precision(u: u8) -> str {
+  "{u:>8.1}" //~ ERROR E0325
+}
+
+fn string_precision(s: str) -> str {
+  "{s:.3}" //~ ERROR E0325
+}
+
+fn bool_precision(b: bool) -> str {
+  "{b:.1}" //~ ERROR E0325
+}
+
+fn list_precision(xs: List<f64>) -> str {
+  "{xs:.2}" //~ ERROR E0325
+}
+
+fn option_precision(o: Option<f64>) -> str {
+  "{o:.2}" //~ ERROR E0325
+}
+
+fn integer_scientific(i: i64) -> str {
+  "{i:e}" //~ ERROR E0325
+}
+
+fn integer_scientific_precision(u: u32) -> str {
+  "{u:.2e}" //~ ERROR E0325
+}
+
+fn string_scientific(s: str) -> str {
+  "{s:e}" //~ ERROR E0325
+}
+
+fn float_hex(f: f64) -> str {
+  "{f:x}" //~ ERROR E0325
+}
+
+fn float_upper_hex(g: f32) -> str {
+  "{g:X}" //~ ERROR E0325
+}
+
+fn float_octal(f: f64) -> str {
+  "{f:o}" //~ ERROR E0325
+}
+
+fn float_binary(f: f64) -> str {
+  "{f:<9b}" //~ ERROR E0325
+}
+
+fn string_hex(s: str) -> str {
+  "{s:x}" //~ ERROR E0325
+}
+
+fn bool_binary(b: bool) -> str {
+  "{b:b}" //~ ERROR E0325
+}
+
+fn list_hex(xs: List<i64>) -> str {
+  "{xs:x}" //~ ERROR E0325
+}
+
+fn option_octal(o: Option<i64>) -> str {
+  "{o:o}" //~ ERROR E0325
+}
+
+fn two_in_one(i: i64, s: str) -> str {
+  "{i:e} and {s:b}" //~ ERROR E0325 ERROR E0325
+}

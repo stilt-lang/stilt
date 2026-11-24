@@ -1,0 +1,3 @@
+/// Separated by a line of separators. //~ ERROR E0100
+;
+pub fn f() {}

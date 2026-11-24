@@ -1,0 +1,10 @@
+── INVALID VALUE ARGUMENT ──────── E0347_invalid_value_argument.lt:3:20  [E0347]
+
+`Mod` takes a value of type `u64` here, and `u64` is a type: write a literal, a
+constant or a value parameter:
+
+  3 │ fn value_of(m: Mod<u64>) -> u64 { m.value }
+    │                    ^^^
+
+A value argument is a literal, a constant or a value parameter, never a type, a
+local or a computation, and an array's size is 0 or more.

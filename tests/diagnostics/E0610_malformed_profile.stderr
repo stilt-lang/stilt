@@ -1,0 +1,9 @@
+── MALFORMED PROFILE ────────────── E0610_malformed_profile.profile:2:1  [E0610]
+
+Line 2 of the profile isn't of its form: `3` isn't a count, a power of two:
+
+  2 │ main.main/body 0000 loop 2:3 3
+    │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A release build reads a profile whole or not at all. Fix the line, or delete the
+profile and write it again with `stilt run --profile`.

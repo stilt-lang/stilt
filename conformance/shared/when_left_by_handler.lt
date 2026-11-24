@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: shared.when, handlers.resuming
+//~ stdout:
+//~ | 0 5
+
+// A handler's body that never resumes ends the `with`, and with it the `when` inside its
+// block: the value keeps what its place held, and the `when` lets it go, so the next `when`
+// on it holds it.
+
+use std.sync
+
+effect Stop {
+  fn stop() -> i64
+}
+
+fn main() / io {
+  let c = sync.Shared.new(1)
+  let h = handler Stop -> i64 { fn stop() -> i64 { 0 } }
+  let r = with h {
+    when c {
+      c = 5
+      Stop.stop()
+    }
+  }
+  when c { print("{r} {c}") }
+}

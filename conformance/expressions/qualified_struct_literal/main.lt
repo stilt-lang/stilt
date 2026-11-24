@@ -1,0 +1,9 @@
+//~ rule: syntax.expression-paths, program.what-use-binds, expressions.struct-literals
+//~ run-output: "Point { x: 1, y: 2 }"
+
+use geo
+
+fn main() / io {
+  let p = geo.Point { x: 1, y: 2 }
+  print("{p}")
+}

@@ -1,0 +1,24 @@
+// A list whose elements are all literals goes on one line when it fits in 100 columns, and
+// otherwise fills each line with as many elements as fit, each followed by a comma, a level
+// deeper than the line that opens it, and its closing bracket on a line of its own: numbers,
+// negated or not, a `-` apart from its number among them, strings and booleans.
+fn main() / io {
+  let short = [-1, 0, 1]
+  let offsets = [
+    -17, -15, -10, -6, 6, 10, 15, 17, -9, -8, -7, -1, 1, 7, 8, 9, -17, -15, -10, -6, 6, 10, 15, 17,
+    -9, -8, -7, -1, 1, 7, 8, 9,
+  ]
+  let scales = [
+    -2.5, 1.5e3, - 4, 0x10, 0b11, 1_000, 0.25, -0.125, 1e9, -1e9, 3.14159, 2.71828, 1.41421,
+    1.73205, -273.15, 6.02214e23, 1.60218e-19,
+  ]
+  let names = [
+    "pawn", "knight", "bishop", "rook", "queen", "king", "none",
+    "a much longer name for a piece than any other", "x",
+  ]
+  let flags = [
+    true, false, true, true, false, false, true, false, true, true, false, false, true, false, true,
+    true, false,
+  ]
+  print("{short} {offsets} {scales} {names} {flags}")
+}

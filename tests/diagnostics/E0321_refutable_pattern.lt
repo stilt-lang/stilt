@@ -1,0 +1,4 @@
+fn first_name(name: Option<str>) -> str {
+  let Some(n) = name
+  n
+}

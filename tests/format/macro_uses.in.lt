@@ -1,0 +1,42 @@
+// A use's groups keep their tokens as written, with their spaces and line breaks, since no
+// macro is resolved when a file is formatted (macros.formatting). Only the indentation of the
+// lines inside them follows the code around them, each line keeping its indentation relative
+// to the line where its group opens. A trailing block is a space after the group before it,
+// and a construct that holds a group on several lines never goes on one line.
+use tools
+
+fn main() / io {
+        swap!(a,b)
+  print(count!( 1,2 ,3 ))
+  print("{double!(1 + 2)}")
+  let q = pairs![1 => "a",2=>"b"]
+  print_all!("a"; "b")
+  tools.greet!( "Ada" )
+  unless!(xs.is_empty()){ print("first") }
+      unless!(done) {
+          print("a")
+        print("b")
+      }
+  match p {
+    pair!(1 , s) => print(s)
+    _ => print("other")
+  }
+  let pair!(n, _) = p
+  if ready {
+    for x in xs {
+  log!(
+    x,
+      x + 1
+  )
+    }
+  }
+  print(size!(
+    5
+  ))
+}
+
+fn total() -> i64 {
+let n = add!(1,
+             2)
+    n
+}

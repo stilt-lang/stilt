@@ -1,0 +1,17 @@
+//~ tier: meta
+//~ rule: macros.tokens-and-code, macros.outside-run
+//~ run-output: "tmp"
+
+use std.meta
+
+// Called when the program runs: the quote makes its code whatever its
+// splices' values, a NaN among them, and `fresh` makes a name.
+fn make(n: f64) -> (meta.Name, meta.Expr) {
+  let v = meta.fresh("tmp")
+  (v, quote { $v + $n })
+}
+
+fn main() / io {
+  let (v, _) = make(f64.NAN)
+  print(v.text())
+}

@@ -1,0 +1,10 @@
+── A PROJECTION YIELDS EXACTLY ONCE ── E0424_a_projection_yields_exactly_once.lt:5:1  [E0424]
+
+A path through the projection reaches its end without a `yield`: every path
+yields exactly once:
+
+  5 │ }
+    │ ^
+
+A projection hands its caller one place on every path. Yield on each path, or
+raise or panic on the others.

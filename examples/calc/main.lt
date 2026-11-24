@@ -1,0 +1,75 @@
+// calc: runs a program of a small expression language, a line at a time, from the file that
+// its argument names or from standard input.
+
+use std.cli
+use std.fs
+use std.io
+use ast
+use eval
+use lexer
+use parser
+
+/// Why a line failed: its syntax, at a column, or its evaluation.
+type Failure = | Syntax(lexer.SyntaxError) | Runtime(str)
+
+/// What a line does to the globals: defines one, prints a value, or nothing.
+type Outcome = | Defined(str, eval.Value) | Printed(eval.Value) | Nothing
+
+fn main() / {io, raise<str>} {
+  let lines = match cli.arg(0) {
+    Some(path) => try fs.read_lines(path) catch _ => raise "cannot read {path}"
+    None => io.read_lines()
+  }
+  var globals = Map.new()
+  var failed = false
+  for (n, text) in lines.enumerate(1) {
+    match Result.of(|| try step(text, globals)) {
+      Ok(Defined(name, v)) => { globals[name] = v }
+      Ok(Printed(v)) => print("{v}")
+      Ok(Nothing) => {}
+      Err(f) => {
+        print("line {n}: {describe(f)}")
+        failed = true
+      }
+    }
+  }
+  if failed { exit(1) }
+}
+
+/// What the line `text` does, given the globals defined before it.
+/// ex: try step("1 + 2", Map.new()) == Printed(eval.Int(3))
+/// ex: try step("let x = 4", Map.new()) == Defined("x", eval.Int(4))
+/// ex: Result.of(|| try step("1 +", Map.new())) == Err(Syntax(lexer.SyntaxError { column: 4, message: "expected an expression" }))
+/// ex: Result.of(|| try step("y", Map.new())) == Err(Runtime("unknown name y"))
+fn step(text: str, globals: Map<str, eval.Value>) -> Outcome / raise<Failure> {
+  let line = try parser.line(text) catch e => raise Syntax(e)
+  match line {
+    Define(name, e) => Defined(name, try eval.value(e, globals) catch m => raise Runtime(m))
+    Print(e) => Printed(try eval.value(e, globals) catch m => raise Runtime(m))
+    Blank => Nothing
+  }
+}
+
+fn describe(f: Failure) -> str {
+  match f {
+    Syntax(e) => "column {e.column}: {e.message}"
+    Runtime(message) => message
+  }
+}
+
+test "a program defines and calls recursive functions" {
+  let program = [
+    "let fact = fn(n) => if n <= 1 then 1 else n * fact(n - 1)",
+    "let compose = fn(f, g) => fn(x) => f(g(x))", "compose(fact, fn(x) => x + 1)(4)",
+  ]
+  var globals = Map.new()
+  var printed = []
+  for text in program {
+    match Result.of(|| try step(text, globals)) {
+      Ok(Defined(name, v)) => { globals[name] = v }
+      Ok(Printed(v)) => printed.push("{v}")
+      _ => panic("{text} failed")
+    }
+  }
+  assert printed == ["120"]
+}

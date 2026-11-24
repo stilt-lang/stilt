@@ -1,0 +1,52 @@
+//~ rule: patterns.constants
+//~ stdout:
+//~ | origin elsewhere
+//~ | pair other other
+//~ | on off
+//~ | stopped moving moving
+
+// A constant matches the values equal to it part by part.
+const ORIGIN: (i64, i64) = (0, 0)
+
+const PAIR: List<i64> = [1, 2]
+
+const ON: bool = true
+
+type Signal = | Halt(i64) | Run(i64)
+
+const STOPPED: Signal = Halt(0)
+
+fn place(p: (i64, i64)) -> str {
+  match p {
+    ORIGIN => "origin"
+    _ => "elsewhere"
+  }
+}
+
+fn named(xs: List<i64>) -> str {
+  match xs {
+    PAIR => "pair"
+    _ => "other"
+  }
+}
+
+fn switch(b: bool) -> str {
+  match b {
+    ON => "on"
+    _ => "off"
+  }
+}
+
+fn state(s: Signal) -> str {
+  match s {
+    STOPPED => "stopped"
+    _ => "moving"
+  }
+}
+
+fn main() / io {
+  print("{place((0, 0))} {place((0, 1))}")
+  print("{named([1, 2])} {named([1, 3])} {named([1, 2, 3])}")
+  print("{switch(true)} {switch(false)}")
+  print("{state(Halt(0))} {state(Run(0))} {state(Halt(1))}")
+}

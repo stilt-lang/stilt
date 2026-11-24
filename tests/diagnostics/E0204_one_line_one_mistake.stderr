@@ -1,0 +1,15 @@
+── FACT BEYOND A `without` LIMIT ──── E0204_one_line_one_mistake.lt:4:3  [E0204]
+
+`List.map` allocates, through `List.new`, but `labels` says `without alloc`:
+
+  3 │ pub fn labels(prices: List<Price>) -> List<str> without alloc {
+    │                                                         ───── the limit
+  4 │   prices.map(|p| "{p.cents}")
+    │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │              ─────────────── also allocates
+    │                  ─────────── also allocates
+    │                    ─────── also allocates
+
+Code under `without alloc` makes no list or string. Let the caller make it, and
+take it `inout`: writes through its indexes stay in its storage, as `out[i] = x`
+does.

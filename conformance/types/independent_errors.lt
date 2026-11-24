@@ -1,0 +1,9 @@
+//~ rule: types.inferred-per-body, expressions.arguments, errors.root-causes, errors.phases
+
+fn takes(s: str) {}
+
+fn main() {
+  let x = 1.5
+  takes(x, 2) //~ ERROR E0315
+  let n: i64 = x //~ ERROR E0311
+}

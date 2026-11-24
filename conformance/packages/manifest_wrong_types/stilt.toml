@@ -1,0 +1,6 @@
+[package]
+name = 3 # //~ ERROR E0600
+
+[dependencies]
+csv = "deps/csv" # //~ ERROR E0600
+json = { path = ["deps", "json"] } # //~ ERROR E0600

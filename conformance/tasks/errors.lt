@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: tasks.async, tasks.task-functions
+
+use std.task
+
+type Bad = | Bad
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn raises() / async {
+  let t = task.spawn(|| raise Bad) //~ ERROR E0502
+}
+
+fn asks() / {async, Ask} {
+  let t = task.spawn(|| Ask.ask()) //~ ERROR E0502
+}
+
+fn literal() {
+  let h = handler async {} //~ ERROR E0511
+}
+
+fn main() {}

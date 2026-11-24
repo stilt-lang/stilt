@@ -1,0 +1,9 @@
+//~ rule: std.map-key-bounds, std.finding-keys
+//~ run-output: "checked"
+
+fn show_all(m: Map<f64, str>) / io {
+  for (k, v) in m { print("{k}: {v}") }
+  print("{m}")
+}
+
+fn main() / io { print("checked") }

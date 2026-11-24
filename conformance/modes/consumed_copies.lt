@@ -1,0 +1,30 @@
+//~ rule: modes.copies, modes.shared-writes, values.consumed-parameters, facts.copy
+
+// A binding passed to a consumed parameter, and used again after the call, is copied there,
+// and the copy lasts as long as the call's result: until the end of the scope of the binding
+// that holds the result, or for the call alone when the result is dropped.
+fn keep(xs: List<i64>) -> List<i64> { xs }
+
+fn held(inout xs: List<i64>) -> i64 without copy {
+  let ys = keep(xs)
+  xs.push(1) //~ ERROR E0204
+  ys.len()
+}
+
+fn dropped(inout xs: List<i64>) -> i64 without copy {
+  let n = keep(xs).len()
+  xs.push(1)
+  n
+}
+
+fn ended(inout xs: List<i64>) -> i64 without copy {
+  var n = 0
+  {
+    let ys = keep(xs)
+    n = ys.len()
+  }
+  xs.push(1)
+  n
+}
+
+fn main() {}

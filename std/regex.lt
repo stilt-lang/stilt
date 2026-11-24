@@ -1,0 +1,584 @@
+module std.regex
+
+// Regular expressions (std.regex, std.regex-syntax and std.regex-matching): a
+// pattern is compiled once into a program that a Pike machine runs over the
+// text's scalar values, keeping at most one thread per instruction, so a
+// search takes time proportional to the text's length times the program's,
+// whatever either holds. Everything here is written in Stilt.
+
+/// A compiled pattern: its source, the number of its capturing groups, and the
+/// program that matches it.
+pub type Regex = { source: str, groups: i64, program: List<Op> }
+
+/// Why a pattern isn't one, at the byte offset of the character where it goes
+/// wrong: a character that can't stand where it is, a group or a class that
+/// isn't closed, an escape that means nothing, a range or a count out of order
+/// or above 1,000, or a pattern whose program would exceed 100,000
+/// instructions or whose groups nest deeper than 250.
+pub type Error = | Unexpected(offset: i64) | Unclosed(offset: i64) | Escape(offset: i64) | Order(offset: i64) | TooLarge
+
+/// A match: the byte offsets where it starts and ends in the text, and its
+/// text.
+pub type Match = { start: i64, end: i64, text: str }
+
+/// An instruction of a compiled pattern: a scalar value in one of sorted
+/// ranges, a fork to two instructions, the first preferred, a jump, the
+/// position saved in a slot, an assertion, and the end of a match.
+pub type Op = | Class(ranges: List<(u32, u32)>) | Split(first: i64, second: i64) | Jump(to: i64) | Save(slot: i64) | Assert(which: i64) | Done
+
+/// The program of `source`, or the error at its first mistake.
+/// ex: (try compile("a(b)c")).groups == 1
+/// ex: Result.of(|| try compile("a(b")) == Err(Unclosed(1)) && Result.of(|| try compile("*a")) == Err(Unexpected(0))
+/// ex: Result.of(|| try compile("[z-a]")) == Err(Order(1)) && Result.of(|| try compile("\\q")) == Err(Escape(0))
+pub fn compile(source: str) -> Regex / raise<Error> {
+  let points = source.code_points()
+  var p = Parser { points, offsets: offsets(points), at: 0, groups: 0, depth: 0 }
+  let node = try alternatives(inout p)
+  if p.at < p.points.len() { raise Unexpected(offset(p)) }
+  if size(node) > 100000 { raise TooLarge }
+  var program: List<Op> = [Save(0)]
+  emit(node, inout program)
+  program.push(Save(1))
+  program.push(Done)
+  Regex { source, groups: p.groups, program }
+}
+
+/// `text` with a `\` before each character that a pattern gives a meaning to,
+/// so that the pattern matches `text` itself.
+/// ex: escape("1+1=2?") == "1\\+1=2\\?"
+pub fn escape(text: str) -> str { "".join(text.chars().map(|c| if "\\.+*?()|[]\{}^$".contains(c) { "\\{c}" } else { c })) }
+
+impl Regex {
+  /// Whether the pattern matches somewhere in `text`.
+  /// ex: (try compile("b+")).is_match("abbc") && !(try compile("^b")).is_match("abc")
+  pub fn is_match(self, text: str) -> bool { search(self, text.code_points(), 0, false).is_some() }
+
+  /// The leftmost match in `text`, and of those that start there, the one that
+  /// the pattern prefers.
+  /// ex: (try compile("b+")).find("abbc") == Some(Match { start: 1, end: 3, text: "bb" })
+  /// ex: (try compile("a|ab")).find("ab") == Some(Match { start: 0, end: 1, text: "a" })
+  pub fn find(self, text: str) -> Option<Match> {
+    let points = text.code_points()
+    let slots = search(self, points, 0, false) else return None
+    piece(text.chars(), offsets(points), slots, 0)
+  }
+
+  /// The matches in `text` from left to right, each starting at or after the
+  /// end of the one before, but an empty match right after another match.
+  /// ex: (try compile("a*")).find_all("baac").map(|m| m.start) == [0, 1, 4]
+  pub fn find_all(self, text: str) -> List<Match> {
+    let chars = text.chars()
+    let at = offsets(text.code_points())
+    all(self, text, false).filter_map(|slots| piece(chars, at, slots, 0))
+  }
+
+  /// The groups of the leftmost match: the match itself, then each capturing
+  /// group in the order of its `(`, `None` for one that took no part in it.
+  /// ex: (try compile("(a)|(b)")).captures("b") == Some([Some(Match { start: 0, end: 1, text: "b" }), None, Some(Match { start: 0, end: 1, text: "b" })])
+  pub fn captures(self, text: str) -> Option<List<Option<Match>>> {
+    let points = text.code_points()
+    let slots = search(self, points, 0, true) else return None
+    let chars = text.chars()
+    let at = offsets(points)
+    Some(List.generate(self.groups + 1, |g| piece(chars, at, slots, g)))
+  }
+
+  /// `text` with each match of `find_all` replaced by `to`, in which `$n`
+  /// stands for the text of group `n`, `""` when it took no part, and `$$`
+  /// for `$`.
+  /// ex: (try compile("(\\w+)@(\\w+)")).replace("a@b c@d", "$2.$1") == "b.a d.c"
+  pub fn replace(self, text: str, to: str) -> str { replaced(self, text, to, all(self, text, true)) }
+
+  /// `text` with its leftmost match replaced, as `replace` replaces each.
+  /// ex: (try compile("o")).replace_first("foo", "0") == "f0o"
+  pub fn replace_first(self, text: str, to: str) -> str { replaced(self, text, to, search(self, text.code_points(), 0, true).to_list()) }
+
+  /// The parts of `text` between the matches of `find_all`, in order: the part
+  /// before the first match, between each two, and after the last.
+  /// ex: (try compile(", *")).split("a, b,c") == ["a", "b", "c"] && (try compile(",")).split("") == [""]
+  pub fn split(self, text: str) -> List<str> {
+    let chars = text.chars()
+    var parts: List<str> = []
+    var from = 0
+    for slots in all(self, text, false) {
+      parts.push(between(chars, from, slots.get(0) else 0))
+      from = slots.get(1) else 0
+    }
+    parts.push(between(chars, from, chars.len()))
+    parts
+  }
+}
+
+// The byte offset of each scalar value of a text, then the text's length.
+fn offsets(points: List<u32>) -> List<i64> {
+  var at: List<i64> = [0]
+  var n = 0
+  for c in points {
+    n += if c < 0x80 { 1 } else if c < 0x800 { 2 } else if c < 0x10000 { 3 } else { 4 }
+    at.push(n)
+  }
+  at
+}
+
+// Group `g` of a match's slots, which hold positions among the text's scalar
+// values, `chars`, whose byte offsets are `at`.
+fn piece(chars: List<str>, at: List<i64>, slots: List<i64>, g: i64) -> Option<Match> {
+  let s = slots.get(2 * g) else return None
+  let e = slots.get(2 * g + 1) else return None
+  if s < 0 || e < s { return None }
+  let start = at.get(s) else return None
+  let end = at.get(e) else return None
+  Some(Match { start, end, text: between(chars, s, e) })
+}
+
+// The text of the scalar values from position `s` to position `e`.
+fn between(chars: List<str>, s: i64, e: i64) -> str {
+  var out: List<str> = []
+  for i in s..e { out.push(chars.get(i) else "") }
+  "".join(out)
+}
+
+// The slots of each match of `find_all`.
+fn all(re: Regex, text: str, groups: bool) -> List<List<i64>> {
+  let points = text.code_points()
+  var found: List<List<i64>> = []
+  var from = 0
+  var last = -1
+  while from <= points.len() {
+    let slots = search(re, points, from, groups) else break
+    let s = slots.get(0) else 0
+    let e = slots.get(1) else 0
+    if s == e && s == last {
+      from = s + 1
+      continue
+    }
+    found.push(slots)
+    last = e
+    from = if e == s { e + 1 } else { e }
+  }
+  found
+}
+
+// `text` with the matches of `found` replaced by the template `to`.
+fn replaced(re: Regex, text: str, to: str, found: List<List<i64>>) -> str {
+  let chars = text.chars()
+  let at = offsets(text.code_points())
+  var out: List<str> = []
+  var from = 0
+  for slots in found {
+    out.push(between(chars, from, slots.get(0) else 0))
+    out.push(expand(to, chars, at, slots, re.groups))
+    from = slots.get(1) else 0
+  }
+  out.push(between(chars, from, chars.len()))
+  "".join(out)
+}
+
+// The template `to` for one match: `$n` its group `n`, `$$` a `$`, and any
+// other `$` itself.
+fn expand(to: str, chars: List<str>, at: List<i64>, slots: List<i64>, groups: i64) -> str {
+  let cs = to.chars()
+  var out: List<str> = []
+  var i = 0
+  while i < cs.len() {
+    let c = cs.get(i) else ""
+    i += 1
+    if c != "$" {
+      out.push(c)
+    } else if cs.get(i) == Some("$") {
+      out.push("$")
+      i += 1
+    } else {
+      var g = -1
+      while (cs.get(i) else "").is_ascii_digit() {
+        let d = (cs.get(i) else "0").to_i64() else 0
+        g = if g < 0 { d } else { (g.min(100000) * 10).saturating_add(d) }
+        i += 1
+      }
+      if g < 0 { out.push("$") } else if g <= groups { out.push((piece(chars, at, slots, g) else Match { start: 0, end: 0, text: "" }).text) }
+    }
+  }
+  "".join(out)
+}
+
+// A thread of the machine: the instruction it waits at, and its slots.
+type Thread = { pc: i64, slots: List<i64> }
+
+// The slots of the leftmost match that starts at or after position `from` of
+// `points`, by the Pike machine: it steps every thread over each scalar value
+// in the order of their preference, so the first to reach `Done` wins over
+// those after it, and starts a new thread at each position until one has.
+// Only slots 0 and 1 are kept unless `groups`.
+fn search(re: Regex, points: List<u32>, from: i64, groups: bool) -> Option<List<i64>> {
+  let empty = List.repeat(-1, if groups { 2 * re.groups + 2 } else { 2 })
+  var marks = List.repeat(-1, re.program.len())
+  var now: List<Thread> = []
+  var found: Option<List<i64>> = None
+  var i = from
+  add(re.program, inout now, inout marks, Thread { pc: 0, slots: empty }, points, i)
+  while i <= points.len() && (now.len() > 0 || found.is_none()) {
+    var next: List<Thread> = []
+    let c = points.get(i)
+    for t in now {
+      match re.program.get(t.pc) {
+        Some(Done) => {
+          found = Some(t.slots)
+          break
+        }
+        Some(Class(ranges)) => if c.is_some_and(|x| within(ranges, x)) { add(re.program, inout next, inout marks, Thread { pc: t.pc + 1, slots: t.slots }, points, i + 1) },
+        _ => {}
+      }
+    }
+    if found.is_none() && i < points.len() { add(re.program, inout next, inout marks, Thread { pc: 0, slots: empty }, points, i + 1) }
+    now = next
+    i += 1
+  }
+  found
+}
+
+// Adds thread `t` at position `i` to `list`, following its jumps, forks,
+// saves and assertions to the instructions that read a scalar value or end a
+// match. `marks` holds, for each instruction, the last position whose list it
+// joined, so that no instruction joins a list twice.
+fn add(program: List<Op>, inout list: List<Thread>, inout marks: List<i64>, t: Thread, points: List<u32>, i: i64) {
+  let pc = t.pc
+  if pc < 0 || pc >= marks.len() || marks[pc] == i { return }
+  marks[pc] = i
+  match program.get(t.pc) {
+    Some(Jump(to)) => add(program, inout list, inout marks, Thread { pc: to, slots: t.slots }, points, i),
+    Some(Split(first, second)) => {
+      add(program, inout list, inout marks, Thread { pc: first, slots: t.slots }, points, i)
+      add(program, inout list, inout marks, Thread { pc: second, slots: t.slots }, points, i)
+    }
+    Some(Save(slot)) => {
+      var slots = t.slots
+      if slot >= 0 && slot < slots.len() { slots[slot] = i }
+      add(program, inout list, inout marks, Thread { pc: t.pc + 1, slots }, points, i)
+    }
+    Some(Assert(which)) => if holds(which, points, i) { add(program, inout list, inout marks, Thread { pc: t.pc + 1, slots: t.slots }, points, i) },
+    _ => list.push(t),
+  }
+}
+
+// Whether an assertion holds at position `i`: `^`, `$`, `\b` or `\B`.
+fn holds(which: i64, points: List<u32>, i: i64) -> bool {
+  let boundary = is_word(points.get(i - 1)) != is_word(points.get(i))
+  if which == START { i == 0 } else if which == END { i == points.len() } else if which == BOUNDARY { boundary } else { !boundary }
+}
+
+fn is_word(c: Option<u32>) -> bool { within(WORD, c else SPACE) }
+
+// Whether `x` lies in one of `ranges`.
+fn within(ranges: List<(u32, u32)>, x: u32) -> bool { ranges.any(|r| r.0 <= x && x <= r.1) }
+
+// The assertions.
+const START: i64 = 0
+const END: i64 = 1
+const BOUNDARY: i64 = 2
+const NOT_BOUNDARY: i64 = 3
+
+// The classes of `\d`, `\w` and `\s`, and the last scalar value.
+const DIGITS: List<(u32, u32)> = [(48, 57)]
+const WORD: List<(u32, u32)> = [(48, 57), (65, 90), (95, 95), (97, 122)]
+const SPACES: List<(u32, u32)> = [(9, 13), (32, 32)]
+const MAX: u32 = 0x10FFFF
+
+// The characters that the syntax names.
+const TAB: u32 = 9
+const LINE_FEED: u32 = 10
+const RETURN: u32 = 13
+const SPACE: u32 = 32
+const DOLLAR: u32 = 36
+const OPEN: u32 = 40
+const CLOSE: u32 = 41
+const STAR: u32 = 42
+const PLUS: u32 = 43
+const COMMA: u32 = 44
+const MINUS: u32 = 45
+const DOT: u32 = 46
+const COLON: u32 = 58
+const QUESTION: u32 = 63
+const OPEN_BRACKET: u32 = 91
+const BACKSLASH: u32 = 92
+const CLOSE_BRACKET: u32 = 93
+const CARET: u32 = 94
+const OPEN_BRACE: u32 = 123
+const BAR: u32 = 124
+const CLOSE_BRACE: u32 = 125
+
+// A parsed pattern: the empty pattern, a class of scalar values, patterns one
+// after another, alternatives, a capturing group, a repetition from `min` to
+// `max` times, `-1` for no bound, and an assertion.
+type Node = | Empty | Chars(List<(u32, u32)>) | Seq(List<Node>) | Either(List<Node>) | Group(index: i64, inner: Node) | Repeat(inner: Node, min: i64, max: i64, greedy: bool) | Test(i64)
+
+// A pattern's scalar values, their offsets, the next one's position, the
+// groups opened so far, and how many are open.
+type Parser = { points: List<u32>, offsets: List<i64>, at: i64, groups: i64, depth: i64 }
+
+// The next scalar value, or 0 at the end, which no rule takes.
+fn peek(p: Parser) -> u32 { p.points.get(p.at) else 0 }
+fn offset(p: Parser) -> i64 { p.offsets.get(p.at) else 0 }
+fn more(p: Parser) -> bool { p.at < p.points.len() }
+
+// alternatives := sequence ('|' sequence)*
+fn alternatives(inout p: Parser) -> Node / raise<Error> {
+  var options = [try sequence(inout p)]
+  while more(p) && peek(p) == BAR {
+    p.at += 1
+    options.push(try sequence(inout p))
+  }
+  if options.len() == 1 { options.get(0) else Empty } else { Either(options) }
+}
+
+// sequence := repeat*, up to a `|`, a `)` or the end.
+fn sequence(inout p: Parser) -> Node / raise<Error> {
+  var items: List<Node> = []
+  while more(p) && peek(p) != BAR && peek(p) != CLOSE { items.push(try repeat(inout p)) }
+  if items.len() == 1 { items.get(0) else Empty } else if items.is_empty() { Empty } else { Seq(items) }
+}
+
+// repeat := atom (('*' | '+' | '?' | count) '?'?)?
+fn repeat(inout p: Parser) -> Node / raise<Error> {
+  let atom = try single(inout p)
+  let c = peek(p)
+  if !more(p) || (c != STAR && c != PLUS && c != QUESTION && c != OPEN_BRACE) { return atom }
+  let (min, max) = if c == OPEN_BRACE { try count(inout p) } else if c == STAR { (0, -1) } else if c == PLUS { (1, -1) } else { (0, 1) }
+  p.at += 1
+  let greedy = !(more(p) && peek(p) == QUESTION)
+  if !greedy { p.at += 1 }
+  let d = peek(p)
+  if more(p) && (d == STAR || d == PLUS || d == QUESTION || d == OPEN_BRACE) { raise Unexpected(offset(p)) }
+  Repeat(atom, min, max, greedy)
+}
+
+// count := '{' n (',' n?)? '}', leaving the parser at its `}`.
+fn count(inout p: Parser) -> (i64, i64) / raise<Error> {
+  let at = offset(p)
+  p.at += 1
+  let min = try digits(inout p, at)
+  var max = min
+  if more(p) && peek(p) == COMMA {
+    p.at += 1
+    max = if more(p) && peek(p) == CLOSE_BRACE { -1 } else { try digits(inout p, at) }
+  }
+  if !more(p) { raise Unclosed(at) }
+  if peek(p) != CLOSE_BRACE { raise Unexpected(offset(p)) }
+  if min > 1000 || max > 1000 || (max >= 0 && max < min) { raise Order(at) }
+  (min, max)
+}
+
+// The number of a count that opens at `at`.
+fn digits(inout p: Parser, at: i64) -> i64 / raise<Error> {
+  if !more(p) { raise Unclosed(at) }
+  number(inout p) else raise Unexpected(offset(p))
+}
+
+// The decimal number at the parser, or `None` where no digit is.
+fn number(inout p: Parser) -> Option<i64> {
+  if !more(p) || peek(p) < 48 || peek(p) > 57 { return None }
+  var n = 0
+  while more(p) && peek(p) >= 48 && peek(p) <= 57 {
+    n = (n.min(100000) * 10).saturating_add((peek(p) - 48).to_i64())
+    p.at += 1
+  }
+  Some(n)
+}
+
+// atom := group | class | '.' | '^' | '$' | '\' escape | any other character
+fn single(inout p: Parser) -> Node / raise<Error> {
+  let at = offset(p)
+  let c = peek(p)
+  p.at += 1
+  if c == OPEN { return try group(inout p, at) }
+  if c == OPEN_BRACKET { return try class(inout p, at) }
+  if c == DOT { return Chars(negated([(LINE_FEED, LINE_FEED)])) }
+  if c == CARET { return Test(START) }
+  if c == DOLLAR { return Test(END) }
+  if c == BACKSLASH { return try escaped(inout p, at, false) }
+  if c == STAR || c == PLUS || c == QUESTION || c == OPEN_BRACE || c == CLOSE { raise Unexpected(at) }
+  Chars([(c, c)])
+}
+
+// group := '(' ('?:')? alternatives ')'
+fn group(inout p: Parser, at: i64) -> Node / raise<Error> {
+  let capturing = !(peek(p) == QUESTION && p.points.get(p.at + 1) == Some(COLON))
+  if p.depth == 250 { raise TooLarge }
+  p.depth += 1
+  var index = -1
+  if capturing {
+    p.groups += 1
+    index = p.groups
+  } else {
+    p.at += 2
+  }
+  let inner = try alternatives(inout p)
+  if !more(p) { raise Unclosed(at) }
+  p.at += 1
+  p.depth -= 1
+  if capturing { Group(index, inner) } else { inner }
+}
+
+// class := '[' '^'? item+ ']', where item := '\' escape | c ('-' c)?, and a
+// `]` first is an item.
+fn class(inout p: Parser, at: i64) -> Node / raise<Error> {
+  let negate = more(p) && peek(p) == CARET
+  if negate { p.at += 1 }
+  var ranges: List<(u32, u32)> = []
+  var first = true
+  while more(p) && (first || peek(p) != CLOSE_BRACKET) {
+    first = false
+    let start = offset(p)
+    let lo = peek(p)
+    p.at += 1
+    if lo == BACKSLASH {
+      ranges = ranges.concat(try escaped_class(inout p, start))
+    } else if more(p) && peek(p) == MINUS && p.points.get(p.at + 1).is_some_and(|x| x != CLOSE_BRACKET) {
+      p.at += 1
+      let hi = peek(p)
+      if hi == BACKSLASH { raise Escape(offset(p)) }
+      p.at += 1
+      if hi < lo { raise Order(start) }
+      ranges.push((lo, hi))
+    } else {
+      ranges.push((lo, lo))
+    }
+  }
+  if !more(p) { raise Unclosed(at) }
+  p.at += 1
+  let sorted = merged(ranges)
+  Chars(if negate { negated(sorted) } else { sorted })
+}
+
+// The ranges of an escape inside a class, which can't be an assertion.
+fn escaped_class(inout p: Parser, at: i64) -> List<(u32, u32)> / raise<Error> {
+  match try escaped(inout p, at, true) {
+    Chars(ranges) => ranges,
+    _ => raise Escape(at),
+  }
+}
+
+// The escape after a `\` at `at`: a class, an assertion outside a class, a
+// control character, or an ASCII punctuation character standing for itself.
+fn escaped(inout p: Parser, at: i64, inside: bool) -> Node / raise<Error> {
+  if !more(p) { raise Escape(at) }
+  let c = peek(p)
+  p.at += 1
+  match str.from_code_point(c) else "" {
+    "d" => Chars(DIGITS),
+    "D" => Chars(negated(DIGITS)),
+    "w" => Chars(WORD),
+    "W" => Chars(negated(WORD)),
+    "s" => Chars(SPACES),
+    "S" => Chars(negated(SPACES)),
+    "n" => Chars([(LINE_FEED, LINE_FEED)]),
+    "t" => Chars([(TAB, TAB)]),
+    "r" => Chars([(RETURN, RETURN)]),
+    "b" if !inside => Test(BOUNDARY),
+    "B" if !inside => Test(NOT_BOUNDARY),
+    s => if s.is_ascii() && c > SPACE && c < 127 && !s.is_ascii_alphanumeric() { Chars([(c, c)]) } else { raise Escape(at) },
+  }
+}
+
+// `ranges` sorted, with those that touch or overlap joined.
+fn merged(ranges: List<(u32, u32)>) -> List<(u32, u32)> {
+  var out: List<(u32, u32)> = []
+  for r in ranges.sorted() {
+    let prev = out.last() else (MAX, MAX)
+    if out.is_empty() || r.0 > prev.1.saturating_add(1) {
+      out.push(r)
+    } else {
+      let _ = out.pop()
+      out.push((prev.0, prev.1.max(r.1)))
+    }
+  }
+  out
+}
+
+// The scalar values outside the sorted, disjoint `ranges`.
+fn negated(ranges: List<(u32, u32)>) -> List<(u32, u32)> {
+  var out: List<(u32, u32)> = []
+  var next: u32 = 0
+  for r in ranges {
+    if r.0 > next { out.push((next, r.0 - 1)) }
+    next = r.1.saturating_add(1)
+  }
+  if next <= MAX { out.push((next, MAX)) }
+  out
+}
+
+// The number of instructions that `emit` writes for `node`, saturating.
+fn size(node: Node) -> i64 {
+  match node {
+    Empty => 0,
+    Chars(_) | Test(_) => 1,
+    Seq(items) => items.map(size).fold(0, |a, b| a.saturating_add(b)),
+    Either(options) => options.map(size).fold(2 * options.len(), |a, b| a.saturating_add(b)),
+    Group(_, inner) => size(inner).saturating_add(2),
+    Repeat(inner, min, max, _) => (size(inner).min(100000) + 1) * (if max < 0 { min + 1 } else { max }).min(1001) + 1,
+  }
+}
+
+// Appends the program of `node` to `program`.
+fn emit(node: Node, inout program: List<Op>) {
+  match node {
+    Empty => {}
+    Chars(ranges) => program.push(Class(ranges)),
+    Seq(items) => for item in items { emit(item, inout program) },
+    Either(options) => either(options, inout program),
+    Group(index, inner) => {
+      program.push(Save(2 * index))
+      emit(inner, inout program)
+      program.push(Save(2 * index + 1))
+    }
+    Repeat(inner, min, max, greedy) => repeated(inner, min, max, greedy, inout program),
+    Test(which) => program.push(Assert(which)),
+  }
+}
+
+// `a|b|c`: a fork before each option but the last, preferring it, and after
+// it a jump to the end.
+fn either(options: List<Node>, inout program: List<Op>) {
+  var jumps: List<i64> = []
+  for (k, option) in options.enumerate(0) {
+    let fork = program.len()
+    let last = k + 1 == options.len()
+    if !last { program.push(Split(fork + 1, -1)) }
+    emit(option, inout program)
+    if !last {
+      jumps.push(program.len())
+      program.push(Jump(-1))
+      patch(inout program, fork, Split(fork + 1, program.len()))
+    }
+  }
+  let end = program.len()
+  for j in jumps { patch(inout program, j, Jump(end)) }
+}
+
+// `inner` from `min` to `max` times: `min` copies, then a loop, or `max - min`
+// copies that each fork to the end.
+fn repeated(inner: Node, min: i64, max: i64, greedy: bool, inout program: List<Op>) {
+  for _ in 0..min { emit(inner, inout program) }
+  var forks: List<i64> = []
+  if max < 0 {
+    let top = program.len()
+    program.push(Split(-1, -1))
+    emit(inner, inout program)
+    program.push(Jump(top))
+    patch(inout program, top, choice(top + 1, program.len(), greedy))
+    return
+  }
+  for _ in min..max {
+    forks.push(program.len())
+    program.push(Split(-1, -1))
+    emit(inner, inout program)
+  }
+  let end = program.len()
+  for f in forks { patch(inout program, f, choice(f + 1, end, greedy)) }
+}
+
+// A fork that takes `take` first when `greedy`, and `skip` first when not.
+fn choice(take: i64, skip: i64, greedy: bool) -> Op { if greedy { Split(take, skip) } else { Split(skip, take) } }
+
+fn patch(inout program: List<Op>, at: i64, op: Op) {
+  if at >= 0 && at < program.len() { program[at] = op }
+}

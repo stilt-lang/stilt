@@ -1,0 +1,129 @@
+// The grammar in the Lark-like format of llguidance.
+
+use ebnf
+use lexicon
+use render
+use shape
+
+type Lark = {}
+
+impl render.Syntax for Lark {
+  fn name(self, rule: str) -> str { rule }
+
+  fn lines(self, branches: List<str>) -> str { "\n    | ".join(branches) }
+
+  fn rx(self, rx: lexicon.Rx) -> str { rx_text(rx) }
+}
+
+fn rx_text(rx: lexicon.Rx) -> str {
+  match rx {
+    Lit(text) => "".join(text.chars().map(regex_char))
+    Class(negated, ranges) => render.set_text(negated, ranges, class_char)
+    Seq(items) => "".join(items.map(part))
+    Alt(items) => "|".join(items.map(rx_text))
+    Star(inner) => "{operand(inner)}*"
+    Plus(inner) => "{operand(inner)}+"
+    Opt(inner) => "{operand(inner)}?"
+  }
+}
+
+fn part(rx: lexicon.Rx) -> str {
+  match rx {
+    Alt(_) => "(?:{rx_text(rx)})"
+    _ => rx_text(rx)
+  }
+}
+
+fn operand(rx: lexicon.Rx) -> str {
+  let single = match rx {
+    Lit(text) => text.char_count() == 1
+    Class(_, _) => true
+    _ => false
+  }
+  if single { rx_text(rx) } else { "(?:{rx_text(rx)})" }
+}
+
+/// ex: regex_char(".") == "\\."
+/// ex: regex_char("\n") == "\\n"
+/// ex: regex_char("a") == "a"
+fn regex_char(c: str) -> str {
+  match c {
+    "\\"
+      | "."
+      | "+"
+      | "*"
+      | "?"
+      | "("
+      | ")"
+      | "|"
+      | "["
+      | "]"
+      | "\{"
+      | "}"
+      | "^"
+      | "$"
+      | "/" => "\\{c}"
+    "\n" => "\\n"
+    "\t" => "\\t"
+    _ => c
+  }
+}
+
+/// ex: class_char("-") == "\\-"
+/// ex: class_char("a") == "a"
+fn class_char(c: str) -> str {
+  match c {
+    "\\" | "]" | "[" | "^" | "-" | "/" => "\\{c}"
+    "\n" => "\\n"
+    "\t" => "\\t"
+    _ => c
+  }
+}
+
+/// ex: string_literal("a\"b") == "\"a\\\"b\""
+fn string_literal(text: str) -> str {
+  let inner = "".join(text.chars().map(|c| if c == "\"" || c == "\\" { "\\{c}" } else { c }))
+  "\"{inner}\""
+}
+
+/// The Lark text of the grammar.
+pub fn emit(grammar: shape.Published) -> str {
+  let form = Lark {}
+  var out = [
+    "// The grammar of core Stilt, in the Lark-like format of llguidance.",
+    "// Generated from reference/03-syntax.md and 02-lexical.md by `just grammar-generate`. Do not edit.",
+    "// A newline is the separator of statements and items where lexical.terminator-insertion",
+    "// inserts a terminator (see syntax.published-grammars.loosening).",
+    "",
+    // llguidance does not skip what `%ignore` names before the first token.
+    "start: LEAD? root",
+  ]
+  for (name, body) in grammar.rules { out.push("{name}: {render.body(form, body)}") }
+  out.push("{shape.NEWLINE}: NL")
+  for (text, name) in grammar.literals {
+    let lead = if grammar.continuing.contains(text) { "nl* " } else { "" }
+    let trail = if shape.ends_statement(text) { "" } else { " nl*" }
+    out.push("{name}: {lead}{string_literal(text)}{trail}")
+  }
+  var terminals = []
+  for (name, spellings) in grammar.choices {
+    let (before, after) = shape.choice_layout(grammar.continuing, spellings)
+    let lead = if before { "nl* " } else { "" }
+    let trail = if after { " nl*" } else { "" }
+    let terminal = name.ascii_upper()
+    out.push("{name}: {lead}{terminal}{trail}")
+    terminals.push("{terminal}: /{"|".join(spellings.map(|t| form.rx(lexicon.Lit(t))))}/")
+  }
+  for (name, rx) in lexicon.lexemes() {
+    let trail = if shape.ENDING_LEXEMES.contains(name) { "" } else { " nl*" }
+    out.push("{name}: {name.ascii_upper()}{trail}")
+    terminals.push("{name.ascii_upper()}: /{form.rx(rx)}/")
+  }
+  out.push("")
+  out.push("NL: /{form.rx(lexicon.newline())}/")
+  out.push("LEAD: /{form.rx(lexicon.leading_blanks())}/")
+  out.extend(terminals)
+  out.push("%ignore /[ \\t]+/")
+  out.push("%ignore /{form.rx(lexicon.comment())}/")
+  "{"\n".join(out)}\n"
+}

@@ -1,0 +1,9 @@
+── DEPENDENCY THAT CAN'T BE FETCHED ──────────────────── stilt.toml:5:1  [E0601]
+
+`csv` names deps/csv, which holds no stilt.toml:
+
+  5 │ csv = { path = "deps/csv" }
+    │ ^^^
+
+A dependency comes from a directory that holds its stilt.toml, with `path`, or
+from a git repository, with `from`, whose versions are tags such as `v1.2.0`.

@@ -1,0 +1,8 @@
+── SYNTAX ERROR ────────── E0100_method_receiver_before_the_name.lt:3:4  [E0100]
+
+Stilt declares a method in an `impl` block, as `impl Point { fn norm(self) … }`:
+
+  3 │ fn (p Point) norm() -> i64 { p.x }
+    │    ^
+
+A method takes `self` as its first parameter, inside `impl` and the type's name.

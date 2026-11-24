@@ -1,0 +1,549 @@
+module std.meta
+
+use std.array
+
+// Reflection (meta.std-meta). In a module that names `std.meta` with `use`,
+// `T.shape()` is the shape of the type `T` and `T.name()` its name. Each case
+// of a shape gives accessors, and the type of a field, an element or a payload
+// is a fresh type of its arm or loop, which code there can pass to a function
+// with a type parameter but can't name. Every type of reflection is native
+// (views.std-view), and `Shape`'s cases are those of meta.shapes.
+
+/// The shape of the type `T`: `Int`, `Float`, `Bool`, `Str`, `Unit`,
+/// `Option`, `List`, `Set`, `Map`, `Array`, `Tuple`, `Record` or `Variants`.
+pub type Shape<T> = ?
+
+/// The decimal text of an integer type's values.
+pub type Integer<T> = ?
+
+/// A type's values as values of the type `U`, and back.
+pub type Convert<T, U> = ?
+
+/// An array type's elements, of the type `E`, and its size.
+pub type Sized<T, E> = ?
+
+/// The fields of a record or tuple type, in order.
+pub type Fields<T> = ?
+
+/// One field of the record or tuple type `T`, of the type `F`.
+pub type Field<T, F> = ?
+
+/// The variants of a variant type, in the order of their declaration.
+pub type Cases<T> = ?
+
+/// One variant of the variant type `T`, whose payload is the tuple `P`.
+pub type Case<T, P> = ?
+
+impl<T> Integer<T> {
+  /// The decimal text of `value`.
+  /// ex: match i64.shape() { Int(n) => n.text(-42) == "-42", _ => false }
+  pub fn text(self, value: T) -> str = ?
+
+  /// The integer that `text` writes, or `None` unless it is one of `T`'s
+  /// range written as `text` writes one.
+  /// ex: match u8.shape() { Int(n) => n.parse("255") == Some(255), _ => false }
+  /// ex: match u8.shape() { Int(n) => n.parse("256").is_none(), _ => false }
+  pub fn parse(self, text: str) -> Option<T> = ?
+}
+
+impl<T, U> Convert<T, U> {
+  /// `value` as a `U`.
+  /// ex: match str.shape() { Str(s) => s.get("hi") == "hi", _ => false }
+  pub fn get(self, value: T) -> U = ?
+
+  /// The `T` that `u` gives: of equal elements of a set, the first, and of
+  /// equal keys of a map, the last value, at the first's position.
+  /// ex: match f32.shape() { Float(x) => x.make(0.5) == 0.5.to_f32(), _ => false }
+  pub fn make(self, u: U) -> T = ?
+}
+
+impl<T, E> Sized<T, E> {
+  /// The elements of `value`, in order.
+  /// ex: { let a: array.Array<i64, 3> = [4, 5, 6]; elements(a) == 3 }
+  pub fn get(self, value: T) -> List<E> = ?
+
+  /// The array of the elements `xs`, or `None` unless there are exactly as
+  /// many as its size.
+  /// ex: { let a: array.Array<i64, 3> = [4, 5, 6]; remade_array(a) }
+  pub fn make(self, xs: List<E>) -> Option<T> = ?
+
+  /// The array type's size.
+  /// ex: { let a: array.Array<str, 2> = ["a", "b"]; size(a) == 2 }
+  pub fn len(self) -> i64 = ?
+}
+
+impl<T> Fields<T> {
+  /// The number of fields.
+  /// ex: match Sample.shape() { Record(fields) => fields.len() == 2, _ => false }
+  pub fn len(self) -> i64 = ?
+
+  /// The `T` whose fields hold what `f` gives each, calling `f` once on each
+  /// field in order, and on none after a call raises.
+  /// ex: { let s = Sample { count: 3, label: "x" }; copied(s) == s }
+  pub fn build(self, f: fn<F>(Field<T, F>) -> F) -> T = ?
+}
+
+impl<T, F> Field<T, F> {
+  /// The field's name, or `"0"`, `"1"` and so on for a tuple's.
+  /// ex: field_names(Sample { count: 3, label: "x" }) == "count label"
+  /// ex: field_names((1, true)) == "0 1"
+  pub fn name(self) -> str = ?
+
+  /// The field's position, counted from 0.
+  /// ex: last_field(Sample { count: 3, label: "x" }) == 1
+  pub fn index(self) -> i64 = ?
+
+  /// The field's value in `value`.
+  /// ex: field_types(Sample { count: 3, label: "x" }) == "i64 str"
+  pub fn get(self, value: T) -> F = ?
+}
+
+impl<T> Cases<T> {
+  /// The number of variants.
+  /// ex: match Light.shape() { Variants(cases) => cases.len() == 2, _ => false }
+  pub fn len(self) -> i64 = ?
+}
+
+impl<T, P> Case<T, P> {
+  /// The variant's name.
+  /// ex: case_of(Dim(3)) == "Dim"
+  pub fn name(self) -> str = ?
+
+  /// The variant's position in its type's declaration, counted from 0.
+  /// ex: position(Dim(3)) == 1
+  pub fn index(self) -> i64 = ?
+
+  /// `Some` of `value`'s payload, as a tuple, when `value` is this variant.
+  /// ex: case_of(Off) == "Off"
+  pub fn get(self, value: T) -> Option<P> = ?
+
+  /// The value of this variant whose payload is `payload`.
+  /// ex: remade_case(Dim(3)) == Dim(3)
+  pub fn make(self, payload: P) -> T = ?
+}
+
+// Procedural macros (macros.procedural-declarations and macros.quote). A macro reads its input as tokens, through the
+// cursor below, written in Stilt, and writes code with quotes, which it
+// splices and never takes apart. Only a macro's run makes a token or a name of
+// the user's, so the functions that take a value of these types have no
+// examples (macros.tokens-and-code): the conformance tests of procedural macros are theirs.
+
+/// A place in the user's source, or in a file that a use names.
+pub type Span = ?
+
+/// A token of lexical.tokens, as written.
+pub type Token = ?
+
+/// What a token is: a word, which is an identifier or a keyword; a number or
+/// a punctuation mark, as written; a string literal, or `Interpolated` when it
+/// interpolates; or a group of tokens.
+pub type Kind =
+  | Word(str)
+  | Number(str)
+  | Text(Text)
+  | Interpolated
+  | Punct(str)
+  | Group(Delim, Tokens)
+
+/// The brackets of a group: `( )`, `[ ]` or `{ }`.
+pub type Delim = | Paren | Bracket | Brace
+
+/// The tokens of a use's part, of a group or of a file, and the span of what
+/// ends them.
+pub type Tokens = { items: List<Token>, close: Span }
+
+/// A string literal without interpolation, or a file's text.
+pub type Text = ?
+
+/// A file that a use names: its path as written, its text and the span of the
+/// literal that names it.
+pub type File = { path: str, text: Text, span: Span }
+
+/// An identifier: the user's, from a token, or a fresh one.
+pub type Name = ?
+
+/// Code that a quote wrote or a use gave: an expression.
+pub type Expr = ?
+
+/// Code that a quote wrote or a use gave: a pattern.
+pub type Pattern = ?
+
+/// Code that a quote wrote or a use gave: a type.
+pub type Type = ?
+
+/// Code that a quote wrote: one field of a record literal, `name: expr`.
+pub type FieldInit = ?
+
+/// A diagnostic that a macro raises.
+pub type Error = ?
+
+impl Span {
+  /// The span from this one's start to `other`'s end.
+  pub fn to(self, other: Span) -> Span = ?
+}
+
+impl Token {
+  /// What the token is.
+  pub fn kind(self) -> Kind = ?
+
+  /// Where the token is written, its line included.
+  pub fn span(self) -> Span = ?
+
+  /// The token as a name, when it is an identifier.
+  pub fn name(self) -> Option<Name> = ?
+}
+
+impl Text {
+  /// The text's value, its escapes decoded.
+  pub fn value(self) -> str = ?
+
+  /// Where the value's bytes from `start` to `end` are written, widened to
+  /// whole escapes.
+  pub fn span(self, start: i64, end: i64) -> Span = ?
+
+  /// The text's tokens, as lexical.tokens lexes them, raising at the first character
+  /// it can't lex.
+  pub fn lex(self) -> Tokens / raise<Error> = ?
+}
+
+impl Name {
+  /// The name as written.
+  pub fn text(self) -> str = ?
+
+  /// Where the name is written, or the use for a fresh name.
+  pub fn span(self) -> Span = ?
+}
+
+/// A new name, distinct from every other, whose text is `text`.
+/// ex: fresh("row").text() == "row"
+pub fn fresh(text: str) -> Name = ?
+
+impl Expr {
+  /// Where the code is written, or the use for code that a quote wrote.
+  pub fn span(self) -> Span = ?
+}
+
+impl Pattern {
+  /// Where the code is written, or the use for code that a quote wrote.
+  pub fn span(self) -> Span = ?
+}
+
+impl Type {
+  /// Where the code is written, or the use for code that a quote wrote.
+  pub fn span(self) -> Span = ?
+}
+
+impl FieldInit {
+  /// The use, where the code that a quote wrote stands.
+  pub fn span(self) -> Span = ?
+}
+
+/// A diagnostic at `span` that says `message`.
+pub fn error(span: Span, message: str) -> Error = ?
+
+impl Error {
+  /// The diagnostic with a note at `span` that says `message`; a diagnostic
+  /// keeps its first three notes.
+  pub fn note(self, span: Span, message: str) -> Error = ?
+}
+
+/// A reader of tokens, in order.
+pub type Cursor = { tokens: Tokens, at: i64 }
+
+/// A cursor at the first of the tokens `ts`.
+pub fn cursor(ts: Tokens) -> Cursor { Cursor { tokens: ts, at: 0 } }
+
+impl Cursor {
+  /// The next token, left unread, or `None` at the end.
+  pub fn peek(self) -> Option<Token> {
+    if self.at < self.tokens.items.len() { Some(self.tokens.items[self.at]) } else { None }
+  }
+
+  /// Whether every token is read.
+  pub fn at_end(self) -> bool { self.at >= self.tokens.items.len() }
+
+  /// Reads the next token.
+  pub fn next(inout self) -> Token / raise<Error> {
+    let Some(t) = self.peek() else raise self.expected("a token")
+    self.at += 1
+    t
+  }
+
+  /// Raises unless every token is read.
+  pub fn end(self) / raise<Error> { if !self.at_end() { raise self.expected("the end") } }
+
+  /// Reads the word `w`, whose ASCII letters it compares without case.
+  pub fn word(inout self, w: str) -> Span / raise<Error> {
+    if !self.is_word(w) { raise self.expected("`{w}`") }
+    self.take()
+  }
+
+  /// Reads the word `w` when it comes next, as `word` does, and says whether
+  /// it did.
+  pub fn word_if(inout self, w: str) -> bool {
+    let found = self.is_word(w)
+    if found { self.at += 1 }
+    found
+  }
+
+  /// Reads the punctuation mark `p`.
+  pub fn punct(inout self, p: str) -> Span / raise<Error> {
+    if !self.is_punct(p) { raise self.expected("`{p}`") }
+    self.take()
+  }
+
+  /// Reads the punctuation mark `p` when it comes next, and says whether it
+  /// did.
+  pub fn punct_if(inout self, p: str) -> bool {
+    let found = self.is_punct(p)
+    if found { self.at += 1 }
+    found
+  }
+
+  /// Reads the first of the punctuation marks `ps` that comes next, and gives
+  /// it.
+  pub fn punct_of(inout self, ps: List<str>) -> str / raise<Error> {
+    for p in ps {
+      if self.is_punct(p) {
+        self.at += 1
+        return p
+      }
+    }
+    let marks = ps.map(|p| "`{p}`")
+    raise self.expected("one of {", ".join(marks)}")
+  }
+
+  /// Reads a name: an identifier, never a keyword.
+  pub fn name(inout self) -> Name / raise<Error> {
+    let Some(t) = self.peek() else raise self.expected("a name")
+    let Some(n) = t.name() else raise self.expected("a name")
+    self.at += 1
+    n
+  }
+
+  /// Reads one name or more, with the punctuation mark `sep` between them.
+  pub fn names_by(inout self, sep: str) -> List<Name> / raise<Error> {
+    var names = [try self.name()]
+    while self.punct_if(sep) { names.push(try self.name()) }
+    names
+  }
+
+  /// Reads a string literal without interpolation.
+  pub fn text(inout self) -> Text / raise<Error> {
+    let Some(t) = self.peek() else raise self.expected("a string")
+    match t.kind() {
+      Text(x) => {
+        self.at += 1
+        x
+      }
+      _ => raise self.expected("a string")
+    }
+  }
+
+  /// Reads a number, and gives its token.
+  pub fn number(inout self) -> Token / raise<Error> {
+    let Some(t) = self.peek() else raise self.expected("a number")
+    match t.kind() {
+      Number(_) => {
+        self.at += 1
+        t
+      }
+      _ => raise self.expected("a number")
+    }
+  }
+
+  /// Reads a group whose brackets are `d`, and gives its tokens.
+  pub fn group(inout self, d: Delim) -> Tokens / raise<Error> {
+    let Some(t) = self.peek() else raise self.expected(opening(d))
+    match t.kind() {
+      Group(e, ts) if opening(e) == opening(d) => {
+        self.at += 1
+        ts
+      }
+      _ => raise self.expected(opening(d))
+    }
+  }
+
+  /// Reads an expression: the longest run of the next tokens that is one and
+  /// ends before a `,`, a `;` or the end.
+  pub fn expr(inout self) -> Expr / raise<Error> {
+    let (e, at) = try parse_expr(self.tokens, self.at)
+    self.at = at
+    e
+  }
+
+  /// Reads a pattern, as `expr` reads an expression.
+  pub fn pattern(inout self) -> Pattern / raise<Error> {
+    let (p, at) = try parse_pattern(self.tokens, self.at)
+    self.at = at
+    p
+  }
+
+  /// Reads a type, as `expr` reads an expression.
+  pub fn type_(inout self) -> Type / raise<Error> {
+    let (t, at) = try parse_type(self.tokens, self.at)
+    self.at = at
+    t
+  }
+
+  /// Reads a `{ … }` group whose tokens are one expression.
+  pub fn braced_expr(inout self) -> Expr / raise<Error> {
+    var inner = cursor(try self.group(Brace))
+    let e = try inner.expr()
+    try inner.end()
+    e
+  }
+
+  // Whether the next token is the word `w`, its ASCII letters compared
+  // without case.
+  fn is_word(self, w: str) -> bool {
+    match self.peek().map(.kind()) {
+      Some(Word(x)) => x.eq_ignore_ascii_case(w)
+      _ => false
+    }
+  }
+
+  // Whether the next token is the punctuation mark `p`.
+  fn is_punct(self, p: str) -> bool {
+    match self.peek().map(.kind()) {
+      Some(Punct(x)) => x == p
+      _ => false
+    }
+  }
+
+  // Reads the next token, which is there, and gives its span.
+  fn take(inout self) -> Span {
+    let t = self.tokens.items[self.at]
+    self.at += 1
+    t.span()
+  }
+
+  // The error at the next token, or at what ends the tokens, that says what
+  // was expected there and what was found.
+  fn expected(self, what: str) -> Error {
+    match self.peek() {
+      Some(t) => error(t.span(), "expected {what}, found {shown(t)}")
+      None => error(self.tokens.close, "expected {what}, found the end")
+    }
+  }
+}
+
+// The expression, the pattern or the type that the language's parser reads
+// from the tokens of `ts` at `at` on, and where the next token is.
+fn parse_expr(ts: Tokens, at: i64) -> (Expr, i64) / raise<Error> = ?
+
+fn parse_pattern(ts: Tokens, at: i64) -> (Pattern, i64) / raise<Error> = ?
+
+fn parse_type(ts: Tokens, at: i64) -> (Type, i64) / raise<Error> = ?
+
+// A token as a message shows it.
+fn shown(t: Token) -> str {
+  match t.kind() {
+    Word(x) => "`{x}`"
+    Number(x) => "`{x}`"
+    Text(_) => "a string"
+    Interpolated => "an interpolated string"
+    Punct(x) => "`{x}`"
+    Group(d, _) => opening(d)
+  }
+}
+
+// The opening bracket of a group, as a message shows it.
+fn opening(d: Delim) -> str {
+  match d {
+    Paren => "`(`"
+    Bracket => "`[`"
+    Brace => "`\{`"
+  }
+}
+
+// The types and functions below serve the examples above.
+
+type Sample = { count: i64, label: str }
+
+type Light = | Off | Dim(i64)
+
+fn name_of<T>(value: T) -> str { T.name() }
+
+fn elements<T>(value: T) -> i64 {
+  match T.shape() {
+    Array(s) => s.get(value).len()
+    _ => -1
+  }
+}
+
+fn remade_array<T>(value: T) -> bool {
+  match T.shape() {
+    Array(s) => s.make(s.get(value)).is_some() && s.make([]).is_none()
+    _ => false
+  }
+}
+
+fn size<T>(value: T) -> i64 {
+  match T.shape() {
+    Array(s) => s.len()
+    _ => -1
+  }
+}
+
+fn copied<T>(value: T) -> T {
+  match T.shape() {
+    Record(fields) => fields.build(|f| f.get(value))
+    _ => value
+  }
+}
+
+fn field_names<T>(value: T) -> str {
+  var names: List<str> = []
+  match T.shape() {
+    Record(fields) => { for f in fields { names.push(f.name()) } }
+    Tuple(fields) => { for f in fields { names.push(f.name()) } }
+    _ => {}
+  }
+  " ".join(names)
+}
+
+fn last_field<T>(value: T) -> i64 {
+  var last = -1
+  match T.shape() {
+    Record(fields) => { for f in fields { last = f.index() } }
+    _ => {}
+  }
+  last
+}
+
+fn field_types<T>(value: T) -> str {
+  var names: List<str> = []
+  match T.shape() {
+    Record(fields) => { for f in fields { names.push(name_of(f.get(value))) } }
+    _ => {}
+  }
+  " ".join(names)
+}
+
+fn case_of<T>(value: T) -> str {
+  var name = ""
+  match T.shape() {
+    Variants(cases) => { for c in cases { if c.get(value).is_some() { name = c.name() } } }
+    _ => {}
+  }
+  name
+}
+
+fn position<T>(value: T) -> i64 {
+  var at = -1
+  match T.shape() {
+    Variants(cases) => { for c in cases { if c.get(value).is_some() { at = c.index() } } }
+    _ => {}
+  }
+  at
+}
+
+fn remade_case<T>(value: T) -> T {
+  var out = value
+  match T.shape() {
+    Variants(cases) => { for c in cases { if let Some(p) = c.get(value) { out = c.make(p) } } }
+    _ => {}
+  }
+  out
+}

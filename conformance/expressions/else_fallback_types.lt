@@ -1,0 +1,16 @@
+//~ rule: expressions.option-fallback, expressions.let-else, patterns.let-else
+
+fn from_result(r: Result<i64, str>) -> i64 {
+  r else 0 //~ ERROR E0311
+}
+
+fn converted(r: Result<i64, str>) -> i64 { r.ok() else 0 }
+
+fn wrong_default(o: Option<i64>) -> i64 {
+  o else "zero" //~ ERROR E0311
+}
+
+fn let_else_needs_never(o: Option<i64>) -> i64 {
+  let Some(x) = o else 0 //~ ERROR E0311
+  x
+}

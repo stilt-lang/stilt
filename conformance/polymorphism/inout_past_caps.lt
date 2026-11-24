@@ -1,0 +1,28 @@
+//~ rule: polymorphism.recursion, values.inout-arguments
+//~ stdout:
+//~ | 1 2 15
+//~ | 3 4 23209
+
+type P = { x: i64, y: i64 }
+
+// An `inout` argument whose type holds the type argument that grows with each call: the
+// callee reads and writes both its parts, and the caller reads them back.
+fn grow<T>(inout acc: (T, i64), x: T, n: i64, escaping get: fn(T) -> i64) {
+  if n == 0 {
+    acc.1 += get(acc.0) + 1
+    acc.0 = x
+    return
+  }
+  var inner: ((T, T), i64) = ((x, x), acc.1)
+  grow(inout inner, (acc.0, x), n - 1, |t: (T, T)| get(t.0) + get(t.1))
+  acc.1 = inner.1
+  acc.0 = inner.0.0
+}
+
+fn main() / io {
+  for n in [1, 12] {
+    var a = (P { x: 1, y: 2 }, 0)
+    grow(inout a, P { x: 3, y: 4 }, n, |p: P| p.x + p.y)
+    print("{a.0.x} {a.0.y} {a.1}")
+  }
+}

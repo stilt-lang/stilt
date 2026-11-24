@@ -1,0 +1,9 @@
+── TYPE OF THE WRONG KIND ──────── E0337_type_of_the_wrong_kind.lt:5:26  [E0337]
+
+`F` is a constructor of 1 type argument, so it is written with them, as `F<…>`:
+
+  5 │ fn size<F: Mappable>(xs: F) -> i64 { 0 }
+    │                          ^
+
+A constructor trait's parameter stands for a generic type, so it is written with
+its type arguments, as `F<i64>`.

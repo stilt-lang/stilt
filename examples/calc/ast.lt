@@ -1,0 +1,43 @@
+// The syntax tree of a calc expression.
+
+/// An operator of one operand.
+pub type Unary = | Neg | Not
+
+/// An operator of two operands.
+pub type Binary = | Add | Sub | Mul | Div | Rem | Lt | Le | Gt | Ge | Eq | Ne | And | Or
+
+/// An expression.
+pub type Expr =
+  | Int(i64)
+  | Bool(bool)
+  | Name(str)
+  | Apply1(Unary, Expr)
+  | Apply2(Binary, Expr, Expr)
+  | If(Expr, Expr, Expr)
+  | Lambda(List<str>, Expr)
+  | Let(str, Expr, Expr)
+  | Call(Expr, List<Expr>)
+
+/// A line of a program: a definition of a global name, an expression whose value is printed,
+/// or nothing.
+pub type Line = | Define(str, Expr) | Print(Expr) | Blank
+
+/// The operator as calc writes it.
+/// ex: sign(Le) == "<="
+pub fn sign(op: Binary) -> str {
+  match op {
+    Add => "+"
+    Sub => "-"
+    Mul => "*"
+    Div => "/"
+    Rem => "%"
+    Lt => "<"
+    Le => "<="
+    Gt => ">"
+    Ge => ">="
+    Eq => "=="
+    Ne => "!="
+    And => "&&"
+    Or => "||"
+  }
+}

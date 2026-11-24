@@ -1,0 +1,21 @@
+//~ rule: types.field-access, expressions.struct-literal-fields
+
+type Point = { x: i64, y: i64 }
+
+fn missing() -> Point {
+  Point { x: 1 } //~ ERROR E0316
+}
+
+fn twice() -> Point {
+  Point { x: 1, y: 2, x: 3 } //~ ERROR E0316
+}
+
+fn punned_twice(x: i64, y: i64) -> Point {
+  Point { x, y, y } //~ ERROR E0316
+}
+
+fn extra() -> Point {
+  Point { x: 1, y: 2, z: 3 } //~ ERROR E0313
+}
+
+fn complete(x: i64) -> Point { Point { y: 2, x } }

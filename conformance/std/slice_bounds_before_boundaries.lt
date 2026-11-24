@@ -1,0 +1,8 @@
+//~ rule: std.str
+//~ panic: bounds
+//~ panic-at: slice_bounds_before_boundaries.lt:7:9
+
+fn main() / io {
+  let s = "é"
+  print(s.slice(1, 0))
+}

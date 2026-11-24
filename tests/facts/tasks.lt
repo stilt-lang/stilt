@@ -1,0 +1,36 @@
+//~ tier: advanced
+
+// Tasks (tasks.implicit-effects-and-capabilities): `spawn` is a call through a stored function
+// value, so it may not end, and the closure literal's body adds its own sites where it is written;
+// `spawn` has the capability `spawn`, which it reaches through `async`, not `io`. A task's closure
+// captures by copy, so a parameter it names is stored in a value (values.consumed-parameters).
+
+use std.task
+
+fn started() -> task.Task<i64> / async {
+  task.spawn(|| 1) //~ DIV SPAWN ALLOC
+}
+
+fn both(xs: List<i64>) -> i64 / {io, async} {
+  let a = task.spawn(|| xs[0]) //~ CONSUMES xs DIV SPAWN ALLOC PANIC
+  let b = task.spawn(|| { //~ DIV SPAWN ALLOC
+    print("b") //~ CONSOLE ALLOC
+    2
+  })
+  a.await() + b.await() //~ OVERFLOW ALLOC
+}
+
+// A task whose closure captures another task's handle shares it with the code that started it,
+// and its value, so `spawn` may make their counts atomic; so may one given a function value,
+// which may capture a handle (par.atomic-sites). The first task above captures a list, the second
+// nothing, so neither does.
+fn chained(t: task.Task<i64>, f: fn() -> i64) -> i64 / {io, async} {
+  let u = task.spawn(|| t.await() + 1) //~ OVERFLOW CONSUMES t DIV SPAWN ALLOC ATOMIC
+  let v = task.spawn(f) //~ DIV SPAWN ATOMIC ALLOC
+  u.await() + v.await() //~ OVERFLOW ALLOC
+}
+
+// `await` waits for a task, and adds nothing else.
+fn waited(t: task.Task<i64>) -> i64 / async {
+  t.await() //~ ALLOC
+}

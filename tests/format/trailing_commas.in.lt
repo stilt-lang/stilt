@@ -1,0 +1,18 @@
+// A trailing comma is written where a list breaks, after its last element, and nowhere else,
+// whether the source has one or not. A tuple of one element keeps its comma, and a `..` ends a
+// list without one.
+fn pair(a: i64, b: i64,) -> (i64, i64) { (a, b,) }
+
+fn main() / io {
+  let one = (1,)
+  let xs = [
+    1,
+    2,
+  ]
+  let ys = [
+    1,
+    2]
+  let wide = describe_order(customer_name, shipping_address, billing_address, order_total, tax_amount)
+  let Point { x, .. } = origin
+  print("{pair(1, 2,)} {one} {xs} {ys}")
+}

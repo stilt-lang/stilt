@@ -1,0 +1,181 @@
+use std.array
+use std.lazy
+use std.math
+use std.meta
+use std.par
+use std.sync
+use std.task
+use std.view
+
+// The helpers below each reach a form or a native that performs nothing, which
+// a macro's run evaluates as a program's run does (macros.procedural-bodies and macros.running).
+
+effect Tick {
+  fn tick(n: i64) -> i64
+}
+
+fn ticks() -> i64 / Tick { Tick.tick(1) + Tick.tick(2) * 10 }
+
+// A user's effect, handled by a handler that resumes at once and by one that
+// takes control, whose bodies wait for the rest of the block (handlers.resuming).
+fn handled() -> str {
+  let doubled = handler Tick {
+    fn tick(n: i64) -> i64 { n * 2 }
+  }
+  let a = with doubled { ticks() }
+  let traced = handler Tick -> str {
+    fn tick(n: i64) -> i64 {
+      let rest = resume(n + 100)
+      "{n}<{rest}>"
+    }
+  }
+  let b = with traced { "{ticks()}" }
+  "{a} {b}"
+}
+
+// A pack, spread among a list's elements and a tuple's (variadics.spread-expressions).
+fn listed<..Ts: Show>(xs: (..Ts)) -> str {
+  let shown = [..xs.show()]
+  "{shown.len()}: {", ".join(shown)} {(..xs, 4)}"
+}
+
+type Point = { x: i64, y: i64 }
+
+type Shade = | Light | Dark(i64)
+
+fn shown<X>(x: X) -> str {
+  if X: Show { "{x}" } else { "?" }
+}
+
+// The fields of a record and the cases of a variant type (meta.shapes, meta.fields and
+// meta.variant-cases).
+fn described<T>(value: T) -> str {
+  var parts: List<str> = []
+  match T.shape() {
+    Record(fields) => {
+      for f in fields { parts.push("{f.name()}={shown(f.get(value))}") }
+      "{T.name()} {" ".join(parts)}"
+    }
+    Variants(cases) => {
+      for c in cases {
+        if let Some(p) = c.get(value) { parts.push("{c.name()}#{c.index()}{shown(p)}") }
+      }
+      "{T.name()} of {cases.len()}: {" ".join(parts)}"
+    }
+    _ => "other"
+  }
+}
+
+fn plus_one<F>(v: F) -> F {
+  match F.shape() {
+    Int(n) => n.parse("{(n.text(v).to_i64() else 0) + 1}") else v
+    _ => v
+  }
+}
+
+// A record built from a closure of each field's (meta.building).
+fn bumped<T>(value: T) -> T {
+  match T.shape() {
+    Record(fields) => fields.build(|f| plus_one(f.get(value)))
+    _ => value
+  }
+}
+
+fn reflected() -> str {
+  "{described(Point { x: 1, y: 2 })}; {described(Dark(5))}; {bumped(Point { x: 1, y: 2 })}"
+}
+
+// Two handles on one value, held by `when`s (shared.when).
+fn held() -> str {
+  let total = sync.Shared.new(10)
+  let same = total
+  when total { total += 5 }
+  when same { same *= 2 }
+  when total, same { total += 1 }
+  when total { "{total}" }
+}
+
+// A projection's place, written and read (projections.yield and projections.call-is-place).
+fn slot(inout xs: List<i64>, i: i64) -> inout i64 { yield xs[i] }
+
+fn projected() -> str {
+  var xs = [1, 2, 3]
+  slot(inout xs, 1) += 40
+  let third = slot(inout xs, 2)
+  slot(inout xs, 0) = third * 10
+  "{xs} {third}"
+}
+
+// The natives that `Set` is written with.
+fn sets() -> str {
+  var s = Set.from_list([3, 1, 3, 2])
+  s.insert(5)
+  s.remove(1)
+  "{s.len()} {s.contains(3)} {s.contains(1)} {s.to_list()}"
+}
+
+// The natives of `std.array` (generics.arrays), and a value parameter.
+fn arrays() -> str {
+  let a: array.Array<i64, 3> = array.fill(7)
+  let b = a.map(|x| x + 1)
+  let c: Option<array.Array<i64, 2>> = array.from_list([1, 2, 3])
+  "{b.to_list()} {b.len()} {c.is_none()}"
+}
+
+// The natives of `str`.
+fn strings() -> str {
+  let words = "a,bb,ccc".split(",").map(|w| w.ascii_upper())
+  let joined = "-".join(words)
+  "{joined.pad_start(10, ".")} {"stressed".reversed()} {"stilt".find("il")} {"x y".replace(" ", "_")} {"héllo".char_count()}"
+}
+
+// A writable view, an iterator, a lazy value, the functions of `std.par`, a
+// task and a function of `std.math`.
+fn others() -> str {
+  var xs = [5, 1, 4, 2]
+  {
+    var w = view.into(inout xs, 1, 3)
+    w[0] = 9
+  }
+  let evens = view.range(0, 10).filter(|x| x % 2 == 0).map(|x| x * x).take(3).collect()
+  let later = lazy.Lazy.new(|| 6 * 7)
+  let squares = par.map([1, 2, 3], |x| x * x)
+  let total = par.fold([1, 2, 3, 4], 0, |a, b| a + b)
+  let spawned = with task.sequential() { task.spawn(|| 3).await() }
+  "{xs} {evens} {later.get()} {squares} {total} {spawned} {math.hypot(3.0, 4.0)}"
+}
+
+pub macro effects() -> meta.Expr {
+  let s = handled()
+  quote { $s }
+}
+
+pub macro packs() -> meta.Expr {
+  let s = listed((1, "a", true))
+  quote { $s }
+}
+
+pub macro reflection() -> meta.Expr {
+  let s = reflected()
+  quote { $s }
+}
+
+pub macro shared() -> meta.Expr {
+  let s = held()
+  quote { $s }
+}
+
+pub macro projection() -> meta.Expr {
+  let s = projected()
+  quote { $s }
+}
+
+pub macro natives() -> meta.Expr {
+  let s = "{sets()} | {arrays()} | {strings()}"
+  quote { $s }
+}
+
+pub macro modules() -> meta.Expr {
+  let s = others()
+  quote { $s }
+}

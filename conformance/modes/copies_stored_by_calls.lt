@@ -1,0 +1,50 @@
+//~ rule: modes.call-stores, modes.copies, modes.shared-writes, facts.copy
+
+// A call may store an argument in its result or in an `inout` argument when, by the call's
+// types, a part of the argument of a copy-on-write type may become a part of theirs: a native's
+// as well as any other function's. So passing a binding to it is a copy.
+fn got(inout xs: List<List<i64>>) -> i64 without copy {
+  let e = xs.get(0)
+  xs[0].push(1) //~ ERROR E0204
+  match e {
+    Some(l) => l.len()
+    None => 0
+  }
+}
+
+fn inserted(inout a: List<i64>) -> i64 without copy {
+  var m: Map<str, List<i64>> = Map.new()
+  {
+    let b = a
+    m.insert("k", b)
+  }
+  a.push(1) //~ ERROR E0204
+  m.len()
+}
+
+// The rule reads the call's types alone: `fresh` stores nothing of `f`, but its result's type
+// is `f`'s, so the call may store it, and `g` holds the copies that `f` held.
+fn typed(inout a: List<i64>) -> i64 without copy {
+  var g: fn() -> i64 = || 0
+  {
+    let f = || a.len()
+    g = fresh(f)
+  }
+  a.push(1) //~ ERROR E0204
+  g()
+}
+
+fn fresh(f: fn() -> i64) -> fn() -> i64 {
+  || 0
+}
+
+// The elements of a `List<i64>` are no copy-on-write values, so `get` stores nothing of `xs`,
+// and `len` stores nothing at all.
+fn scalars(inout xs: List<i64>) -> i64 without copy {
+  let e = xs.get(0)
+  let n = xs.len()
+  xs.push(1)
+  e.unwrap_or(0) + n
+}
+
+fn main() {}

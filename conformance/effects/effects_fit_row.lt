@@ -1,0 +1,36 @@
+//~ rule: effects.rows, effects.inference, effects.missing-effects, effects.non-escaping-parameters, effects.raise
+
+fn greet(name: str) {
+  print("hello {name}") //~ ERROR E0502
+  print("bye {name}")
+}
+
+fn parse(s: str) -> i64 {
+  s.to_i64() else raise "not a number: {s}" //~ ERROR E0502
+}
+
+fn each<e>(xs: List<i64>, escaping f: fn(i64) / e) {
+  for x in xs {
+    f(x) //~ ERROR E0502
+  }
+}
+
+fn each_declared<e>(xs: List<i64>, escaping f: fn(i64) / e) / e { for x in xs { f(x) } }
+
+// The effects of `f` pass through, so the function's own row holds them.
+fn each_passing(xs: List<i64>, f: fn(i64)) { for x in xs { f(x) } }
+
+fn later() -> fn() / io { || print("later") }
+
+fn parse_declared(s: str) -> i64 / raise<str> { s.to_i64() else raise "not a number: {s}" }
+
+fn safe() -> i64 { try parse_declared("1") catch _ because "a default is fine" => 0 }
+
+fn loud(s: str) -> i64 / {io, raise<str>} {
+  print(s)
+  s.to_i64() else raise "not a number"
+}
+
+fn noisy() -> i64 {
+  try loud("1") catch _ because "a default is fine" => 0 //~ ERROR E0502
+}

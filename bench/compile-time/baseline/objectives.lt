@@ -1,0 +1,67 @@
+// Objectives of service: for each service, the share of its requests answered in time and the
+// share answered without a server error, against what the service promises.
+
+use rows
+use table
+use events.entry
+
+/// The time within which a request should be answered, in milliseconds.
+pub const TARGET: i64 = 200
+
+/// The share of requests, in percent, that each objective promises.
+pub const PROMISED: i64 = 95
+
+/// How one service fared: its requests, those answered in time and those without a server
+/// error.
+pub type Fared = { service: str, requests: i64, in_time: i64, served: i64 }
+
+impl Fared {
+  /// The share of requests answered in time, in percent, rounded down.
+  /// ex: Fared { service: "/a", requests: 3, in_time: 2, served: 3 }.speed() == 66
+  pub fn speed(self) -> i64 { self.in_time * 100 / self.requests }
+
+  /// The share of requests answered without a server error, in percent, rounded down.
+  /// ex: Fared { service: "/a", requests: 4, in_time: 2, served: 3 }.health() == 75
+  pub fn health(self) -> i64 { self.served * 100 / self.requests }
+
+  /// The objectives it missed, by name.
+  /// ex: Fared { service: "/a", requests: 4, in_time: 4, served: 3 }.missed() == ["errors"]
+  pub fn missed(self) -> List<str> {
+    var out: List<str> = []
+    if self.speed() < PROMISED { out.push("time") }
+    if self.health() < PROMISED { out.push("errors") }
+    out
+  }
+}
+
+/// How each service fared, in the order the services first appear.
+pub fn fared(es: List<entry.Entry>) -> List<Fared> {
+  let rs = es.filter_map(
+    |e| match e.event {
+      Http(r) => Some(r)
+      _ => None
+    },
+  )
+  var out: List<Fared> = []
+  for (service, of) in rs.group_by(.service()) {
+    let in_time = of.count(|r| r.millis < TARGET)
+    out.push(Fared { service, requests: of.len(), in_time, served: of.count(|r| !r.failed()) })
+  }
+  out
+}
+
+/// A row for each service: its shares, and the objectives it missed.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  let found = fared(es).map(
+    |f| rows.ObjectiveRow {
+      service: f.service,
+      requests: f.requests,
+      in_time: f.speed(),
+      served: f.health(),
+      missed: f.missed(),
+    },
+  )
+  ["== objectives: {PROMISED}% of requests in {TARGET}ms and without a server error =="].concat(
+    table.render(found),
+  )
+}

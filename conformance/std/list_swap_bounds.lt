@@ -1,0 +1,11 @@
+//~ rule: std.list-changes
+//~ run-output: "[2, 1]"
+//~ panic: bounds
+//~ panic-at: list_swap_bounds.lt:10:3
+
+fn main() / io {
+  var xs = [1, 2]
+  xs.swap(0, 1)
+  print("{xs}")
+  xs.swap(0, 2)
+}

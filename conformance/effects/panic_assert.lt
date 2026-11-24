@@ -1,0 +1,12 @@
+//~ rule: program.assert-expr, effects.panic-kinds
+//~ run-output: "checked"
+//~ panic: assert
+//~ panic-at: panic_assert.lt:10:3
+
+fn main() / io {
+  let n = 3
+  assert n > 0
+  print("checked")
+  assert n > 5
+  print("not reached")
+}

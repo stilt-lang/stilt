@@ -1,0 +1,50 @@
+//~ tier: meta
+//~ rule: syntax.macro-checks, macros.procedural-declarations, macros.procedural-bodies
+
+use std.meta
+
+fn shout(s: str) / io { print(s) }
+
+fn refuse() / raise<str> { raise "no" }
+
+macro takes_int(n: i64) -> meta.Expr { quote { $n } } //~ ERROR E0228
+
+macro tokens_first(ts: meta.Tokens, e: meta.Expr) -> meta.Expr { e } //~ ERROR E0228
+
+macro gives_int(e: meta.Expr) -> i64 { 1 } //~ ERROR E0228
+
+macro gives_field(e: meta.Expr) -> meta.FieldInit { quote field { a: $e } } //~ ERROR E0228
+
+macro performs(e: meta.Expr) -> meta.Expr / io { e } //~ ERROR E0228
+
+macro raises_text(e: meta.Expr) -> meta.Expr / raise<str> { e } //~ ERROR E0228
+
+macro generic<T>(e: meta.Expr) -> meta.Expr { e } //~ ERROR E0228
+
+macro limited(e: meta.Expr) -> meta.Expr without alloc { e } //~ ERROR E0228
+
+// A macro's body performs nothing: a call that performs `io` is E0502, and
+// one that raises an error its row doesn't name is reported as in any
+// function, E0502 with an empty row and E0503 beside `meta.Error`.
+macro prints(e: meta.Expr) -> meta.Expr {
+  shout("x") //~ ERROR E0502
+  e
+}
+
+macro refuses(e: meta.Expr) -> meta.Expr {
+  try refuse() //~ ERROR E0502
+  e
+}
+
+macro refuses_too(e: meta.Expr) -> meta.Expr / raise<meta.Error> {
+  try refuse() //~ ERROR E0503
+  e
+}
+
+// Implicit effects are allowed: this one allocates and may panic.
+macro implicit(e: meta.Expr) -> meta.Expr {
+  let xs = [e]
+  xs[0]
+}
+
+fn main() {}

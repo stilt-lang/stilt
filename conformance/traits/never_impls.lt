@@ -1,0 +1,12 @@
+//~ rule: traits.built-in-impls
+//~ run-output: "checked"
+
+fn describe(x: Never, y: Never) -> str { "{x} {x == y} {x < y}" }
+
+fn count(x: Never) -> i64 {
+  var m: Map<Never, i64> = Map.new()
+  m[x] = 1
+  m.len()
+}
+
+fn main() / io { print("checked") }

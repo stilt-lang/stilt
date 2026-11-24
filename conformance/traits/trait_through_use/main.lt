@@ -1,0 +1,10 @@
+//~ rule: program.visibility, traits.traits-in-scope
+//~ run-output: "9"
+
+use geo.measures
+use shapes
+
+fn main() / io {
+  let s = shapes.Square { side: 3 }
+  print("{s.area()}")
+}

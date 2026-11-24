@@ -1,0 +1,19 @@
+trait Report {
+  fn describe(self) -> str
+}
+
+trait Audit {
+  fn describe(self) -> str
+}
+
+type Order = { id: i64 }
+
+impl Report for Order {
+  fn describe(self) -> str { "order {self.id}" }
+}
+
+impl Audit for Order {
+  fn describe(self) -> str { "audited order {self.id}" }
+}
+
+fn summary(o: Order) -> str { o.describe() }

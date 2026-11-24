@@ -1,0 +1,6 @@
+//~ tier: advanced
+//~ rule: handlers.effects-in-rows
+// An `Upper` name in a row is an effect (handlers.effects-in-rows), never a row
+// variable, so `E` is a name that means nothing here.
+
+fn apply<e>(escaping f: fn() / E) / e { f() } //~ ERROR E0211

@@ -1,0 +1,5 @@
+//~ rule: syntax.holes-before-dots, types.hole-before-dot
+
+fn first(t: (i64, i64)) -> i64 {
+  t?.0 //~ ERROR E0100
+}

@@ -1,0 +1,27 @@
+//~ tier: meta
+//~ rule: syntax.quotes, macros.quote, macros.splices
+
+use std.meta
+
+fn broken_expr() -> meta.Expr {
+  quote { 1 + } //~ ERROR E0100
+}
+
+fn broken_type() -> meta.Type {
+  quote type { 1 } //~ ERROR E0100
+}
+
+fn broken_pattern() -> meta.Pattern {
+  quote pattern { 1 + 2 } //~ ERROR E0100
+}
+
+fn broken_field() -> meta.FieldInit {
+  quote field { 1 } //~ ERROR E0100
+}
+
+// `$` stands only in quotes and in pattern macros' declarations.
+fn dollar(x: i64) -> i64 {
+  $x //~ ERROR E0100
+}
+
+fn main() {}

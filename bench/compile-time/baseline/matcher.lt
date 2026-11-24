@@ -1,0 +1,209 @@
+// The matchers of log lines: steps that move the threads of a match along a line, which the
+// patterns of `patterns` compose. Each step takes the threads in the order the match prefers
+// them, and gives the threads that come out of each in that order, the first at each position
+// kept, so that a match is the one that backtracking would find, leftmost and greedy.
+
+/// One way the match can stand: its position in the line, and the start and end of each group,
+/// -1 while the group has taken no part.
+pub type Thread = { at: i64, caps: List<i64> }
+
+/// The characters of a line, and the threads of a match over them, in the order it prefers them.
+pub type Run = { chars: List<str>, threads: List<Thread> }
+
+/// What a match found: the text of each group, the whole match first, and `None` for a group
+/// that took no part.
+pub type Captures = { groups: List<Option<str>> }
+
+impl Captures {
+  /// The text of group `i`, or `""` when it took no part.
+  /// ex: Captures { groups: [Some("ab"), None] }.get(1) == ""
+  pub fn get(self, i: i64) -> str { self.groups[i] else "" }
+
+  /// Whether group `i` took part in the match.
+  /// ex: Captures { groups: [Some("ab"), None] }.has(0)
+  pub fn has(self, i: i64) -> bool { self.groups[i].is_some() }
+
+  /// The digits of group `i` as a number, or 0 when there are none.
+  /// ex: Captures { groups: [Some("42")] }.int(0) == 42
+  pub fn int(self, i: i64) -> i64 { self.get(i).to_i64() else 0 }
+}
+
+impl Run {
+  /// The threads at whose position the characters of `s` come next, moved past them.
+  /// ex: start("abc").text("ab").threads.map(.at) == [2]
+  /// ex: start("abc").text("b").threads.is_empty()
+  pub fn text(self, s: str) -> Run {
+    let cs = s.chars()
+    self.moved(
+      self.threads.filter_map(
+        |t| if follows(self.chars, t.at, cs) { Some(advanced(t, cs.len())) } else { None },
+      ),
+    )
+  }
+
+  /// The threads whose next character `keep` accepts, moved past it.
+  /// ex: start("7a").class(|c| c >= "0" && c <= "9").threads.map(.at) == [1]
+  pub fn class(self, keep: fn(str) -> bool) -> Run {
+    let n = self.chars.len()
+    self.moved(
+      self.threads.filter_map(
+        |t| if t.at < n && keep(self.chars[t.at]) { Some(advanced(t, 1)) } else { None },
+      ),
+    )
+  }
+
+  /// The threads that have a next character, moved past it: the pattern `.`.
+  /// ex: start("").any().threads.is_empty()
+  pub fn any(self) -> Run {
+    let n = self.chars.len()
+    self.moved(self.threads.filter_map(|t| if t.at < n { Some(advanced(t, 1)) } else { None }))
+  }
+
+  /// The threads at the start of the line: the pattern `^`.
+  /// ex: start("a").bol().threads.len() == 1
+  pub fn bol(self) -> Run { self.moved(self.threads.filter(|t| t.at == 0)) }
+
+  /// The threads at the end of the line: the pattern `$`.
+  /// ex: start("a").eol().threads.is_empty()
+  pub fn eol(self) -> Run {
+    let n = self.chars.len()
+    self.moved(self.threads.filter(|t| t.at == n))
+  }
+
+  /// The steps one after another.
+  /// ex: start("ab").seq([|r| r.text("a"), |r| r.text("b")]).threads.map(.at) == [2]
+  pub fn seq(self, steps: List<fn(Run) -> Run>) -> Run {
+    var out = self
+    for step in steps { out = step(out) }
+    out
+  }
+
+  /// Each thread through each branch, the first branch preferred.
+  /// ex: start("ab").alt([|r| r.text("a"), |r| r.text("ab")]).threads.map(.at) == [1, 2]
+  pub fn alt(self, branches: List<fn(Run) -> Run>) -> Run {
+    var out: List<Thread> = []
+    for t in self.threads { for b in branches { out.extend(b(self.only(t)).threads) } }
+    self.moved(first_at_each(out))
+  }
+
+  /// Each thread through `body` as many times as it goes on, the most preferred: the pattern
+  /// `x*`. A pass of `body` that moves no thread ends the repeating.
+  /// ex: start("aab").star(|r| r.text("a")).threads.map(.at) == [2, 1, 0]
+  pub fn star(self, body: fn(Run) -> Run) -> Run {
+    var seen: List<bool> = List.repeat(false, self.chars.len() + 1)
+    var out: List<Thread> = []
+    for t in self.threads { self.repeat(t, body, inout seen, inout out) }
+    self.moved(out)
+  }
+
+  /// `body` once, then as many times more as it goes on: the pattern `x+`.
+  /// ex: start("aab").plus(|r| r.text("a")).threads.map(.at) == [2, 1]
+  pub fn plus(self, body: fn(Run) -> Run) -> Run { body(self).star(body) }
+
+  /// Each thread through `body`, or past it, through it preferred: the pattern `x?`.
+  /// ex: start("ab").opt(|r| r.text("a")).threads.map(.at) == [1, 0]
+  pub fn opt(self, body: fn(Run) -> Run) -> Run {
+    var out: List<Thread> = []
+    for t in self.threads {
+      out.extend(body(self.only(t)).threads)
+      out.push(t)
+    }
+    self.moved(first_at_each(out))
+  }
+
+  /// `body` as group `i`: each thread that comes out of it records where the group started
+  /// and where it ends.
+  /// ex: start("ab").group(0, |r| r.text("a")).threads.map(.caps) == [[0, 1]]
+  pub fn group(self, i: i64, body: fn(Run) -> Run) -> Run {
+    let opened = self.moved(self.threads.map(|t| marked(t, 2 * i)))
+    self.moved(body(opened).threads.map(|t| marked(t, 2 * i + 1)))
+  }
+
+  // The run with other threads.
+  fn moved(self, threads: List<Thread>) -> Run { Run { chars: self.chars, threads } }
+
+  // The run of one thread.
+  fn only(self, t: Thread) -> Run { Run { chars: self.chars, threads: [t] } }
+
+  // The threads that repeating `body` gives from `t`, each after those that repeat further,
+  // and none at a position that an earlier thread reached, which can give no match that the
+  // earlier one doesn't.
+  fn repeat(
+    self,
+    t: Thread,
+    body: fn(Run) -> Run,
+    inout seen: List<bool>,
+    inout out: List<Thread>,
+  ) {
+    if seen[t.at] { return }
+    seen[t.at] = true
+    for u in body(self.only(t)).threads {
+      if u.at > t.at { self.repeat(u, body, inout seen, inout out) }
+    }
+    out.push(t)
+  }
+}
+
+// Whether the characters `cs` come at `at` in `chars`.
+fn follows(chars: List<str>, at: i64, cs: List<str>) -> bool {
+  if at + cs.len() > chars.len() { return false }
+  var i = 0
+  while i < cs.len() {
+    if chars[at + i] != cs[i] { return false }
+    i += 1
+  }
+  true
+}
+
+fn advanced(t: Thread, n: i64) -> Thread { Thread { ..t, at: t.at + n } }
+
+// The first of the threads at each position, in their order.
+fn first_at_each(ts: List<Thread>) -> List<Thread> {
+  var seen: List<i64> = []
+  var out: List<Thread> = []
+  for t in ts {
+    if !seen.contains(t.at) {
+      seen.push(t.at)
+      out.push(t)
+    }
+  }
+  out
+}
+
+// The thread with its position recorded in the slot `slot` of its groups.
+fn marked(t: Thread, slot: i64) -> Thread {
+  var caps = t.caps
+  caps[slot] = t.at
+  Thread { ..t, caps }
+}
+
+/// The first match of `body` in `line`, from the leftmost position where one starts, or only
+/// from its start when `anchored`, with `groups` groups besides the whole match.
+/// ex: search("x12", 0, false, |r| r.plus(|r| r.class(|c| c >= "0" && c <= "9"))).map(|m| m.get(0)) == Some("12")
+/// ex: search("x12", 0, true, |r| r.text("1")).is_none()
+pub fn search(line: str, groups: i64, anchored: bool, body: fn(Run) -> Run) -> Option<Captures> {
+  let chars = line.chars()
+  let last = if anchored { 0 } else { chars.len() }
+  for from in 0..last + 1 {
+    let first = Thread { at: from, caps: List.repeat(-1, 2 * groups + 2) }
+    if let Some(t) = body(Run { chars, threads: [first] }).threads.first() {
+      var caps = t.caps
+      caps[0] = from
+      caps[1] = t.at
+      return Some(Captures { groups: List.generate(groups + 1, |g| span(chars, caps, g)) })
+    }
+  }
+  None
+}
+
+// The text of group `g`, whose start and end are in `caps`.
+fn span(chars: List<str>, caps: List<i64>, g: i64) -> Option<str> {
+  if caps[2 * g] < 0 || caps[2 * g + 1] < 0 { return None }
+  Some("".join(chars.slice(caps[2 * g], caps[2 * g + 1])))
+}
+
+/// A run with one thread, at the start of `line`, which has no group.
+/// ex: start("ab").threads.map(.at) == [0]
+pub fn start(line: str) -> Run {
+  Run { chars: line.chars(), threads: [Thread { at: 0, caps: [-1, -1] }] }
+}

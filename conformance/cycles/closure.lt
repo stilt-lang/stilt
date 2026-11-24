@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: cycles.through-shared-values, cycles.freeing, cycles.check-at-exit
+//~ stdout:
+//~ | 1
+
+// A handle whose value holds a closure that captures the handle.
+
+use std.sync
+
+type Callback = { run: fn() -> i64 }
+
+fn main() / io {
+  let s = sync.Shared.new(Callback { run: || 0 })
+  let held = s
+  when s { s = Callback { run: || { let _ = held; 1 } } }
+  let n = when s { s.run() }
+  print("{n}")
+}

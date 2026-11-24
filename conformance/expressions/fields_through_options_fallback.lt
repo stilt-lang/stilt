@@ -1,0 +1,17 @@
+//~ rule: types.fields-through-option, types.option-field-types, types.only-fields, expressions.option-fallback
+//~ run-output: "Lyon unknown 4 0"
+
+type Address = { city: str }
+type Person = { address: Option<Address> }
+
+fn city(p: Person) -> Option<str> { p.address.city }
+
+fn main() / io {
+  let ana = Person { address: Some(Address { city: "Lyon" }) }
+  let bo = Person { address: None }
+  let here: str = ana.address.city else "unknown"
+  let there = city(bo) else "unknown"
+  let length = ana.address.city.map(.len()) else 0
+  let none = bo.address.city.map(.len()) else 0
+  print("{here} {there} {length} {none}")
+}

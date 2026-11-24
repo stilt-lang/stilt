@@ -1,0 +1,21 @@
+// A let-else whose expression doesn't fit in 100 columns breaks the expression, and its `else`
+// and the block's brace stay on the line where the expression ends, with the block's statements
+// a level deeper than that line: after an argument list, and after a chain of calls.
+fn main() / io {
+  let [first, second] = read_the_two_numbers_from_the_input(
+    the_input_text,
+    the_separator_text,
+  ) else {
+    eprint("two numbers")
+    exit(2)
+  }
+  let Some(total) = orders.items
+    .iter()
+    .map(|item| item.price * item.quantity)
+    .filter(|t| t > 1000)
+    .first() else {
+      eprint("none")
+      exit(2)
+    }
+  print("{first} {second} {total}")
+}

@@ -1,0 +1,9 @@
+samples/orders.csv
+--where
+qty>=2
+--where
+price<6
+--group
+customer
+--max
+qty

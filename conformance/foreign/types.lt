@@ -1,0 +1,43 @@
+//~ tier: systems
+//~ rule: c.foreign-functions, c.types-c-takes, c.effects, c.calls, c.both-implementations
+//~ stdout:
+//~ | 5
+//~ | 7
+//~ | 2.5
+//~ | 1.5
+//~ | 65
+//~ | 5
+//~ | done
+
+// A foreign function of each type of C's library that every system has: its name is its
+// symbol, found in the C library, and it is called with C's calling convention. `srand` gives
+// `void`, which is `()`.
+
+use std.c
+
+extern fn abs(n: i32) -> i32
+
+extern fn labs(n: i64) -> i64
+
+extern fn fabs(x: f64) -> f64
+
+extern fn fabsf(x: f32) -> f32
+
+extern fn toupper(ch: i32) -> i32
+
+extern fn strlen(s: c.Str) -> u64
+
+extern fn srand(seed: u32)
+
+fn main() / io {
+  unsafe because "each takes any value but the least integer, which no call here passes" {
+    print("{abs(-5)}")
+    print("{labs(-7)}")
+    print("{fabs(-2.5)}")
+    print("{fabsf(-1.5)}")
+    print("{toupper(97)}")
+    print("{"hello".with_c_str(|s| strlen(s))}")
+    srand(1)
+  }
+  print("done")
+}

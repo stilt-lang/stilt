@@ -1,0 +1,10 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ run-output: "2147483647"
+//~ panic: overflow
+//~ panic-at: negating_the_minimum.lt:9:11
+
+fn main() / io {
+  let m = i32.MIN
+  print("{-(m + 1)}")
+  print("{-m}")
+}

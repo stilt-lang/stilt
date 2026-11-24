@@ -1,0 +1,9 @@
+use std.view
+
+fn rest(xs: List<i64>) -> view.View<List<i64>> {
+  let ys = xs.slice(1, xs.len())
+  let v = view.View.all(ys)
+  v
+}
+
+fn main() {}

@@ -1,0 +1,295 @@
+// What the operators of the service see: jobs, disks, deploys, settings, panics and retries.
+
+use std.json
+use decode
+
+/// A job of the scheduler: started, finished in some milliseconds, or failed for a reason.
+pub type Job = | Started(str) | Finished(str, i64) | Failed(str, str)
+
+/// How full a disk is, in percent of its size.
+pub type Disk = { mount: str, percent: i64 }
+
+/// A version of the service, as three numbers.
+pub type Version = { major: i64, minor: i64, patch: i64 }
+
+/// A version deployed by someone to some hosts.
+pub type Deploy = { version: Version, by: str, hosts: List<str> }
+
+/// A setting changed from one value to another.
+pub type Setting = { key: str, before: str, after: str }
+
+/// A thread that panicked, and its message.
+pub type Crash = { thread: str, message: str }
+
+/// An operation tried again: which attempt this is, how many it may make, and the time it
+/// waited before this one.
+pub type Retry = { op: str, attempt: i64, limit: i64, wait: i64 }
+
+impl Job {
+  /// The job's name.
+  /// ex: Failed("backup", "disk full").name() == "backup"
+  pub fn name(self) -> str {
+    match self {
+      Started(n) | Finished(n, _) | Failed(n, _) => n
+    }
+  }
+
+  /// What happened to the job, in a word.
+  /// ex: Finished("a", 3).state() == "finished"
+  pub fn state(self) -> str {
+    match self {
+      Started(_) => "started"
+      Finished(_, _) => "finished"
+      Failed(_, _) => "failed"
+    }
+  }
+}
+
+impl Disk {
+  /// Whether the disk is full enough that someone should free some of it.
+  /// ex: Disk { mount: "/var", percent: 90 }.critical()
+  /// ex: !Disk { mount: "/var", percent: 89 }.critical()
+  pub fn critical(self) -> bool { self.percent >= 90 }
+}
+
+impl Version {
+  /// The version as a line writes it.
+  /// ex: Version { major: 1, minor: 4, patch: 2 }.text() == "1.4.2"
+  pub fn text(self) -> str { "{self.major}.{self.minor}.{self.patch}" }
+
+  /// Whether this version comes after `other`.
+  /// ex: Version { major: 1, minor: 10, patch: 0 }.after(Version { major: 1, minor: 9, patch: 7 })
+  pub fn after(self, other: Version) -> bool {
+    (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+  }
+}
+
+impl Deploy {
+  /// The deploy as the report says it.
+  /// ex: Deploy { version: Version { major: 1, minor: 0, patch: 0 }, by: "ana", hosts: ["web-1"] }.text() == "1.0.0 by ana to 1 host"
+  pub fn text(self) -> str {
+    let n = self.hosts.len()
+    "{self.version.text()} by {self.by} to {n} host{if n == 1 { "" } else { "s" }}"
+  }
+}
+
+impl Setting {
+  /// Whether the setting's value went up, both values being numbers with the same unit.
+  /// ex: Setting { key: "k", before: "30s", after: "45s" }.raised() == Some(true)
+  /// ex: Setting { key: "k", before: "on", after: "off" }.raised() == None
+  pub fn raised(self) -> Option<bool> {
+    let (a, unit_a) = number(self.before) else return None
+    let (b, unit_b) = number(self.after) else return None
+    if unit_a != unit_b { return None }
+    Some(b > a)
+  }
+}
+
+// The number a value starts with, and the unit after it.
+fn number(value: str) -> Option<(i64, str)> {
+  let digits = value.chars().take_while(|c| c.is_ascii_digit())
+  if digits.is_empty() { return None }
+  let n = "".join(digits).to_i64() else return None
+  Some((n, value.slice(digits.len(), value.len())))
+}
+
+impl Retry {
+  /// Whether this attempt was the last the operation may make.
+  /// ex: Retry { op: "fetch", attempt: 5, limit: 5, wait: 100 }.last()
+  pub fn last(self) -> bool { self.attempt >= self.limit }
+}
+
+// JSON, written and read by hand as `std.json` would from the types' shapes (std.json).
+
+impl Job {
+  /// The job that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Job / raise<json.Error> {
+    let (name, p) = decode.named(v) else raise decode.mismatch("Job", v, path)
+    let at = "{path}.{name}"
+    match name {
+      "Started" => {
+        let values = try decode.payload(p, at, 1, "(str,)")
+        Started(try decode.text(values[0], "{at}[0]"))
+      }
+      "Finished" => {
+        let values = try decode.payload(p, at, 2, "(str, i64)")
+        Finished(try decode.text(values[0], "{at}[0]"), try decode.int(values[1], "{at}[1]"))
+      }
+      "Failed" => {
+        let values = try decode.payload(p, at, 2, "(str, str)")
+        Failed(try decode.text(values[0], "{at}[0]"), try decode.text(values[1], "{at}[1]"))
+      }
+      _ => raise decode.mismatch("Job", v, path)
+    }
+  }
+}
+
+impl json.ToJson for Job {
+  fn to_json(self) -> json.Value {
+    match self {
+      Started(n) => decode.variant("Started", [json.Text(n)])
+      Finished(n, ms) => decode.variant("Finished", [json.Text(n), decode.number(ms)])
+      Failed(n, why) => decode.variant("Failed", [json.Text(n), json.Text(why)])
+    }
+  }
+}
+
+impl json.FromJson for Job {
+  fn from_json(v: json.Value) -> Job / raise<json.Error> { try Job.read(v, "$") }
+}
+
+impl Disk {
+  /// The disk that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Disk / raise<json.Error> {
+    let ms = try decode.members(v, path, "Disk")
+    Disk {
+      mount: try decode.text(try decode.field(ms, "mount", path), "{path}.mount"),
+      percent: try decode.int(try decode.field(ms, "percent", path), "{path}.percent"),
+    }
+  }
+}
+
+impl json.ToJson for Disk {
+  fn to_json(self) -> json.Value {
+    json.Object([("mount", json.Text(self.mount)), ("percent", decode.number(self.percent))])
+  }
+}
+
+impl json.FromJson for Disk {
+  fn from_json(v: json.Value) -> Disk / raise<json.Error> { try Disk.read(v, "$") }
+}
+
+impl Version {
+  /// The version that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Version / raise<json.Error> {
+    let ms = try decode.members(v, path, "Version")
+    Version {
+      major: try decode.int(try decode.field(ms, "major", path), "{path}.major"),
+      minor: try decode.int(try decode.field(ms, "minor", path), "{path}.minor"),
+      patch: try decode.int(try decode.field(ms, "patch", path), "{path}.patch"),
+    }
+  }
+}
+
+impl json.ToJson for Version {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("major", decode.number(self.major)),
+        ("minor", decode.number(self.minor)),
+        ("patch", decode.number(self.patch)),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Version {
+  fn from_json(v: json.Value) -> Version / raise<json.Error> { try Version.read(v, "$") }
+}
+
+impl Deploy {
+  /// The deploy that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Deploy / raise<json.Error> {
+    let ms = try decode.members(v, path, "Deploy")
+    Deploy {
+      version: try Version.read(try decode.field(ms, "version", path), "{path}.version"),
+      by: try decode.text(try decode.field(ms, "by", path), "{path}.by"),
+      hosts: try decode.texts(try decode.field(ms, "hosts", path), "{path}.hosts"),
+    }
+  }
+}
+
+impl json.ToJson for Deploy {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("version", self.version.to_json()),
+        ("by", json.Text(self.by)),
+        ("hosts", json.Array(self.hosts.map(json.Text))),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Deploy {
+  fn from_json(v: json.Value) -> Deploy / raise<json.Error> { try Deploy.read(v, "$") }
+}
+
+impl Setting {
+  /// The setting that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Setting / raise<json.Error> {
+    let ms = try decode.members(v, path, "Setting")
+    Setting {
+      key: try decode.text(try decode.field(ms, "key", path), "{path}.key"),
+      before: try decode.text(try decode.field(ms, "before", path), "{path}.before"),
+      after: try decode.text(try decode.field(ms, "after", path), "{path}.after"),
+    }
+  }
+}
+
+impl json.ToJson for Setting {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("key", json.Text(self.key)),
+        ("before", json.Text(self.before)),
+        ("after", json.Text(self.after)),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Setting {
+  fn from_json(v: json.Value) -> Setting / raise<json.Error> { try Setting.read(v, "$") }
+}
+
+impl Crash {
+  /// The panic that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Crash / raise<json.Error> {
+    let ms = try decode.members(v, path, "Crash")
+    Crash {
+      thread: try decode.text(try decode.field(ms, "thread", path), "{path}.thread"),
+      message: try decode.text(try decode.field(ms, "message", path), "{path}.message"),
+    }
+  }
+}
+
+impl json.ToJson for Crash {
+  fn to_json(self) -> json.Value {
+    json.Object([("thread", json.Text(self.thread)), ("message", json.Text(self.message))])
+  }
+}
+
+impl json.FromJson for Crash {
+  fn from_json(v: json.Value) -> Crash / raise<json.Error> { try Crash.read(v, "$") }
+}
+
+impl Retry {
+  /// The retry that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Retry / raise<json.Error> {
+    let ms = try decode.members(v, path, "Retry")
+    Retry {
+      op: try decode.text(try decode.field(ms, "op", path), "{path}.op"),
+      attempt: try decode.int(try decode.field(ms, "attempt", path), "{path}.attempt"),
+      limit: try decode.int(try decode.field(ms, "limit", path), "{path}.limit"),
+      wait: try decode.int(try decode.field(ms, "wait", path), "{path}.wait"),
+    }
+  }
+}
+
+impl json.ToJson for Retry {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("op", json.Text(self.op)),
+        ("attempt", decode.number(self.attempt)),
+        ("limit", decode.number(self.limit)),
+        ("wait", decode.number(self.wait)),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Retry {
+  fn from_json(v: json.Value) -> Retry / raise<json.Error> { try Retry.read(v, "$") }
+}

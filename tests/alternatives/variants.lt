@@ -1,0 +1,29 @@
+// The values that the arms of a `match` miss: the first, as the message names it, then the
+// first of each other constructor, in the type's order.
+
+type Shape = Circle(f64) | Square(f64) | Triangle(f64, f64)
+
+fn area(s: Shape) -> f64 {
+  match s { //~ E0329
+    //~ alternative: variant Square(_)
+    //~ alternative: variant Triangle(_, _)
+    Circle(r) => r * r
+  }
+}
+
+fn sign(b: bool) -> i64 {
+  match b { //~ E0329
+    //~ alternative: variant false
+    true => 1
+  }
+}
+
+// Inside `Some`, only the first value missed is named: the constructors counted are the
+// scrutinee's own.
+fn size(o: Option<Shape>) -> f64 {
+  match o { //~ E0329
+    //~ alternative: variant Some(Square(_))
+    None => 0.0
+    Some(Circle(r)) => r
+  }
+}

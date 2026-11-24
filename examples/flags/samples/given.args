@@ -1,0 +1,12 @@
+--width
+320
+--height=200
+--fit
+cover
+--no-keep-metadata
+--tags
+a
+--tags
+b
+x.png
+y.png

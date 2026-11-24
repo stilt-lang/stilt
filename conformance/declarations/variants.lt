@@ -1,0 +1,33 @@
+//~ rule: syntax.declarations, syntax.variants, declarations.variant-types, declarations.constructors, declarations.recursive-types
+//~ stdout:
+//~ | [Circle(1.0), Circle(2.5)]
+//~ | Square(3.0)
+//~ | 4.0
+//~ | Node(Node(Leaf, 1, Leaf), 2, Node(Leaf, 3, Leaf))
+
+type Shape = Circle(radius: f64) | Square(side: f64)
+
+type Tree<T> = | Leaf | Node(Tree<T>, T, Tree<T>)
+
+fn insert(t: Tree<i64>, x: i64) -> Tree<i64> {
+  match t {
+    Leaf => Node(Leaf, x, Leaf)
+    Node(l, v, r) => if x < v { Node(insert(l, x), v, r) } else { Node(l, v, insert(r, x)) }
+  }
+}
+
+fn side(s: Shape) -> f64 {
+  match s {
+    Circle(r) => r
+    Square(length) => length
+  }
+}
+
+fn main() / io {
+  let circles = [1.0, 2.5].map(Circle)
+  print("{circles}")
+  print("{Square(3.0)}")
+  print("{side(Square(4.0))}")
+  let tree = [2, 1, 3].fold(Leaf, insert)
+  print("{tree}")
+}

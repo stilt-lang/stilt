@@ -1,0 +1,16 @@
+//~ rule: std.io
+//~ stdin: "a\nb\xffc\r\n"
+//~ stdout:
+//~ | Some("a")
+//~ | ["b�c\r\n"]
+//~ | [""]
+//~ | None
+
+use std.io
+
+fn main() / io {
+  print("{io.read_line()}")
+  print("{[io.read_all()]}")
+  print("{[io.read_all()]}")
+  print("{io.read_line()}")
+}

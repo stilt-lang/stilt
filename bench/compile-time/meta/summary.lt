@@ -1,0 +1,50 @@
+// The report's numbers as one value of JSON, which `std.json` writes from the value's type and
+// reads back (std.json), the histograms' buckets among them.
+
+use std.json
+use charts
+use tally
+use events.entry
+use events.time
+
+/// The numbers of the report: the lines, the entries and the lines not read, the entries of
+/// each topic and of each level, and the histograms.
+pub type Summary = {
+  lines: i64,
+  entries: i64,
+  skipped: i64,
+  topics: Map<str, i64>,
+  levels: Map<str, i64>,
+  charts: charts.Charts,
+}
+
+/// The summary of what the log held.
+pub fn of(t: tally.Tally) -> Summary {
+  let es = t.entries()
+  var topics: Map<str, i64> = Map.new()
+  for topic in entry.TOPICS { topics[topic] = es.count(|e| e.event.topic() == topic) }
+  var levels: Map<str, i64> = Map.new()
+  for level in time.LEVELS { levels[level.label()] = es.count(|e| e.level == level) }
+  Summary {
+    lines: t.lines,
+    entries: es.len(),
+    skipped: t.skipped.len(),
+    topics,
+    levels,
+    charts: t.charts,
+  }
+}
+
+/// The summary as JSON, and whether that reads back equal.
+pub fn lines(t: tally.Tally) -> List<str> {
+  let s = of(t)
+  let text = write(s)
+  let same = Result.of(|| try read(text)).ok() == Some(s)
+  ["== summary as JSON ==", text, "reads back equal: {same}"]
+}
+
+/// The summary as one line of JSON.
+pub fn write(s: Summary) -> str { json.to_text(s) }
+
+/// The summary that a line of JSON holds.
+pub fn read(text: str) -> Summary / raise<json.Error> { try json.from_text(text) }

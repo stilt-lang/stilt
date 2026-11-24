@@ -1,0 +1,3 @@
+/// Separated by a comment line. //~ ERROR E0100
+// A plain note.
+pub fn f() {}

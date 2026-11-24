@@ -1,0 +1,82 @@
+//~ tier: meta
+//~ rule: syntax.bound-tests, meta.bound-tests, meta.static-reflection, meta.reflection-tier
+//~ stdout:
+//~ | shows 3
+//~ | shows Wrap(4)
+//~ | no Show: fn() -> i64
+//~ | no Show: Wrap<fn() -> i64>
+//~ | 8 from i64
+//~ | no Convert<i64>: Other
+//~ | tag 3
+//~ | shows true
+//~ | static: shows 2
+//~ | static: neither
+
+// A module that writes a bound test, and doesn't name `std.meta`.
+
+trait Convert<U> {
+  fn convert(self) -> U
+}
+
+trait Label {
+  fn label(self) -> str
+}
+
+type Tag = { id: i64 }
+
+type Wrap<T> = { inner: T }
+
+impl Convert<i64> for Tag {
+  fn convert(self) -> i64 { self.id * 2 + 2 }
+}
+
+// An impl with other arguments than the bound's.
+type Other = { v: i64 }
+
+impl Convert<str> for Other {
+  fn convert(self) -> str { "other" }
+}
+
+impl Label for Tag {
+  fn label(self) -> str { "tag {self.id}" }
+}
+
+// A conditional impl, whose bound a `Wrap<T>` meets only when `T` does.
+impl<T: Show> Show for Wrap<T> {
+  fn show(self) -> str { "Wrap({self.inner})" }
+}
+
+// In the branch that a bound test guards, `T` has its bounds, so the
+// trait's methods resolve. A bound test is true when the type that
+// instantiates `T` has an impl of each trait, with the bound's arguments,
+// whose own bounds hold.
+fn shown<T>(value: T, name: str) -> str {
+  if T: Show { "shows {value}" } else { "no Show: {name}" }
+}
+
+fn converted<T>(value: T, name: str) -> str {
+  if T: Convert<i64> { "{value.convert()} from i64" } else { "no Convert<i64>: {name}" }
+}
+
+// An `else if` tests another bound.
+fn either<T>(value: T) -> str {
+  if T: Label + Convert<i64> { value.label() } else if T: Show { "shows {value}" } else { "neither" }
+}
+
+// `comptime if T: Show` keeps erasure.
+fn statically<T>(value: T) -> str {
+  comptime if T: Show { "static: shows {value}" } else { "static: neither" }
+}
+
+fn main() / io {
+  print(shown(3, "i64"))
+  print(shown(Wrap { inner: 4 }, "Wrap<i64>"))
+  print(shown(|| 5, "fn() -> i64"))
+  print(shown(Wrap { inner: || 6 }, "Wrap<fn() -> i64>"))
+  print(converted(Tag { id: 3 }, "Tag"))
+  print(converted(Other { v: 7 }, "Other"))
+  print(either(Tag { id: 3 }))
+  print(either(true))
+  print(statically(2))
+  print(statically(|| 1))
+}

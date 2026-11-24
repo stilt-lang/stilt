@@ -1,0 +1,10 @@
+//~ rule: program.main, program.exit-statuses
+//~ stderr:
+//~ | error: Failure { code: 3, reason: "bad\tline" }
+//~ exit: 1
+
+type Failure = { code: i64, reason: str }
+
+fn parse() / raise<Failure> { raise Failure { code: 3, reason: "bad\tline" } }
+
+fn main() / raise<Failure> { try parse() }

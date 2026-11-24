@@ -1,0 +1,14 @@
+//~ rule: values.inout-argument-order, modes.durations, modes.law
+//~ run-output: "[1, 2, 3] [1, 2, 3]"
+
+fn pop_last(inout xs: List<i64>) -> i64 { xs.pop() else 0 }
+
+fn append(inout xs: List<i64>, x: i64) { xs.push(x) }
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  append(inout xs, pop_last(inout xs))
+  var ys = [1, 2, 3]
+  ys.push(ys.pop() else 0)
+  print("{xs} {ys}")
+}

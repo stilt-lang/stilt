@@ -1,0 +1,148 @@
+// What queries do to a value with nothing more given: paths, kinds and the functions that take
+// no argument.
+
+use std.json
+use std.view
+use order
+
+/// Whether `v` counts as true: every value but `false` and `null` does.
+/// ex: truthy(json.Number("0")) && !truthy(json.Null)
+pub fn truthy(v: json.Value) -> bool { v != json.Null && v != json.Bool(false) }
+
+/// The name of the kind of `v`, which `type` returns.
+pub fn kind(v: json.Value) -> str {
+  match v {
+    Null => "null"
+    Bool(_) => "boolean"
+    Number(_) => "number"
+    Text(_) => "string"
+    Array(_) => "array"
+    Object(_) => "object"
+  }
+}
+
+/// The kind of `v` with its article, as messages name it.
+fn article(v: json.Value) -> str {
+  match v {
+    Array(_) | Object(_) => "an {kind(v)}"
+    _ => "a {kind(v)}"
+  }
+}
+
+/// The member of an object named `name`; `null` has none.
+pub fn field(v: json.Value, name: str) -> json.Value / raise<str> {
+  match v {
+    Object(members) => order.member(members, name)
+    Null => json.Null
+    _ => raise "can't take the field \"{name}\" of {article(v)}"
+  }
+}
+
+/// The element of an array at `i`, counting from its end when `i` is negative; past either
+/// end, and in `null`, there is none.
+/// ex: try index(json.Array([json.Null, json.Bool(true)]), -1) == json.Bool(true)
+pub fn index(v: json.Value, i: i64) -> json.Value / raise<str> {
+  match v {
+    Array(items) => items.get(if i < 0 { items.len() + i } else { i }) else json.Null
+    Null => json.Null
+    _ => raise "can't take the element {i} of {article(v)}"
+  }
+}
+
+/// The part of an array or a string from `from` up to `to`, counted from the end when negative
+/// and kept within its ends, as jq slices: elements of an array, characters of a string. In
+/// `null`, there is none.
+/// ex: try slice(json.Array([json.Null, json.Bool(true), json.Null]), Some(1), None) == json.Array([json.Bool(true), json.Null])
+/// ex: try slice(json.Text("héllo"), Some(1), Some(-1)) == json.Text("éll")
+pub fn slice(v: json.Value, from: Option<i64>, to: Option<i64>) -> json.Value / raise<str> {
+  match v {
+    Array(items) => {
+      let (a, b) = bounds(items.len(), from, to)
+      json.Array(view.View.of(items, a, b).copy())
+    }
+    Text(s) => {
+      let (a, b) = bounds(s.char_count(), from, to)
+      json.Text("".join(view.chars(view.View.all(s)).skip(a).take(b - a).collect()))
+    }
+    Null => json.Null
+    _ => raise "can't take a slice of {article(v)}"
+  }
+}
+
+/// The offsets of a slice of a value of length `n`: from the end when negative, then within
+/// `0` and `n`, the end no less than the start.
+/// ex: bounds(4, Some(3), Some(1)) == (3, 3)
+/// ex: bounds(4, Some(-10), None) == (0, 4)
+fn bounds(n: i64, from: Option<i64>, to: Option<i64>) -> (i64, i64) {
+  let at = |i: i64| (if i < 0 { n + i } else { i }).clamp(0, n)
+  let a = from.map(at).unwrap_or(0)
+  (a, to.map(at).unwrap_or(n).max(a))
+}
+
+/// The elements of an array, or the values of an object's members.
+pub fn each(v: json.Value) -> List<json.Value> / raise<str> {
+  match v {
+    Array(items) => items
+    Object(members) => members.map(.1)
+    _ => raise "can't take the elements of {article(v)}"
+  }
+}
+
+/// The elements of an array, which `name` needs.
+pub fn items(v: json.Value, name: str) -> List<json.Value> / raise<str> {
+  let Array(items) = v else raise "{name} needs an array, not {article(v)}"
+  items
+}
+
+/// What the function `name`, which takes no argument, makes of `v`.
+/// ex: try plain("keys", json.Object([("b", json.Number("1")), ("a", json.Null)])) == [json.Array([json.Text("a"), json.Text("b")])]
+/// ex: try plain("length", json.Text("héllo")) == [json.Number("5")]
+pub fn plain(name: str, v: json.Value) -> List<json.Value> / raise<str> {
+  match name {
+    "length" => [json.Number("{try length(v)}")]
+    "keys" => [json.Array(try keys(v))]
+    "type" => [json.Text(kind(v))]
+    "not" => [json.Bool(!truthy(v))]
+    "empty" => []
+    "first" => [try index(v, 0)]
+    "last" => [try index(v, -1)]
+    "reverse" => [json.Array(try items(v, name).reversed())]
+    "sort" => [json.Array(try items(v, name).sorted_with(order.compare))]
+    "unique" => [json.Array(try items(v, name).sorted_with(order.compare).deduped())]
+    "min" => [try items(v, name).sorted_with(order.compare).first() else json.Null]
+    "max" => [try items(v, name).sorted_with(order.compare).last() else json.Null]
+    "to_entries" => [json.Array(try entries(v))]
+    _ => raise "{name} is no function"
+  }
+}
+
+fn length(v: json.Value) -> i64 / raise<str> {
+  match v {
+    Null => 0
+    Text(s) => s.char_count()
+    Array(items) => items.len()
+    Object(members) => members.len()
+    _ => raise "{article(v)} has no length"
+  }
+}
+
+fn keys(v: json.Value) -> List<json.Value> / raise<str> {
+  match v {
+    Object(members) => order.keys(members).map(json.Text)
+    Array(items) => items.enumerate(0).map(|(i, _)| json.Number("{i}"))
+    _ => raise "{article(v)} has no keys"
+  }
+}
+
+fn entries(v: json.Value) -> List<json.Value> / raise<str> {
+  let Object(members) = v else raise "to_entries needs an object, not {article(v)}"
+  members.map(|(k, x)| json.Object([("key", json.Text(k)), ("value", x)]))
+}
+
+test "a path in a value of the wrong kind is an error, and in null gives null" {
+  assert Result.of(|| try field(json.Number("1"), "a")) ==
+    Err("can't take the field \"a\" of a number")
+  assert Result.of(|| try each(json.Null)) == Err("can't take the elements of a null")
+  assert try field(json.Null, "a") == json.Null
+  assert try index(json.Array([]), 3) == json.Null
+}

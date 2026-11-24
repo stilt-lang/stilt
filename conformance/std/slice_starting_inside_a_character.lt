@@ -1,0 +1,10 @@
+//~ rule: effects.panic-kinds, std.bytes-and-scalars, std.str
+//~ run-output: "é"
+//~ panic: utf8-boundary
+//~ panic-at: slice_starting_inside_a_character.lt:9:9
+
+fn main() / io {
+  let s = "héllo"
+  print(s.slice(1, 3))
+  print(s.slice(2, 4))
+}

@@ -1,0 +1,6 @@
+use shout
+
+fn main() / io {
+  let loud = shout.printer()
+  loud("a")
+}

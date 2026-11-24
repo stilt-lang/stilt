@@ -1,0 +1,37 @@
+//~ tier: advanced
+
+// Polymorphic function types and lazy values (polymorphism.advanced-tier, polymorphism.lazy-values and polymorphism.lazy-implicit-effects): a module that writes a
+// polymorphic function type, or names `Lazy`, is in the advanced tier. A call through a
+// parameter that isn't `escaping` passes its argument's effects through, and one through a
+// field may not end, as for any function type (facts.div).
+
+use std.lazy
+
+fn both(f: fn<T: Show>(T) -> str, n: i64, s: str) -> str {
+  "{f(n)} and {f(s)}" //~ ALLOC
+}
+
+type Style = { wrap: fn<T: Show>(T) -> str }
+
+fn render(s: Style) -> str {
+  s.wrap(1) //~ DIV
+}
+
+fn quoted<T: Show>(x: T) -> str { "'{x}'" } //~ ALLOC
+
+// `new` allocates, and so does the closure, where it is written.
+fn table() -> lazy.Lazy<List<i64>> {
+  lazy.Lazy.new(|| [1, 2, 3]) //~ ALLOC
+}
+
+// `get` may not end, and adds none of the closure's own effects.
+fn first(t: lazy.Lazy<List<i64>>) -> i64 {
+  t.get().len() //~ DIV ALLOC
+}
+
+fn main() / io {
+  print(both(quoted, 1, "a")) //~ ALLOC CONSOLE
+  print(both(|x| "<{x}>", 2, "b")) //~ ALLOC CONSOLE
+  print(render(Style { wrap: quoted })) //~ ALLOC DIV CONSOLE
+  print("{first(table())}") //~ ALLOC DIV CONSOLE
+}

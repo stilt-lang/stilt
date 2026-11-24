@@ -1,0 +1,104 @@
+// Reading CSV text into a table, as RFC 4180 lays it out.
+
+/// A table: its column names, and its rows, each with one field per column.
+pub type Table = { header: List<str>, rows: List<List<str>> }
+
+const QUOTE: u8 = 34
+const COMMA: u8 = 44
+const NEWLINE: u8 = 10
+const RETURN: u8 = 13
+
+/// The table that CSV text holds, its first record being the header. Every record must have
+/// as many fields as the header.
+/// ex: try parse("a,b\n1,2\n") == Table { header: ["a", "b"], rows: [["1", "2"]] }
+/// ex: Result.of(|| try parse("a,b\n1\n")) == Err("record 2 has 1 field, but the header has 2")
+pub fn parse(text: str) -> Table / raise<str> {
+  let all = try records(text)
+  let [header, ..rows] = all else raise "the file holds no header"
+  for (n, row) in rows.enumerate(2) {
+    if row.len() != header.len() {
+      let fields = if row.len() == 1 { "1 field" } else { "{row.len()} fields" }
+      raise "record {n} has {fields}, but the header has {header.len()}"
+    }
+  }
+  Table { header, rows }
+}
+
+/// The records of CSV text. Fields are separated by commas and records by newlines, with or
+/// without a carriage return. A field in double quotes may hold commas, newlines and `""`,
+/// which stands for one quote. Blank lines hold no record.
+/// ex: try records("a,b\r\n1,\n") == [["a", "b"], ["1", ""]]
+/// ex: try records("\"x, y\",\"say \"\"hi\"\"\"") == [["x, y", "say \"hi\""]]
+/// ex: try records("a\n\nb") == [["a"], ["b"]]
+/// ex: try records("\"two\nlines\"") == [["two\nlines"]]
+/// prop: |a: str| a.contains("\"") || a.contains(",") || a.contains("\n") || a.contains("\r") || try records("{a},{a}") == [[a, a]]
+pub fn records(text: str) -> List<List<str>> / raise<str> {
+  let bytes = text.bytes()
+  var records = []
+  var record = []
+  var pos = 0
+  var line = 1
+  while pos < bytes.len() {
+    record.push(try field(text, bytes, inout pos, inout line))
+    if pos < bytes.len() && bytes[pos] == COMMA {
+      pos += 1
+      if pos < bytes.len() { continue }
+      record.push("")
+    }
+    if pos < bytes.len() && bytes[pos] == RETURN { pos += 1 }
+    if pos < bytes.len() && bytes[pos] == NEWLINE {
+      pos += 1
+      line += 1
+    }
+    if record != [""] { records.push(record) }
+    record = []
+  }
+  records
+}
+
+/// The field that starts at `pos`, which is left at the byte after it.
+fn field(text: str, bytes: List<u8>, inout pos: i64, inout line: i64) -> str / raise<str> {
+  if pos < bytes.len() && bytes[pos] == QUOTE {
+    return try quoted(text, bytes, inout pos, inout line)
+  }
+  let start = pos
+  while pos < bytes.len() && !ends_field(bytes[pos]) { pos += 1 }
+  text.slice(start, pos)
+}
+
+/// The quoted field that starts at `pos`, without its quotes and with each `""` read as `"`.
+fn quoted(text: str, bytes: List<u8>, inout pos: i64, inout line: i64) -> str / raise<str> {
+  let opened = line
+  pos += 1
+  var pieces = []
+  var start = pos
+  loop {
+    if pos == bytes.len() { raise "line {opened}: a quoted field is never closed" }
+    if bytes[pos] == QUOTE {
+      pieces.push(text.slice(start, pos))
+      pos += 1
+      if pos == bytes.len() || bytes[pos] != QUOTE { break }
+      pieces.push("\"")
+      start = pos + 1
+    } else if bytes[pos] == NEWLINE {
+      line += 1
+    }
+    pos += 1
+  }
+  if pos < bytes.len() && !ends_field(bytes[pos]) {
+    raise "line {line}: a closing quote is followed by more of its field"
+  }
+  "".join(pieces)
+}
+
+fn ends_field(b: u8) -> bool { b == COMMA || b == NEWLINE || b == RETURN }
+
+test "an unclosed quote names the line it opens on" {
+  let r = Result.of(|| try records("a\n\"b\nc"))
+  assert r == Err("line 2: a quoted field is never closed")
+}
+
+test "text after a closing quote is an error" {
+  let r = Result.of(|| try records("\"a\"b,c"))
+  assert r == Err("line 1: a closing quote is followed by more of its field")
+}

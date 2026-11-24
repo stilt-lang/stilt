@@ -1,0 +1,15 @@
+(executable
+ (name main)
+ (public_name stilt-ref)
+ (package stilt-ref)
+ (libraries stilt cmdliner))
+
+; The standard library's trees, parsed when the interpreter is built
+; (Driver.std_snapshot).
+
+(rule
+ (target std_snapshot.ml)
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{exe:../gen/snapshot.exe}))))

@@ -1,0 +1,1 @@
+fn shout(name: str) -> str { "{name:x}" }

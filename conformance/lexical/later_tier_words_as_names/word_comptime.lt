@@ -1,0 +1,3 @@
+fn f() {
+  let comptime = 1 //~ ERROR E0100
+}

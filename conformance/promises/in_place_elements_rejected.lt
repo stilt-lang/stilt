@@ -1,0 +1,65 @@
+//~ rule: modes.shared-writes, modes.shared-conservative, facts.writes-in-place
+
+// An element that holds a copy-on-write value may share it with another element, so a write
+// through the element's parts copies, whichever part it writes.
+type Named = { name: str, n: i64 }
+
+type Holder = { items: List<i64>, n: i64 }
+
+type Label = | Plain | Text(str)
+
+type Tagged = { label: Label, n: i64 }
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Rooted = { tree: Tree, n: i64 }
+
+type Particle = { x: f64, v: f64 }
+
+type Cloud = { ps: List<Particle> }
+
+fn named(inout ns: List<Named>) without alloc {
+  ns[0].n = 1 //~ ERROR E0204
+}
+
+fn held(inout hs: List<Holder>) without alloc {
+  hs[0].n += 1 //~ ERROR E0204
+}
+
+fn paired(inout ps: List<(str, i64)>) without alloc {
+  ps[0].1 = 2 //~ ERROR E0204
+}
+
+fn tagged(inout ts: List<Tagged>) without alloc {
+  ts[0].n = 0 //~ ERROR E0204
+}
+
+fn rooted(inout rs: List<Rooted>) without alloc {
+  rs[0].n = 0 //~ ERROR E0204
+}
+
+// A type parameter may stand for a copy-on-write type.
+fn generic<T>(inout ps: List<(T, i64)>) without alloc {
+  ps[0].1 = 0 //~ ERROR E0204
+}
+
+// A copy of the list lasts at the write, which modes.shared-writes makes shared.
+fn copied(inout ps: List<Particle>) -> List<Particle> without alloc {
+  let keep = ps
+  ps[0].x = 1.0 //~ ERROR E0204
+  keep
+}
+
+// The list is a field of a binding, not a binding named whole.
+fn in_field(inout c: Cloud) without alloc {
+  c.ps[0].x = 1.0 //~ ERROR E0204
+}
+
+fn nudge(inout p: Particle) without alloc { p.x += 1.0 }
+
+// An `inout` argument through an index still hands an element on.
+fn handed(inout ps: List<Particle>) without alloc {
+  nudge(inout ps[0]) //~ ERROR E0204
+}
+
+fn main() / io {}

@@ -1,0 +1,9 @@
+── SYNTAX ERROR ──────────────────────────────── E0100_java_new.lt:3:28  [E0100]
+
+Stilt has no `new`: a record is built with its fields, as `Point { … }`:
+
+  3 │ fn origin() -> Point { new Point(0, 0) }
+    │                            ^^^^^
+
+A record literal names each field, as `Point { x: 0, y: 0 }`, and a type's own
+functions are named on it, as `List.new()`.

@@ -1,0 +1,69 @@
+//~ rule: patterns.unreachable-arms, effects.catch-syntax, effects.catch-alls-need-reason
+//~ stdout:
+//~ | 0 0 7
+//~ | -1 -2 -3 -3
+//~ | fetch failed for q
+//~ | fetch failed: Invalid("x")
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> {
+  if key == "" { raise Missing }
+  key.to_i64() else raise Invalid(key)
+}
+
+fn wild_reason(key: str) -> i64 {
+  try fetch(key) catch {
+    _ because "every failure counts as zero" => 0
+  }
+}
+
+fn wild_bare(key: str) -> i64 {
+  try fetch(key) catch {
+    _ => 0 //~ WARN W0501
+  }
+}
+
+fn wild_raises(key: str) -> i64 / raise<str> {
+  try fetch(key) catch {
+    _ => raise "fetch failed for {key}"
+  }
+}
+
+fn named_raises(key: str) -> i64 / raise<str> {
+  try fetch(key) catch failure => raise "fetch failed: {failure}"
+}
+
+fn named_reason(key: str) -> i64 {
+  try fetch(key) catch failure because "a failure counts as minus one" => -1
+}
+
+fn after_variants(key: str) -> i64 {
+  try fetch(key) catch {
+    Missing => -2
+    Invalid(_) => -3
+    _ => 0 //~ WARN W0301
+  }
+}
+
+fn after_one_variant(key: str) -> i64 {
+  try fetch(key) catch {
+    Missing => -2
+    other because "every invalid key counts as minus three" => -3
+  }
+}
+
+fn main() / io {
+  print("{wild_reason("")} {wild_bare("x")} {wild_reason("7")}")
+  print("{named_reason("x")} {after_variants("")} {after_variants("x")} {after_one_variant("y")}")
+  let a = try wild_raises("q")
+    catch message because "the message is printed instead" => {
+    print(message)
+    0
+  }
+  let b = try named_raises("x")
+    catch message because "the message is printed instead" => {
+    print(message)
+    0
+  }
+}

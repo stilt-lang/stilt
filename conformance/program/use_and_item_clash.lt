@@ -1,0 +1,14 @@
+//~ rule: program.one-value-namespace, declarations.namespaces, errors.several-places
+
+use std.fs
+
+fn fs() {} //~ ERROR E0208
+
+fn io() {}
+
+use std.io //~ ERROR E0208
+
+fn count(cli: i64) -> i64 {
+  let fmt = cli
+  fmt
+}

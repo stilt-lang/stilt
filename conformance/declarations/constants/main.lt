@@ -1,0 +1,43 @@
+//~ rule: patterns.constants, declarations.constant-declarations, declarations.constant-expressions, declarations.constants-in-patterns
+//~ stdout:
+//~ | max
+//~ | limit
+//~ | board
+//~ | other
+//~ | 3.141592653589793
+//~ | [(1, "one"), (-2, "minus two")]
+//~ | 16
+
+use limits
+
+const LIMIT: i64 = 5
+
+const HALF_TURN: f64 = f64.PI
+
+const PAIRS: List<(i64, str)> = [(1, "one"), (-2, "minus two")]
+
+type Board = { side: i64 }
+
+impl Board {
+  const SIZE: i64 = 8
+  pub const DEFAULT: Board = Board { side: Board.SIZE }
+}
+
+fn describe(n: i64) -> str {
+  match n {
+    limits.MAX => "max"
+    LIMIT => "limit"
+    Board.SIZE => "board"
+    _ => "other"
+  }
+}
+
+fn main() / io {
+  print(describe(3))
+  print(describe(5))
+  print(describe(8))
+  print(describe(0))
+  print("{HALF_TURN}")
+  print("{PAIRS}")
+  print("{Board.DEFAULT.side * limits.TWO}")
+}

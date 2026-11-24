@@ -1,0 +1,11 @@
+type OutOfRange = | OutOfRange
+
+fn at(inout xs: List<i64>, i: i64) -> inout i64 / raise<OutOfRange> {
+  yield xs[i]
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  at(inout xs, 0) = 3
+  print("{xs}")
+}

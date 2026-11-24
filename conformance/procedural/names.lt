@@ -1,0 +1,15 @@
+//~ rule: macros.meta-use, macros.quote
+//~ run-output: "1 2 3"
+
+// `pattern` and `field` are words of the grammar only after `quote`, and
+// `meta` only before `use`: everywhere else they are names.
+type Rule = { pattern: i64, field: i64 }
+
+fn meta(r: Rule) -> i64 { r.pattern + r.field }
+
+fn main() / io {
+  let pattern = 1
+  let field = 2
+  let r = Rule { pattern, field }
+  print("{pattern} {field} {meta(r)}")
+}

@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: polymorphism.instantiation, polymorphism.rigid-types, polymorphism.arguments, polymorphism.recursion
+//~ stdout:
+//~ | 1:7 x:7
+//~ | 1/(2, "b") x/(2, "b")
+//~ | 1:7 x:7
+//~ | 1=(1, 2) x=(1, 2)
+
+// A polymorphic function type may name the enclosing function's type parameter `A`, which each
+// call of `apply` fixes, while `T` stays generic.
+fn apply<A: Show>(f: fn<T: Show>(T, A) -> str, a: A) -> str { "{f(1, a)} {f("x", a)}" }
+
+// `deep` calls itself at `(A, A)`, so its argument grows with each call, and the closure it
+// passes on names the bigger type.
+fn deep<A: Show>(f: fn<T: Show>(T, A) -> str, a: A, n: i64) -> str {
+  if n == 0 { "{f(1, a)} {f("x", a)}" } else { deep(|x, p: (A, A)| f(x, p.0), (a, a), n - 1) }
+}
+
+fn main() / io {
+  print(apply(|x, a| "{x}:{a}", 7))
+  print(apply(|x, a| "{x}/{a}", (2, "b")))
+  print(deep(|x, a| "{x}:{a}", 7, 3))
+  print(deep(|x, a| "{x}={a}", (1, 2), 12))
+}

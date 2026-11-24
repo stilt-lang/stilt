@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: handlers.with, facts.joins, facts.paths-that-leave
+//~ panic: bounds
+//~ panic-at: order_ended.lt:18:3
+
+effect Stop {
+  fn stop()
+}
+
+// The handler ends its `with` at the performance, before the `push`.
+fn ended() -> i64 {
+  var xs: List<i64> = []
+  let stop = handler Stop -> () { fn stop() {} }
+  with stop {
+    Stop.stop()
+    xs.push(1)
+  }
+  xs[0]
+}
+
+fn main() / io { print("{ended()}") }

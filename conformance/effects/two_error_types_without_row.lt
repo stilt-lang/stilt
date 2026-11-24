@@ -1,0 +1,23 @@
+//~ rule: effects.one-error-type
+
+type A = | A1
+type B = | B1
+
+fn a() / raise<A> { raise A1 }
+fn b() / raise<B> { raise B1 }
+
+fn in_closure() {
+  let f = || {
+    try a()
+    try b() //~ ERROR E0503
+  }
+}
+
+fn in_operand() -> i64 {
+  try {
+    a()
+    b() //~ ERROR E0503
+    1
+  }
+    catch _ because "either fails" => 0
+}

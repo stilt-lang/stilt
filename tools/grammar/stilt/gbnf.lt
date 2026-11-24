@@ -1,0 +1,114 @@
+// The grammar as GBNF, the format that llama.cpp reads.
+
+use ebnf
+use lexicon
+use render
+use shape
+
+type Gbnf = {}
+
+impl render.Syntax for Gbnf {
+  fn name(self, rule: str) -> str { rule.replace("_", "-") }
+
+  // llama.cpp ends a rule at a newline unless the line ends with `|`.
+  fn lines(self, branches: List<str>) -> str { " |\n    ".join(branches) }
+
+  fn rx(self, rx: lexicon.Rx) -> str { rx_text(rx) }
+}
+
+fn rx_text(rx: lexicon.Rx) -> str {
+  match rx {
+    Lit(text) => "\"{"".join(text.chars().map(string_char))}\""
+    Class(negated, ranges) => render.set_text(negated, ranges, class_char)
+    Seq(items) => " ".join(items.map(|i| operand(i, false)))
+    Alt(items) => " | ".join(items.map(rx_text))
+    Star(inner) => "{operand(inner, true)}*"
+    Plus(inner) => "{operand(inner, true)}+"
+    Opt(inner) => "{operand(inner, true)}?"
+  }
+}
+
+/// A part of a sequence, or the operand of a repetition, which must be one element.
+fn operand(rx: lexicon.Rx, repeated: bool) -> str {
+  let single = match rx {
+    Lit(text) => text.char_count() == 1
+    Class(_, _) => true
+    _ => false
+  }
+  let sequence_part = !repeated && !matches_alt(rx)
+  if single || sequence_part { rx_text(rx) } else { "({rx_text(rx)})" }
+}
+
+fn matches_alt(rx: lexicon.Rx) -> bool {
+  match rx {
+    Alt(_) => true
+    _ => false
+  }
+}
+
+/// ex: string_char("\"") == "\\\""
+/// ex: string_char("\n") == "\\n"
+/// ex: string_char("a") == "a"
+fn string_char(c: str) -> str {
+  match c {
+    "\\" => "\\\\"
+    "\"" => "\\\""
+    "\n" => "\\n"
+    "\r" => "\\r"
+    "\t" => "\\t"
+    _ => c
+  }
+}
+
+/// ex: class_char("]") == "\\]"
+/// ex: class_char("\t") == "\\t"
+fn class_char(c: str) -> str {
+  match c {
+    "\\" | "]" | "[" => "\\{c}"
+    "\n" => "\\n"
+    "\t" => "\\t"
+    _ => c
+  }
+}
+
+/// The GBNF text of the grammar.
+pub fn emit(grammar: shape.Published) -> str {
+  let form = Gbnf {}
+  var out = [
+    "# The grammar of core Stilt, as GBNF for llama.cpp.",
+    "# Generated from reference/03-syntax.md and 02-lexical.md by `just grammar-generate`. Do not edit.",
+    "# Each token ends with the spaces and comments after it, and a newline is the separator",
+    "# of statements and items where lexical.terminator-insertion inserts a terminator (see",
+    "# syntax.published-grammars.loosening).", "",
+  ]
+  // `blanks` is written as a recursion, which no regular expression is. llguidance's
+  // converter reads a rule that holds only characters as one lexeme, so with a recursive
+  // `blanks`, every token and every nonterminal stays a rule.
+  out.push("blanks ::= (blank blanks)?")
+  out.push("blank ::= {form.rx(lexicon.blank())}")
+  out.push("{form.name(shape.NEWLINE)} ::= {form.rx(lexicon.newline())} blanks")
+  for (name, body) in grammar.rules {
+    let lead = if name == "root" { "blanks " } else { "" }
+    out.push("{form.name(name)} ::= {lead}{render.body(form, body)}")
+  }
+  for (text, name) in grammar.literals {
+    let lead = if grammar.continuing.contains(text) { "nl* " } else { "" }
+    let trail = if shape.ends_statement(text) { "" } else { " nl*" }
+    out.push("{form.name(name)} ::= {lead}{form.rx(lexicon.Lit(text))} blanks{trail}")
+  }
+  for (name, spellings) in grammar.choices {
+    let (before, after) = shape.choice_layout(grammar.continuing, spellings)
+    let lead = if before { "nl* " } else { "" }
+    let trail = if after { " nl*" } else { "" }
+    let lexeme = form.name("{name}_lexeme")
+    out.push("{form.name(name)} ::= {lead}{lexeme} blanks{trail}")
+    out.push("{lexeme} ::= {" | ".join(spellings.map(|t| form.rx(lexicon.Lit(t))))}")
+  }
+  for (name, rx) in lexicon.lexemes() {
+    let trail = if shape.ENDING_LEXEMES.contains(name) { "" } else { " nl*" }
+    let lexeme = form.name("{name}_lexeme")
+    out.push("{form.name(name)} ::= {lexeme} blanks{trail}")
+    out.push("{lexeme} ::= {form.rx(rx)}")
+  }
+  "{"\n".join(out)}\n"
+}

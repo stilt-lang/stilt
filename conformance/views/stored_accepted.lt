@@ -1,0 +1,30 @@
+//~ tier: advanced
+//~ rule: views.view-types, views.across-calls, views.fixed
+//~ stdout:
+//~ | Some("ab") 2
+//~ | 2 4 2 7
+
+use std.view
+
+// An `Option` may hold a view, and a generic function may take one. An iterator's elements may
+// be views, and a generic function may take a closure that captures one. A type of the
+// program's own named `View` is no view.
+fn maybe(s: str, flag: bool) -> Option<view.View<str>> {
+  if flag { Some(view.View.all(s)) } else { None }
+}
+
+fn id<T>(x: T) -> T { x }
+
+fn lens(it: view.Iter<view.View<str>>) -> i64 { it.fold(0, |n, v| n + v.len()) }
+
+type View = { n: i64 }
+
+type Holder = { inner: View }
+
+fn main() / io {
+  let v = id(view.View.all("ab"))
+  print("{maybe("ab", true)} {v.len()}")
+  let f = id(|| v.len())
+  let h = Holder { inner: View { n: 7 } }
+  print("{f()} {lens(view.Iter.of(["ab", "cd"]).map(|s| view.View.all(s)))} {view.Iter.of(["xyz"]).map(|s| view.View.of(s, 1, 3)).fold(0, |n, w| n + w.len())} {h.inner.n}")
+}

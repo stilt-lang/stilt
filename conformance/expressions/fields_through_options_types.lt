@@ -1,0 +1,13 @@
+//~ rule: types.known-types, types.option-field-types
+
+type Address = { city: str }
+type Person = { address: Option<Address> }
+
+fn city(p: Person) -> str {
+  p.address.city //~ ERROR E0311
+}
+
+fn unknown() {
+  let o = None
+  let _ = o.city //~ ERROR E0312
+}

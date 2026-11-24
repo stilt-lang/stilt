@@ -1,0 +1,21 @@
+//~ rule: types.expected-types, expressions.match, patterns.arm-types
+
+fn arm(n: i64) -> i64 {
+  let v = match n {
+    0 => 1
+    _ => {
+      "many" //~ ERROR E0311
+    }
+  }
+  v
+}
+
+fn annotated(n: i64) -> i64 {
+  let v: i64 = match n {
+    0 => {
+      "none" //~ ERROR E0311
+    }
+    _ => 2
+  }
+  v
+}

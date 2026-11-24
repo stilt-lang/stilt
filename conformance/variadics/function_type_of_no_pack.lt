@@ -1,0 +1,11 @@
+//~ tier: advanced
+//~ rule: variadics.type-spreads, errors.error-type
+
+// A function type whose parameter spreads a name that names nothing has a
+// number of parameters that nothing gives, so it is the error type, as such a
+// tuple is: neither a call of it nor a closure given for it reports more.
+fn apply<..Ts, R>(f: fn(..Tz) -> R, args: (..Ts)) -> R { f(..args) } //~ ERROR E0211
+
+fn main() / io {
+  print("{apply(|a, b| a + b, (2, 3))}")
+}

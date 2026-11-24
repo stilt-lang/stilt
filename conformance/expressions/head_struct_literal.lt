@@ -1,0 +1,10 @@
+//~ rule: syntax.heads, expressions.head-contents
+
+type Point = { x: i64, y: i64 }
+
+fn at_origin(p: Point) -> bool {
+  if p == Point { x: 0, y: 0 } { //~ ERROR E0100
+    return true
+  }
+  false
+}

@@ -1,0 +1,5 @@
+//~ rule: lexical.commented-out-code, errors.warnings-with-errors
+fn broken() -> i64 {
+  // let retries = 3 //~ WARN W0001
+  "one" //~ ERROR E0311
+}

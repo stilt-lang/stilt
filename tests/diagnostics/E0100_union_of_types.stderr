@@ -1,0 +1,9 @@
+── SYNTAX ERROR ────────────────────────── E0100_union_of_types.lt:1:11  [E0100]
+
+Stilt's variant type names each case, as `type Id = | Name(str) | Number(i64)`:
+
+  1 │ type Id = str | i64
+    │           ^^^
+
+A variant type is `type`, its name, `=` and its variants, each after `|`, each
+holding its own values.

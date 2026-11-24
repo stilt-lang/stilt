@@ -1,0 +1,30 @@
+GET /k/greeting
+-> 404 Not Found
+no key greeting
+PUT /k/greeting hello, world
+-> 201 Created
+PUT /k/count 1
+-> 201 Created
+GET /k/greeting
+-> 200 OK
+hello, world
+PUT /k/count 2
+-> 200 OK
+GET /
+-> 200 OK
+count
+greeting
+GET /stats
+-> 200 OK
+{"keys":2,"writes":3}
+DELETE /k/greeting
+-> 204 No Content
+DELETE /k/greeting
+-> 404 Not Found
+no key greeting
+POST /k/count 3
+-> 405 Method Not Allowed
+POST isn't a method of a key
+GET /nowhere
+-> 404 Not Found
+no such route

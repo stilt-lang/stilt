@@ -1,0 +1,5 @@
+//~ rule: syntax.declarations, expressions.arguments, declarations.parameters
+
+fn greet(name: str = "world") -> str { //~ ERROR E0100
+  "hello, {name}"
+}

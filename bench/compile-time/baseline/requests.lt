@@ -1,0 +1,108 @@
+// The requests: how many, how fast, which services and methods answered them, and the slowest.
+
+use rows
+use table
+use events.entry
+use events.web
+
+/// The requests that entries hold, each with its entry.
+pub fn of(es: List<entry.Entry>) -> List<(entry.Entry, web.Request)> {
+  es.filter_map(
+    |e| match e.event {
+      Http(r) => Some((e, r))
+      _ => None
+    },
+  )
+}
+
+/// The value at the `p`th percentile of the sorted values, by the nearest rank, or 0 when there
+/// are none.
+/// ex: percentile([1, 2, 3, 4], 50) == 2
+/// ex: percentile([1, 2, 3, 4], 99) == 4
+/// ex: percentile([], 50) == 0
+pub fn percentile(sorted: List<i64>, p: i64) -> i64 {
+  if sorted.is_empty() { return 0 }
+  let rank = (p * sorted.len() + 99) / 100
+  sorted[rank.max(1) - 1]
+}
+
+/// How many requests, how many failed, the time they took on average and at three percentiles,
+/// the services that answered them, the methods, and the five slowest.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  let rs = of(es)
+  var out = ["== requests =="]
+  if rs.is_empty() {
+    out.push("no requests")
+    return out
+  }
+  let times = rs.map(|(_, r)| r.millis).sorted()
+  let failed = rs.count(|(_, r)| r.failed())
+  out.push("{rs.len()} requests, {failed} failed, {i64.sum(times) / rs.len()}ms on average")
+  out.push("p50 {percentile(times, 50)}ms, p90 {percentile(times, 90)}ms, p99 {percentile(times, 99)}ms")
+  out.extend(table.render(services(rs.map(.1))))
+  out.extend(table.render(routes(rs.map(.1))))
+  out.extend(table.render(statuses(rs.map(.1))))
+  let methods = [web.Get, web.Post, web.Put, web.Delete]
+  let counts = methods.map(|m| "{m.label()} {rs.count(|(_, r)| r.method == m)}")
+  out.push("by method: {", ".join(counts)}")
+  out.push("slowest:")
+  for (e, _) in rs.sorted_desc_by(|(_, r)| r.millis).take(5) { out.push("  {e.line()}") }
+  out
+}
+
+/// Each service's requests, the time they took on average and at most, and those that failed,
+/// in the order the services first appear.
+/// ex: services([]) == []
+pub fn services(rs: List<web.Request>) -> List<rows.ServiceRow> {
+  var out: List<rows.ServiceRow> = []
+  for (service, of) in rs.group_by(.service()) {
+    let ms = of.map(.millis)
+    let slowest = ms.max() else 0
+    out.push(
+      rows.ServiceRow {
+        service,
+        requests: of.len(),
+        mean: i64.sum(ms) / of.len(),
+        slowest,
+        failed: of.count(.failed()),
+      },
+    )
+  }
+  out
+}
+
+/// A path with each of its segments that is a number written `:id`.
+/// ex: route("/api/orders/7/items") == "/api/orders/:id/items"
+/// ex: route("/static/app.js") == "/static/app.js"
+pub fn route(path: str) -> str {
+  "/".join(path.split("/").map(|s| if s.is_ascii_digit() { ":id" } else { s }))
+}
+
+/// Each route's requests, the bytes they answered, the time they took on average, and those
+/// that failed, the busiest first, and of those as busy, the first to appear first.
+pub fn routes(rs: List<web.Request>) -> List<rows.RouteRow> {
+  var out: List<rows.RouteRow> = []
+  for (route, of) in rs.group_by(|r| route(r.path)) {
+    let mean = i64.sum(of.map(.millis)) / of.len()
+    out.push(
+      rows.RouteRow {
+        route,
+        requests: of.len(),
+        bytes: i64.sum(of.map(.bytes)),
+        mean,
+        failed: of.count(.failed()),
+      },
+    )
+  }
+  out.sorted_desc_by(.requests)
+}
+
+/// Each status's requests and their share of all, in the order of the statuses.
+/// ex: statuses([]) == []
+pub fn statuses(rs: List<web.Request>) -> List<rows.StatusRow> {
+  var out: List<rows.StatusRow> = []
+  for (status, of) in rs.group_by(.status) {
+    out.push(rows.StatusRow { status, requests: of.len(), share: rows.percent(of.len(), rs.len()) })
+  }
+  out.sorted_by(.status)
+}

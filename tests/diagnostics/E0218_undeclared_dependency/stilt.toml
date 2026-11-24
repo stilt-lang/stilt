@@ -1,0 +1,5 @@
+[package]
+name = "app"
+
+[dependencies]
+http = { path = "deps/http" }

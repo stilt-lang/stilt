@@ -1,0 +1,18 @@
+//~ rule: conformance.annotations, conformance.header-region, lexical.line-comments, lexical.doc-comments, lexical.annotations, lexical.commented-out-code, program.doc-comments
+//~ run-output: "2"
+
+fn main() / io {
+  // print("old") //~ WARN W0001
+  // fallthrough
+  // 42
+  // -1
+  // TODO: tidy this up
+  // let x = 1 //~ WARN W0001
+  print("{add_one(1)}")
+}
+
+// fn add_two(x: i64) -> i64 { x + 2 } //~ WARN W0001
+/// Adds one, as in `add_one(1)`.
+fn add_one(x: i64) -> i64 {
+  x + 1 // x + 2 //~ WARN W0001
+}

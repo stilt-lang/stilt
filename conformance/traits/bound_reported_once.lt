@@ -1,0 +1,7 @@
+//~ rule: traits.bound-reported-once, traits.required-traits, std.map-key-bounds
+
+fn total(m: Map<f64, i64>) -> i64 {
+  let a = m[1.0] //~ ERROR E0318
+  let b = m[2.0]
+  a + b
+}

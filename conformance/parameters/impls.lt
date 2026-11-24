@@ -1,0 +1,46 @@
+//~ tier: advanced
+//~ rule: traits.trait-parameters, traits.trait-arguments, traits.bound-arguments
+
+trait Convert<T> {
+  fn convert(self) -> T
+}
+
+type Celsius = { degrees: f64 }
+type Meters = { length: f64 }
+type Grams = { weight: i64 }
+
+impl Convert<f64> for Celsius {
+  fn convert(self) -> f64 { self.degrees }
+}
+
+// One trait parameter, two arguments.
+impl Convert<f64, str> for Meters { //~ ERROR E0300
+  fn convert(self) -> f64 { self.length }
+}
+
+// The parameter is fixed by the type, so a second impl overlaps.
+impl Convert<str> for Celsius { //~ ERROR E0304
+  fn convert(self) -> str { "{self.degrees}" }
+}
+
+// `T` is no argument of `Grams`.
+impl<T> Convert<List<T>> for Grams { //~ ERROR E0302
+  fn convert(self) -> List<T> { [] }
+}
+
+trait Pair<A, B> {
+  fn left(self) -> A
+  fn right(self) -> B
+}
+
+fn lefts<P: Pair<i64>>(p: P) -> i64 { p.left() } //~ ERROR E0300
+
+trait Holder<Item> {
+  fn hold<Item>(self, x: Item) -> Item //~ ERROR E0208
+}
+
+type Box = { inner: i64 }
+
+impl Convert<i64> for Box {
+  fn convert(self) -> f64 { 0.0 } //~ ERROR E0307
+}

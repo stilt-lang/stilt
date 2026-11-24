@@ -1,0 +1,6 @@
+//~ rule: effects.missing-effects, effects.one-error-type
+
+fn f() {
+  raise "y" //~ ERROR E0502
+  raise 1
+}

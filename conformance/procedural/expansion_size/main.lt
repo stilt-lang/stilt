@@ -1,0 +1,12 @@
+//~ tier: meta
+//~ rule: macros.expansion-size
+
+// A procedural macro's result counts toward the tokens of the use's
+// expansions, which hold at most 100,000.
+meta use grow
+
+fn doubled() -> i64 { grow.doubled!() } //~ ERROR E0231
+
+fn small() -> i64 { grow.small!() }
+
+fn main() {}

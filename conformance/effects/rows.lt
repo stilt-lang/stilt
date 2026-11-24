@@ -1,0 +1,51 @@
+//~ rule: syntax.rows, effects.rows, effects.inference, effects.non-escaping-parameters
+//~ stdout:
+//~ | 20
+//~ | in closure 3
+//~ | 4
+//~ | applying to 4
+//~ | 45
+//~ | [1, 2]
+//~ | bad x
+//~ | []
+//~ | Some(7) None
+
+type Failure = | Bad(str)
+
+fn apply(x: i64, f: fn(i64) -> i64) -> i64 { f(x) }
+
+fn logged(x: i64, f: fn(i64) -> i64) -> i64 / io {
+  print("applying to {x}")
+  f(x)
+}
+
+fn parse(s: str) -> i64 / raise<Failure> { s.to_i64() else raise Bad(s) }
+
+fn parse_all(xs: List<str>) -> List<i64> / raise<Failure> { try xs.map(|s| parse(s)) }
+
+fn attempt<E>(f: fn() -> i64 / raise<E>) -> Option<i64> {
+  try Some(f()) catch _ because "every failure becomes None" => None
+}
+
+fn main() / io {
+  let pure = apply(2, |n| n * 10)
+  print("{pure}")
+  let shown = apply(3, |n| {
+    print("in closure {n}")
+    n + 1
+  })
+  print("{shown}")
+  let value = try logged(4, |n| parse("{n}5")) catch Bad(_) => 0
+  print("{value}")
+  let all = try parse_all(["1", "2"]) catch Bad(_) => []
+  print("{all}")
+  let parsed = try parse_all(["1", "x", "y"])
+    catch Bad(s) => {
+    print("bad {s}")
+    []
+  }
+  print("{parsed}")
+  let seven = attempt(|| try parse("7"))
+  let none = attempt(|| try parse("q"))
+  print("{seven} {none}")
+}

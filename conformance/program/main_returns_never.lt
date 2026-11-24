@@ -1,0 +1,5 @@
+//~ rule: program.main
+
+fn main() -> Never / io { //~ ERROR E0310
+  exit(0)
+}

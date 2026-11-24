@@ -1,0 +1,18 @@
+//~ tier: meta
+//~ rule: meta.building
+
+use std.meta
+
+// `build`'s argument is polymorphic: a closure bound to a local first has
+// one type, which isn't.
+fn zeroed<T>(value: T) -> T {
+  match T.shape() {
+    Record(fields) => {
+      let zero = |f: meta.Field<T, i64>| 0
+      fields.build(zero) //~ ERROR E0311
+    }
+    _ => value
+  }
+}
+
+fn main() {}

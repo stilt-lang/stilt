@@ -1,0 +1,23 @@
+// A binary expression that doesn't fit in 100 columns breaks after each of its operators, a level
+// in, and an `else` fallback breaks before its `else`. An operator of another precedence inside it
+// is laid out by itself. `>` and `>>` never end a line (lexical.continuing-expression). A condition
+// that continues puts its lines two levels in, so that the body is not mistaken for part of it.
+fn main() / io {
+  let total = first_price * first_quantity +
+    second_price * second_quantity +
+    third_price * third_quantity
+  let fallback = lookup_the_customer_name_in_the_table(customer_identifier)
+    else default_customer_name_for_orders
+  let big = first_value_in_the_comparison_that_is_long > second_value_in_the_comparison_that_is_long_enough
+  if first_condition_of_the_check &&
+      second_condition_of_the_check &&
+      third_condition_of_the_check_too {
+    print("all")
+    print("done")
+  }
+  while remaining_items_in_the_queue > 0 ||
+      the_producer_is_still_running_and_might_add_more_items_now {
+    print("waiting")
+    print("again")
+  }
+}

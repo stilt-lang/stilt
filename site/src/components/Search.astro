@@ -1,0 +1,131 @@
+---
+// Search over every page, through the index that Pagefind writes after the build into
+// `/pagefind/`, loaded the first time the dialog opens. ⌘K, Ctrl+K or `/` opens it.
+---
+
+<dialog class="search panel" aria-label="Search the site">
+  <form method="dialog" class="flex items-center gap-3 border-b border-rule px-4">
+    <svg viewBox="0 0 20 20" class="h-4 w-4 flex-none text-muted" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"></circle><path d="m13.2 13.2 3.6 3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+    <input
+      type="search"
+      class="h-14 flex-1 bg-transparent text-base outline-none placeholder:text-muted"
+      placeholder="Search the guide, the Reference, the library…"
+      aria-label="Search"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button class="kbd" value="close" aria-label="Close">esc</button>
+  </form>
+  <ol class="results" role="listbox" aria-label="Results"></ol>
+  <p class="status px-5 py-4 text-sm text-muted">Type to search every page.</p>
+</dialog>
+
+<script>
+  interface Result {
+    url: string;
+    excerpt: string;
+    meta: { title?: string };
+    sub_results?: { url: string; title: string; excerpt: string }[];
+  }
+  interface Pagefind {
+    init(): Promise<void>;
+    debouncedSearch(q: string): Promise<{ results: { data(): Promise<Result> }[] } | null>;
+  }
+
+  const dialog = document.querySelector<HTMLDialogElement>("dialog.search")!;
+  const input = dialog.querySelector("input")!;
+  const list = dialog.querySelector<HTMLOListElement>(".results")!;
+  const status = dialog.querySelector<HTMLParagraphElement>(".status")!;
+  let pagefind: Promise<Pagefind> | null = null;
+
+  const load = () => {
+    const path = "/pagefind/pagefind.js";
+    pagefind ??= import(/* @vite-ignore */ path).then(async (p: Pagefind) => (await p.init(), p));
+    return pagefind;
+  };
+
+  const open = () => {
+    if (dialog.open) return;
+    dialog.showModal();
+    input.select();
+    load().catch(() => (status.textContent = "The search index is written by `npm run build`."));
+  };
+
+  const item = (r: { url: string; title: string; excerpt: string }, page?: string) =>
+    `<li role="option"><a href="${r.url}"><span class="title">${page ? `<span class="page">${page} ›</span> ` : ""}${r.title}</span><span class="excerpt">${r.excerpt}</span></a></li>`;
+
+  async function search(query: string) {
+    if (!query.trim()) {
+      list.innerHTML = "";
+      status.textContent = "Type to search every page.";
+      return;
+    }
+    const found = await (await load()).debouncedSearch(query);
+    if (!found) return;
+    const data = await Promise.all(found.results.slice(0, 8).map((r) => r.data()));
+    list.innerHTML = data
+      .map((d) => {
+        const title = d.meta.title ?? d.url;
+        const subs = (d.sub_results ?? []).filter((s) => s.url !== d.url).slice(0, 2);
+        return item({ url: d.url, title, excerpt: d.excerpt }) + subs.map((s) => item(s, title)).join("");
+      })
+      .join("");
+    status.textContent = data.length ? "" : `Nothing found for “${query}”.`;
+  }
+
+  const links = () => [...list.querySelectorAll("a")];
+  input.addEventListener("input", () => search(input.value));
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const all = links();
+    const at = all.indexOf(document.activeElement as HTMLAnchorElement);
+    const next = event.key === "ArrowDown" ? at + 1 : at - 1;
+    if (next < 0) input.focus();
+    else all[Math.min(next, all.length - 1)]?.focus();
+  });
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+  document.addEventListener("click", (event) => {
+    if ((event.target as Element).closest("[data-search-open]")) open();
+  });
+  document.addEventListener("keydown", (event) => {
+    const typing = (event.target as Element).closest("input, textarea, [contenteditable]");
+    if ((event.key === "k" && (event.metaKey || event.ctrlKey)) || (event.key === "/" && !typing)) {
+      event.preventDefault();
+      open();
+    }
+  });
+</script>
+
+<style>
+  .search {
+    width: min(42rem, calc(100vw - 2rem));
+    max-height: min(36rem, calc(100dvh - 6rem));
+    margin: 4.5rem auto auto;
+    padding: 0;
+    color: var(--ink);
+    background: var(--ground);
+    box-shadow: 0 24px 64px -16px rgb(0 0 0 / 0.35);
+  }
+  .search::backdrop { background: color-mix(in srgb, var(--ground) 60%, transparent); backdrop-filter: blur(4px); }
+  .search input::-webkit-search-cancel-button { display: none; }
+  .results { overflow-y: auto; max-height: calc(min(36rem, 100dvh - 6rem) - 3.6rem); }
+  .results:empty { display: none; }
+  .results :global(li a) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.8rem 1.25rem;
+    border-bottom: 1px solid var(--rule);
+    text-decoration: none;
+    outline: none;
+  }
+  .results :global(li a:is(:hover, :focus)) { background: var(--surface); }
+  .results :global(.title) { font-weight: 500; font-size: 0.9375rem; color: var(--ink); }
+  .results :global(.page) { color: var(--muted); font-weight: 400; }
+  .results :global(.excerpt) { font-size: 0.875rem; color: var(--muted); line-height: 1.5; }
+  .results :global(mark) { background: var(--sky-wash); color: var(--ink); border-radius: 3px; padding: 0 0.1em; }
+  .status:empty { display: none; }
+</style>

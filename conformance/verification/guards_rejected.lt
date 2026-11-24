@@ -1,0 +1,101 @@
+//~ rule: effects.without-panic, facts.rules-of-acceptance, facts.acceptance-places, facts.known-signs, facts.guarding-tests, facts.guards, facts.closest-rule
+
+// No range loop names these indexes, so each error says what the guard needs.
+
+fn unbounded(xs: List<i64>, i: i64) -> i64 without panic {
+  if i < xs.len() { xs[i] } else { 0 } //~ ERROR E0204
+}
+
+fn another(xs: List<i64>, ys: List<i64>, i: i64) -> i64 without panic {
+  if i >= 0 && i < ys.len() { xs[i] } else { 0 } //~ ERROR E0204
+}
+
+// The statement that holds the index writes `j` after the index is read.
+fn stored(xs: List<i64>, i: i64) -> List<i64> without panic {
+  var ys = xs
+  var j = i
+  if j >= 0 && j < ys.len() { ys[j] = { j = 5; 1 } } //~ ERROR E0204
+  ys
+}
+
+fn emptied(xs: List<i64>, i: i64) -> i64 without panic {
+  var ys = xs
+  if i >= 0 && i < ys.len() {
+    ys.clear()
+    ys[i] //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+fn popped(xs: List<i64>, i: i64) -> i64 without panic {
+  var ys = xs
+  if i >= 0 && i < ys.len() {
+    let _ = ys.pop()
+    ys[i] //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+fn grow(inout xs: List<i64>) without panic { xs.push(0) }
+
+fn called(xs: List<i64>, i: i64) -> i64 without panic {
+  var ys = xs
+  if i >= 0 && i < ys.len() {
+    grow(inout ys)
+    ys[i] //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+// The index is neither a name nor a literal.
+fn next(xs: List<i64>, i: i64) -> i64 without panic {
+  if i >= 0 && i + 1 < xs.len() { xs[i + 1] } else { 0 } //~ ERROR E0204
+}
+
+fn cell(cells: List<i64>, n: i64, x: i64, y: i64) -> i64 without panic {
+  if x >= 0 && y >= 0 && y * n + x < cells.len() { cells[y * n + x] } else { 0 } //~ ERROR E0204
+}
+
+// A row is no place, so no test gives the second index below its length.
+fn grid(rows: List<List<i64>>, i: i64, j: i64) -> i64 without panic {
+  if i >= 0 && i < rows.len() && j >= 0 {
+    if j < rows[i].len() { rows[i][j] } else { 0 } //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+// The left side of `&&` guards only its right side, and the left side of `||`
+// gives its right side its negation, which an `&&` chain gives nothing.
+fn backwards(xs: List<i64>, i: i64) -> bool without panic {
+  if xs[i] > 0 && i >= 0 && i < xs.len() { true } else { false } //~ ERROR E0204
+}
+
+fn either(xs: List<i64>, i: i64) -> bool without panic {
+  i >= 0 && i < xs.len() || xs[i] > 0 //~ ERROR E0204
+}
+
+// `n = n - 1` leaves `n` no known sign.
+fn stepped_back(xs: List<i64>) -> i64 without panic {
+  var n = 0
+  n = n - 1
+  if n < xs.len() { xs[n] } else { 0 } //~ ERROR E0204
+}
+
+// Only `!P.is_empty()` gives `0 < P.len()`: neither `P.is_empty()` itself nor the
+// negation of another call does.
+fn empty_branch(xs: List<i64>) -> i64 without panic {
+  if xs.is_empty() { xs[0] } else { 0 } //~ ERROR E0204
+}
+
+fn other_call(xs: List<i64>) -> i64 without panic {
+  if !xs.contains(0) { xs[0] } else { 0 } //~ ERROR E0204
+}
+
+// A test that the list isn't empty gives no bound to another index.
+fn other_index(xs: List<i64>, i: i64) -> i64 without panic {
+  if i >= 0 && !xs.is_empty() { xs[i] } else { 0 } //~ ERROR E0204
+}

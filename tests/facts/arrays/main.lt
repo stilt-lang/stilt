@@ -1,0 +1,39 @@
+//~ tier: core
+
+// A module that only names a type with value arguments, or calls a function with value
+// parameters, stays in its tier (generics.meta-tier). An array's elements are stored inline, as a
+// record's fields are, so making, copying, reading and writing one allocate nothing; only
+// `to_list` and the calls of `map`'s argument add `alloc`, and `fill` adds `panic` (generics.array-effects).
+// An index that the size proves in range adds no `panic` (facts.range-loops). Overflow adds
+// nothing (effects.without-overflow).
+
+use std.array
+use modular
+
+fn made() -> array.Array<i64, 3> { [1, 2, 3] }
+
+fn filled() -> array.Array<i64, 4> { array.fill(0) } //~ PANIC
+
+fn copied(a: array.Array<i64, 3>) -> i64 {
+  var b = a
+  b[0] = 5 //~ PROVED bounds
+  b[1] + a[1] //~ OVERFLOW PROVED bounds
+}
+
+fn total(a: array.Array<i64, 3>) -> i64 {
+  var s = 0
+  for x in a { s += x } //~ OVERFLOW
+  s
+}
+
+fn listed(a: array.Array<i64, 3>) -> List<i64> { a.to_list() } //~ ALLOC
+
+// `map` adds nothing of its own; its argument, a closure literal, allocates (facts.allocation).
+fn tens(a: array.Array<i64, 3>) -> array.Array<i64, 3> { a.map(|x| x * 10) } //~ OVERFLOW ALLOC
+
+fn main() / io {
+  let v = made()
+  let m: modular.Mod<7> = modular.Mod { value: 3 }
+  let r = modular.add(m, m) //~ PANIC OVERFLOW
+  print("{copied(v)} {total(tens(v))} {listed(v)} {r.value} {modular.sum(filled())}") //~ PANIC OVERFLOW ALLOC CONSOLE
+}

@@ -1,0 +1,12 @@
+── EXPANSION TOO LARGE ───────────── E0231_expansion_too_large.lt:12:11  [E0231]
+
+The expansions of `q8!` hold more than 100,000 tokens once `q0!` expands in
+them:
+
+  12 │   print("{q8!()}")
+     │           ^^^^^
+
+A use's expansions, its own and those nested in it, hold at most 100,000 tokens
+in all. A macro that uses another several times at each level multiplies its
+code at each one: use it once and reuse its result, or build the repeated part
+in a function.

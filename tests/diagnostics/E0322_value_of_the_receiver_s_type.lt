@@ -1,0 +1,5 @@
+fn main() / io {
+  var names = ["Grace", "Ada"]
+  names.reversed()
+  print("{names}")
+}

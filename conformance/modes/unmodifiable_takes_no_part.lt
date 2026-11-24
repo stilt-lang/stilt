@@ -1,0 +1,25 @@
+//~ rule: expressions.capture, modes.closures, modes.what-can-be-modified
+
+fn swap(inout x: i64, inout y: i64) {
+  let t = x
+  x = y
+  y = t
+}
+
+fn captured(inout xs: List<i64>) {
+  for x in xs {
+    let add = || xs.push(x) //~ ERROR E0403
+  }
+}
+
+fn twice() {
+  let k = 1
+  swap(inout k, inout k) //~ ERROR E0403 ERROR E0403
+}
+
+fn iterated() {
+  let ys = [1]
+  for y in ys {
+    ys.push(y) //~ ERROR E0403
+  }
+}

@@ -1,0 +1,22 @@
+//~ rule: effects.function-values
+
+fn run(f: fn() / io) / io { f() }
+
+fn run_all(fs: List<fn() / io>) / io { for f in fs { f() } }
+
+fn quiet() {}
+
+fn loud() / io { print("loud") }
+
+fn run_pure(fs: List<fn()>) / io {
+  run_all(fs) //~ ERROR E0311
+}
+
+fn main() / io {
+  run(quiet)
+  run_all([quiet, || print("hi")])
+  let either = if true { quiet } else { loud }
+  either()
+  let both = [quiet, loud]
+  run_all(both)
+}

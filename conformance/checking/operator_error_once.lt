@@ -1,0 +1,9 @@
+//~ rule: expressions.no-string-plus, errors.root-causes
+
+fn greet(a: str, b: str) -> str {
+  a + " " + b //~ ERROR E0317
+}
+
+fn negate(s: str) -> str {
+  -(-s) //~ ERROR E0317
+}

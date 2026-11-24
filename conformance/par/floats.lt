@@ -1,0 +1,14 @@
+//~ rule: par.fold-tree
+//~ stdout:
+//~ | 0.0 1.0
+
+use std.par
+
+fn main() / io {
+  // The tree adds (1e16 + 1.0) + (-1e16 + 1.0), and each 1.0 is lost to
+  // rounding; from left to right, the last 1.0 is added to 0.0 and kept.
+  let xs = [1e16, 1.0, -1e16, 1.0]
+  let tree = par.fold(xs, 0.0, |p, q| p + q)
+  let left = xs.fold(0.0, |p, q| p + q)
+  print("{tree} {left}")
+}

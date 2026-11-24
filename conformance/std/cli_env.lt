@@ -1,0 +1,8 @@
+//~ rule: std.cli
+//~ run-output: "true None None None None"
+
+use std.cli
+
+fn main() / io {
+  print("{cli.env("PATH").is_some()} {cli.env("STILT_NEVER_SET")} {cli.env("")} {cli.env("PATH=x")} {cli.env("PA\0TH")}")
+}

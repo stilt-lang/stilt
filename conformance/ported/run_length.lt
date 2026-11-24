@@ -1,0 +1,47 @@
+//~ rule: std.str-building, std.str-classes, numbers.parsing
+//~ stdout:
+//~ | 12W1B12W3B24W1B14W
+//~ | true
+//~ | 67 characters in 18
+
+// Rosetta Code, Run-length encoding: each run of one character is written as its length and the
+// character. The task's string encodes as 12W1B12W3B24W1B14W, and decoding gives it back.
+
+const INPUT: str = "WWWWWWWWWWWWBWWWWWWWWWWWWBBBWWWWWWWWWWWWWWWWWWWWWWWWBWWWWWWWWWWWWWW"
+
+fn encode(text: str) -> str {
+  var out = ""
+  var run = ""
+  var count = 0
+  for c in text.chars() {
+    if c != run && count > 0 {
+      out = "{out}{count}{run}"
+      count = 0
+    }
+    run = c
+    count += 1
+  }
+  if count > 0 { out = "{out}{count}{run}" }
+  out
+}
+
+fn decode(code: str) -> str {
+  var out = ""
+  var digits = ""
+  for c in code.chars() {
+    if c.is_ascii_digit() {
+      digits = "{digits}{c}"
+    } else {
+      out = "{out}{c.repeat(digits.to_i64() else 1)}"
+      digits = ""
+    }
+  }
+  out
+}
+
+fn main() / io {
+  let code = encode(INPUT)
+  print(code)
+  print("{decode(code) == INPUT}")
+  print("{INPUT.len()} characters in {code.len()}")
+}

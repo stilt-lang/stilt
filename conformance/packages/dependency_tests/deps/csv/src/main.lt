@@ -1,0 +1,6 @@
+/// prop: |n: i64| n < 0
+pub fn rows() -> i64 { 3 }
+
+test "counts wrong" {
+  assert rows() == 4
+}

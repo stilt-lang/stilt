@@ -1,0 +1,16 @@
+//~ rule: syntax.catch-attachment, effects.catch-around-row-variables
+//~ run-output: "1 7"
+
+fn later<e>(escaping g: fn() -> i64 / e, ready: bool) -> fn() -> i64 / e {
+  try {
+    let k = || g()
+    if ready { k } else { raise "not ready" }
+  }
+    catch _ because "a source that isn't ready gives a constant" => || 7
+}
+
+fn main() / io {
+  let a = later(|| 1, true)
+  let b = later(|| 1, false)
+  print("{a()} {b()}")
+}

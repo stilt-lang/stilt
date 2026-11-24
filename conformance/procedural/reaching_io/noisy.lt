@@ -1,0 +1,14 @@
+pub trait Bark {
+  fn bark(self) -> i64
+}
+
+pub type Dog = { size: i64 }
+
+pub fn dog() -> Dog { Dog { size: 3 } }
+
+impl Bark for Dog {
+  fn bark(self) -> i64 {
+    print("woof") //~ ERROR E0502
+    self.size
+  }
+}

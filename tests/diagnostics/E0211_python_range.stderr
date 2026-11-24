@@ -1,0 +1,14 @@
+── UNKNOWN NAME ──────────────────────────── E0211_python_range.lt:2:12  [E0211]
+
+Stilt has no `range`: a `for` goes through a range, as `for i in 0..n`:
+
+  2 │   for i in range(3) {
+    │            ^^^^^
+
+`0..n` counts from 0 up to `n`, leaving `n` out, and `0..=n` counts to `n` too.
+A range is written only as what a `for` goes through.
+
+To fix it, write a range:
+
+  2 │   for i in 0..3 {
+    │            ~~~~

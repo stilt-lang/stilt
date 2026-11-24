@@ -1,0 +1,19 @@
+use std.meta
+
+type Job = { name: str, run: fn() -> i64 }
+
+fn leaves<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var total = 0
+      for f in fields { total += leaves(f.get(value)) }
+      total
+    }
+    _ => 1
+  }
+}
+
+fn main() / io {
+  let job = Job { name: "build", run: || 1 }
+  print("{leaves(job)}")
+}

@@ -1,0 +1,17 @@
+//~ rule: std.process-commands
+//~ stdout:
+//~ | Command { program: "sh", args: [], env: [], dir: "", input: "" }
+//~ | ["-c", "exit 0", "x"]
+//~ | [("A", Some("1")), ("B", None), ("A", None)]
+//~ | /tmp hi
+
+use std.process
+
+fn main() / io {
+  let c = process.Command.new("sh")
+  print("{c}")
+  print("{c.with_args(["-c", "exit 0"]).with_arg("x").args}")
+  print("{c.with_env("A", "1").without_env("B").without_env("A").env}")
+  let d = c.with_dir("/tmp").with_input("hi")
+  print("{d.dir} {d.input}")
+}

@@ -1,0 +1,9 @@
+//~ tier: advanced
+//~ rule: effects.other-effects, tasks.async
+// `async` is an effect, written in a row as `io` is, no longer a word
+// reserved for a later tier (tasks.async and tasks.advanced-tier), which the module's tier
+// follows.
+
+fn fetch() / async {}
+
+fn main() {}

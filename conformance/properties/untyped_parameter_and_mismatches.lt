@@ -1,0 +1,5 @@
+//~ rule: tests.property-form
+// The parameter has no type, so the property gives E0332 there, and nothing else: the two
+// mismatches its body would have, were `n` an `i64`, go unreported.
+/// prop: |n| twice(n) == "a" || twice(n) == "b" //~ ERROR E0332
+fn twice(n: i64) -> i64 { n * 2 }

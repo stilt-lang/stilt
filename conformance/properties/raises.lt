@@ -1,0 +1,7 @@
+//~ rule: tests.property-checking, tests.running-cases
+
+/// Fails on numbers above 10.
+/// prop: |x: i64| { try check(x); true } //~ FAIL
+/// prop: |x: i64| { try check(x % 10); true } //~ PASS
+/// prop: |x: i64| { try check(x) catch _ because "a big one passes too" => (); true } //~ PASS
+fn check(x: i64) / raise<str> { if x > 10 { raise "{x} is too big" } }

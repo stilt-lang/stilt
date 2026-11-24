@@ -1,0 +1,35 @@
+---
+// The reader's choice of theme: the system's, light or dark, kept in the browser's storage.
+---
+
+<div class="seg" role="radiogroup" aria-label="Theme" data-theme-choice>
+  <button type="button" role="radio" aria-checked="true" data-value="system" aria-label="As the system is">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"></rect><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
+  </button>
+  <button type="button" role="radio" aria-checked="false" data-value="light" aria-label="Light">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
+  </button>
+  <button type="button" role="radio" aria-checked="false" data-value="dark" aria-label="Dark">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.8 5.8 0 1 0 7.1 7.1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+  </button>
+</div>
+
+<script>
+  const group = document.querySelector<HTMLElement>("[data-theme-choice]")!;
+  const buttons = [...group.querySelectorAll<HTMLButtonElement>("button")];
+  const show = (value: string) => {
+    for (const b of buttons) b.setAttribute("aria-checked", String(b.dataset.value === value));
+  };
+  const choose = (value: string) => {
+    if (value === "system") {
+      localStorage.removeItem("theme");
+      delete document.documentElement.dataset.theme;
+    } else {
+      localStorage.setItem("theme", value);
+      document.documentElement.dataset.theme = value;
+    }
+    show(value);
+  };
+  show(localStorage.getItem("theme") ?? "system");
+  for (const b of buttons) b.addEventListener("click", () => choose(b.dataset.value!));
+</script>

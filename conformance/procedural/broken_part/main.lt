@@ -1,0 +1,8 @@
+//~ tier: meta
+//~ rule: macros.expansion-order, errors.resuming
+
+// The part that breaks ends before `pub macro`, which `tools` declares; since
+// `tools` has an error, the use expands to nothing and reports nothing.
+meta use tools
+
+fn main() / io { print("{tools.one!()}") }

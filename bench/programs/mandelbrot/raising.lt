@@ -1,0 +1,32 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+
+use std.cli
+
+type Fail = | Fail
+
+fn main() / {io, raise<Fail>} {
+  let size = (cli.arg(0) else "").to_i64() else 600
+  let scale = size.to_f64()
+  var inside = 0
+  var escapes = 0
+  for y in 0..size {
+    let ci = 2.0 * y.to_f64() / scale - 1.0
+    for x in 0..size {
+      let cr = 2.0 * x.to_f64() / scale - 1.5
+      var zr = 0.0
+      var zi = 0.0
+      var i = 0
+      var escaped = false
+      while i < 50 && !escaped {
+        let next = zr * zr - zi * zi + cr
+        zi = 2.0 * zr * zi + ci
+        zr = next
+        if zr * zr + zi * zi > 4.0 { escaped = true }
+        i += 1
+      }
+      if escaped { escapes += i } else { inside += 1 }
+    }
+  }
+  print("{inside} points inside, {escapes} iterations to escape")
+}

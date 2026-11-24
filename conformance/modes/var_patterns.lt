@@ -1,0 +1,15 @@
+//~ rule: values.let-and-var, patterns.var-bindings, modes.what-can-be-modified
+//~ run-output: "11 22 P { x: 2, y: 2 } P { x: 1, y: 2 }"
+
+type P = { x: i64, y: i64 }
+
+fn main() / io {
+  var (a, b) = (1, 2)
+  a += 10
+  b += 20
+  let p = P { x: 1, y: 2 }
+  var P { x, y } = p
+  x += 1
+  let q = P { x, y }
+  print("{a} {b} {q} {p}")
+}

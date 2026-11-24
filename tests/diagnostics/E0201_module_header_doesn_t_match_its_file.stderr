@@ -1,0 +1,14 @@
+── MODULE HEADER DOESN'T MATCH ITS FILE ── E0201_module_header_doesn_t_match_its_file.lt:1:8  [E0201]
+
+This file is module `main`, but its header says `orders`:
+
+  1 │ module orders
+    │        ^^^^^^
+
+A module's name comes from its file's path, so its header names the module the
+file is. Change the header, or rename the file.
+
+To fix it, name the module `main`:
+
+  1 │ module main
+    │        ~~~~

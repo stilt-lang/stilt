@@ -1,0 +1,24 @@
+//~ rule: patterns.var-bindings, modes.what-can-be-modified
+
+fn bump(pair: (i64, i64)) -> i64 {
+  let (a, b) = pair
+  a += 1 //~ ERROR E0403
+  a + b
+}
+
+fn rename(o: Option<str>) -> str {
+  match o {
+    Some(s) => {
+      s = "renamed" //~ ERROR E0403
+      s
+    }
+    None => ""
+  }
+}
+
+fn rebound(pair: (i64, i64)) -> i64 {
+  let (a, b) = pair
+  var a = a
+  a += 1
+  a + b
+}

@@ -1,0 +1,3 @@
+fn shown<T>(x: T) -> str where T: Show { "{x}" }
+
+fn main() {}

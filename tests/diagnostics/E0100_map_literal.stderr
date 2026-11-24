@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────────────────────── E0100_map_literal.lt:2:20  [E0100]
+
+Stilt has no map literal: `Map.from_entries` builds a map from pairs:
+
+  2 │   let ages = {"ada": 36, "alan": 41}
+    │                    ^
+
+A map is built from a list of `(key, value)` pairs, or with `Map.new()` and
+`m[k] = v`.
+
+To fix it, write `Map.from_entries`:
+
+  2 │   let ages = Map.from_entries([("ada", 36), ("alan", 41)])
+    │              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

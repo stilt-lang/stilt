@@ -1,0 +1,37 @@
+//~ tier: meta
+//~ rule: syntax.macro-uses, macros.part-forms, macros.cursor
+//~ stdout:
+//~ | 3
+//~ | 7
+//~ | 105
+//~ | 2
+//~ | 3 ;
+
+// A macro's input has no terminator at its top level, as inside `( … )`, so
+// a newline before `+` continues the expression, in a part, in what a cursor
+// reads and in a trailing block; inside a `{ … }` group among its tokens, a
+// newline ends a statement again. A `;` written first in a group is a token,
+// since no newline inserted it (lexical.terminator-positions).
+meta use lines
+
+fn main() / io {
+  let a = 1
+  let b = 2
+  let sum = lines.same!(a
+    + b)
+  print("{sum}")
+  let read = lines.read!(a
+    + b * 3)
+  print("{read}")
+  let after = lines.after!(1) {
+    a
+      + 4
+  }
+  print("{after}")
+  let block = lines.same!({
+    let x = a
+    x + 1
+  })
+  print("{block}")
+  print(lines.inside!((; a b)))
+}

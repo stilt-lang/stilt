@@ -1,0 +1,47 @@
+//~ rule: expressions.trailing-commas, declarations.records, declarations.variant-types, effects.escaping-parameters
+//~ stdout:
+//~ | 3 (1,) 1 [1, 2]
+//~ | P { a: 1, b: 2 } 3 1 A(4, "x")
+//~ | {"k": 1} 1 4 5 6 1a true
+
+type P = { a: i64, b: i64 }
+
+type V<T,> = | A(T, str) | B
+
+impl<T,> V<T,> {
+  fn is_a(self) -> bool {
+    match self {
+      A(_, _) => true
+      B => false
+    }
+  }
+}
+
+fn add(x: i64, y: i64) -> i64 { x + y }
+
+fn show_both<T: Show, U: Show,>(t: T, u: U) -> str { "{t}{u}" }
+
+fn run<e,>(escaping f: fn() -> i64 / {e,}) -> i64 / {e,} { f() }
+
+fn main() / io {
+  let n = add(1, 2)
+  let one = (1,)
+  let plain = (1)
+  let xs = [1, 2]
+  print("{n} {one} {plain} {xs}")
+  let p = P { a: 1, b: 2 }
+  let P { a, b } = p
+  let P { a: first, .. } = p
+  let (c, d) = (a, b)
+  let v: V<i64,> = A(4, "x")
+  print("{p} {c + d} {first} {v}")
+  var m: Map<str, i64,> = Map.new()
+  m["k"] = 1
+  let [h, ..] = xs else return
+  let k = match v {
+    A(k, s) => k
+    B => 0
+  }
+  let sum = |x: i64, y: i64,| x + y
+  print("{m} {h} {k} {sum(2, 3)} {run(|| 6)} {show_both(1, "a")} {v.is_a()}")
+}

@@ -1,0 +1,4 @@
+//~ rule: conformance.observables, conformance.diagnostic-objects, conformance.paths, conformance.directory-tests
+use util.text
+
+fn main() / io { print(text.greet()) }

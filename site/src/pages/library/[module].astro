@@ -1,0 +1,52 @@
+---
+// A module of the standard library, as `stilt doc --std --json` documents it: its address and
+// tier, its description, its declarations' names, then each declaration.
+import type { GetStaticPaths } from "astro";
+import Item from "../../components/Item.astro";
+import Doc from "../../layouts/Doc.astro";
+import { type Module, file, library } from "../../lib/stilt";
+import { render } from "../../lib/markdown";
+import { sidebar } from "../../lib/nav";
+
+export const getStaticPaths = (() =>
+  library().map((module) => ({ params: { module: module.address }, props: { module } }))) satisfies GetStaticPaths;
+
+const { module } = Astro.props as { module: Module };
+const href = `/library/${module.address}/`;
+const description = render(module.description, { from: file(module) });
+const headings = module.items.map((i) => ({ depth: 2, id: i.name, text: i.name }));
+---
+
+<Doc title={module.address} section="library" href={href} blocks={sidebar("library")} headings={headings}>
+  <h1 slot="title" class="title">
+    <code>{module.address}</code>
+    <span class="tier">{module.tier}</span>
+  </h1>
+  <div class="description" set:html={description.html} />
+  {
+    module.items.length > 0 && (
+      <ul class="contents">
+        {module.items.map((i) => (
+          <li>
+            <a href={`#${i.name}`}>
+              <code>{i.name}</code>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  {module.items.map((item) => <Item item={item} module={module} />)}
+</Doc>
+
+<style>
+  .title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem; margin-bottom: 1.25rem; font-size: 1.75rem; line-height: 1.25; }
+  .title code { font-weight: 600; letter-spacing: -0.02em; }
+  .tier { font-size: 0.875rem; font-weight: 400; color: var(--muted); }
+  .description :global(p + p) { margin-top: 1rem; }
+  .contents { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; list-style: none; padding: 0; margin-top: 1.5rem; }
+  .contents li { margin: 0; }
+  .contents a { font-family: var(--mono); font-size: 0.8125rem; color: var(--ink-soft); text-decoration-color: var(--rule-firm); }
+  .contents a:hover { color: var(--ink); text-decoration-color: var(--ink); }
+  .contents code { background: none; padding: 0; color: inherit; font-size: inherit; }
+</style>

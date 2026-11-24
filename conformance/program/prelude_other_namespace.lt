@@ -1,0 +1,50 @@
+//~ rule: program.prelude-namespaces, declarations.namespaces, traits.qualified-calls
+//~ stdout:
+//~ | true false
+//~ | [1, 2] 3
+//~ | Eq Show List([4]) Map
+//~ | 2 Greater Some(5) true
+
+type Token = | Eq | Show | List(List<i64>) | Map
+
+type Greater = { by: i64 }
+
+trait Some {
+  fn some(self) -> bool
+}
+
+type Pair = { a: i64, b: i64 }
+
+impl Eq for Pair {
+  fn eq(self, other: Pair) -> bool { self.a == other.a }
+}
+
+impl Some for Pair {
+  fn some(self) -> bool { self.b > 0 }
+}
+
+fn same<T: Eq>(x: T, y: T) -> bool { Eq.eq(x, y) }
+
+fn name(t: Token) -> str {
+  match t {
+    Eq => "Eq"
+    Show => "Show"
+    List(_) => "List"
+    Map => "Map"
+  }
+}
+
+fn main() / io {
+  print("{same(Pair { a: 1, b: 2 }, Pair { a: 1, b: 3 })} {same(1, 2)}")
+  let xs: List<i64> = [1, 2]
+  var m: Map<str, i64> = Map.new()
+  m["k"] = 3
+  let k = m["k"]
+  print("{xs} {k}")
+  let t = List([4])
+  print("{Eq} {Show} {t} {name(Map)}")
+  let g = Greater { by: 2 }
+  let o: Ordering = Greater
+  let p = Pair { a: 0, b: 1 }
+  print("{g.by} {o} {Some(5)} {p.some()}")
+}

@@ -1,0 +1,44 @@
+//~ tier: advanced
+//~ rule: syntax.effect-forms, tasks.async, tasks.std-task, tasks.values-in-tasks, tasks.sequential-run, tasks.same-output-under-every-handler
+//~ stdout:
+//~ | (3, 30)
+//~ | 30 30
+//~ | [1, 2, 3]
+//~ | (3, 30)
+//~ | 6
+
+use std.task
+
+fn sum(xs: List<i64>) -> i64 { xs.fold(0, |a, x| a + x) }
+
+fn both(a: List<i64>, b: List<i64>) -> (i64, i64) / async {
+  let x = task.spawn(|| sum(a))
+  let y = task.spawn(|| sum(b))
+  (x.await(), y.await())
+}
+
+// A task starts a task.
+fn nested() -> i64 / async {
+  let outer = task.spawn(|| {
+    let inner = task.spawn(|| 2)
+    inner.await() * 3
+  })
+  outer.await()
+}
+
+fn main() / io {
+  with task.threads() {
+    print("{both([1, 2], [10, 20])}")
+    let t = task.spawn(|| sum([10, 20]))
+    print("{t.await()} {t.await()}")
+    // The task's copy of `xs` isn't changed by the code that started it.
+    var xs = [1, 2, 3]
+    let seen = task.spawn(|| xs)
+    xs.push(4)
+    print("{seen.await()}")
+  }
+  with task.sequential() {
+    print("{both([1, 2], [10, 20])}")
+  }
+  print("{nested()}")
+}

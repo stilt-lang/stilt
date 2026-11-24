@@ -1,0 +1,9 @@
+── A VIEW CAN'T BE STORED ──────── E0421_a_view_can_t_be_stored.lt:3:21  [E0421]
+
+A field can't hold a view, which must not outlive what it views:
+
+  3 │ type Line = { text: view.View<str> }
+    │                     ^^^^^^^^^^^^^^
+
+A view reads a value that someone else holds, so it can't be stored where it
+could outlive it. Store the value, or the range it covers.

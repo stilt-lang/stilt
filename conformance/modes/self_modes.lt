@@ -1,0 +1,17 @@
+//~ rule: traits.methods, modes.what-can-be-modified
+
+type Counter = { n: i64 }
+
+impl Counter {
+  fn reset(self) {
+    self.n = 0 //~ ERROR E0403
+  }
+
+  fn bump(inout self) { self.n += 1 }
+
+  fn bumped(self) -> Counter {
+    var c = self
+    c.bump()
+    c
+  }
+}

@@ -1,0 +1,5 @@
+//~ rule: program.contents, values.shared
+
+fn count(s: Shared<i64>) -> i64 { //~ ERROR E0211
+  0
+}

@@ -1,0 +1,14 @@
+//~ rule: program.what-use-binds, program.one-value-namespace, declarations.wrong-kind-of-name, traits.bounds
+
+use std.fs
+
+type Point = { x: i64 }
+
+fn f() {
+  let _ = fs //~ ERROR E0212
+  let _ = Point //~ ERROR E0212
+}
+
+fn g(x: Show) {} //~ ERROR E0212
+
+fn h<T: Point>(x: T) {} //~ ERROR E0212

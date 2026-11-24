@@ -1,0 +1,44 @@
+//~ tier: advanced
+//~ rule: projections.yield, projections.call-is-place, projections.when-projection-runs, values.inout-arguments
+//~ stdout:
+//~ | 6
+//~ | 5
+//~ | -5
+//~ | 10
+
+// Hylo, Tests/EndToEndTests/TestCases/LocalInout.hylo and
+// Tests/EndToEndTests/TestCases/Projection/legacy-InoutProjection.hylo: `negated` projects an
+// integer as its negation, yielding a negated copy and writing back the negation of what the
+// caller left in it. So adding 1 to `x` and then 1 to its negation leaves `x` at 5, whose
+// negation reads -5. `change_double` doubles `x` before it yields and halves it after, so adding
+// 10 through it turns 5 into (10 + 10) / 2 = 10. The originals state these values in
+// preconditions, which this port prints. Hylo binds `inout` locals to places; Stilt has none,
+// so each such binding is an `inout` parameter of a function.
+
+fn negated(inout x: i64) -> inout i64 {
+  var n = -x
+  yield n
+  x = -n
+}
+
+fn change_double(inout x: i64) -> inout i64 {
+  x *= 2
+  yield x
+  x /= 2
+}
+
+fn add_one(inout y: i64) {
+  y = y + 1
+}
+
+fn main() / io {
+  var x = 5
+  add_one(inout x)
+  print("{x}")
+  add_one(inout negated(inout x))
+  print("{x}")
+  print("{negated(inout x)}")
+  var z = 5
+  change_double(inout z) += 10
+  print("{z}")
+}

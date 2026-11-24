@@ -1,0 +1,11 @@
+//~ rule: effects.panic-kinds, std.maps
+//~ run-output: "1"
+//~ panic: missing-key
+//~ panic-at: panic_missing_key.lt:10:11
+
+fn main() / io {
+  var m: Map<str, i64> = Map.new()
+  m["a"] = 1
+  print("{m["a"]}")
+  print("{m["b"]}")
+}

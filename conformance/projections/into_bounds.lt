@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: projections.writable-views
+//~ run-output: "[1, 2]"
+//~ panic: bounds
+//~ panic-at: into_bounds.lt:15:11
+
+use std.view
+
+fn main() / io {
+  var xs = [1, 2]
+  {
+    var v = view.into(inout xs, 0, 2)
+    print("{v}")
+  }
+  var w = view.into(inout xs, 1, 3)
+  print("{w}")
+}

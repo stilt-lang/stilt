@@ -1,0 +1,3 @@
+type Box = { v: i64 }
+
+fn wrap(g: fn() -> i64) -> Result<i64, Box> { Result.of(g) }

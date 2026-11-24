@@ -1,0 +1,13 @@
+//~ rule: docs.bodies-compared, docs.same-body, docs.duplicate-bodies, docs.warnings-in-conformance
+//~ run-output: "9 9"
+
+type Order = { qty: i64, extra: i64 }
+
+fn mass(o: Order) -> i64 { o.qty * 2 + o.extra * 3 + o.qty * o.extra }
+
+fn heft(p: Order) -> i64 { p.qty * 2 + p.extra * 3 + p.qty * p.extra } //~ WARN W0302
+
+fn main() / io {
+  let o = Order { qty: 2, extra: 1 }
+  print("{mass(o)} {heft(o)}")
+}

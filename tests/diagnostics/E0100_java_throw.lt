@@ -1,0 +1,6 @@
+type ParseError = | Negative
+
+fn checked(n: i64) -> i64 / raise<ParseError> {
+  if n < 0 { throw Negative }
+  n
+}

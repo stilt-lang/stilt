@@ -1,0 +1,10 @@
+//~ rule: errors.registry-phases
+
+type Color = | Red | Green
+
+fn name(c: Color) -> str {
+  let n: i64 = "one" //~ ERROR E0311
+  match c {
+    Red => "red"
+  }
+}

@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: views.reads-that-last, views.change-while-viewed
+
+use std.view
+
+type Doc = { lines: List<str>, n: i64 }
+
+fn bump(inout xs: List<i64>) { xs.push(0) }
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  let v = view.View.of(xs, 0, 2)
+  xs.push(4) //~ ERROR E0423
+  xs[0] = 9 //~ ERROR E0423
+  bump(inout xs) //~ ERROR E0423
+  var d = Doc { lines: ["a"], n: 0 }
+  let w = view.View.all(d.lines)
+  d = Doc { lines: [], n: 1 } //~ ERROR E0423
+  d.lines[0] = "b" //~ ERROR E0423
+  for x in view.View.all(xs) {
+    xs.push(x) //~ ERROR E0423
+  }
+  print("{v} {w}")
+}

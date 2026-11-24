@@ -1,0 +1,73 @@
+//~ rule: program.qualified-names, patterns.variants-by-type, declarations.qualified-variants
+//~ stdout:
+//~ | seq of 2, first lit a
+//~ | seq of 0
+//~ | alt of 1
+//~ | maybe lit b
+//~ | maybe empty
+//~ | rule top: seq
+//~ | rule end
+//~ | own seq 3
+//~ | none
+//~ | qualified alt of 1
+
+use ebnf
+
+type Step = | Seq(i64) | Stop
+
+type Lit = { text: str }
+
+const Empty: i64 = 0
+
+fn describe(e: ebnf.Expr) -> str {
+  match e {
+    Seq([Lit(first), ..rest]) => "seq of {rest.len() + 1}, first lit {first}"
+    Seq(items) => "seq of {items.len()}"
+    Alt(items) => "alt of {items.len()}"
+    Opt(Lit(s)) => "maybe lit {s}"
+    Opt(inner) => "maybe {describe(inner)}"
+    Lit(s) => "lit {s}"
+    Empty => "empty"
+  }
+}
+
+fn rule(r: ebnf.Rule) -> str {
+  match r {
+    ebnf.Rule { name, body: Seq(_) } => "rule {name}: seq"
+    ebnf.Rule { name, .. } => "rule {name}"
+  }
+}
+
+fn step(s: Step) -> str {
+  match s {
+    Seq(n) => "own seq {n}"
+    Stop => "stop"
+  }
+}
+
+fn count(n: i64) -> str {
+  match n {
+    Empty => "none"
+    _ => "some"
+  }
+}
+
+fn qualified(e: ebnf.Expr) -> str {
+  match e {
+    ebnf.Alt(items) => "qualified alt of {items.len()}"
+    _ => "qualified other"
+  }
+}
+
+fn main() / io {
+  print(describe(ebnf.Seq([ebnf.Lit("a"), ebnf.Empty])))
+  print(describe(ebnf.Seq([])))
+  print(describe(ebnf.Alt([ebnf.Empty])))
+  print(describe(ebnf.Opt(ebnf.Lit("b"))))
+  print(describe(ebnf.Opt(ebnf.Empty)))
+  print(rule(ebnf.Rule { name: "top", body: ebnf.Seq([]) }))
+  print(rule(ebnf.Rule { name: "end", body: ebnf.Empty }))
+  print(step(Seq(3)))
+  print(count(Empty))
+  print(qualified(ebnf.Alt([ebnf.Lit("c")])))
+}

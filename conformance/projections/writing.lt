@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: projections.reaching-written-source
+
+use std.view
+
+fn push9(inout xs: List<i64>) { xs.push(9) }
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var v = view.into(inout xs, 0, 1)
+  // While `v` writes `xs`, nothing may reach `xs`.
+  let n = xs.len() //~ ERROR E0429
+  xs[1] = 5 //~ ERROR E0429
+  for x in xs { //~ ERROR E0429
+    v[0] = x
+  }
+  let w = view.View.all(xs) //~ ERROR E0429
+  push9(inout xs) //~ ERROR E0429
+  v[0] = n
+  print("{v} {w}")
+}

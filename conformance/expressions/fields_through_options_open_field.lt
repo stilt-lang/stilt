@@ -1,0 +1,11 @@
+//~ rule: types.option-field-known
+
+type Box<T> = { v: T }
+
+fn read() -> i64 {
+  var xs = []
+  let o = Some(Box { v: xs[0] })
+  let n = o.v //~ ERROR E0312
+  xs.push(1)
+  0
+}

@@ -1,0 +1,9 @@
+── UNKNOWN MODULE ───────────────────────── E0205_unknown_module.lt:1:1  [E0205]
+
+There is no module `std.yaml`:
+
+  1 │ use std.yaml
+    │ ^^^^^^^^^^^^
+
+`use` names a module, as `use std.fs`. A dependency's modules are named after
+it, once stilt.toml lists it under `[dependencies]`.

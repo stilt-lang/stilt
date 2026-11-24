@@ -1,0 +1,12 @@
+//~ rule: syntax.longest-operands, expressions.open-ended-forms, expressions.heads
+//~ run-output: "start"
+
+fn quits() / io {
+  if return { print("never") }
+  print("never either")
+}
+
+fn main() / io {
+  print("start")
+  quits()
+}

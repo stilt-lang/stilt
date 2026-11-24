@@ -1,0 +1,9 @@
+// calls: a loop that calls a small function on each of its iterations.
+
+fn step(acc: i64, i: i64) -> i64 { (acc + i * 7) % 1000003 }
+
+fn main() / io {
+  var acc = 0
+  for i in 0..60000000 { acc = step(acc, i) }
+  print("{acc}")
+}

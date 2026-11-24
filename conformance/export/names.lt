@@ -1,0 +1,46 @@
+//~ rule: c.exported-names
+
+// An exported function's name is its C symbol, so it can't be one that the C or C++ program
+// it is linked into can already mean.
+
+pub extern fn int() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn class() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn read() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn size_t() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn _start() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn stilt_x() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn lt_x() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn f_x() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn m_x() -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn reads() -> i64 {
+  0
+}
+
+pub extern fn main() {} //~ ERROR E0352

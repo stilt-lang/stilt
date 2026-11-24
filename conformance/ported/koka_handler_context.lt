@@ -1,0 +1,32 @@
+//~ tier: advanced
+//~ rule: handlers.with, handlers.handler-types
+//~ run-output: "44"
+
+// Koka, test/algeff/noyield1.kk: the handler of `bar` answers by performing `foo`, which the
+// row of `bar` holds. That performance reaches the handler of `foo` outside the `with` of
+// `bar`, which answers 42, and not the one that `foobar` installs around its performance of
+// `bar`, which answers 1. So `bar()` is 43, and `foobar` adds its own `foo()`, which its handler
+// answers with 1: 44.
+
+effect Foo {
+  fn foo() -> i64
+}
+
+effect Bar {
+  fn bar() -> i64 / Foo
+}
+
+fn answer() -> i64 {
+  let forty_two = handler Foo { fn foo() -> i64 { 42 } }
+  let plus_one = handler Bar { fn bar() -> i64 / Foo { Foo.foo() + 1 } }
+  with forty_two, plus_one { foobar() }
+}
+
+fn foobar() -> i64 / Bar {
+  let one = handler Foo { fn foo() -> i64 { 1 } }
+  with one { Bar.bar() + Foo.foo() }
+}
+
+fn main() / io {
+  print("{answer()}")
+}

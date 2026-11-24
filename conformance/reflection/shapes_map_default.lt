@@ -1,0 +1,26 @@
+//~ tier: meta
+//~ rule: meta.shape-accessors
+//~ stdout:
+//~ | 0 1
+//~ | 1
+//~ panic: missing-key
+//~ panic-at: shapes_map_default.lt:25:11
+
+use std.meta
+
+// A map's default is not part of its shape: `make` gives a map with none.
+fn remade<T>(value: T) -> T {
+  match T.shape() {
+    Map(c) => c.make(c.get(value))
+    _ => value
+  }
+}
+
+fn main() / io {
+  var m: Map<str, i64> = Map.with_default(0)
+  m.insert("b", 1)
+  print("{m["a"]} {m["b"]}")
+  let r = remade(m)
+  print("{r["b"]}")
+  print("{r["a"]}")
+}

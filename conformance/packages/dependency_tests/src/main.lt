@@ -1,0 +1,11 @@
+use csv
+
+fn main() / io { print("{csv.rows()}") }
+
+test "adds" { //~ PASS
+  assert 1 + 1 == 2
+}
+
+test "counts the rows" { //~ PASS
+  assert csv.rows() == 3
+}

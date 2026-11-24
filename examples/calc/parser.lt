@@ -1,0 +1,210 @@
+// Parsing the tokens of a line of calc into its syntax tree, by recursive descent.
+//
+//   line    = "let" NAME "=" expr | expr | nothing
+//   expr    = "if" expr "then" expr "else" expr
+//           | "fn" "(" [ NAME { "," NAME } ] ")" "=>" expr
+//           | "let" NAME "=" expr "in" expr
+//           | binary
+//   binary  = unary { OPERATOR unary }, by the precedence of `level`
+//   unary   = ( "-" | "!" ) unary | call
+//   call    = atom { "(" [ expr { "," expr } ] ")" }
+//   atom    = INT | "true" | "false" | NAME | "(" expr ")"
+
+use ast
+use lexer
+
+/// The tokens of a line, and the index of the next one.
+type Parser = { tokens: List<lexer.Token>, pos: i64 }
+
+/// The line that `text` writes.
+/// ex: try line("let two = 1 + 1") == ast.Define("two", ast.Apply2(ast.Add, ast.Int(1), ast.Int(1)))
+/// ex: try line("  # nothing") == ast.Blank
+/// ex: try line("1 - 2 - 3") == ast.Print(ast.Apply2(ast.Sub, ast.Apply2(ast.Sub, ast.Int(1), ast.Int(2)), ast.Int(3)))
+/// ex: try line("f(1)(2)") == ast.Print(ast.Call(ast.Call(ast.Name("f"), [ast.Int(1)]), [ast.Int(2)]))
+pub fn line(text: str) -> ast.Line / raise<lexer.SyntaxError> {
+  var p = Parser { tokens: try lexer.tokens(text), pos: 0 }
+  if peek(p) == lexer.End { return ast.Blank }
+  let result = if peek(p) == lexer.Keyword("let") {
+    try definition(inout p)
+  } else {
+    ast.Print(try expr(inout p))
+  }
+  if peek(p) != lexer.End { raise error(p, "expected the end of the line") }
+  result
+}
+
+/// A line that starts with `let`: a definition, unless an `in` makes it an expression.
+fn definition(inout p: Parser) -> ast.Line / raise<lexer.SyntaxError> {
+  advance(inout p)
+  let name = try identifier(inout p)
+  try expect(inout p, "=")
+  let value = try expr(inout p)
+  if peek(p) != lexer.Keyword("in") { return ast.Define(name, value) }
+  advance(inout p)
+  ast.Print(ast.Let(name, value, try expr(inout p)))
+}
+
+fn peek(p: Parser) -> lexer.Kind { p.tokens[p.pos].kind }
+
+fn advance(inout p: Parser) { if p.pos < p.tokens.len() - 1 { p.pos += 1 } }
+
+fn error(p: Parser, message: str) -> lexer.SyntaxError {
+  lexer.SyntaxError { column: p.tokens[p.pos].column, message }
+}
+
+fn expect(inout p: Parser, symbol: str) / raise<lexer.SyntaxError> {
+  if peek(p) != lexer.Symbol(symbol) { raise error(p, "expected {symbol}") }
+  advance(inout p)
+}
+
+fn expect_keyword(inout p: Parser, word: str) / raise<lexer.SyntaxError> {
+  if peek(p) != lexer.Keyword(word) { raise error(p, "expected {word}") }
+  advance(inout p)
+}
+
+fn identifier(inout p: Parser) -> str / raise<lexer.SyntaxError> {
+  let Name(name) = peek(p) else raise error(p, "expected a name")
+  advance(inout p)
+  name
+}
+
+fn expr(inout p: Parser) -> ast.Expr / raise<lexer.SyntaxError> {
+  match peek(p) {
+    Keyword("if") => {
+      advance(inout p)
+      let c = try expr(inout p)
+      try expect_keyword(inout p, "then")
+      let yes = try expr(inout p)
+      try expect_keyword(inout p, "else")
+      ast.If(c, yes, try expr(inout p))
+    }
+    Keyword("fn") => {
+      advance(inout p)
+      let params = try list(inout p, identifier)
+      try expect(inout p, "=>")
+      ast.Lambda(params, try expr(inout p))
+    }
+    Keyword("let") => {
+      advance(inout p)
+      let name = try identifier(inout p)
+      try expect(inout p, "=")
+      let value = try expr(inout p)
+      try expect_keyword(inout p, "in")
+      ast.Let(name, value, try expr(inout p))
+    }
+    _ => try binary(inout p, 1)
+  }
+}
+
+/// The operator that a symbol writes, and its level: `||` binds most loosely, then `&&`, the
+/// comparisons, `+` and `-`, and `*`, `/` and `%`.
+/// ex: operator(lexer.Symbol("*")) == Some((ast.Mul, 5))
+/// ex: operator(lexer.Symbol("(")) == None
+fn operator(kind: lexer.Kind) -> Option<(ast.Binary, i64)> {
+  let Symbol(s) = kind else return None
+  let ops = [
+    ("||", ast.Or, 1),
+    ("&&", ast.And, 2),
+    ("==", ast.Eq, 3),
+    ("!=", ast.Ne, 3),
+    ("<", ast.Lt, 3),
+    ("<=", ast.Le, 3),
+    (">", ast.Gt, 3),
+    (">=", ast.Ge, 3),
+    ("+", ast.Add, 4),
+    ("-", ast.Sub, 4),
+    ("*", ast.Mul, 5),
+    ("/", ast.Div, 5),
+    ("%", ast.Rem, 5),
+  ]
+  let (_, op, level) = ops.find(|(sign, _, _)| sign == s) else return None
+  Some((op, level))
+}
+
+/// The operators of level `min` and above, which associate to the left, except comparisons,
+/// which don't chain.
+fn binary(inout p: Parser, min: i64) -> ast.Expr / raise<lexer.SyntaxError> {
+  var left = try unary(inout p)
+  loop {
+    let (op, level) = operator(peek(p)) else break
+    if level < min { break }
+    advance(inout p)
+    left = ast.Apply2(op, left, try binary(inout p, level + 1))
+    if level == 3 && operator(peek(p)).is_some_and(|(_, l)| l == 3) {
+      raise error(p, "comparisons don't chain; join them with && or ||")
+    }
+  }
+  left
+}
+
+fn unary(inout p: Parser) -> ast.Expr / raise<lexer.SyntaxError> {
+  match peek(p) {
+    Symbol("-") => {
+      advance(inout p)
+      ast.Apply1(ast.Neg, try unary(inout p))
+    }
+    Symbol("!") => {
+      advance(inout p)
+      ast.Apply1(ast.Not, try unary(inout p))
+    }
+    _ => try call(inout p)
+  }
+}
+
+fn call(inout p: Parser) -> ast.Expr / raise<lexer.SyntaxError> {
+  var e = try atom(inout p)
+  while peek(p) == lexer.Symbol("(") { e = ast.Call(e, try list(inout p, expr)) }
+  e
+}
+
+fn atom(inout p: Parser) -> ast.Expr / raise<lexer.SyntaxError> {
+  let e = match peek(p) {
+    Int(n) => ast.Int(n)
+    Keyword("true") => ast.Bool(true)
+    Keyword("false") => ast.Bool(false)
+    Name(n) => ast.Name(n)
+    Symbol("(") => {
+      advance(inout p)
+      let inner = try expr(inout p)
+      if peek(p) != lexer.Symbol(")") { raise error(p, "expected )") }
+      inner
+    }
+    _ => raise error(p, "expected an expression")
+  }
+  advance(inout p)
+  e
+}
+
+/// A parenthesized list of what `item` parses, separated by commas.
+fn list<T>(
+  inout p: Parser,
+  item: fn(inout Parser) -> T / raise<lexer.SyntaxError>,
+) -> List<T> / raise<lexer.SyntaxError> {
+  try expect(inout p, "(")
+  var items = []
+  if peek(p) == lexer.Symbol(")") {
+    advance(inout p)
+    return items
+  }
+  loop {
+    items.push(try item(inout p))
+    if peek(p) == lexer.Symbol(")") { break }
+    try expect(inout p, ",")
+  }
+  advance(inout p)
+  items
+}
+
+test "syntax errors name their column" {
+  assert Result.of(|| try line("1 +")) ==
+    Err(lexer.SyntaxError { column: 4, message: "expected an expression" })
+  assert Result.of(|| try line("(1")) == Err(lexer.SyntaxError { column: 3, message: "expected )" })
+  assert Result.of(|| try line("1 < 2 < 3")).is_err()
+  assert Result.of(|| try line("f(1 2)")) ==
+    Err(lexer.SyntaxError { column: 5, message: "expected ," })
+}
+
+test "a let that ends in `in` is an expression" {
+  assert try line("let x = 2 in x * x") ==
+    ast.Print(ast.Let("x", ast.Int(2), ast.Apply2(ast.Mul, ast.Name("x"), ast.Name("x"))))
+}

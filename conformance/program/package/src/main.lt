@@ -1,0 +1,6 @@
+use tools
+
+fn main() / io {
+  print("package")
+  tools.fail()
+}

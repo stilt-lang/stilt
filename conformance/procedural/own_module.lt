@@ -1,0 +1,23 @@
+//~ tier: meta
+//~ rule: macros.meta-use
+
+use std.meta
+
+macro one() -> meta.Expr { quote { 1 } }
+
+// A procedural macro is used only through `meta use`, never in its own
+// module, in code or in a quote.
+macro again() -> meta.Expr {
+  quote { one!() } //~ ERROR E0212
+}
+
+fn used() -> i64 {
+  one!() //~ ERROR E0212
+}
+
+fn named() -> i64 {
+  let f = one //~ ERROR E0212
+  0
+}
+
+fn main() {}

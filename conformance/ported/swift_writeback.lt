@@ -1,0 +1,84 @@
+//~ tier: advanced
+//~ rule: projections.call-is-place, projections.when-projection-runs, projections.nested
+//~ stdout:
+//~ | 4
+//~ | five
+//~ | 6
+//~ | 7
+//~ | eight
+//~ | 9
+//~ | 4
+//~ | five
+//~ | 6
+//~ | 7
+//~ | eight
+//~ | 9
+//~ | 4
+//~ | eight
+//~ | 9
+
+// Swift, test/Interpreter/writeback.swift: `x` is a computed property whose getter permutes a
+// stored triple and whose setter permutes it back, so a write to one element of `x` reads the
+// whole triple, changes the element, and writes the triple back. `Bar.foo` is a computed
+// property over a stored `Foo`, so `bar.foo.x.0 = 7` nests two such write-backs. The original
+// then swaps whole values, `x` triples and single elements through these properties with tuple
+// assignments; this port swaps them with a function of two `inout` parameters, which reads both
+// places before it writes either, as the tuple assignment does. Each property is a projection,
+// which yields a permuted copy and writes it back after the caller's access.
+
+type Foo = { raw: (i64, str, str) }
+
+impl Foo {
+  fn new(a: i64, b: str, c: str) -> Foo { Foo { raw: (a, c, b) } }
+
+  fn x(inout self) -> inout (i64, str, str) {
+    let (a, b, c) = self.raw
+    var shown = (a, c, b)
+    yield shown
+    let (d, e, f) = shown
+    self.raw = (d, f, e)
+  }
+}
+
+type Bar = { stored: Foo }
+
+impl Bar {
+  fn foo(inout self) -> inout Foo {
+    var got = self.stored
+    yield got
+    self.stored = got
+  }
+}
+
+fn swap<T>(inout a: T, inout b: T) {
+  let t = a
+  a = b
+  b = t
+}
+
+fn show(inout bar: Bar) / io {
+  print("{bar.foo().x().0}")
+  print(bar.foo().x().1)
+  print(bar.foo().x().2)
+}
+
+fn main() / io {
+  var foo = Foo.new(1, "two", "3")
+  foo.x().0 = 4
+  foo.x().1 = "five"
+  foo.x().2 = "6"
+  print("{foo.x().0}")
+  print(foo.x().1)
+  print(foo.x().2)
+  var bar = Bar { stored: Foo.new(1, "two", "3") }
+  bar.foo().x().0 = 7
+  bar.foo().x().1 = "eight"
+  bar.foo().x().2 = "9"
+  show(inout bar)
+  swap(inout foo, inout bar.foo())
+  show(inout bar)
+  swap(inout foo.x(), inout bar.foo().x())
+  show(inout bar)
+  swap(inout foo.x().0, inout bar.foo().x().0)
+  show(inout bar)
+}

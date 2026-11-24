@@ -1,0 +1,67 @@
+use std.meta
+
+fn down(n: i64) -> i64 { down(n + 1) + 1 }
+
+fn down_to(n: i64, stop: i64) -> i64 { if n == stop { 0 } else { down_to(n + 1, stop) + 1 } }
+
+/// Never ends.
+pub macro spin() -> meta.Expr {
+  var n = 0
+  loop { n += 1 }
+}
+
+/// Calls deeper without end.
+pub macro dive() -> meta.Expr {
+  let n = down(0)
+  quote { $n }
+}
+
+/// Runs 10,000 frames deep: its own body, then 9,999 calls.
+pub macro within() -> meta.Expr {
+  let n = down_to(1, 9999)
+  quote { $n }
+}
+
+/// Runs one frame deeper.
+pub macro beyond() -> meta.Expr {
+  let n = down_to(1, 10000)
+  quote { $n }
+}
+
+/// Takes 10,000,000 steps: its own body, then 9,999,999 turns of its loop.
+pub macro all_steps() -> meta.Expr {
+  var n = 0
+  while n < 9999999 {
+    n += 1
+  }
+  quote { 1 }
+}
+
+/// Takes one step more.
+pub macro one_more() -> meta.Expr {
+  var n = 0
+  while n < 10000000 {
+    n += 1
+  }
+  quote { 1 }
+}
+
+/// Reads past the end of a list, which panics.
+pub macro past() -> meta.Expr {
+  let xs = [1, 2]
+  let n = xs[2]
+  quote { $n }
+}
+
+/// Splices a float that isn't a number.
+pub macro nan() -> meta.Expr {
+  let f = f64.NAN
+  quote { $f }
+}
+
+/// Uses a pattern macro that never stops expanding.
+pub macro deep() -> meta.Expr { quote { again!(1) } }
+
+syntax again {
+  ($x: expr) => again!($x)
+}

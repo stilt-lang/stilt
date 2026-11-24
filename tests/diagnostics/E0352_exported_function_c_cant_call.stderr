@@ -1,0 +1,10 @@
+── EXPORTED FUNCTION C CAN'T CALL ── E0352_exported_function_c_cant_call.lt:2:30  [E0352]
+
+C can't pass a value of type `str`: an exported function takes integers, floats
+and `bool`:
+
+  2 │ pub extern fn checksum(line: str) -> u32 {
+    │                              ^^^
+
+C calls an exported function, so it takes and returns only numbers and `bool`,
+and its name is a C symbol of its own. Keep the rest of the code inside Stilt.

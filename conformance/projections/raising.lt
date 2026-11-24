@@ -1,0 +1,32 @@
+//~ tier: advanced
+//~ rule: projections.raising-during-access
+//~ stdout:
+//~ | caught in main
+//~ | [50, 2, 100]
+
+type Bad = | Bad
+
+fn fail(inout n: i64) / raise<Bad> {
+  n = 50
+  raise Bad
+}
+
+fn maybe(flag: bool) / raise<Bad> {
+  if flag { raise Bad }
+}
+
+fn at(inout xs: List<i64>, i: i64) -> inout i64 / io {
+  xs.push(100)
+  yield xs[i]
+  // The projection doesn't resume after the access raises: no `catch` of its own sees
+  // the error, and nothing here runs.
+  try maybe(false) catch Bad => print("caught inside")
+  print("resumed")
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  try fail(inout at(inout xs, 0)) catch Bad => print("caught in main")
+  // `xs` holds the changes made before the `yield` and through the place.
+  print("{xs}")
+}

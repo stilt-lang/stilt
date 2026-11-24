@@ -1,0 +1,69 @@
+//~ rule: lexical.contextual-keywords, declarations.limits, effects.non-escaping-parameters, effects.without-panic, facts.calls-through-function-values, facts.without, facts.allocation, facts.without-alloc, facts.divisors
+
+fn half(n: i64) -> i64 without panic { n / 2 }
+
+fn share(a: i64, b: i64) -> i64 without panic {
+  a / b //~ ERROR E0204
+}
+
+fn idle() without panic, alloc {}
+
+fn check(b: bool) without panic {
+  assert b //~ ERROR E0204
+}
+
+fn todo() -> i64 without panic = ? //~ ERROR E0204
+
+fn at(xs: List<i64>) -> i64 { xs[0] }
+
+fn first(xs: List<i64>) -> i64 without panic {
+  at(xs) //~ ERROR E0204
+}
+
+fn uses_first(xs: List<i64>) -> i64 { first(xs) + 1 }
+
+fn limited_caller(xs: List<i64>) -> i64 without panic { first(xs) }
+
+fn divide_all(xs: List<i64>) -> List<i64> without panic {
+  xs.map(|x| 100 / x) //~ ERROR E0204
+}
+
+fn build(n: i64) -> List<i64> without alloc {
+  var xs = List.new() //~ ERROR E0204
+  xs.push(n) //~ ERROR E0204
+  xs
+}
+
+// `print` holds its text until it goes out, which allocates (facts.native-allocation).
+fn report(s: str) / io without alloc { print(s) } //~ ERROR E0204
+
+fn shout(s: str) / io without alloc {
+  print(s.ascii_upper()) //~ ERROR E0204
+}
+
+fn both(inout xs: List<i64>) without panic, alloc {
+  xs.insert(1, 1) //~ ERROR E0204 ERROR E0204
+}
+
+fn twice(f: fn(i64) -> i64, x: i64) -> i64 without panic, alloc { f(f(x)) }
+
+fn apply(f: fn(i64) -> i64, x: i64) -> i64 without panic, alloc { f(x) }
+
+fn without(alloc: i64) -> i64 without alloc { alloc + 1 }
+
+type Counter = { n: i64 }
+
+impl Counter {
+  fn ratio(self, d: i64) -> i64 without panic {
+    self.n / d //~ ERROR E0204
+  }
+}
+
+impl Show for Counter {
+  fn show(self) -> str without alloc { "counter" }
+}
+
+fn main() / io {
+  let c = Counter { n: 4 }
+  print("{apply(|n| n * 2, without(1))} {twice(half, 8)} {c}")
+}

@@ -1,0 +1,16 @@
+//~ rule: effects.passing-reports
+
+type Box = { v: i64 }
+
+fn both<e>(
+  escaping f: fn() -> i64 / {raise<Box>, e},
+  escaping g: fn() -> i64 / {raise<Box>, e},
+) -> i64 / e {
+  let a = try f() catch b because "a Box gives its value" => b.v
+  let c = try g() catch b because "a Box gives its value" => b.v
+  a + c
+}
+
+fn caller<r>(escaping g: fn() -> i64 / r) -> i64 / r {
+  both(g, g) //~ ERROR E0507
+}

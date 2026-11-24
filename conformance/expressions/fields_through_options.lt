@@ -1,0 +1,29 @@
+//~ rule: types.fields-through-option, types.option-field-types
+//~ stdout:
+//~ | Some("Lyon") None
+//~ | Some("b") None
+//~ | Some("Lyon") None None
+//~ | Some("69001") None None
+//~ | Some("Lyon") None None
+
+type Address = { city: str, zip: Option<str> }
+type Person = { name: str, address: Option<Address> }
+
+fn main() / io {
+  let lyon: Option<Address> = Some(Address { city: "Lyon", zip: Some("69001") })
+  let nowhere: Option<Address> = None
+  print("{lyon.city} {nowhere.city}")
+  let pair: Option<(i64, str)> = Some((1, "b"))
+  let no_pair: Option<(i64, str)> = None
+  print("{pair.1} {no_pair.1}")
+  let ana: Option<Person> = Some(Person { name: "ana", address: lyon })
+  let bo: Option<Person> = Some(Person { name: "bo", address: None })
+  let nobody: Option<Person> = None
+  print("{ana.address.city} {bo.address.city} {nobody.address.city}")
+  let zip: Option<str> = ana.address.zip
+  print("{zip} {bo.address.zip} {nobody.address.zip}")
+  let twice: Option<Option<Address>> = Some(lyon)
+  let inner_none: Option<Option<Address>> = Some(None)
+  let outer_none: Option<Option<Address>> = None
+  print("{twice.city} {inner_none.city} {outer_none.city}")
+}

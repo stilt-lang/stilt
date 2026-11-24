@@ -1,0 +1,23 @@
+//~ rule: program.module-header, facts.inferred-facts, facts.without-alloc
+//~ stdout:
+//~ | [1, 2, 3]
+//~ | a=1
+//~ | 3 items
+
+module main
+without panic
+
+fn build(n: i64) -> List<i64> {
+  var xs = List.new()
+  for i in 1..=n { xs.push(i) }
+  xs
+}
+
+fn main() / io {
+  let xs = build(3)
+  print("{xs}")
+  var m: Map<str, i64> = Map.new()
+  m["a"] = 1
+  for (k, v) in m { print("{k}={v}") }
+  print("{xs.len()} items")
+}

@@ -1,0 +1,11 @@
+//~ rule: lexical.commented-out-code, declarations.typed-holes, errors.warnings-with-errors
+// let retries = 3 //~ WARN W0001
+
+fn broken() -> i64 {
+  let n: str = 1 //~ ERROR E0311
+  ?
+}
+
+fn fine() -> i64 {
+  ? //~ WARN W0300
+}

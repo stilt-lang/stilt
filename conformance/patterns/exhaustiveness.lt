@@ -1,0 +1,74 @@
+//~ rule: patterns.algorithm, patterns.non-exhaustive-matches
+
+type Color = | Red | Green | Blue
+type Point = { x: i64, y: i64 }
+
+fn variants(c: Color) -> i64 {
+  match c { //~ ERROR E0329
+    Red => 1
+    Green => 2
+  }
+}
+
+fn all_variants(c: Color) -> i64 {
+  match c {
+    Red => 1
+    Green | Blue => 2
+  }
+}
+
+// An or-pattern that names some of the variants covers only those.
+fn some_variants(c: Color) -> i64 {
+  match c { //~ ERROR E0329
+    Red | Green => 1
+  }
+}
+
+fn booleans(b: bool) -> i64 {
+  match b { //~ ERROR E0329
+    false => 0
+  }
+}
+
+fn nested(o: Option<bool>) -> i64 {
+  match o { //~ ERROR E0329
+    None => 0
+    Some(true) => 1
+  }
+}
+
+fn tuples(t: (bool, ())) -> i64 {
+  match t {
+    (true, ()) => 1
+    (false, _) => 2
+  }
+}
+
+fn records(p: Point) -> i64 {
+  match p {
+    Point { x: 0, .. } => 0
+    Point { x, y } => x + y
+  }
+}
+
+fn integers(n: i64) -> i64 {
+  match n { //~ ERROR E0329
+    0 => 1
+    1 => 2
+  }
+}
+
+fn strings(s: str) -> i64 {
+  match s {
+    "one" => 1
+    _ => 0
+  }
+}
+
+fn floats(f: f64) -> i64 {
+  match f {
+    x => 1
+  }
+}
+
+fn never(n: Never) -> i64 { match n {} }

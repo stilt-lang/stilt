@@ -1,0 +1,25 @@
+module std.par
+
+// Deterministic parallelism (par.std-par). Each function's closures perform no
+// effect and reach no `Shared<T>` and no view (par.what-runs-in-parallel), so its result is that
+// of its sequential run (par.sequential-meaning), whatever the number of threads. Every
+// function here is native (par.std-par).
+
+/// The list of `f` of each element of `xs`, in order.
+/// ex: map([1, 2, 3], |x| x * 10) == [10, 20, 30]
+pub fn map<T, U>(xs: List<T>, escaping f: fn(T) -> U) -> List<U> = ?
+
+/// Calls `f` on each element of `xs` in place.
+/// ex: { var xs = [1, 2]; each(inout xs, |inout x| { x += 1 }); xs == [2, 3] }
+pub fn each<T>(inout xs: List<T>, escaping f: fn(inout T)) = ?
+
+/// The pair of the values of `f` and `g`.
+/// ex: both(|| 1, || "a") == (1, "a")
+pub fn both<A, B>(escaping f: fn() -> A, escaping g: fn() -> B) -> (A, B) = ?
+
+/// The elements of `xs` combined by `f` in a balanced tree that depends on
+/// the length alone: the first half folded, combined with the rest folded.
+/// `empty` for an empty list.
+/// ex: fold(["a", "b", "c"], "", |p, q| "({p}{q})") == "(a(bc))"
+/// ex: fold([], 0, |p, q| p + q) == 0
+pub fn fold<T>(xs: List<T>, empty: T, escaping f: fn(T, T) -> T) -> T = ?

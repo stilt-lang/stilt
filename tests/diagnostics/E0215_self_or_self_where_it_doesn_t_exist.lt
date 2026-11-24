@@ -1,0 +1,7 @@
+type Rect = { w: f64, h: f64 }
+
+impl Rect {
+  fn width() -> f64 { self.w }
+}
+
+fn main() {}

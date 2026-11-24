@@ -1,0 +1,5 @@
+use std.meta
+
+// The quote names `print`, which no grant covers: the expansion prints in the
+// user's code, but the capability is the macro's package's.
+pub macro stamped(e: meta.Expr) -> meta.Expr { quote { print("[stamp] {$e}") } }

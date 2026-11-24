@@ -1,0 +1,8 @@
+fn name(n: i64) -> str {
+  switch n {
+    case 1: return "one"
+    default: return "many"
+  }
+}
+
+fn main() / io { print(name(1)) }

@@ -1,0 +1,5 @@
+//~ rule: program.no-cycles, errors.several-places
+
+use util
+
+fn f() { util.text.g() }

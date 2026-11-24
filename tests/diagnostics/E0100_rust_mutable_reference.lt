@@ -1,0 +1,1 @@
+fn bump(n: &mut i64) { n += 1 }

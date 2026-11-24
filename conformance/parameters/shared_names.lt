@@ -1,0 +1,64 @@
+//~ tier: advanced
+//~ rule: traits.trait-constants, traits.shared-member-names
+//~ stdout:
+//~ | 1 100
+//~ | 1 100
+//~ | 9 cap
+//~ | 3
+
+trait Small {
+  const SIZE: i64
+  fn make() -> Self
+}
+
+trait Large {
+  const SIZE: i64
+  fn make() -> Self
+}
+
+type Box = { n: i64 }
+
+impl Small for Box {
+  const SIZE: i64 = 1
+  fn make() -> Box { Box { n: 1 } }
+}
+
+impl Large for Box {
+  const SIZE: i64 = 100
+  fn make() -> Box { Box { n: 100 } }
+}
+
+// Each bound names one trait's member, and each impl has its own value.
+fn small<T: Small>(x: T) -> i64 { T.SIZE }
+fn large<T: Large>(x: T) -> i64 { T.SIZE }
+fn made_small<T: Small>() -> T { T.make() }
+fn made_large<T: Large>() -> T { T.make() }
+
+// A trait constant's type names the trait's parameter and `Self`.
+trait Bounded<Item> {
+  const MAX: Item
+  const ITSELF: Self
+}
+
+type Cap = { label: str }
+
+impl Bounded<i64> for Cap {
+  const MAX: i64 = 9
+  const ITSELF: Cap = Cap { label: "cap" }
+}
+
+fn top<B: Bounded<i64>>(b: B) -> i64 { B.MAX }
+
+impl<T> Bounded<i64> for List<T> {
+  const MAX: i64 = 3
+  const ITSELF: List<T> = []
+}
+
+fn main() / io {
+  let a: Box = made_small()
+  let b: Box = made_large()
+  print("{small(a)} {large(a)}")
+  print("{a.n} {b.n}")
+  print("{top(Cap.ITSELF)} {Cap.ITSELF.label}")
+  print("{List.MAX}")
+}

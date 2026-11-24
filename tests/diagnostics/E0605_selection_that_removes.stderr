@@ -1,0 +1,11 @@
+── VERSIONS THAT DON'T AGREE ─────────────────────────── stilt.toml:5:1  [E0605]
+
+`http` asks for `json` 1.6.0, which removes `json.decode.parse_int`, which the
+1.4.0 asked for here has:
+
+  5 │ json = { from = "file:///repos/json", version = "1.4.0", hash = "b3:9d282c077407c18a81690a96a7b02dba823ca26fe41c0e410207f019f4ab30d7" }
+    │ ^^^^
+
+A program holds one version of each package, the highest that any manifest asks
+for, and that version removes what another manifest needs. Ask for a version
+that keeps it, or change the code that needs it.

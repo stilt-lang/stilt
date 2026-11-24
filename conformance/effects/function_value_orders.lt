@@ -1,0 +1,63 @@
+//~ rule: effects.function-value-unions
+//~ stdout:
+//~ | 1
+//~ | loud
+//~ | 2
+//~ | loud
+//~ | 3
+//~ | loud
+//~ | 4
+//~ | loud
+//~ | 5
+//~ | loud
+//~ | loud
+//~ | 6
+//~ | loud
+//~ | 7
+//~ | loud
+//~ | loud
+//~ | 8
+
+type Job = { run: fn() / io }
+
+fn quiet() {}
+
+fn loud() / io { print("loud") }
+
+fn run(f: fn() / io) / io { f() }
+
+fn run_all(fs: List<fn() / io>) / io { for f in fs { f() } }
+
+fn pick(c: bool) -> fn() / io { if c { loud } else { quiet } }
+
+fn main() / io {
+  run(quiet)
+  print("1")
+  let first = if true { loud } else { quiet }
+  first()
+  print("2")
+  let second = if false { quiet } else { loud }
+  second()
+  print("3")
+  run_all([loud, quiet])
+  print("4")
+  run_all([quiet, loud])
+  print("5")
+  let mixed = [quiet, loud, quiet, loud]
+  run_all(mixed)
+  print("6")
+  pick(true)()
+  pick(false)()
+  print("7")
+  let annotated: fn() / io = quiet
+  annotated()
+  var assigned: fn() / io = loud
+  assigned()
+  assigned = quiet
+  assigned()
+  let job = Job { run: quiet }
+  job.run()
+  let jobs = [Job { run: loud }, Job { run: quiet }]
+  for j in jobs { j.run() }
+  print("8")
+}

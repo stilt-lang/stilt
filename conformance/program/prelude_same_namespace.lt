@@ -1,0 +1,15 @@
+//~ rule: program.prelude-names, declarations.namespaces, errors.declarations-with-errors
+
+type Option = { value: i64 } //~ ERROR E0209
+type Sign = | Less | Zero //~ ERROR E0209
+trait Show { //~ ERROR E0209
+  fn text(self) -> str
+}
+type Tag = | Eq | Ord | Hash
+
+fn f(o: Option, s: Sign) -> Tag {
+  let n = o.value
+  let t = Less
+  let shown: Show = s
+  Eq
+}

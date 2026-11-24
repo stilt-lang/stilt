@@ -1,0 +1,23 @@
+//~ rule: traits.structural-calls, std.lists
+//~ stdout:
+//~ | [3, 2, 1] [(1, "b"), (1, "a"), (0, "a")] [1, 2, 3]
+//~ | 60 true false Some(6) None [(1, "a"), (2, "b")] [(1, "a"), (2, "b")]
+//~ | [2, 3] [1, 2, 3] [] [3, 2, 1] [1, 2] true Some(1) Some(3) None
+//~ | [9, 1, 3] Some(4) None [1] None Some(1) 3 false 1 None []
+
+fn main() / io {
+  let pairs = [(1, "b"), (0, "a"), (1, "a")]
+  print("{[3, 1, 2].sorted_by(|x| -x)} {pairs.sorted_desc_by(|p| p.0)} {[2, 3, 1].sorted()}")
+  let total = [1, 2, 3, 4].filter(|x| x % 2 == 0).map(|x| x * 10).fold(0, |a, x| a + x)
+  let empty: List<i64> = []
+  print("{total} {[1, 2, 3].any(|x| x > 2)} {[1, 2].all(|x| x > 1)} {[5, 6].find(|x| x > 5)} {empty.find(|x| x > 5)} {[1, 2, 3].zip(["a", "b"])} {["a", "b"].enumerate(1)}")
+  print("{[1, 2, 3].skip(1)} {[1, 2, 3].take(9)} {[1, 2].skip(5)} {[1, 2, 3].reversed()} {[1].concat([2])} {[3, 1].contains(1)} {[1, 2].first()} {[1, 3].last()} {empty.last()}")
+  var xs = [1, 2, 3, 4]
+  xs.retain(|x| x != 2)
+  xs.insert(0, 9)
+  let popped = xs.pop()
+  var one = [1]
+  let gone = one.remove(0)
+  let nothing = one.pop()
+  print("{xs} {popped} {xs.get(-1)} {xs.slice(1, 2)} {xs.get(3)} {xs.get(1)} {xs.len()} {xs.is_empty()} {gone} {nothing} {one}")
+}

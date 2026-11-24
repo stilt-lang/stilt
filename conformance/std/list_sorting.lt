@@ -1,0 +1,23 @@
+//~ rule: std.list-searching, std.list-sorting
+//~ stdout:
+//~ | [(1, "b"), (1, "d"), (2, "a"), (2, "c")]
+//~ | [(2, "a"), (2, "c"), (1, "b"), (1, "d")]
+//~ | [5, 3, 3, 1] [] [1]
+//~ | true true true false
+//~ | Some(1) None Some(0) None Some(3)
+//~ | Some(1) Some(3) None None
+//~ | Some(-0.0) Some(nan)
+//~ | Some((1, "x")) Some((2, "y"))
+
+fn main() / io {
+  let pairs = [(2, "a"), (1, "b"), (2, "c"), (1, "d")]
+  print("{pairs.sorted_with(|a, b| Ord.compare(a.0, b.0))}")
+  print("{pairs.sorted_with(|a, b| Ord.compare(b.0, a.0))}")
+  let none: List<i64> = []
+  print("{[3, 1, 5, 3].sorted_desc()} {none.sorted_desc()} {[1].sorted_desc()}")
+  print("{[1, 2, 2, 3].is_sorted()} {none.is_sorted()} {[7].is_sorted()} {[2, 1].is_sorted()}")
+  print("{[1, 3, 3, 5].binary_search(3)} {[1, 3, 5].binary_search(4)} {[1, 3, 5].binary_search(1)} {none.binary_search(1)} {[1, 2, 3, 4].binary_search(4)}")
+  print("{[3, 1, 2, 1].min()} {[3, 1, 3].max()} {none.min()} {none.max()}")
+  print("{[0.0, -0.0, 1.0].min()} {[1.0, f64.NAN, f64.INFINITY].max()}")
+  print("{[(1, "x"), (1, "y")].min_by(.0)} {[(2, "y"), (2, "z")].max_by(.0)}")
+}

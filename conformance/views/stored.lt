@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: views.view-types, views.consumers
+
+use std.view
+
+type Holder = { v: view.View<str> } //~ ERROR E0421
+
+type Wrapped = | Wrap(view.View<str>) //~ ERROR E0421
+
+type Pair<T> = { a: T, b: T }
+
+fn raised(s: str) / raise<view.View<str>> { //~ ERROR E0421
+  raise view.View.all(s)
+}
+
+fn main() / io {
+  let s = "ab"
+  let v = view.View.all(s)
+  let xs = [v] //~ ERROR E0421
+  let t = (v, 1) //~ ERROR E0421
+  let p = Pair { a: v, b: v } //~ ERROR E0421
+  var m: Map<str, view.View<str>> = Map.new() //~ ERROR E0421
+  let ws = view.Iter.of(["a"]).map(|x| view.View.all(x)).collect() //~ ERROR E0421
+  print("{xs.len()} {t.1} {p.a} {m.len()} {ws.len()}")
+}

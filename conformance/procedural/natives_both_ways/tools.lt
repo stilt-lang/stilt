@@ -1,0 +1,85 @@
+use std.meta
+
+// Every native of `str`, on texts that are empty, beyond ASCII, blank, separated, numeric and
+// mixed.
+pub fn strings() -> str {
+  let texts = ["", "héllo, wörld", "  a\tb \n c  ", "a,,b,", "-128", "255", "3.5e2", "😀x😀", "ABC def 123"]
+  "\n".join(texts.map(|t| about(t)))
+}
+
+fn about(t: str) -> str {
+  "{measures(t)} / {searches(t)} / {forms(t)} / {numbers(t)} / {made(t)}"
+}
+
+fn measures(t: str) -> str {
+  let kinds = [t.is_ascii(), t.is_ascii_digit(), t.is_ascii_alpha(), t.is_ascii_alphanumeric(), t.is_ascii_whitespace(), t.is_ascii_upper(), t.is_ascii_lower()]
+  "{t.len()} {t.is_empty()} {t.char_count()} {kinds}"
+}
+
+fn searches(t: str) -> str {
+  let found = "{t.contains("l")} {t.starts_with("a")} {t.ends_with(",")} {t.find("ö")} {t.rfind(",")} {t.count("a")}"
+  "{found} {t.strip_prefix("  ")} {t.strip_suffix(",")} {t.split_once(",")} {t.rsplit_once(",")}"
+}
+
+fn forms(t: str) -> str {
+  let parts = "{t.split(",")} {t.lines()} {t.split_whitespace()} {t.chars()} {"+".join(t.chars())}"
+  let trimmed = "{t.trim()}|{t.trim_start()}|{t.trim_end()}"
+  let changed = "{t.replace("a", "AA")} {t.replace_first(",", ";")} {t.ascii_upper()} {t.ascii_lower()} {t.reversed()}"
+  let padded = "{t.pad_start(14, "*")} {t.pad_end(14, "é")}"
+  let cut = if t.len() >= 1 && t.is_ascii() { t.slice(1, t.len()) } else { t }
+  "{parts} {trimmed} {changed} {padded} {cut} {t.bytes()} {t.code_points()}"
+}
+
+fn numbers(t: str) -> str {
+  let signed = "{t.to_i8()} {t.to_i16()} {t.to_i32()} {t.to_i64()}"
+  let unsigned = "{t.to_u8()} {t.to_u16()} {t.to_u32()} {t.to_u64()}"
+  "{signed} {unsigned} {t.to_f32()} {t.to_f64()}"
+}
+
+fn made(t: str) -> str {
+  let half = t.bytes().slice(0, t.len() / 2)
+  "{str.from_utf8(t.bytes())} {str.from_utf8(half)} {str.from_utf8_lossy(half)} {t.code_points().map(|c| str.from_code_point(c))}"
+}
+
+// The natives of the integer types, of `f64`, of `List` and of `Map`. Those of `std.math` are
+// left out: their results are specified within 4 ulps (std.math), so two runs may differ.
+pub fn figures() -> str {
+  let ints = [0, 7, -12, 1000000007, 4611686018427387904, 9223372036854775807]
+  let floats = [0.5, 2.0, 10.0, -3.25, 1.0e300, 0.1]
+  "{"\n".join(ints.map(|i| integer(i)))}\n{"\n".join(floats.map(|x| float(x)))}"
+}
+
+fn integer(i: i64) -> str {
+  let checked = "{i.checked_add(i)} {i.checked_sub(-i)} {i.checked_mul(3)} {i.saturating_add(i)} {i.saturating_sub(-i)}"
+  let bits = "{i.count_ones()} {i.leading_zeros()} {i.trailing_zeros()}"
+  let arithmetic = "{i.abs()} {i.min(5)} {i.max(5)} {(i % 1000).pow(2)} {i.rem_euclid(5)} {i.div_euclid(5)} {i.gcd(12)} {(i % 1000).lcm(6)}"
+  let converted = "{i.to_i8()} {i.to_u32()} {i.wrap_to_u8()} {i.to_f32()} {i.to_f64()}"
+  "{checked} {bits} {arithmetic} {converted}"
+}
+
+fn float(x: f64) -> str {
+  let rounded = "{x.sqrt()} {x.floor()} {x.ceil()} {x.trunc()} {x.round()} {x.abs()} {x.min(1.0)} {x.max(1.0)} {x.is_nan()}"
+  let converted = "{x.to_i8()} {x.to_i64()} {x.to_u64()} {x.to_f32()}"
+  "{rounded} {converted}"
+}
+
+pub fn collections() -> str {
+  var xs = [3, 1, 2]
+  xs.push(5)
+  let last = xs.pop()
+  xs.insert(1, 9)
+  let removed = xs.remove(0)
+  var m: Map<str, i64> = Map.new()
+  m.insert("b", 2)
+  m.insert("a", 1)
+  let d: Map<str, i64> = Map.with_default(7)
+  "{xs} {last} {removed} {xs.len()} {xs.is_empty()} {xs.contains(9)} {xs.get(1)} {xs.slice(1, 3)} {m.get("a")} {m.contains("c")} {m.len()} {d["z"]}"
+}
+
+// Every text above, which the macro and the run compute alike.
+pub fn all() -> str { "{strings()}\n{figures()}\n{collections()}" }
+
+pub macro expanded() -> meta.Expr {
+  let s = all()
+  quote { $s }
+}

@@ -1,0 +1,7 @@
+// A record type that doesn't fit in 100 columns puts each field on a line of its own, followed by
+// a comma, the last field too, whose type here is a function type with a row.
+type Handlers = {
+  on_start: fn(i64) -> i64,
+  on_progress: fn(i64, i64) -> bool,
+  on_finish: fn(str, i64) -> Option<str> / io
+}

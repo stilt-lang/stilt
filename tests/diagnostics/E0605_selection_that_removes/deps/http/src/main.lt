@@ -1,0 +1,3 @@
+use json.decode
+
+pub fn get(url: str) -> f64 { decode.parse_float(url) }

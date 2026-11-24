@@ -1,0 +1,76 @@
+//~ tier: advanced
+//~ rule: modes.shared-writes, modes.shared-holders, modes.shared-when-names, shared.when, facts.without-copy
+
+// A `when`'s name is written as a `var` is, and holds what it names as a `var` does: a write to
+// it while a copy of the written part lasts is shared, and so is a write to a copy of a part of
+// it that it reads after.
+
+use std.sync
+
+type Box = { items: List<i64> }
+
+fn copy_kept(a: sync.Shared<Box>) -> i64 without copy {
+  when a {
+    let z = a.items
+    a.items.push(1) //~ ERROR E0204
+    z.len()
+  }
+}
+
+fn copy_written(a: sync.Shared<Box>) -> i64 without copy {
+  when a {
+    var z = a.items
+    z[0] = 9 //~ ERROR E0204
+    z.len() + a.items.len()
+  }
+}
+
+// Two names of one `when` whose values have the same type may be one place: a write through one
+// is a write of each, and a point that names one names each.
+fn copy_of_the_other(a: sync.Shared<List<i64>>, b: sync.Shared<List<i64>>) -> i64 without copy {
+  when a, b {
+    let c = a
+    b.push(1) //~ ERROR E0204
+    c.len()
+  }
+}
+
+fn read_through_the_other(a: sync.Shared<List<i64>>, b: sync.Shared<List<i64>>) -> i64 without copy {
+  when a, b {
+    var y = a
+    y.push(1) //~ ERROR E0204
+    b.len()
+  }
+}
+
+// An assignment to one replaces nothing of the other, whose copy still lasts at the write.
+fn other_assigned(a: sync.Shared<List<i64>>, b: sync.Shared<List<i64>>) -> i64 without copy {
+  when a, b {
+    let c = b
+    a = [9]
+    b.push(1) //~ ERROR E0204
+    c.len()
+  }
+}
+
+// Names whose values have different types never reach one value.
+fn other_types(a: sync.Shared<List<i64>>, b: sync.Shared<List<str>>) -> i64 without copy {
+  when a, b {
+    let c = a
+    b.push("x")
+    c.len()
+  }
+}
+
+// With no copy, the write is in place.
+fn alone(a: sync.Shared<Box>) -> i64 without copy {
+  when a {
+    a.items.push(1)
+    a.items.len()
+  }
+}
+
+fn main() / io {
+  let a = sync.Shared.new(Box { items: [1, 2] })
+  print("{alone(a)}")
+}

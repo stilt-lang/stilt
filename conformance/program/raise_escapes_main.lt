@@ -1,0 +1,15 @@
+//~ rule: program.main, program.exit-statuses, std.io-errors
+//~ stdout:
+//~ | reading
+//~ stderr:
+//~ | error: NotFound("missing.txt")
+//~ exit: 1
+
+use std.fs
+use std.io
+
+fn main() / {io, raise<io.IoError>} {
+  print("reading")
+  let text = try fs.read("missing.txt")
+  print(text)
+}

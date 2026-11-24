@@ -1,0 +1,62 @@
+//~ tier: core
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Point = { x: i64, y: i64 }
+
+fn list() -> List<i64> {
+  [1, 2, 3] //~ ALLOC
+}
+
+fn text(n: i64) -> str {
+  "n is {n}" //~ ALLOC
+}
+
+// A string literal that doesn't interpolate, and a record of a type that isn't recursive,
+// are plain values.
+fn plain() -> str { "plain" }
+
+fn point() -> Point { Point { x: 1, y: 2 } }
+
+fn leaf(n: i64) -> Tree {
+  Node(Leaf, n, Leaf) //~ ALLOC
+}
+
+fn constructor() -> fn(Tree, i64, Tree) -> Tree {
+  Node //~ ALLOC
+}
+
+fn xs_of(ps: List<Point>) -> List<i64> {
+  ps.map(.x) //~ ALLOC
+}
+
+fn set_first(inout xs: List<i64>) {
+  xs[0] = 1 //~ PANIC ALLOC
+}
+
+fn put(inout m: Map<str, i64>) {
+  m["a"] = 1 //~ ALLOC
+}
+
+fn bump(inout m: Map<str, i64>) {
+  m["a"] += 1 //~ PANIC OVERFLOW ALLOC
+}
+
+fn reset(inout x: i64) { x = 0 }
+
+fn reset_first(inout xs: List<i64>) {
+  reset(inout xs[0]) //~ PANIC ALLOC
+}
+
+fn shown(n: i64) -> str {
+  n.show() //~ ALLOC
+}
+
+fn grown(inout xs: List<i64>) {
+  xs.push(1) //~ ALLOC
+}
+
+// Reading an element, and `len`, allocate nothing.
+fn sum(xs: List<i64>) -> i64 {
+  xs[0] + xs.len() //~ PANIC OVERFLOW
+}

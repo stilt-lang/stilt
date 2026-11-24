@@ -1,0 +1,171 @@
+---
+// The proof map's explorer: one declaration of the Lean model at a time, with its statement,
+// its doc, the paragraphs it cites, what its statement and proof use and what uses it. It reads
+// /design/proof-map/map.json, and the address's `#decl=NAME` names the declaration shown.
+import { paragraphHref, proofMap } from "../lib/proofmap";
+
+interface Props {
+  start: string;
+}
+
+const { start } = Astro.props;
+const map = proofMap();
+const hrefs = Object.fromEntries(
+  (map?.chapters ?? []).flatMap((c) =>
+    c.paragraphs.filter((p) => p.by.length).map((p) => [p.id, paragraphHref(map!, p.id)]),
+  ),
+);
+---
+
+<div class="explorer" data-start={start} data-paragraphs={JSON.stringify(hrefs)}>
+  <div class="search">
+    <input type="search" placeholder="Search a declaration, as Program.Accepted or eval" aria-label="Search a declaration" autocomplete="off" />
+    <ul class="results" hidden></ul>
+  </div>
+  <div class="panel" aria-live="polite"><p class="muted">Loading the map…</p></div>
+</div>
+
+<script>
+  interface D { n: string; k: string; m: string; f: string; l: number; s: number[]; b: number[]; c: string[]; r: boolean; d?: string; t?: string }
+
+  const root = document.querySelector<HTMLElement>(".explorer")!;
+  const panel = root.querySelector<HTMLElement>(".panel")!;
+  const input = root.querySelector<HTMLInputElement>("input")!;
+  const results = root.querySelector<HTMLUListElement>(".results")!;
+  const hrefs: Record<string, string> = JSON.parse(root.dataset.paragraphs ?? "{}");
+  const LISTED = 60;
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  const inline = (s: string) =>
+    esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  const prose = (s: string) => s.split(/\n\s*\n/).map((p) => `<p>${inline(p.replace(/\s+/g, " "))}</p>`).join("");
+
+  fetch("/design/proof-map/map.json")
+    .then((r) => r.json())
+    .then((map: { decls: D[] }) => explore(map.decls));
+
+  function explore(decls: D[]) {
+    const index = new Map(decls.map((d, i) => [d.n, i]));
+    const usedBy: number[][] = decls.map(() => []);
+    decls.forEach((d, i) => { for (const j of new Set([...d.s, ...d.b])) usedBy[j].push(i); });
+
+    const item = (i: number, note = "") =>
+      `<li><a href="#decl=${encodeURIComponent(decls[i].n)}"><span class="k">${decls[i].k}</span><code>${esc(decls[i].n)}</code></a>${note}${decls[i].r ? "" : '<span class="out" title="outside the theorem">apart</span>'}</li>`;
+    const list = (title: string, items: number[], note: (i: number) => string = () => "") => {
+      const shown = items.slice(0, LISTED).map((i) => item(i, note(i))).join("");
+      const more = items.length > LISTED ? `<li class="muted">and ${items.length - LISTED} more</li>` : "";
+      return `<section><h4>${title} <span class="count">${items.length}</span></h4>${items.length ? `<ul>${shown}${more}</ul>` : '<p class="muted">Nothing.</p>'}</section>`;
+    };
+
+    /** Its neighbourhood as a picture: what uses it above, what it uses below, the ones behind
+     * `soundness` first, each a link to its own. */
+    function ego(i: number, by: number[], uses: number[]): string {
+      const ROWS = 9;
+      const pick = (xs: number[]) => [...xs].sort((a, b) => Number(decls[b].r) - Number(decls[a].r)).slice(0, ROWS);
+      const top = pick(by), bottom = pick(uses);
+      const short = (n: string) => { const s = n.split(".").slice(-2).join("."); return s.length > 22 ? `${s.slice(0, 21)}…` : s; };
+      const W = 1000, BOX = 104, H = 28;
+      const xs = (k: number) => Array.from({ length: k }, (_, j) => (W * (j + 0.5)) / Math.max(k, 1));
+      const rows: [number[], number][] = [[top, 22], [bottom, 190]];
+      const mid = { x: W / 2, y: 106 };
+      const box = (j: number, x: number, y: number, main = false) =>
+        `<a href="#decl=${encodeURIComponent(decls[j].n)}"><g class="e-node${decls[j].r ? " r" : ""}${main ? " main" : ""}"><title>${esc(decls[j].n)}</title>
+          <rect x="${x - (main ? 150 : BOX / 2 + 6)}" y="${y - H / 2}" width="${main ? 300 : BOX + 12}" height="${H}" rx="7"/>
+          <text x="${x}" y="${y + 4}">${esc(main ? (decls[j].n.length > 38 ? `${decls[j].n.slice(0, 37)}…` : decls[j].n) : short(decls[j].n))}</text></g></a>`;
+      const edges = rows.flatMap(([ids, y]) => xs(ids.length).map((x) => {
+        const [y1, y2] = y < mid.y ? [y + H / 2, mid.y - H / 2] : [mid.y + H / 2, y - H / 2];
+        const [x1, x2] = y < mid.y ? [x, mid.x] : [mid.x, x];
+        const m = (y1 + y2) / 2;
+        return `<path d="M${x1},${y1} C${x1},${m} ${x2},${m} ${x2},${y2}"/>`;
+      }));
+      const nodes = rows.flatMap(([ids, y]) => xs(ids.length).map((x, k) => box(ids[k], x, y)));
+      const more = (n: number, y: number) => (n > ROWS ? `<text class="e-more" x="${W - 4}" y="${y + 4}">+${n - ROWS}</text>` : "");
+      return `<svg class="ego" viewBox="0 0 ${W} 212" role="img" aria-label="What uses it and what it uses">${edges.join("")}${nodes.join("")}${box(i, mid.x, mid.y, true)}${more(by.length, 22)}${more(uses.length, 190)}</svg>`;
+    }
+
+    function show(name: string) {
+      const i = index.get(name);
+      if (i === undefined) { panel.innerHTML = `<p class="muted">No declaration is named <code>${esc(name)}</code>.</p>`; return; }
+      const d = decls[i];
+      const uses = [...new Set([...d.s, ...d.b])].sort((a, b) => decls[a].n.localeCompare(decls[b].n));
+      const inStatement = new Set(d.s);
+      const by = [...usedBy[i]].sort((a, b) => Number(decls[b].r) - Number(decls[a].r) || decls[a].n.localeCompare(decls[b].n));
+      panel.innerHTML = `
+        <header>
+          <span class="kind">${d.k}</span>
+          <h3><code>${esc(d.n)}</code></h3>
+          <span class="${d.r ? "in" : "out"}">${d.r ? "behind soundness" : "apart from soundness"}</span>
+        </header>
+        <p class="where"><a href="/source/${d.f}/#L${d.l}">${esc(d.m)}, line ${d.l}</a></p>
+        ${d.d ? `<div class="doc">${prose(d.d)}</div>` : ""}
+        ${d.t ? `<pre class="lean"><code>${esc(d.t)}</code></pre>` : ""}
+        ${d.c.length ? `<p class="cites">${d.c.map((id) => `<a class="chip" href="${hrefs[id] ?? "/reference/"}">${id}</a>`).join("")}</p>` : ""}
+        ${ego(i, by, uses)}
+        <div class="lists">
+          ${list("Uses", uses, (j) => (inStatement.has(j) ? '<span class="tag">statement</span>' : ""))}
+          ${list("Used by", by)}
+        </div>`;
+    }
+
+    const fromHash = () => {
+      const m = location.hash.match(/^#decl=(.+)$/);
+      show(m ? decodeURIComponent(m[1]) : root.dataset.start!);
+    };
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+
+    input.addEventListener("input", () => {
+      const q = input.value.trim().toLowerCase();
+      if (!q) { results.hidden = true; return; }
+      const hits = decls
+        .map((d, i) => ({ i, at: d.n.toLowerCase().indexOf(q) }))
+        .filter((h) => h.at >= 0)
+        .sort((a, b) => a.at - b.at || decls[a.i].n.length - decls[b.i].n.length)
+        .slice(0, 12);
+      results.innerHTML = hits.map((h) => item(h.i)).join("") || '<li class="muted">No declaration matches.</li>';
+      results.hidden = false;
+    });
+    results.addEventListener("click", () => { results.hidden = true; input.value = ""; });
+  }
+</script>
+
+<style>
+  .explorer { margin-top: 1rem; border: 1px solid var(--rule); border-radius: 0.625rem; overflow: hidden; }
+  .search { position: relative; border-bottom: 1px solid var(--rule); }
+  .search input { width: 100%; padding: 0.75rem 1rem; border: 0; background: var(--surface); color: var(--ink); font: inherit; font-size: 0.9375rem; outline: none; }
+  .results { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 0; padding: 0.375rem; list-style: none; background: var(--ground); border: 1px solid var(--rule-firm); border-radius: 0 0 0.5rem 0.5rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.08); }
+  .panel { padding: 1rem 1.125rem 1.25rem; min-height: 12rem; }
+  .panel :global(header) { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.625rem; }
+  .panel :global(h3) { margin: 0; font-size: 1.125rem; }
+  .panel :global(h3 code) { background: none; padding: 0; }
+  .panel :global(.kind), .explorer :global(.k) { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .explorer :global(.k) { display: inline-block; width: 5.5rem; }
+  .panel :global(.in) { font-size: 0.75rem; color: var(--pass); }
+  .panel :global(header .out) { font-size: 0.75rem; color: var(--muted); }
+  .panel :global(.where) { margin: 0.25rem 0 0.75rem; font-size: 0.8125rem; }
+  .panel :global(.doc p) { margin: 0.375rem 0; font-size: 0.9375rem; line-height: 1.45; }
+  .panel :global(pre.lean) { margin: 0.75rem 0; padding: 0.75rem 0.875rem; border: 1px solid var(--rule); border-radius: 0.5rem; background: var(--surface); overflow-x: auto; font-size: 0.8125rem; line-height: 1.5; }
+  .panel :global(.cites) { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+  .panel :global(.chip) { font-family: var(--mono); font-size: 0.75rem; padding: 0.0625rem 0.4375rem; border-radius: 999px; background: var(--sky-wash); color: var(--sky); text-decoration: none; }
+  .panel :global(.lists) { display: grid; grid-template-columns: 1fr; gap: 1.25rem; margin-top: 1rem; }
+  @media (min-width: 56rem) { .panel :global(.lists) { grid-template-columns: 1fr 1fr; } }
+  .panel :global(h4) { margin: 0 0 0.375rem; font-size: 0.875rem; }
+  .panel :global(.count) { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); font-weight: 400; }
+  .explorer :global(ul) { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+  .explorer :global(li) { font-size: 0.8125rem; display: flex; align-items: baseline; gap: 0.375rem; }
+  .explorer :global(li a) { text-decoration: none; color: var(--ink); }
+  .explorer :global(li a:hover code) { color: var(--sky); }
+  .explorer :global(li code) { background: none; padding: 0; font-size: 0.75rem; }
+  .explorer :global(.tag) { font-size: 0.6875rem; color: var(--sky); }
+  .explorer :global(li .out) { font-size: 0.6875rem; color: var(--muted); }
+  .explorer :global(.muted) { color: var(--muted); font-size: 0.875rem; }
+  .panel :global(svg.ego) { display: block; width: 100%; height: auto; margin: 1rem 0 0.25rem; }
+  .panel :global(.ego path) { fill: none; stroke: var(--rule-firm); stroke-width: 1.25; }
+  .panel :global(.e-node rect) { fill: var(--ground); stroke: var(--sky); stroke-width: 1.25; }
+  .panel :global(.e-node.r rect) { stroke: var(--pass); fill: color-mix(in srgb, var(--pass) 12%, var(--ground)); }
+  .panel :global(.e-node.main rect) { stroke-width: 2.25; }
+  .panel :global(.e-node text) { text-anchor: middle; font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+  .panel :global(.e-node.main text) { font-size: 13px; font-weight: 600; }
+  .panel :global(.e-node:hover rect) { stroke-width: 2.25; }
+  .panel :global(.e-more) { text-anchor: end; font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+</style>

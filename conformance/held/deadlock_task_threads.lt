@@ -1,0 +1,27 @@
+//~ tier: advanced
+//~ rule: shared.when-on-value-already-held
+//~ panic: deadlock
+//~ panic-at: deadlock_task_threads.lt:13:36
+//~ stdout:
+//~ | in
+
+use std.sync
+use std.task
+
+type Counter = { n: i64 }
+
+fn bump(c: sync.Shared<Counter>) { when c { c.n += 1 } }
+
+// The sequential run runs the task inside the block, where its `when` reaches the held value,
+// and every handler panics there.
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 0 })
+  let f = || bump(c)
+  with task.threads() {
+    when c {
+      print("in")
+      task.spawn(f)
+      print("not reached")
+    }
+  }
+}

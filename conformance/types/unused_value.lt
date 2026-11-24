@@ -1,0 +1,7 @@
+//~ rule: expressions.unused-values
+
+fn sorted(xs: List<i64>) -> List<i64> {
+  xs.sorted() //~ ERROR E0322
+  let _ = xs.len()
+  xs.sorted()
+}

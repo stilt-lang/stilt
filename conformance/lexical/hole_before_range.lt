@@ -1,0 +1,10 @@
+//~ rule: lexical.tokens, declarations.typed-holes
+//~ run-output: "ran"
+
+fn later() {
+  for _ in (?)..3 {} //~ WARN W0300
+}
+
+fn main() / io {
+  print("ran")
+}

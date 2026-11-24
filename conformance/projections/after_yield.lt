@@ -1,0 +1,42 @@
+//~ tier: advanced
+//~ rule: projections.yield, projections.when-projection-runs
+//~ stdout:
+//~ | before
+//~ | after 10
+//~ | mid
+//~ | before
+//~ | after 4
+//~ | before
+//~ | after 10
+//~ | 10 10 5
+
+type Scores = { by_name: Map<str, i64>, best: i64 }
+
+impl Scores {
+  // The statements after the `yield` run once the caller is done, so `best` is kept true.
+  fn of(inout self, name: str) -> inout i64 / io {
+    print("before")
+    yield self.by_name[name]
+    print("after {self.by_name[name]}")
+    if self.by_name[name] > self.best { self.best = self.by_name[name] }
+  }
+}
+
+// A projection may yield a `var` local, read it once the caller is done, and `return`.
+fn added(inout total: i64) -> inout i64 {
+  var tmp = 0
+  yield tmp
+  total += tmp
+  return
+}
+
+fn main() / io {
+  var s = Scores { by_name: Map.with_default(0), best: 0 }
+  s.of("ada") += 10
+  print("mid")
+  s.of("bob") = 4
+  var t = 0
+  added(inout t) = 5
+  let ada = s.of("ada")
+  print("{s.best} {ada} {t}")
+}

@@ -1,0 +1,168 @@
+// Reading a line of the log's text into an entry: its head, then its message by its topic's
+// pattern.
+
+use matcher
+use patterns
+use events.access
+use events.entry
+use events.ops
+use events.time
+use events.web
+
+/// The entry that a line of text records, or why it records none.
+/// ex: try line("2026-11-03T08:15:02Z web-1 WARN disk: /var at 91%").event == entry.Disk(ops.Disk { mount: "/var", percent: 91 })
+/// ex: Result.of(|| try line("hello")) == Err("no head")
+/// ex: Result.of(|| try line("2026-11-03T08:15:02Z web-1 INFO mail: sent")) == Err("no topic `mail`")
+pub fn line(text: str) -> entry.Entry / raise<str> {
+  let head = patterns.line(text) else raise "no head"
+  let at = try stamp(head)
+  let source = time.Source { host: head.get(7), index: head.int(8) }
+  let level = time.Level.parse(head.get(9)) else raise "no level `{head.get(9)}`"
+  let event = try event(head.get(10), head.get(11))
+  entry.Entry { at, source, level, event }
+}
+
+// The time that the head's first six groups write.
+fn stamp(head: matcher.Captures) -> time.Stamp / raise<str> {
+  let date = time.Date { year: head.int(1), month: try small(head, 2), day: try small(head, 3) }
+  let at = time.Stamp {
+    date,
+    hour: try small(head, 4),
+    minute: try small(head, 5),
+    second: try small(head, 6),
+  }
+  if !at.valid() { raise "no such time as {at.text()}" }
+  at
+}
+
+// The two digits of a group.
+fn small(head: matcher.Captures, i: i64) -> u8 / raise<str> {
+  head.get(i).to_u8() else raise "`{head.get(i)}` isn't a number"
+}
+
+/// The event of a message of the topic, read by the topic's patterns.
+/// ex: try event("job", "started name=reindex") == entry.Job(ops.Started("reindex"))
+/// ex: Result.of(|| try event("job", "started name=reindex in 3ms")) == Err("a job message that no pattern reads")
+pub fn event(topic: str, message: str) -> entry.Event / raise<str> {
+  let found = match topic {
+    "http" => http(message)
+    "sql" => sql(message)
+    "auth" => auth(message)
+    "cache" => cache(message)
+    "job" => job(message)
+    "disk" => disk(message)
+    "deploy" => deploy(message)
+    "config" => config(message)
+    "panic" => crash(message)
+    "retry" => retry(message)
+    _ => raise "no topic `{topic}`"
+  }
+  found else raise "a {topic} message that no pattern reads"
+}
+
+fn http(message: str) -> Option<entry.Event> {
+  let c = patterns.http(message) else return None
+  let method = web.Method.parse(c.get(1)) else return None
+  let query = if c.has(4) { Some(c.get(4)) } else { None }
+  let request = web.Request {
+    method,
+    path: c.get(2),
+    query,
+    status: c.int(5),
+    millis: c.int(6),
+    bytes: c.int(7),
+  }
+  Some(entry.Http(request))
+}
+
+fn sql(message: str) -> Option<entry.Event> {
+  let c = patterns.slow(message) else return None
+  Some(entry.Sql(web.Query { table: c.get(1), millis: c.int(2), rows: c.int(3) }))
+}
+
+fn auth(message: str) -> Option<entry.Event> {
+  let c = patterns.login(message) else return None
+  let ip = access.Ip.parse([c.get(3), c.get(4), c.get(5), c.get(6)]) else return None
+  let attempts = if c.has(8) { Some(c.int(8)) } else { None }
+  Some(entry.Auth(access.Login { user: c.get(2), ip, ok: c.get(1) == "ok", attempts }))
+}
+
+fn cache(message: str) -> Option<entry.Event> {
+  if let Some(c) = patterns.lookup(message) {
+    let key = access.Key { space: c.get(2), id: c.int(3) }
+    return Some(entry.Cache(if c.get(1) == "hit" { access.Hit(key) } else { access.Miss(key) }))
+  }
+  let c = patterns.evict(message) else return None
+  Some(entry.Cache(access.Evict(access.Key { space: c.get(1), id: c.int(2) }, c.int(3))))
+}
+
+// A job: a start says nothing after the name, a finish its time and a failure its reason.
+fn job(message: str) -> Option<entry.Event> {
+  let c = patterns.job(message) else return None
+  let name = c.get(2)
+  let j = match c.get(1) {
+    "started" if !c.has(3) => ops.Started(name)
+    "finished" if c.has(4) => ops.Finished(name, c.int(4))
+    "failed" if c.has(5) => ops.Failed(name, c.get(5))
+    _ => return None
+  }
+  Some(entry.Job(j))
+}
+
+fn disk(message: str) -> Option<entry.Event> {
+  let c = patterns.disk(message) else return None
+  Some(entry.Disk(ops.Disk { mount: c.get(1), percent: c.int(2) }))
+}
+
+fn deploy(message: str) -> Option<entry.Event> {
+  let c = patterns.deploy(message) else return None
+  let version = ops.Version { major: c.int(1), minor: c.int(2), patch: c.int(3) }
+  let hosts = c.get(5).split(",").filter(|h| h != "")
+  Some(entry.Deploy(ops.Deploy { version, by: c.get(4), hosts }))
+}
+
+fn config(message: str) -> Option<entry.Event> {
+  let c = patterns.setting(message) else return None
+  Some(entry.Config(ops.Setting { key: c.get(1), before: c.get(2), after: c.get(3) }))
+}
+
+fn crash(message: str) -> Option<entry.Event> {
+  let c = patterns.crash(message) else return None
+  Some(entry.Panic(ops.Crash { thread: c.get(1), message: c.get(2) }))
+}
+
+fn retry(message: str) -> Option<entry.Event> {
+  let c = patterns.retry(message) else return None
+  Some(entry.Retry(ops.Retry { op: c.get(1), attempt: c.int(2), limit: c.int(3), wait: c.int(4) }))
+}
+
+test "each topic's message reads into its event" {
+  let head = "2026-11-03T08:15:02Z web-1 INFO"
+  let topics = [
+    "http", "sql", "auth", "cache", "cache", "job", "disk", "deploy", "config", "panic", "retry",
+  ]
+  let messages = [
+    "PUT /api/users/12 200 3ms 10B", "slow query on orders took 340ms rows=1200",
+    "login ok user=bo ip=192.168.1.20", "miss key=session:9", "evict key=page:3 size=4096",
+    "finished name=reindex in 2140ms", "/var at 72%", "version 1.5.0 by ana to web-1,web-2",
+    "set mode from blue to green", "thread worker-3 panicked: index out of bounds",
+    "fetch attempt 2 of 5 after 400ms",
+  ]
+  for (topic, message) in topics.zip(messages) {
+    let e = try line("{head} {topic}: {message}") catch why => panic("{topic}: {why}")
+    assert e.event.topic() == topic
+    assert e.line() == "{head} {topic}: {e.event.summary()}"
+  }
+}
+
+test "a line whose time no clock shows reads into no entry" {
+  assert Result.of(|| try line("2026-11-03T24:00:00Z web-1 INFO disk: /var at 1%")) ==
+    Err("no such time as 2026-11-03T24:00:00Z")
+  assert Result.of(|| try line("2026-04-31T08:00:00Z web-1 INFO disk: /var at 1%")) ==
+    Err("no such time as 2026-04-31T08:00:00Z")
+}
+
+test "an address with a number past 255 reads into no login" {
+  let message = "login ok user=bo ip=10.0.0.256"
+  assert Result.of(|| try event("auth", message)) == Err("a auth message that no pattern reads")
+}

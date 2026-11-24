@@ -1,0 +1,28 @@
+//~ rule: traits.impl-members, traits.impl-signatures
+
+trait Shape {
+  fn area(self) -> f64
+  fn name(self) -> str { "shape" }
+}
+
+type Square = { side: f64 }
+
+impl Shape for Square { //~ ERROR E0305
+  fn perimeter(self) -> f64 { //~ ERROR E0306
+    4.0 * self.side
+  }
+}
+
+type Circle = { radius: f64 }
+
+impl Shape for Circle {
+  fn area(inout self) -> f64 { //~ ERROR E0307
+    3.0 * self.radius * self.radius
+  }
+}
+
+type Dot = {}
+
+impl Shape for Dot {
+  fn area(self) -> f64 { 0.0 }
+}

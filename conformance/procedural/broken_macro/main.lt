@@ -1,0 +1,8 @@
+//~ tier: meta
+//~ rule: macros.expansion-order, errors.broken-parts
+
+// A part that begins with `macro` and breaks declares that macro, which
+// expands no use.
+meta use tools
+
+fn main() / io { print("{tools.two!()}") }

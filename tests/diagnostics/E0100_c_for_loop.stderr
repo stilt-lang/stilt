@@ -1,0 +1,9 @@
+── SYNTAX ERROR ─────────────────────────────── E0100_c_for_loop.lt:2:8  [E0100]
+
+Stilt loops over a range, as `for i in 0..n`, or a list, as `for x in xs`:
+
+  2 │   for (var i = 0; i < 3; i += 1) { print("{i}") }
+    │        ^^^
+
+A `for` loop takes each value of what follows `in`; a `while` loop runs while
+its condition holds.

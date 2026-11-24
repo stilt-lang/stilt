@@ -1,0 +1,27 @@
+//~ tier: advanced
+
+// A module that declares a macro is in the advanced tier (macros.advanced-tier). Its expansions are
+// the using function's code, so their facts are that function's (macros.expansion-effects), each on the line of
+// the tokens the user wrote: a fragment's, or the use's for the template's own (macros.errors-in-expansions).
+
+syntax unless {
+  ($cond: expr) $body: block => if !($cond) $body
+}
+
+syntax both {
+  ($a: expr, $b: expr) => [$a, $b]
+}
+
+fn first(xs: List<i64>) -> i64 {
+  unless!(xs.is_empty()) { return xs[0] } //~ PROVED bounds
+  0
+}
+
+fn main() / io {
+  let pair = both!(1, 2) //~ ALLOC
+  unless!(pair.len() > 2) { print("short") } //~ CONSOLE ALLOC
+  unless!(pair.is_empty()) {
+    print("first") //~ CONSOLE ALLOC
+  }
+  print("{first(pair)}") //~ ALLOC CONSOLE
+}

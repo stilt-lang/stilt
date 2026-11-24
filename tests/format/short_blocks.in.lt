@@ -1,0 +1,42 @@
+// A block of one statement goes on one line when the line fits in 100 columns, and every other
+// block has one statement per line.
+fn largest(xs: List<i64>) -> i64 {
+  var best = xs[0]
+  for x in xs {
+    if x > best {
+      best = x
+    }
+  }
+  best
+}
+
+fn doubled(xs: List<i64>) -> List<i64> {
+  xs.map(|x| {
+    x * 2
+  })
+}
+
+fn first_or_zero(xs: List<i64>) -> i64 {
+  let [first, ..] = xs else {
+    return 0
+  }
+  first
+}
+
+fn spin() / io { while true { let n = 1; print("{n}") } }
+
+fn nothing() {
+}
+
+test "largest" {
+  assert largest([1, 3, 2]) == 3
+}
+
+type Point = { x: i64, y: i64 }
+
+fn origin() -> Point {
+  Point {
+    x: 0,
+    y: 0,
+  }
+}

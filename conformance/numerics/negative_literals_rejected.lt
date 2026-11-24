@@ -1,0 +1,54 @@
+//~ rule: numbers.negative-literals, numbers.unsigned-negation, patterns.pattern-forms
+
+fn smallest() -> i8 { -128 }
+
+fn below() -> i8 {
+  -129 //~ ERROR E0320
+}
+
+fn parenthesized() -> i8 {
+  -(128) //~ ERROR E0320
+}
+
+fn spaced() -> i8 {
+  - 128 //~ ERROR E0320
+}
+
+fn spaced_pattern(n: i8) -> bool {
+  match n {
+    - 128 => true
+    _ => false
+  }
+}
+
+fn pattern_below(n: i8) -> bool {
+  match n {
+    -129 => true //~ ERROR E0320
+    _ => false
+  }
+}
+
+fn unsigned_zero() -> u8 { -0 }
+
+fn unsigned_spaced_zero() -> u8 {
+  - 0 //~ ERROR E0317
+}
+
+fn unsigned_parenthesized_zero() -> u8 {
+  -(0) //~ ERROR E0317
+}
+
+fn unsigned_minus_one() -> u8 {
+  -1 //~ ERROR E0320
+}
+
+fn unsigned_pattern(n: u16) -> bool {
+  match n {
+    -1 => true //~ ERROR E0320
+    _ => false
+  }
+}
+
+fn unsigned_variable(n: u64) -> u64 {
+  -n //~ ERROR E0317
+}

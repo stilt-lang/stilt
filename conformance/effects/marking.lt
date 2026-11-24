@@ -1,0 +1,32 @@
+//~ rule: effects.marking
+
+type ParseError = | Empty | NotANumber(str)
+
+fn parse(s: str) -> i64 / raise<ParseError> {
+  if s == "" { raise Empty }
+  s.to_i64() else raise NotANumber(s)
+}
+
+fn unmarked(s: str) -> i64 / raise<ParseError> {
+  parse(s) //~ ERROR E0505
+}
+
+fn marked(s: str) -> i64 / raise<ParseError> { try parse(s) }
+
+fn through_closure(lines: List<str>) -> List<i64> / raise<ParseError> {
+  try lines.map(|l| parse(l))
+}
+
+fn closure_unmarked(lines: List<str>) -> List<i64> / raise<ParseError> {
+  lines.map(|l| try parse(l)) //~ ERROR E0505
+}
+
+fn arm_unmarked(s: str) -> i64 / raise<ParseError> {
+  try parse(s) catch _ because "an empty field is zero" => parse("0") //~ ERROR E0505
+}
+
+fn arm_marked(s: str) -> i64 / raise<ParseError> {
+  try parse(s) catch _ because "an empty field is zero" => try parse("0")
+}
+
+fn raises_directly(s: str) -> i64 / raise<ParseError> { raise NotANumber(s) }

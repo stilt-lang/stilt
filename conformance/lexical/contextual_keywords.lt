@@ -1,0 +1,19 @@
+//~ rule: lexical.contextual-keywords, lexical.contextual-keywords.as-names, syntax.contextual-keywords, program.module-header, declarations.limits
+//~ run-output: "1 2 3 4 5 6 7 8"
+
+module main
+  without panic
+
+fn because(without: i64) -> i64 without alloc { without + 1 }
+
+fn main() / io {
+  let without = because(0)
+  let advanced = because(without)
+  let meta = 3
+  let systems = 4
+  let alloc = 5
+  let tier = 6
+  let total = 7
+  let io = 8
+  print("{without} {advanced} {meta} {systems} {alloc} {tier} {total} {io}")
+}

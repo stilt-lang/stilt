@@ -1,0 +1,30 @@
+//~ tier: advanced
+//~ rule: syntax.types, polymorphism.placement, polymorphism.instantiation, polymorphism.arguments
+//~ stdout:
+//~ | [1] (true)
+//~ | <7> <x>
+//~ | [1] (true)
+
+// A record of functions whose field stays generic.
+type Style = { wrap: fn<T: Show>(T) -> str }
+
+type Rule = | Plain | Custom(fn<T: Show>(T) -> str)
+
+fn bracket<T: Show>(x: T) -> str { "[{x}]" }
+
+fn render(s: Style) -> str { "{s.wrap(1)} {s.wrap(true)}" }
+
+fn apply(r: Rule, n: i64, s: str) -> str {
+  match r {
+    Plain => "{n} {s}"
+    Custom(f) => "{f(n)} {f(s)}"
+  }
+}
+
+fn main() / io {
+  let style = Style { wrap: |x| if "{x}" == "true" { "({x})" } else { bracket(x) } }
+  print(render(style))
+  print(apply(Custom(|x| "<{x}>"), 7, "x"))
+  // The field's value passed on where the same polymorphic type is expected.
+  print(render(Style { wrap: style.wrap }))
+}

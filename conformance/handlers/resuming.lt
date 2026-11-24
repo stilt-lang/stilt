@@ -1,0 +1,50 @@
+//~ tier: advanced
+//~ rule: handlers.resuming
+//~ stdout:
+//~ | before
+//~ | before
+//~ | after 20
+//~ | after 20
+//~ | 20
+//~ | failed: negative
+//~ | -1
+//~ | 8
+
+effect Ask {
+  fn ask() -> i64
+}
+
+effect Fail {
+  fn fail(msg: str) -> i64
+}
+
+fn twice_asked() -> i64 / Ask { Ask.ask() + Ask.ask() }
+
+fn checked(n: i64) -> i64 / Fail {
+  if n < 0 { Fail.fail("negative") } else { n * 2 }
+}
+
+fn main() / io {
+  // Each body resumes, then goes on once the rest of the block has ended.
+  let around = handler Ask -> i64 {
+    fn ask() -> i64 {
+      print("before")
+      let r = resume(10)
+      print("after {r}")
+      r
+    }
+  }
+  let n = with around { twice_asked() }
+  print("{n}")
+  // A body that never resumes ends the `with` with its value.
+  let to_default = handler Fail -> i64 {
+    fn fail(msg: str) -> i64 {
+      print("failed: {msg}")
+      -1
+    }
+  }
+  let a = with to_default { checked(-3) + 100 }
+  print("{a}")
+  let b = with to_default { checked(4) }
+  print("{b}")
+}

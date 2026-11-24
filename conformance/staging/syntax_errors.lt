@@ -1,0 +1,21 @@
+//~ tier: meta
+//~ rule: syntax.staging-annotations, meta.staging-annotations
+
+// `comptime` stands only before `for`, `if` and `match`, once for a chain.
+fn loop_while() {
+  comptime while true {} //~ ERROR E0100
+}
+
+fn binding() {
+  comptime let x = 1 //~ ERROR E0100
+}
+
+fn block() {
+  comptime { 1 } //~ ERROR E0100
+}
+
+fn chain(x: i64) {
+  if x == 1 {} else comptime if x == 2 {} //~ ERROR E0100
+}
+
+fn main() {}

@@ -1,0 +1,6 @@
+type Shape = | Circle(f64) | Square(f64)
+
+fn main() / io {
+  let s = Shape.Circle(1.0)
+  print("{s}")
+}

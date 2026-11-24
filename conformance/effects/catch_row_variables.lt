@@ -1,0 +1,35 @@
+//~ rule: effects.rows, effects.catch-around-row-variables
+
+type ParseError = | Empty
+
+fn parse(s: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn alone(f: fn() -> i64) -> i64 {
+  try f() catch _ because "a failure counts as zero" => 0 //~ ERROR E0506
+}
+
+fn beside(s: str, f: fn() -> i64) -> i64 {
+  try {
+    let n = parse(s)
+    f() //~ ERROR E0506
+  }
+    catch _ because "a failure counts as zero" => 0
+}
+
+fn through_map(xs: List<i64>, f: fn(i64) -> i64) -> List<i64> {
+  try xs.map(f) catch _ because "a failure gives no results" => [] //~ ERROR E0506
+}
+
+fn labelled<E>(f: fn() -> i64 / raise<E>) -> i64 {
+  try f() catch _ because "a failure counts as zero" => 0
+}
+
+// A closure literal in the operand that calls `f` isn't called there.
+fn nearer<e>(escaping f: fn() -> i64 / e, s: str) -> i64 / e {
+  try {
+    let n = parse(s)
+    let g = || f()
+    n
+  }
+    catch _ because "a failure counts as zero" => 0
+}

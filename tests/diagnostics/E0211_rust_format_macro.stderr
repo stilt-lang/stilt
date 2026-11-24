@@ -1,0 +1,13 @@
+── UNKNOWN NAME ─────────────────────── E0211_rust_format_macro.lt:3:15  [E0211]
+
+Stilt has no `format!`: a string shows values inside braces, as `"{x}"`:
+
+  3 │   let label = format!("{n} items")
+    │               ^^^^^^
+
+A string shows the value of an expression inside braces, as `"{name} is {age}"`.
+
+To fix it, write the string:
+
+  3 │   let label = "{n} items"
+    │               ~~~~~~~~~~~

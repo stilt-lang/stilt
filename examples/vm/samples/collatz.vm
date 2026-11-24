@@ -1,0 +1,71 @@
+; Prints the number below n whose Collatz sequence is the longest, the first of them, and the
+; number of terms of its sequence, 1 included.
+
+fn main 1               ; slot 0: n
+  push 1
+  store 1               ; slot 1: k
+scan:
+  load 1
+  load 0
+  lt
+  jumpz report          ; while k < n
+  load 1
+  call terms
+  dup
+  load 2
+  le
+  jumpz longer          ; terms(k) > best
+  drop
+  jump step
+longer:
+  store 2               ; slot 2: the most terms
+  load 1
+  store 3               ; slot 3: whose they are
+step:
+  load 1
+  push 1
+  add
+  store 1
+  jump scan
+report:
+  load 3
+  print
+  load 2
+  print
+  push 0
+  ret
+
+fn terms 1              ; slot 0: k
+  push 1
+  store 1               ; slot 1: terms so far
+again:
+  load 0
+  push 1
+  eq
+  not
+  jumpz counted         ; while k != 1
+  load 0
+  push 2
+  mod
+  jumpz even
+  load 0
+  push 3
+  mul
+  push 1
+  add
+  store 0               ; k = 3k + 1
+  jump one_more
+even:
+  load 0
+  push 2
+  div
+  store 0               ; k = k / 2
+one_more:
+  load 1
+  push 1
+  add
+  store 1
+  jump again
+counted:
+  load 1
+  ret

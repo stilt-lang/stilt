@@ -1,0 +1,8 @@
+//~ rule: patterns.no-other-forms
+
+fn greeting(s: str, name: str) -> bool {
+  match s {
+    "hello {name}" => true //~ ERROR E0100
+    _ => false
+  }
+}

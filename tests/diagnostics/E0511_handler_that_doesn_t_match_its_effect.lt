@@ -1,0 +1,8 @@
+effect Ask {
+  fn ask() -> i64
+  fn tell(n: i64)
+}
+
+fn answer() -> i64 {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { Ask.ask() }
+}

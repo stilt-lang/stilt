@@ -1,0 +1,114 @@
+// rbtree: inserts 4,200,000 keys into a red-black tree, the value of every tenth true, and
+// folds over the tree to count the true values (Reinking et al., Perceus, PLDI 2021).
+
+type Color = | Red | Black
+
+type Tree = | Leaf | Node(Color, Tree, i64, bool, Tree)
+
+fn is_red(t: Tree) -> bool {
+  match t {
+    Node(Red, _, _, _, _) => true
+    _ => false
+  }
+}
+
+/// Rebalances a black node whose left child `l` is red.
+fn balance_left(l: Tree, k: i64, v: bool, r: Tree) -> Tree {
+  match l {
+    Node(_, Node(Red, a, ka, va, b), kb, vb, c) => Node(
+      Red,
+      Node(Black, a, ka, va, b),
+      kb,
+      vb,
+      Node(Black, c, k, v, r),
+    )
+    Node(_, a, ka, va, Node(Red, b, kb, vb, c)) => Node(
+      Red,
+      Node(Black, a, ka, va, b),
+      kb,
+      vb,
+      Node(Black, c, k, v, r),
+    )
+    Node(_, a, ka, va, b) => Node(Black, Node(Red, a, ka, va, b), k, v, r)
+    Leaf => Leaf
+  }
+}
+
+/// Rebalances a black node whose right child `r` is red.
+fn balance_right(l: Tree, k: i64, v: bool, r: Tree) -> Tree {
+  match r {
+    Node(_, Node(Red, a, ka, va, b), kb, vb, c) => Node(
+      Red,
+      Node(Black, l, k, v, a),
+      ka,
+      va,
+      Node(Black, b, kb, vb, c),
+    )
+    Node(_, a, ka, va, Node(Red, b, kb, vb, c)) => Node(
+      Red,
+      Node(Black, l, k, v, a),
+      ka,
+      va,
+      Node(Black, b, kb, vb, c),
+    )
+    Node(_, a, ka, va, b) => Node(Black, l, k, v, Node(Red, a, ka, va, b))
+    Leaf => Leaf
+  }
+}
+
+fn ins(t: Tree, k: i64, v: bool) -> Tree {
+  match t {
+    Node(Red, l, kx, vx, r) => if k < kx {
+      Node(Red, ins(l, k, v), kx, vx, r)
+    } else if k > kx {
+      Node(Red, l, kx, vx, ins(r, k, v))
+    } else {
+      Node(Red, l, k, v, r)
+    }
+    Node(Black, l, kx, vx, r) => if k < kx {
+      if is_red(l) {
+        balance_left(ins(l, k, v), kx, vx, r)
+      } else {
+        Node(Black, ins(l, k, v), kx, vx, r)
+      }
+    } else if k > kx {
+      if is_red(r) {
+        balance_right(l, kx, vx, ins(r, k, v))
+      } else {
+        Node(Black, l, kx, vx, ins(r, k, v))
+      }
+    } else {
+      Node(Black, l, k, v, r)
+    }
+    Leaf => Node(Red, Leaf, k, v, Leaf)
+  }
+}
+
+fn insert(t: Tree, k: i64, v: bool) -> Tree {
+  match ins(t, k, v) {
+    Node(_, l, kx, vx, r) => Node(Black, l, kx, vx, r)
+    Leaf => Leaf
+  }
+}
+
+fn fold<A>(t: Tree, acc: A, f: fn(i64, bool, A) -> A) -> A {
+  match t {
+    Node(_, l, k, v, r) => fold(r, f(k, v, fold(l, acc, f)), f)
+    Leaf => acc
+  }
+}
+
+fn make_tree(n: i64) -> Tree {
+  var t = Leaf
+  var k = n
+  while k > 0 {
+    k -= 1
+    t = insert(t, k, k % 10 == 0)
+  }
+  t
+}
+
+fn main() / io {
+  let t = make_tree(4200000)
+  print("{fold(t, 0, |_, v, count| if v { count + 1 } else { count })}")
+}

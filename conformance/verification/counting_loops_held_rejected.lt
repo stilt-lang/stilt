@@ -1,0 +1,15 @@
+//~ tier: advanced
+//~ rule: shared.names-that-may-be-one-place, facts.without-div, facts.rules-of-acceptance, facts.acceptance-places, facts.counting-loops
+
+use std.sync
+
+// Two names of one `when` may reach one value, so neither is a `var` that
+// counts.
+fn apart(a: sync.Shared<i64>, b: sync.Shared<i64>) without div {
+  when a, b {
+    while a < b { //~ ERROR E0204
+      a += 1
+      b -= 1
+    }
+  }
+}

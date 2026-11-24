@@ -1,0 +1,11 @@
+//~ rule: syntax.patterns, patterns.pattern-forms, patterns.irrefutable-positions
+//~ run-output: "[1, 1] ()"
+
+fn units(xs: List<()>) -> List<i64> { xs.map(|()| 1) }
+
+fn main() / io {
+  let () = ()
+  var seen = ()
+  for () in [()] { seen = () }
+  print("{units([(), ()])} {seen}")
+}

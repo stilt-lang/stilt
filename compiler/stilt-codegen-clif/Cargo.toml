@@ -1,0 +1,46 @@
+[package]
+name = "stilt-codegen-clif"
+description = "Stilt's debug back end: MIR compiled by Cranelift, run in process by its JIT"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Compiles functions across the machine's cores as the front end checks bodies (goal
+# clean-debug-build).
+stilt-db = { path = "../stilt-db" }
+stilt-mir = { path = "../stilt-mir" }
+stilt-runtime = { path = "../stilt-runtime" }
+# Every target of `stilt build`, whichever the host (goal cross-compilation).
+cranelift-codegen = { version = "0.137.1", features = ["arm64", "x86"] }
+cranelift-frontend = "0.137.1"
+cranelift-jit = "0.137.1"
+cranelift-module = "0.137.1"
+cranelift-native = "0.137.1"
+cranelift-object = "0.137.1"
+# The registry of what a module declares, looked up again for every function that a build
+# reuses (goal compile-time-code-rebuilds).
+rustc-hash.workspace = true
+# The DWARF of compiled code, and the ELF files that give the JIT's to debuggers (goal
+# debuggable-builds).
+gimli = { version = "0.33", default-features = false, features = ["std", "write"] }
+object = { workspace = true, features = ["write"] }
+
+[dev-dependencies]
+# Reads back the DWARF that a build puts together, as a debugger would.
+gimli = { version = "0.33", default-features = false, features = ["std", "read"] }
+
+[lints.rust]
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+# The Cranelift back end is one of the two crates allowed `unsafe` (goal visible-unsafe): it
+# calls the code it compiles.
+unsafe_code = "allow"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+mod_module_files = "warn"
+undocumented_unsafe_blocks = "warn"

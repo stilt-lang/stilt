@@ -1,0 +1,31 @@
+; The reference interpreter's run of a program of one file, compiled to
+; JavaScript by js_of_ocaml for the playground's page (playground/README.md):
+; as one program, optimized, with Stilt's effect handlers, which the
+; interpreter runs on OCaml's, in continuation-passing style, and with the
+; calls that js_of_ocaml's runtime doesn't give from stubs.js. `just
+; playground` builds it; `dune build` alone doesn't, which spares every build
+; of the interpreter compiling it to JavaScript again.
+
+(executable
+ (name run)
+ (modes js)
+ (libraries stilt js_of_ocaml)
+ (js_of_ocaml
+  (compilation_mode whole_program)
+  (javascript_files stubs.js)
+  (flags
+   (--opt 3 --effects=cps))))
+
+(rule
+ (alias default)
+ (action (progn)))
+
+; The standard library's trees, parsed and checked when the playground is
+; built, as stilt-ref is built with them (Driver.std_snapshot).
+
+(rule
+ (target std_snapshot.ml)
+ (action
+  (with-stdout-to
+   %{target}
+   (run %{exe:../../interpreter/gen/snapshot.exe}))))

@@ -1,0 +1,40 @@
+//~ tier: advanced
+//~ rule: shared.std-sync, shared.when, shared.when-order
+//~ stdout:
+//~ | 80 20
+//~ | 80 20
+//~ | 7
+
+use std.sync
+use std.task
+
+type Account = { balance: i64 }
+
+fn transfer(a: sync.Shared<Account>, b: sync.Shared<Account>, n: i64) {
+  when a, b {
+    a.balance -= n
+    b.balance += n
+  }
+}
+
+fn run(handler_: handler async) / io {
+  let alice = sync.Shared.new(Account { balance: 100 })
+  let bob = sync.Shared.new(Account { balance: 0 })
+  with handler_ {
+    task.spawn(|| transfer(alice, bob, 30))
+    task.spawn(|| transfer(bob, alice, 10))
+  }
+  when alice, bob { print("{alice.balance} {bob.balance}") }
+}
+
+fn main() / io {
+  run(task.threads())
+  run(task.sequential())
+  // Two names that reach one value are one place.
+  let c = sync.Shared.new(Account { balance: 5 })
+  let d = c
+  when c, d {
+    c.balance += 2
+    print("{d.balance}")
+  }
+}

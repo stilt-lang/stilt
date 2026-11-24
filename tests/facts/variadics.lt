@@ -1,0 +1,19 @@
+//~ tier: advanced
+
+// Variadic generics (variadics.advanced-tier): a module that declares a pack is in the advanced
+// tier. A tuple is held inline, so a spread among a tuple's elements allocates nothing, and one
+// among a list's allocates the list. A spread uses each element of a tuple it builds from by value,
+// as building a tuple does, so building one from a parameter consumes it.
+
+fn tagged<..Ts>(xs: (..Ts)) -> (..Ts, i64) {
+  (..xs, 0) //~ CONSUMES xs
+}
+
+fn firsts<..Ts>(lists: (..List<Ts>)) -> (..Option<Ts>) { (..lists.first()) }
+
+fn lengths<..Ts>(lists: (..List<Ts>)) -> List<i64> { [..lists.len()] } //~ ALLOC
+
+fn main() / io {
+  print("{firsts(([1], [true]))} {lengths(([1], [true]))}") //~ ALLOC CONSOLE
+  print("{tagged(("a",))}") //~ ALLOC CONSOLE
+}

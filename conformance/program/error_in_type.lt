@@ -1,0 +1,17 @@
+//~ rule: program.meeting-the-error-type, program.errors-outside-bodies, program.check-error-report
+//~ run-output: "0"
+//~ panic: check-error
+//~ panic-at: error_in_type.lt:10:4
+
+type Point = { x: i64, y: Nope } //~ ERROR E0211
+
+fn count(points: List<Point>) -> i64 { points.len() }
+
+fn make() -> Point { Point { x: 1, y: 2 } }
+
+fn second(p: Point) -> i64 { p.y }
+
+fn main() / io {
+  print("{count([])}")
+  print("{make().x}")
+}

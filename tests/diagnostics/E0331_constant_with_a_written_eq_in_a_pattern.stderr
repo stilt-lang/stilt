@@ -1,0 +1,10 @@
+── CONSTANT WITH A WRITTEN `Eq` IN A PATTERN ── E0331_constant_with_a_written_eq_in_a_pattern.lt:11:5  [E0331]
+
+This constant holds a type whose `Eq` you wrote, so compare it with `==` in a
+guard:
+
+  11 │     FREE => "free"
+     │     ^^^^
+
+A pattern compares values field by field, which could disagree with the `eq` you
+wrote. Compare the constant with `==` in an `if` or a guard.

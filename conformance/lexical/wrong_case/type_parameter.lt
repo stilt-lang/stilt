@@ -1,0 +1,1 @@
+type Box<t> = { item: t } //~ ERROR E0100

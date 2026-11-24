@@ -1,0 +1,20 @@
+//~ rule: types.no-type-arguments, declarations.type-arguments
+//~ stdout:
+//~ | Wrapper { inner: 2 }
+//~ | 2
+//~ | 2.5
+//~ | 0
+
+type Wrapper<T> = { inner: T }
+
+fn main() / io {
+  let w = Wrapper { inner: 2 }
+  print("{w}")
+  let Wrapper { inner } = w
+  print("{inner}")
+  var totals: Map<str, f64> = Map.with_default(0.0)
+  totals["a"] += 2.5
+  print("{totals["a"]}")
+  let xs: List<i64> = List.new()
+  print("{xs.len()}")
+}

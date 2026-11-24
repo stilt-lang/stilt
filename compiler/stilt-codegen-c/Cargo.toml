@@ -1,0 +1,16 @@
+[package]
+name = "stilt-codegen-c"
+description = "Stilt's release back end: counted MIR lowered to freestanding C11, which clang compiles (builds.release-builds)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-mir = { path = "../stilt-mir" }
+# The layout constants of the header's fast paths, as the runtime defines them.
+stilt-runtime = { path = "../stilt-runtime" }
+
+[lints]
+workspace = true

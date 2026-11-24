@@ -1,0 +1,28 @@
+//~ rule: declarations.constructors, declarations.no-aliases, declarations.namespaces, declarations.name-lookup
+//~ stdout:
+//~ | UserId(3)
+//~ | 4
+//~ | Point { x: 1 } Point(2)
+
+type UserId = | UserId(i64)
+
+impl UserId {
+  pub fn new(n: i64) -> UserId { UserId(n) }
+
+  pub fn raw(self) -> i64 {
+    let UserId(n) = self
+    n
+  }
+}
+
+type Point = { x: i64 }
+
+type Marker = | Point(i64) | Origin
+
+fn main() / io {
+  print("{UserId.new(3)}")
+  print("{UserId(4).raw()}")
+  let p = Point { x: 1 }
+  let m = Point(2)
+  print("{p} {m}")
+}

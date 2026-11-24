@@ -1,0 +1,42 @@
+//~ tier: meta
+//~ rule: meta.shapes, meta.fields
+//~ stdout:
+//~ | tuple 3: 0=1 1=b 2=true
+//~ | record 3: zeta=1 alpha=b mid=[2.5]
+//~ | record 2: a=first b=2
+//~ | tuple 1: 0=()
+
+use std.meta
+
+type Order = { zeta: i64, alpha: str, mid: List<f64> }
+
+fn shown<X>(x: X) -> str {
+  if X: Show { "{x}" } else { "?" }
+}
+
+// Each field's index, name and value, in the order of meta.shapes: a tuple's
+// named "0", "1" and so on, a declared record's in the order of its
+// declaration, and an anonymous record's in the alphabetical order of its
+// fields' names.
+fn fields_of<T>(value: T) -> str {
+  var parts: List<str> = []
+  let kind = match T.shape() {
+    Tuple(fields) => {
+      for f in fields { parts.push("{f.index()}={shown(f.get(value))}") }
+      "tuple {fields.len()}:"
+    }
+    Record(fields) => {
+      for f in fields { parts.push("{f.name()}={shown(f.get(value))}") }
+      "record {fields.len()}:"
+    }
+    _ => "other"
+  }
+  "{kind} {" ".join(parts)}"
+}
+
+fn main() / io {
+  print(fields_of((1, "b", true)))
+  print(fields_of(Order { mid: [2.5], alpha: "b", zeta: 1 }))
+  print(fields_of({ b: 2, a: "first" }))
+  print(fields_of(((),)))
+}

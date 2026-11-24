@@ -1,0 +1,18 @@
+//~ rule: program.syntax-errors-at-run, errors.broken-parts, errors.running
+//~ run-output: "0"
+//~ panic: check-error
+//~ panic-at: syntax_error_in_type.lt:10:4
+
+type Point = { x: i64, y: } //~ ERROR E0100
+
+fn count(xs: List<i64>) -> i64 { xs.len() }
+
+fn make() -> i64 {
+  let p = Point { x: 1 }
+  p.x
+}
+
+fn main() / io {
+  print("{count([])}")
+  print("{make()}")
+}

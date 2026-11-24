@@ -1,0 +1,21 @@
+//~ rule: expressions.unused-values
+
+fn log(s: str) / io { print(s) }
+
+fn statements(xs: List<i64>, c: bool) -> i64 / io {
+  log("start")
+  xs.len() //~ ERROR E0322
+  let _ = xs.len()
+  xs.reversed() //~ ERROR E0322
+  (1, 2) //~ ERROR E0322
+  if c { 1 } else { 2 } //~ ERROR E0322
+  { log("inner") }
+  assert xs.len() >= 0
+  xs.len()
+}
+
+fn stop(n: i64) -> i64 / io {
+  print("stopping")
+  exit(1)
+  n
+}

@@ -1,0 +1,12 @@
+# The release toolchains that this version of `stilt` names (builds.fetching-toolchain): for each host,
+# the URL of its archive and the SHA-256 of the archive's bytes, one host to a line, as
+#
+#     aarch64-macos https://…/clang-23.1.5-aarch64-macos.tar.gz 5f1c…
+#
+# An archive is a gzip-compressed POSIX tar that holds `bin/clang` and whatever it loads,
+# written by `stilt_pkg::toolchain::archive::pack`, and publishing one adds its line here.
+# A host without a line builds release builds with the toolchain's own clang or `STILT_CC`.
+# Each archive repacks the `bin/clang-23` of LLVM's own release binaries, unchanged.
+
+aarch64-macos https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-23.1.5/clang-23.1.5-aarch64-macos.tar.gz 07510d2b4d7ecfe381afd73256d6007f2285927f15fa49a0fdd28d3f24aef3e9
+x86_64-linux https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-23.1.5/clang-23.1.5-x86_64-linux.tar.gz 008a14fc0261c04bb11ccac4f252be3814ea906d6f7b3ab24ca4b7fd5479fa40

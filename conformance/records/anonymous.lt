@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: syntax.types, syntax.record-types-and-spreads, syntax.record-literal-braces, records.anonymous-types, records.no-home, records.field-order, records.anonymous-literals
+//~ stdout:
+//~ | { x: 0, y: 0 }
+//~ | true true
+//~ | { age: 36, name: "Ada" }
+//~ | true false
+//~ | 3
+
+fn origin() -> { x: i64, y: i64 } { { x: 0, y: 0 } }
+
+// The same type, its fields written in another order.
+fn flipped(p: { y: i64, x: i64 }) -> { x: i64, y: i64 } { p }
+
+fn main() / io {
+  let o = origin()
+  print("{o}")
+  let same = { y: 0, x: 0 }
+  print("{flipped(o) == o} {o == same}")
+  let name = "Ada"
+  let person = { name: name, age: 36 }
+  print("{person}")
+  // Fields compare in alphabetical order: `age` before `name`.
+  let younger = { age: 1, name: "b" }
+  let older = { age: 2, name: "a" }
+  let two = { a: 2 }
+  let one = { a: 1 }
+  print("{younger < older} {two < one}")
+  // `{ x }` is a block.
+  let x = 3
+  let b = { x }
+  print("{b}")
+}

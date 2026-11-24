@@ -1,0 +1,26 @@
+// The names, fields and members close to one that a lookup didn't find, nearest first.
+
+type Order = { name: str, qty: i64, quantity: i64 }
+
+fn total(xs: List<i64>) -> i64 {
+  let count = xs.len()
+  let counter = 0
+  countr //~ E0211
+  //~ alternative: name count
+  //~ alternative: name counter
+}
+
+fn size(o: Order) -> i64 {
+  o.qtty //~ E0313
+  //~ alternative: field qty
+}
+
+fn first(xs: List<i64>) -> Option<i64> {
+  xs.frist() //~ E0314
+  //~ alternative: method first
+}
+
+fn count(xs: List<i64>) -> i64 {
+  xs.length() //~ E0314
+  //~ alternative: method len
+}

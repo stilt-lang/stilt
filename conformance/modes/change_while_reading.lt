@@ -1,0 +1,28 @@
+//~ rule: modes.overlap, modes.kinds-of-access, modes.durations, modes.change-while-iterating, errors.primary-spans
+
+type Item = { id: i64, price: f64 }
+type Cart = { items: List<Item>, total: f64 }
+
+impl Cart {
+  fn remove(inout self, id: i64) { self.items.retain(|item| item.id != id) }
+}
+
+fn clear(inout items: List<Item>) { items = [] }
+
+fn checkout(inout cart: Cart) {
+  for item in cart.items {
+    if item.price < 0.0 {
+      cart.remove(item.id) //~ ERROR E0404
+    }
+    cart.items.push(item) //~ ERROR E0404
+    clear(inout cart.items) //~ ERROR E0404
+    cart.items[0] = item //~ ERROR E0404
+    cart.total += item.price
+  }
+}
+
+fn not_a_place(inout xs: List<i64>) {
+  for (i, x) in xs.enumerate(0) { xs.push(x) }
+  var other = [1]
+  for x in xs { other.push(x) }
+}

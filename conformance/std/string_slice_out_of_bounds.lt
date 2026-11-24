@@ -1,0 +1,10 @@
+//~ rule: effects.panic-kinds, std.str
+//~ run-output: "bc"
+//~ panic: bounds
+//~ panic-at: string_slice_out_of_bounds.lt:9:9
+
+fn main() / io {
+  let s = "abc"
+  print(s.slice(1, 3))
+  print(s.slice(1, 4))
+}

@@ -1,0 +1,84 @@
+// An entry of the log: when, where and how severe, and the event it records.
+
+use events.access
+use events.ops
+use events.time
+use events.web
+
+/// The event an entry records, one for each topic of the log.
+pub type Event =
+  | Http(web.Request)
+  | Sql(web.Query)
+  | Auth(access.Login)
+  | Cache(access.Cache)
+  | Job(ops.Job)
+  | Disk(ops.Disk)
+  | Deploy(ops.Deploy)
+  | Config(ops.Setting)
+  | Panic(ops.Crash)
+  | Retry(ops.Retry)
+
+/// An entry: when it was written, by which host, how severe it is, and its event.
+pub type Entry = { at: time.Stamp, source: time.Source, level: time.Level, event: Event }
+
+/// The topics, in the order the report lists them.
+pub const TOPICS: List<str> = [
+  "http", "sql", "auth", "cache", "job", "disk", "deploy", "config", "panic", "retry",
+]
+
+impl Event {
+  /// The topic of the event, as a line writes it.
+  /// ex: Disk(ops.Disk { mount: "/", percent: 1 }).topic() == "disk"
+  pub fn topic(self) -> str {
+    match self {
+      Http(_) => "http"
+      Sql(_) => "sql"
+      Auth(_) => "auth"
+      Cache(_) => "cache"
+      Job(_) => "job"
+      Disk(_) => "disk"
+      Deploy(_) => "deploy"
+      Config(_) => "config"
+      Panic(_) => "panic"
+      Retry(_) => "retry"
+    }
+  }
+
+  /// The kind of the event: its topic, and what happened for the topics whose events differ in
+  /// that.
+  /// ex: Cache(access.Miss(access.Key { space: "s", id: 1 })).kind() == "cache miss"
+  /// ex: Disk(ops.Disk { mount: "/", percent: 1 }).kind() == "disk"
+  pub fn kind(self) -> str {
+    match self {
+      Http(r) => "http {r.method.label()}"
+      Auth(l) => if l.ok { "auth ok" } else { "auth failed" }
+      Cache(c) => "cache {c.action()}"
+      Job(j) => "job {j.state()}"
+      _ => self.topic()
+    }
+  }
+
+  /// What the event says, in a few words.
+  /// ex: Disk(ops.Disk { mount: "/var", percent: 91 }).summary() == "/var at 91%"
+  pub fn summary(self) -> str {
+    match self {
+      Http(r) => r.text()
+      Sql(q) => "{q.table} took {q.millis}ms for {q.rows} rows"
+      Auth(l) => "{l.user} from {l.ip.text()} {if l.ok { "logged in" } else { "failed" }}"
+      Cache(c) => "{c.action()} {c.key().text()}"
+      Job(j) => "{j.name()} {j.state()}"
+      Disk(d) => "{d.mount} at {d.percent}%"
+      Deploy(d) => d.text()
+      Config(s) => "{s.key}: {s.before} -> {s.after}"
+      Panic(c) => "{c.thread}: {c.message}"
+      Retry(r) => "{r.op} attempt {r.attempt} of {r.limit}"
+    }
+  }
+}
+
+impl Entry {
+  /// The entry as one line of the report: its time, host, level and what its event says.
+  pub fn line(self) -> str {
+    "{self.at.text()} {self.source.text()} {self.level.label()} {self.event.topic()}: {self.event.summary()}"
+  }
+}

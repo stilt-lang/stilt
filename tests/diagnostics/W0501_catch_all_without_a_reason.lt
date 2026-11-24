@@ -1,0 +1,5 @@
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn count(text: str) -> i64 { try parse(text) catch _ => 0 }

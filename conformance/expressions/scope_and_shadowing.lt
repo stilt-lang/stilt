@@ -1,0 +1,22 @@
+//~ rule: expressions.scope, expressions.shadowing
+//~ stdout:
+//~ | inner 10
+//~ | outer 2
+//~ | 4
+//~ | shadowed
+
+fn twice(n: i64) -> i64 { n * 2 }
+
+fn main() / io {
+  let x = 1
+  let x = x + 1
+  {
+    let x = 10
+    print("inner {x}")
+  }
+  print("outer {x}")
+  let twice = twice(x)
+  print("{twice}")
+  let panic = "shadowed"
+  print(panic)
+}

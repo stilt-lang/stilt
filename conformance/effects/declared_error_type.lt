@@ -1,0 +1,15 @@
+//~ rule: effects.inference, effects.one-error-type
+
+type ParseError = { line: i64 }
+
+fn parse(text: str) -> i64 / raise<ParseError> { text.to_i64() else raise ParseError { line: 1 } }
+
+fn wrong_raise(n: i64) -> i64 / raise<str> {
+  raise n //~ ERROR E0503
+}
+
+fn wrong_call(text: str) -> i64 / raise<str> {
+  try parse(text) //~ ERROR E0503
+}
+
+fn mapped(text: str) -> i64 / raise<str> { try parse(text) catch e => raise "line {e.line}" }

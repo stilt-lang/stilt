@@ -1,0 +1,9 @@
+// The module header puts each `without` clause on a line of its own, on one line when it fits.
+// Imports keep their order.
+module orders
+without panic, alloc
+
+use std.fs
+use std.cli
+
+fn main() {}

@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: syntax.record-types-and-spreads, syntax.type-parentheses, variadics.packs, variadics.type-spreads, variadics.pack-inference, variadics.pack-tuples
+//~ stdout:
+//~ | Row { id: 1, cells: ("a", 2.5) }
+//~ | true false
+//~ | (1, "x") ()
+//~ | n ("a", 1, true)
+
+type Row<..Ts> = { id: i64, cells: (..Ts) }
+
+fn same<..Ts: Eq>(a: (..Ts), b: (..Ts)) -> bool { a == b }
+
+fn shown<..Ts: Show>(xs: (..Ts)) -> str { "{xs}" }
+
+// The pack is the elements after the plain one that stands before its spread.
+fn labeled<..Ts: Show>(name: str, rest: (str, ..Ts)) -> str { "{name} {rest}" }
+
+fn main() / io {
+  let r: Row<str, f64> = Row { id: 1, cells: ("a", 2.5) }
+  print("{r}")
+  print("{same((1, "a"), (1, "a"))} {same((1,), (2,))}")
+  print("{shown((1, "x"))} {shown(())}")
+  print(labeled("n", ("a", 1, true)))
+}

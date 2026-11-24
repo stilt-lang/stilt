@@ -1,0 +1,38 @@
+//~ rule: std.width-fill-and-alignment, numbers.shifts, expressions.loops
+//~ stdout:
+//~ |    17    34 KEPT
+//~ |     8    68 STRUCK
+//~ |     4   136 STRUCK
+//~ |     2   272 STRUCK
+//~ |     1   544 KEPT
+//~ | 17 x 34 = 578
+
+// Rosetta Code, Ethiopian multiplication: the left number is halved and the right one doubled
+// until the left is 1; the rows whose left number is even are struck out, and the right
+// numbers that remain add up to the product. The task works 17 x 34 = 578, with three
+// functions to halve, double and test evenness.
+
+fn halve(n: i64) -> i64 { n >> 1 }
+
+fn double(n: i64) -> i64 { n << 1 }
+
+fn is_even(n: i64) -> bool { n & 1 == 0 }
+
+fn multiply(a: i64, b: i64) -> i64 / io {
+  var left = a
+  var right = b
+  var product = 0
+  while left >= 1 {
+    let kept = !is_even(left)
+    print("{left:>5} {right:>5} {if kept { "KEPT" } else { "STRUCK" }}")
+    if kept { product += right }
+    left = halve(left)
+    right = double(right)
+  }
+  product
+}
+
+fn main() / io {
+  let product = multiply(17, 34)
+  print("17 x 34 = {product}")
+}

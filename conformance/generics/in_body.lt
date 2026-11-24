@@ -1,0 +1,22 @@
+//~ tier: meta
+//~ rule: generics.value-parameters-in-body, generics.array-iteration
+//~ run-output: "42 100"
+
+use std.array
+
+// A module-level function, which a value parameter of its name hides.
+fn n() -> i64 { 100 }
+
+fn twice(k: i64) -> i64 { k * 2 }
+
+// `n` read in a range, in an operator and in a call.
+fn sum<n: i64>(a: array.Array<i64, n>) -> i64 {
+  var s = 0
+  for i in 0..n { s = s + a[i] }
+  s + n * 10 + twice(n)
+}
+
+fn main() / io {
+  let a: array.Array<i64, 3> = [1, 2, 3]
+  print("{sum(a)} {n()}")
+}

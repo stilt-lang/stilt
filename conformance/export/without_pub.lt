@@ -1,0 +1,9 @@
+//~ rule: syntax.extern-functions, c.exported-functions
+
+// `extern` comes only after `pub`, so a function that no other module sees isn't exported.
+
+extern fn hidden() -> i64 { //~ ERROR E0100
+  0
+}
+
+fn main() {}

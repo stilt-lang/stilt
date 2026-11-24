@@ -1,0 +1,3 @@
+//~ rule: program.main
+
+fn main(args: List<str>) {} //~ ERROR E0310

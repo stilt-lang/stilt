@@ -1,0 +1,7 @@
+//~ rule: c.exported-functions
+
+// Only a function is exported, never a type.
+
+pub extern type Size = { bytes: i64 } //~ ERROR E0100
+
+fn main() {}

@@ -1,0 +1,2 @@
+fn h() -> str { "unterminated }
+// a lonecarriage return //~ ERROR E0001

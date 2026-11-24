@@ -1,0 +1,6 @@
+//~ rule: lexical.format-specs
+
+fn main() / io {
+  let x: i64 = 42
+  print("[{x:05}]") //~ ERROR E0007
+}

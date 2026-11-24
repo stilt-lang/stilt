@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: records.anonymous-patterns, records.update, records.update-fields, errors.error-type
+
+type Person = { name: str, age: i64 }
+
+fn a(p: Person) -> Person { Person { ..p, email: "x" } } //~ ERROR E0313
+
+fn b(p: Person) -> Person { Person { ..p, age: 1, age: 2 } } //~ ERROR E0316
+
+fn c(p: Person) -> Person { Person { ..p, age: "old" } } //~ ERROR E0311
+
+// Update never adds a field.
+fn d(p: { x: i64 }) -> { x: i64 } { { ..p, y: 1 } } //~ ERROR E0313
+
+fn e(p: { x: i64, y: i64 }) -> i64 {
+  let { x } = p //~ ERROR E0316
+  x
+}
+
+// The base doesn't resolve, but the update names `Person`, whose field `age` keeps its type.
+fn f() -> Person { Person { ..nobody, age: "old" } } //~ ERROR E0211 ERROR E0311
+
+// A bound never names every field of the types that meet it.
+fn g<P: { name: str, .. }>(p: P) -> str {
+  let { name } = p //~ ERROR E0316
+  name
+}
+
+// Only a record has fields to copy.
+fn h(n: i64) -> i64 {
+  let r = { ..n, x: 1 } //~ ERROR E0311
+  0
+}

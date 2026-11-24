@@ -1,0 +1,2 @@
+.books | sort_by(.year) | map({year, title}) | .[0], .[-1]
+samples/books.json

@@ -1,0 +1,45 @@
+//~ tier: advanced
+//~ rule: facts.native-allocation, facts.without-alloc, views.for-over-view
+//~ run-output: "12 true 5 3 6 0.5 1 true"
+
+// The natives that facts.native-allocation lists allocate nothing: a number's methods, the
+// queries and parsers of `str`, the queries of `List` and `Map`, views, `std.math`, pointers,
+// and the natives that end the program, as `unwrap` and `expect` do through theirs. A `for` over
+// a view allocates nothing either.
+
+use std.math
+use std.view
+
+fn numbers(x: i64, y: f64) -> i64 without alloc {
+  x.abs().max(3) + x.pow(2) + y.floor().to_i64().unwrap() + x.checked_add(1).expect("small")
+}
+
+fn texts(s: str) -> bool without alloc {
+  s.contains("b") && s.starts_with("a") && s.find("c") == Some(2) && s.is_ascii_alpha() &&
+    s.to_i64() == None && s.char_count() == 3
+}
+
+fn collections(xs: List<i64>, m: Map<str, i64>) -> i64 without alloc {
+  xs.len() + xs.get(0).unwrap() + m.get("a").unwrap() + (if m.contains("b") { 1 } else { 0 })
+}
+
+fn viewed(xs: List<i64>) -> i64 without alloc {
+  let v = view.View.all(xs)
+  var n = 0
+  for x in v.view(0, 2) {
+    n += x
+  }
+  n + view.get(v, 2).unwrap() - v.len()
+}
+
+fn root(x: f64) -> f64 without alloc { x.sqrt() / math.hypot(3.0, 4.0) * math.pow(2.0, 1.0) }
+
+fn ends(ok: bool) -> i64 without alloc {
+  if ok { 1 } else { panic("not ok") }
+}
+
+fn main() / io {
+  var m = Map.new()
+  m["a"] = 1
+  print("{numbers(-3, 2.5)} {texts("abc")} {collections([2, 3], m)} {viewed([1, 2, 3])} {numbers(1, 0.0)} {root(1.5625)} {ends(true)} {texts("abc")}")
+}

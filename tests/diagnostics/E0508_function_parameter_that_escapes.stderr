@@ -1,0 +1,16 @@
+── FUNCTION PARAMETER THAT ESCAPES ── E0508_function_parameter_that_escapes.lt:3:72  [E0508]
+
+`on_click` is kept, but its effects pass through to the caller:
+
+  3 │ fn button(label: str, on_click: fn() / io) -> Button { Button { label, on_click } }
+    │                       ──────── its effects pass through
+    │                                                                        ^^^^^^^^ stored in a `Button` here
+
+A function parameter passes its effects through to the caller, so it is only
+called during the call. Mark it `escaping` to keep it, and its row is then
+exactly the one written.
+
+To fix it, mark `on_click` `escaping`, so its row is exactly the one written:
+
+  3 │ fn button(label: str, escaping on_click: fn() / io) -> Button { Button { label, on_click } }
+    │                       +++++++++

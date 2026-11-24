@@ -1,0 +1,2 @@
+[dependencies]
+cl = { path = "deps/cl", may = ["io"] } # //~ ERROR E0608

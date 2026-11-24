@@ -1,0 +1,306 @@
+== log ==
+266 lines: 253 entries, 4 of them from JSON, 0 left out, 11 not read, 2 blank
+line 53: no head
+line 118: no topic `mail`
+line 148: a http message that no pattern reads
+line 152: a sql message that no pattern reads
+line 185: Missing("$.level")
+line 186: Mismatch("$.level", "Level", "\"Fatal\"")
+line 195: Mismatch("$.at.hour", "u8", "300")
+line 196: Syntax(1, 18)
+line 197: Mismatch("$.event", "Event", "{\"Mail\":[{\"to\":\"ops@example.com\",\"count\"")
+line 211: no such time as 2026-02-30T09:00:00Z
+line 266: no head
+== topics ==
+topic   entries  share
+------  -------  -----
+http        166     65
+sql           8      3
+auth         11      4
+cache        45     17
+job           6      2
+disk          4      1
+deploy        2      0
+config        3      1
+panic         1      0
+retry         7      2
+== levels ==
+level  entries  share
+-----  -------  -----
+DEBUG       36     14
+INFO       169     66
+WARN        30     11
+ERROR       18      7
+== hosts ==
+host     entries  notable  last
+-------  -------  -------  -----
+ops-1          9        3  08:42
+jobs-1        13        8  08:38
+web-2         55       11  08:49
+web-3         72       10  08:50
+cache-1       44        0  08:50
+db-1           8        8  08:27
+web-1         40        2  08:49
+auth-1         9        5  08:39
+auth-2         2        1  08:32
+cache-2        1        0  08:32
+== timeline ==
+time    http    sql   auth  cache    job   disk deploy config  panic  retry
+08:00     15      2      0      4      1      0      1      0      0      0
+08:05      9      1      2      4      1      0      0      0      0      0
+08:10     17      2      0      5      0      1      0      0      0      0
+08:15     19      2      0      7      0      0      0      0      0      0
+08:20     23      0      5      0      2      1      1      1      0      0
+08:25     20      1      0      3      0      0      0      2      1      5
+08:30     12      0      2      5      1      0      0      0      0      0
+08:35     12      0      2      4      1      0      0      0      0      2
+08:40     14      0      0      4      0      2      0      0      0      0
+08:45     24      0      0      8      0      0      0      0      0      0
+08:50      1      0      0      1      0      0      0      0      0      0
+== pace ==
+at     entries  requests  mean  slowest  errors
+-----  -------  --------  ----  -------  ------
+08:00       23        15    69      171       0
+08:05       17         9    76      154       1
+08:10       25        17    82      279       0
+08:15       28        19    74      219       1
+08:20       33        23    79      195       5
+08:25       32        20   185      972       4
+08:30       20        12    65      213       0
+08:35       21        12   125      278       1
+08:40       20        14    74      250       3
+08:45       32        24    82      219       3
+08:50        2         1   107      107       0
+== request time, in ms ==
+median in 50-99
+       0-49 |########################################| 70
+      50-99 |##################                      | 30
+    100-149 |######################                  | 38
+    150-199 |##########                              | 16
+    200-249 |###                                     | 5
+    250-299 |###                                     | 5
+    300-349 |                                        | 0
+    350-399 |                                        | 0
+       400+ |##                                      | 2
+== response size, in bytes ==
+median in 8192-12287
+     0-4095 |####################################### | 30
+  4096-8191 |##################################      | 26
+ 8192-12287 |###################################     | 27
+12288-16383 |#####################                   | 16
+16384-20479 |##################################      | 26
+20480-24575 |########################################| 31
+     24576+ |#############                           | 10
+== slow queries, in ms ==
+median in 800-999
+    200-399 |##########                              | 1
+    400-599 |                                        | 0
+    600-799 |##########                              | 1
+    800-999 |####################                    | 2
+  1000-1199 |                                        | 0
+      1200+ |########################################| 4
+== entries per five minutes of the hour ==
+median in 25-29
+        0-4 |############################            | 23
+        5-9 |#####################                   | 17
+      10-14 |###############################         | 25
+      15-19 |##################################      | 28
+      20-24 |########################################| 33
+      25-29 |####################################### | 32
+      30-34 |#########################               | 20
+      35-39 |##########################              | 21
+      40-44 |#########################               | 20
+      45-49 |####################################### | 32
+      50-54 |###                                     | 2
+        60+ |                                        | 0
+== statuses ==
+median in 200-299
+    100-199 |                                        | 0
+    200-299 |########################################| 139
+    300-399 |##                                      | 5
+    400-499 |###                                     | 10
+    500-599 |####                                    | 12
+       600+ |                                        | 0
+== requests ==
+166 requests, 12 failed, 93ms on average
+p50 62ms, p90 181ms, p99 911ms
+service  requests  mean  slowest  failed
+-------  --------  ----  -------  ------
+/api           82    94      972       5
+/admin         22   206      279       2
+/auth          26   102      911       0
+/static        36    15       30       5
+route                  requests   bytes  mean  failed
+---------------------  --------  ------  ----  ------
+/api/users/:id               23  333082    72       0
+/admin/stats                 22  246252   206       2
+/api/search                  18  214949    98       0
+/api/users                   16  217252   147       2
+/auth/refresh                15  208973   124       0
+/static/logo.png             15  184827    13       3
+/static/style.css            14  205391    17       1
+/api/orders/:id/items        14  164237    77       2
+/api/orders                  11  162049    75       1
+/auth/login                  11  145583    73       0
+/static/app.js                7   50515    16       1
+status  requests  share
+------  --------  -----
+   200       133     80
+   201         6      3
+   304         5      3
+   404        10      6
+   500        11      6
+   503         1      0
+by method: GET 117, POST 36, PUT 5, DELETE 8
+slowest:
+  2026-11-03T08:25:29Z web-2 WARN http: GET /api/users 404 972ms 0B
+  2026-11-03T08:25:10Z web-1 INFO http: POST /auth/refresh 200 911ms 9336B
+  2026-11-03T08:13:50Z web-2 INFO http: GET /admin/stats 200 279ms 11385B
+  2026-11-03T08:35:10Z web-1 INFO http: GET /admin/stats 200 278ms 11705B
+  2026-11-03T08:38:02Z web-2 INFO http: GET /admin/stats 304 274ms 0B
+== objectives: 95% of requests in 200ms and without a server error ==
+service  requests  in_time  served  missed
+-------  --------  -------  ------  -----------
+/api           82       98      93  errors
+/admin         22       54      90  time,errors
+/auth          26       96     100
+/static        36      100      86  errors
+== spikes ==
+08:25 web-1 POST /auth/refresh 200 911ms 9336B: 41ms on average before, 88ms at most
+08:25 web-2 GET /api/users 404 972ms 0B: 120ms on average before, 158ms at most
+== logins ==
+5 ok, 6 failed
+user  ok  failed  attempts  addresses
+----  --  ------  --------  -----------------
+ana    2       1         3  10.0.0.4,10.0.0.5
+bo     1       0         1  192.168.1.20
+eve    0       5        11  203.0.113.9
+dee    1       0         2  172.20.4.1
+cy     1       0         1  10.0.3.7
+address       logins  failed  users  outside
+------------  ------  ------  -----  -------
+10.0.0.4           2       1  ana    false
+192.168.1.20       1       0  bo     false
+203.0.113.9        5       5  eve    true
+172.20.4.1         1       0  dee    false
+10.0.3.7           1       0  cy     false
+10.0.0.5           1       0  ana    false
+from outside: 203.0.113.9 as eve at 08:20
+from outside: 203.0.113.9 as eve at 08:20
+from outside: 203.0.113.9 as eve at 08:20
+from outside: 203.0.113.9 as eve at 08:20
+from outside: 203.0.113.9 as eve at 08:32
+== cache ==
+27 hits, 9 misses, 75% hit, 197632 bytes freed
+space    hits  misses  evictions  freed
+-------  ----  ------  ---------  -----
+user       13       6          3  56320
+page        6       1          3  55808
+session     8       2          3  85504
+== jobs ==
+job      started  finished  failed  mean  reason
+-------  -------  --------  ------  ----  ---------
+reindex        1         1       0  2140  -
+backup         1         0       1  -     disk full
+report         1         1       0  3300  -
+== retries ==
+op     attempts  runs  gave_up  waited
+-----  --------  ----  -------  ------
+fetch         5     1        1    3000
+mail          2     1        0     200
+== deploys ==
+version  at     before  mean_before  after  mean_after
+-------  -----  ------  -----------  -----  ----------
+1.4.1    08:00       0            0     24          72
+1.5.0    08:24      43           75     33         139
+== changes ==
+08:00 ops-1 deploy 1.4.1 by bo to 3 hosts: web-1, web-2, web-3
+08:21 ops-1 config http.timeout: 30s -> 45s (raised)
+08:24 ops-1 deploy 1.5.0 by ana to 2 hosts: web-1, web-2
+08:26 ops-1 config cache.size: 512mb -> 256mb (lowered)
+08:27 ops-1 config mode: blue -> green
+== alerts ==
+08:20 auth-1 eve failed to log in 3 times in a row
+08:22 ops-1 disk /var at 91%
+08:26 web-2 panic in worker-3: index out of bounds
+08:26 jobs-1 fetch gave up after 5 attempts
+08:42 ops-1 disk /data at 97%
+5 errors from 08:20 to 08:24
+4 errors from 08:26 to 08:26
+3 errors from 08:40 to 08:44
+3 errors from 08:46 to 08:49
+== errors by kind ==
+error                                        count  first  last
+-------------------------------------------  -----  -----  -----
+http: GET /static/logo.png # #ms #B              3  08:15  08:48
+http: GET /api/orders/#/items # #ms #B           2  08:07  08:49
+auth: eve from #.#.#.# failed                    2  08:20  08:20
+http: GET /admin/stats # #ms #B                  2  08:35  08:44
+http: GET /static/style.css # #ms #B             1  08:21  08:21
+job: backup failed                               1  08:23  08:23
+panic: worker-#: index out of bounds             1  08:26  08:26
+http: DELETE /api/orders # #ms #B                1  08:26  08:26
+http: GET /api/users # #ms #B                    1  08:26  08:26
+retry: fetch attempt # of #                      1  08:26  08:26
+http: GET /static/app.js # #ms #B                1  08:40  08:40
+disk: /data at #%                                1  08:42  08:42
+http: GET /api/users?page=#&size=# # #ms #B      1  08:46  08:46
+== read back from JSON ==
+253 of 253 entries read back equal
+deploy, line 1: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":0,"second":0},"source":{"host":"ops","index":1},"level":"Info","event":{"Deploy":[{"version":{"major":1,"minor":4,"patch":1},"by":"bo","hosts":["web-1","web-2","web-3"]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 0, second: 0 }, source: Source { host: "ops", index: 1 }, level: Info, event: Deploy(Deploy { version: Version { major: 1, minor: 4, patch: 1 }, by: "bo", hosts: ["web-1", "web-2", "web-3"] }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=0 at.second=0 source.host=ops source.index=1 level=Info event.Deploy.version.major=1 event.Deploy.version.minor=4 event.Deploy.version.patch=1 event.Deploy.by=bo event.Deploy.hosts[0]=web-1 event.Deploy.hosts[1]=web-2 event.Deploy.hosts[2]=web-3
+job started, line 2: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":0,"second":11},"source":{"host":"jobs","index":1},"level":"Info","event":{"Job":[{"Started":["reindex"]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 0, second: 11 }, source: Source { host: "jobs", index: 1 }, level: Info, event: Job(Started("reindex")) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=0 at.second=11 source.host=jobs source.index=1 level=Info event.Job.Started=reindex
+http DELETE, line 3: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":0,"second":26},"source":{"host":"web","index":2},"level":"Info","event":{"Http":[{"method":"Delete","path":"/api/users/12","query":null,"status":200,"millis":16,"bytes":17406}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 0, second: 26 }, source: Source { host: "web", index: 2 }, level: Info, event: Http(Request { method: Delete, path: "/api/users/12", query: None, status: 200, millis: 16, bytes: 17406 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=0 at.second=26 source.host=web source.index=2 level=Info event.Http.method=Delete event.Http.path=/api/users/12 event.Http.status=200 event.Http.millis=16 event.Http.bytes=17406
+http GET, line 4: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":0,"second":36},"source":{"host":"web","index":3},"level":"Info","event":{"Http":[{"method":"Get","path":"/admin/stats","query":null,"status":200,"millis":171,"bytes":10728}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 0, second: 36 }, source: Source { host: "web", index: 3 }, level: Info, event: Http(Request { method: Get, path: "/admin/stats", query: None, status: 200, millis: 171, bytes: 10728 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=0 at.second=36 source.host=web source.index=3 level=Info event.Http.method=Get event.Http.path=/admin/stats event.Http.status=200 event.Http.millis=171 event.Http.bytes=10728
+cache hit, line 6: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":0,"second":49},"source":{"host":"cache","index":1},"level":"Debug","event":{"Cache":[{"Hit":[{"space":"user","id":14}]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 0, second: 49 }, source: Source { host: "cache", index: 1 }, level: Debug, event: Cache(Hit(Key { space: "user", id: 14 })) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=0 at.second=49 source.host=cache source.index=1 level=Debug event.Cache.Hit.space=user event.Cache.Hit.id=14
+sql, line 7: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":1,"second":28},"source":{"host":"db","index":1},"level":"Warn","event":{"Sql":[{"table":"search_index","millis":674,"rows":7426}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 1, second: 28 }, source: Source { host: "db", index: 1 }, level: Warn, event: Sql(Query { table: "search_index", millis: 674, rows: 7426 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=1 at.second=28 source.host=db source.index=1 level=Warn event.Sql.table=search_index event.Sql.millis=674 event.Sql.rows=7426
+http POST, line 8: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":1,"second":59},"source":{"host":"web","index":2},"level":"Info","event":{"Http":[{"method":"Post","path":"/api/users","query":null,"status":201,"millis":53,"bytes":19342}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 1, second: 59 }, source: Source { host: "web", index: 2 }, level: Info, event: Http(Request { method: Post, path: "/api/users", query: None, status: 201, millis: 53, bytes: 19342 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=1 at.second=59 source.host=web source.index=2 level=Info event.Http.method=Post event.Http.path=/api/users event.Http.status=201 event.Http.millis=53 event.Http.bytes=19342
+cache evict, line 24: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":5,"second":2},"source":{"host":"cache","index":1},"level":"Info","event":{"Cache":[{"Evict":[{"space":"page","id":44},26624]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 5, second: 2 }, source: Source { host: "cache", index: 1 }, level: Info, event: Cache(Evict(Key { space: "page", id: 44 }, 26624)) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=5 at.second=2 source.host=cache source.index=1 level=Info event.Cache.Evict[0].space=page event.Cache.Evict[0].id=44 event.Cache.Evict[1]=26624
+auth ok, line 25: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":5,"second":20},"source":{"host":"auth","index":1},"level":"Info","event":{"Auth":[{"user":"ana","ip":{"a":10,"b":0,"c":0,"d":4},"ok":true,"attempts":null}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 5, second: 20 }, source: Source { host: "auth", index: 1 }, level: Info, event: Auth(Login { user: "ana", ip: Ip { a: 10, b: 0, c: 0, d: 4 }, ok: true, attempts: None }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=5 at.second=20 source.host=auth source.index=1 level=Info event.Auth.user=ana event.Auth.ip.a=10 event.Auth.ip.b=0 event.Auth.ip.c=0 event.Auth.ip.d=4 event.Auth.ok=true
+cache miss, line 39: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":9,"second":3},"source":{"host":"cache","index":1},"level":"Debug","event":{"Cache":[{"Miss":[{"space":"user","id":23}]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 9, second: 3 }, source: Source { host: "cache", index: 1 }, level: Debug, event: Cache(Miss(Key { space: "user", id: 23 })) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=9 at.second=3 source.host=cache source.index=1 level=Debug event.Cache.Miss.space=user event.Cache.Miss.id=23
+job finished, line 40: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":9,"second":26},"source":{"host":"jobs","index":1},"level":"Info","event":{"Job":[{"Finished":["reindex",2140]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 9, second: 26 }, source: Source { host: "jobs", index: 1 }, level: Info, event: Job(Finished("reindex", 2140)) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=9 at.second=26 source.host=jobs source.index=1 level=Info event.Job.Finished[0]=reindex event.Job.Finished[1]=2140
+disk, line 52: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":11,"second":50},"source":{"host":"ops","index":1},"level":"Info","event":{"Disk":[{"mount":"/var","percent":72}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 11, second: 50 }, source: Source { host: "ops", index: 1 }, level: Info, event: Disk(Disk { mount: "/var", percent: 72 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=11 at.second=50 source.host=ops source.index=1 level=Info event.Disk.mount=/var event.Disk.percent=72
+http PUT, line 58: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":13,"second":0},"source":{"host":"web","index":3},"level":"Info","event":{"Http":[{"method":"Put","path":"/api/users/12","query":null,"status":200,"millis":92,"bytes":15434}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 13, second: 0 }, source: Source { host: "web", index: 3 }, level: Info, event: Http(Request { method: Put, path: "/api/users/12", query: None, status: 200, millis: 92, bytes: 15434 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=13 at.second=0 source.host=web source.index=3 level=Info event.Http.method=Put event.Http.path=/api/users/12 event.Http.status=200 event.Http.millis=92 event.Http.bytes=15434
+auth failed, line 97: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":20,"second":24},"source":{"host":"auth","index":1},"level":"Warn","event":{"Auth":[{"user":"eve","ip":{"a":203,"b":0,"c":113,"d":9},"ok":false,"attempts":1}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 20, second: 24 }, source: Source { host: "auth", index: 1 }, level: Warn, event: Auth(Login { user: "eve", ip: Ip { a: 203, b: 0, c: 113, d: 9 }, ok: false, attempts: Some(1) }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=20 at.second=24 source.host=auth source.index=1 level=Warn event.Auth.user=eve event.Auth.ip.a=203 event.Auth.ip.b=0 event.Auth.ip.c=113 event.Auth.ip.d=9 event.Auth.ok=false event.Auth.attempts=1
+config, line 107: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":21,"second":36},"source":{"host":"ops","index":1},"level":"Info","event":{"Config":[{"key":"http.timeout","before":"30s","after":"45s"}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 21, second: 36 }, source: Source { host: "ops", index: 1 }, level: Info, event: Config(Setting { key: "http.timeout", before: "30s", after: "45s" }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=21 at.second=36 source.host=ops source.index=1 level=Info event.Config.key=http.timeout event.Config.before=30s event.Config.after=45s
+job failed, line 117: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":23,"second":1},"source":{"host":"jobs","index":1},"level":"Error","event":{"Job":[{"Failed":["backup","disk full"]}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 23, second: 1 }, source: Source { host: "jobs", index: 1 }, level: Error, event: Job(Failed("backup", "disk full")) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=23 at.second=1 source.host=jobs source.index=1 level=Error event.Job.Failed[0]=backup event.Job.Failed[1]=disk full
+panic, line 140: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":26,"second":1},"source":{"host":"web","index":2},"level":"Error","event":{"Panic":[{"thread":"worker-3","message":"index out of bounds"}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 26, second: 1 }, source: Source { host: "web", index: 2 }, level: Error, event: Panic(Crash { thread: "worker-3", message: "index out of bounds" }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=26 at.second=1 source.host=web source.index=2 level=Error event.Panic.thread=worker-3 event.Panic.message=index out of bounds
+retry, line 143: {"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":26,"second":7},"source":{"host":"jobs","index":1},"level":"Warn","event":{"Retry":[{"op":"fetch","attempt":1,"limit":5,"wait":200}]}}
+  Entry { at: Stamp { date: Date { year: 2026, month: 11, day: 3 }, hour: 8, minute: 26, second: 7 }, source: Source { host: "jobs", index: 1 }, level: Warn, event: Retry(Retry { op: "fetch", attempt: 1, limit: 5, wait: 200 }) }
+  at.date.year=2026 at.date.month=11 at.date.day=3 at.hour=8 at.minute=26 at.second=7 source.host=jobs source.index=1 level=Warn event.Retry.op=fetch event.Retry.attempt=1 event.Retry.limit=5 event.Retry.wait=200
+== summary as JSON ==
+{"lines":266,"entries":253,"skipped":11,"topics":{"http":166,"sql":8,"auth":11,"cache":45,"job":6,"disk":4,"deploy":2,"config":3,"panic":1,"retry":7},"levels":{"DEBUG":36,"INFO":169,"WARN":30,"ERROR":18},"charts":{"latency":{"low":0,"width":50,"counts":[70,30,38,16,5,5,0,0],"over":2},"sizes":{"low":0,"width":4096,"counts":[30,26,27,16,26,31],"over":10},"queries":{"low":200,"width":200,"counts":[1,0,1,2,0],"over":4},"minutes":{"low":0,"width":5,"counts":[23,17,25,28,33,32,20,21,20,32,2,0],"over":0},"statuses":{"low":100,"width":100,"counts":[0,139,5,10,12],"over":0}}}
+reads back equal: true

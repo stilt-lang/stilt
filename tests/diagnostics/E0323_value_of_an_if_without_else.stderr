@@ -1,0 +1,9 @@
+── VALUE OF AN `if` WITHOUT `else` ── E0323_value_of_an_if_without_else.lt:2:3  [E0323]
+
+An `if` without `else` can't have a value of type `str`:
+
+  2 │   if n > 0 { "positive" }
+    │   ^^^^^^^^^^^^^^^^^^^^^^^
+
+An `if` without `else` gives no value, so it can't end a block that gives one.
+Add the `else` branch.

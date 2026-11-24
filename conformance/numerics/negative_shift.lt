@@ -1,0 +1,12 @@
+//~ rule: numbers.shift-amounts, effects.panic-kinds
+//~ run-output: "8"
+//~ panic: overflow
+//~ panic-at: negative_shift.lt:11:11
+
+fn main() / io {
+  let x: i32 = 8
+  let zero: i32 = 0
+  let minus_one: i32 = -1
+  print("{x >> zero}")
+  print("{x >> minus_one}")
+}

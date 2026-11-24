@@ -1,0 +1,8 @@
+//~ rule: program.prelude-functions, program.exit-statuses
+//~ run-output: "a"
+//~ exit: 3
+
+fn main() / io {
+  print("a")
+  exit(3)
+}

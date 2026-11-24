@@ -1,0 +1,11 @@
+//~ tier: meta
+//~ rule: std.json-writing
+//~ panic: explicit
+//~ panic-at: writing_infinity.lt:9:14
+
+use std.json
+
+fn main() / io {
+  let text = json.to_value(Some(-f64.INFINITY.to_f32()))
+  print("{text}")
+}

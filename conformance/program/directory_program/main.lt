@@ -1,0 +1,17 @@
+//~ rule: program.forms, program.module-header, program.what-use-binds
+//~ stdout:
+//~ | top
+//~ | nested
+//~ | deeper
+//~ | reached
+
+use util
+use util.text
+use util.text.style
+
+fn main() / io {
+  util.say("top")
+  text.say("nested")
+  style.say("deeper")
+  util.text.style.say("reached")
+}

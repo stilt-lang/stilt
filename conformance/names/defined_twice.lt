@@ -1,0 +1,20 @@
+//~ rule: program.test-declarations, declarations.namespaces, declarations.unique-names, errors.several-places
+
+type UserId = | UserId(i64)
+
+fn f() {}
+fn f() {} //~ ERROR E0208
+
+type Shape = | Circle(f64) | Square(f64)
+type Tile = | Square(i64) //~ ERROR E0208
+
+type Order = { qty: i64, qty: i64 } //~ ERROR E0208
+
+fn g(x: i64, x: i64) {} //~ ERROR E0208
+
+fn h() {
+  let (a, a) = (1, 2) //~ ERROR E0208
+}
+
+test "adds" {}
+test "adds" {} //~ ERROR E0208

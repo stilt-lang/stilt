@@ -1,0 +1,5 @@
+//~ rule: lexical.contextual-keywords, syntax.contextual-keywords
+
+fn f(escaping: i64) -> i64 { //~ ERROR E0100
+  escaping
+}

@@ -1,0 +1,55 @@
+//~ rule: values.passing-values
+//~ stdout:
+//~ | [1, 9] Cart { name: "a", items: [2] }
+//~ | Cart { name: "b!", items: [1] } Cart { name: "b", items: [2] }
+//~ | Cart { name: "c!", items: [1] } Cart { name: "d", items: [] }
+//~ | 2 2
+//~ | [1, 9] 1
+//~ | [1, 9] [2]
+
+type Cart = { name: str, items: List<i64> }
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn renamed(c: Cart) -> Cart {
+  var d = c
+  d.name = "{d.name}!"
+  d
+}
+
+fn bumped(n: i64) -> i64 {
+  var m = n
+  m += 1
+  m
+}
+
+fn main() / io {
+  var a = Cart { name: "a", items: [1] }
+  let r1 = grown(a.items)
+  a.items = [2]
+  print("{r1} {a}")
+  var b = Cart { name: "b", items: [1] }
+  let r2 = renamed(b)
+  b.items = [2]
+  print("{r2} {b}")
+  var c = Cart { name: "c", items: [1] }
+  let r3 = renamed(c)
+  c = Cart { name: "d", items: [] }
+  print("{r3} {c}")
+  var n = 1
+  let r4 = bumped(n)
+  n += 1
+  print("{r4} {n}")
+  var xs = [1]
+  let r5 = grown(xs)
+  let f = || xs.len()
+  print("{r5} {f()}")
+  var ys = [1]
+  let r6 = grown(ys)
+  ys[0] = 2
+  print("{r6} {ys}")
+}

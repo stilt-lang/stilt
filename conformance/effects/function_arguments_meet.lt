@@ -1,0 +1,15 @@
+//~ rule: effects.rows-that-meet, effects.function-values
+
+type A = { a: i64 }
+type B = { b: i64 }
+
+fn pick<T>(x: T, y: T) -> T { y }
+
+fn fa() -> i64 / raise<A> { raise A { a: 1 } }
+fn fb() -> i64 / raise<B> { raise B { b: 2 } }
+
+fn choose() {
+  let f = fa
+  let g = fb
+  let h = pick(f, g) //~ ERROR E0311
+}

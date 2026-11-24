@@ -1,0 +1,24 @@
+//~ rule: patterns.or-patterns
+
+type Shape = | Circle(f64) | Square(f64) | Dot
+
+fn size(s: Shape) -> f64 {
+  match s {
+    Circle(r) | Square(r) => r
+    Dot => 0.0
+  }
+}
+
+fn bad(s: Shape) -> f64 {
+  match s {
+    Circle(r) | Square(side) => side //~ ERROR E0217
+    Dot => 0.0
+  }
+}
+
+fn rebound(pair: (Shape, f64)) -> f64 {
+  match pair {
+    (Circle(r) | Square(side), side) => side //~ ERROR E0217
+    (Dot, side) => side
+  }
+}

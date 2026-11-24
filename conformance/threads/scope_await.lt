@@ -1,0 +1,73 @@
+//~ tier: advanced
+//~ rule: tasks.scopes, tasks.scope-failure
+//~ stdout:
+//~ | a
+//~ | b
+//~ | 1: 2
+//~ | caught inside 20
+//~ | 2: 21
+//~ | a
+//~ | b
+//~ | 1: 2
+//~ | caught inside 20
+//~ | 2: 21
+
+use std.task
+
+type Bad = { n: i64 }
+
+fn check(n: i64) -> i64 / raise<Bad> {
+  if n == 2 { raise Bad { n } } else { n }
+}
+
+fn slow(n: i64) -> i64 {
+  var s = 0
+  var i = 0
+  while i < 200000 {
+    s = (s + i) % 7
+    i += 1
+  }
+  n + s - s
+}
+
+// The second task raises: the scope's function, which waits for it, never gets past its call
+// in the sequential run, and the third task never starts.
+fn awaiting() -> i64 / {io, async, raise<Bad>} {
+  try task.scope(|s| {
+    let a = try s.spawn(|| {
+      print("a")
+      slow(1)
+    })
+    let b = try s.spawn(|| {
+      print("b")
+      check(slow(2))
+    })
+    print("after b")
+    let c = try s.spawn(|| {
+      print("c")
+      3
+    })
+    a.await() + b.await() + c.await()
+  })
+}
+
+// A raise that the scope's function catches.
+fn caught() -> i64 / {io, async, raise<Bad>} {
+  try task.scope(|s| {
+    let x = try s.spawn(|| check(2)).await() catch e => e.n * 10
+    print("caught inside {x}")
+    let y = try s.spawn(|| check(1))
+    x + y.await()
+  })
+}
+
+fn main() / io {
+  with task.threads() {
+    print("1: {try awaiting() catch e => e.n}")
+    print("2: {try caught() catch e => e.n}")
+  }
+  with task.sequential() {
+    print("1: {try awaiting() catch e => e.n}")
+    print("2: {try caught() catch e => e.n}")
+  }
+}

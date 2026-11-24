@@ -1,0 +1,12 @@
+//~ rule: modes.change-while-iterating, std.lists
+//~ run-output: "[1, 3] [1, 3, 10, 30]"
+
+fn main() / io {
+  var xs = [1, 2, 3, 4]
+  xs.retain(|x| x % 2 == 1)
+  let kept = "{xs}"
+  var extra = []
+  for x in xs { extra.push(x * 10) }
+  for e in extra { xs.push(e) }
+  print("{kept} {xs}")
+}

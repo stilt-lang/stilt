@@ -1,0 +1,9 @@
+── CONSTANTS IN A CYCLE ───────────── E0327_constants_in_a_cycle.lt:2:7  [E0327]
+
+These constants refer to each other in a cycle:
+
+  2 │ const HEIGHT: i64 = WIDTH
+    │       ^^^^^^
+
+A constant's value can't depend on itself. Give one of them a value that doesn't
+refer back.

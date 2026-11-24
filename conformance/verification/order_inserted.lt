@@ -1,0 +1,12 @@
+//~ rule: values.inout-argument-order, facts.analysis-order, facts.proved-indexes
+//~ panic: bounds
+//~ panic-at: order_inserted.lt:8:3
+
+// `insert` reads its receiver where the call starts, after the `clear`.
+fn inserted() -> List<i64> {
+  var xs = [1, 2, 3]
+  xs.insert(3, { xs.clear(); 9 })
+  xs
+}
+
+fn main() / io { print("{inserted()}") }

@@ -1,0 +1,19 @@
+//~ tier: advanced
+
+// Views (views.std-view, views.fixed and views.show): a module that names a view type is in the
+// advanced tier, and `show` prints which source each view reads, which stands for `fixed`.
+
+use std.view
+
+// The result views `line`, the one parameter it could view; `View.of` can panic.
+fn first_word(line: str) -> view.View<str> {
+  view.View.of(line, 0, line.find(" ") else line.len()) //~ VIEWS line PANIC
+}
+
+fn main() / io {
+  let text = "to be"
+  let w = first_word(text) //~ VIEWS text PANIC
+  let xs = [1, 2, 3] //~ ALLOC
+  let t = view.View.of(xs, 1, 3) //~ VIEWS xs PANIC
+  print("{w} {t}") //~ ALLOC CONSOLE
+}

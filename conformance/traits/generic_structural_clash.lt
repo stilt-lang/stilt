@@ -1,0 +1,35 @@
+//~ rule: traits.name-clashes
+
+type Holder<T> = { item: T }
+
+impl<T> Holder<T> {
+  fn show(self) -> str { //~ ERROR E0308
+    "holder"
+  }
+}
+
+type Callback = { run: fn() }
+
+impl Callback {
+  fn show(self) -> str { "callback" }
+}
+
+type Choice = | Yes | No
+
+impl Choice {
+  fn eq(self, other: Choice) -> bool { //~ ERROR E0308
+    true
+  }
+}
+
+type Reading = { value: f64 }
+
+impl Reading {
+  fn hash(self) -> u64 { 0 }
+}
+
+type Table = { rows: Map<str, i64> }
+
+impl Table {
+  fn compare(self, other: Table) -> Ordering { Equal }
+}

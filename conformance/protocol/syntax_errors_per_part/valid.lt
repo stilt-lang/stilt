@@ -1,0 +1,2 @@
+// let unused = 1 //~ WARN W0001
+fn h() -> str { 1 } //~ ERROR E0311

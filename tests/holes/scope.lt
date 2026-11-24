@@ -1,0 +1,87 @@
+// The bindings in scope at a hole: the parameters, then the bindings of `let`, `var`, `for`,
+// arms and closures whose scope holds it, a later binding hiding an earlier one of its name.
+
+fn sum_to(n: i64) -> i64 {
+  var total = 0
+  for i in 0..n {
+    let doubled = i * 2
+    total = total + doubled + ? //~ HOLE
+    //~ expects: i64
+    //~ effects: none
+    //~ in scope: n: i64
+    //~ in scope: total: i64
+    //~ in scope: i: i64
+    //~ in scope: doubled: i64
+  }
+  total
+}
+
+// The parameter `x` is hidden by the `let`.
+fn shadowed(x: i64) -> str {
+  let x = x.show()
+  ? //~ HOLE
+  //~ expects: str
+  //~ effects: none
+  //~ in scope: x: str
+}
+
+// A block's bindings end with it, and a `let` binds nothing in its own `else`.
+fn chosen(o: Option<i64>) -> i64 {
+  let first = {
+    let inner = 2
+    inner * 3
+  }
+  let value = o else ? //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ in scope: o: Option<i64>
+  //~ in scope: first: i64
+  match o {
+    Some(n) => n + value + ? //~ HOLE
+    //~ expects: i64
+    //~ effects: none
+    //~ in scope: o: Option<i64>
+    //~ in scope: first: i64
+    //~ in scope: value: i64
+    //~ in scope: n: i64
+    None => first
+  }
+}
+
+fn lengths(words: List<str>) -> List<i64> {
+  words.map(|w| ?) //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ in scope: words: List<str>
+  //~ in scope: w: str
+}
+
+fn best(m: Map<str, i64>) -> i64 {
+  var most = 0
+  for (k, v) in m {
+    most = most.max(?) //~ HOLE
+    //~ expects: i64
+    //~ effects: none
+    //~ in scope: m: Map<str, i64>
+    //~ in scope: most: i64
+    //~ in scope: k: str
+    //~ in scope: v: i64
+  }
+  most
+}
+
+// A function written `= ?` has its parameters in scope, as a method has `self`.
+fn total(xs: List<i64>, start: i64) -> i64 = ? //~ HOLE
+//~ expects: i64
+//~ effects: none
+//~ in scope: xs: List<i64>
+//~ in scope: start: i64
+
+type Counter = { n: i64 }
+
+impl Counter {
+  pub fn doubled(self) -> i64 = ? //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ in scope: self: Counter
+}

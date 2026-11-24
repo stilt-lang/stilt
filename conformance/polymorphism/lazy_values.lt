@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: polymorphism.lazy-values, polymorphism.lazy-unobservable
+//~ stdout:
+//~ | 25
+//~ | 2 97
+//~ | 25
+//~ | 55
+
+use std.lazy
+
+type Config = { primes: lazy.Lazy<List<i64>> }
+
+fn primes_below(n: i64) -> List<i64> {
+  var found: List<i64> = []
+  for k in 2..n {
+    if found.all(|p| k % p != 0) { found.push(k) }
+  }
+  found
+}
+
+fn sum_to(n: i64) -> i64 { n * (n + 1) / 2 }
+
+fn main() / io {
+  let c = Config { primes: lazy.Lazy.new(|| primes_below(100)) }
+  print("{c.primes.get().len()}")
+  let ps = c.primes.get()
+  print("{ps[0]} {ps[ps.len() - 1]}")
+  // A copy shares the value.
+  let copy = c
+  print("{copy.primes.get().len()}")
+  let total = lazy.Lazy.new(|| sum_to(10))
+  print("{total.get()}")
+}

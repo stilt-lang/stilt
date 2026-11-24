@@ -1,0 +1,17 @@
+// Value parameters are written `name: T` among generics, with one space after the `:`, and value
+// arguments as literals against their `-` (generics.value-parameters and generics.value-arguments).
+use std.array
+
+type Mod<p: u64> = { value: u64 }
+
+type Grid<T, k: i64> = { cells: array.Array<T, k> }
+
+const PRIME: u64 = 1_000_000_007
+
+fn add<p: u64>(a: Mod<p>, b: Mod<p>) -> Mod<p> { Mod { value: (a.value + b.value) % p } }
+
+fn sizes<e, n: i64>(a: array.Array<i64, -1>, b: Flag<true>, c: Mod<PRIME>) / e {}
+
+impl<T, k: i64> Grid<T, k> {
+  fn size(self) -> i64 { k }
+}

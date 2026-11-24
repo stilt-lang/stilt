@@ -1,0 +1,25 @@
+//~ rule: values.inout-arguments, effects.innermost-catch
+//~ run-output: "[1, 2, 3] caught"
+
+type Failure = | Boom
+
+fn inner(inout xs: List<i64>) / raise<Failure> {
+  xs.push(3)
+  raise Boom
+}
+
+fn outer(inout xs: List<i64>) / raise<Failure> {
+  xs.push(2)
+  try inner(inout xs)
+  xs.push(4)
+}
+
+fn main() / io {
+  var xs = [1]
+  let status = try {
+    outer(inout xs)
+    "returned"
+  }
+    catch Boom => "caught"
+  print("{xs} {status}")
+}

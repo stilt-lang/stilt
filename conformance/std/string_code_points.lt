@@ -1,0 +1,15 @@
+//~ rule: std.code-points
+//~ stdout:
+//~ | [97, 233, 26085, 128512] []
+//~ | [Some("é"), None, None, Some("\0")] Some([1114111])
+//~ | Some("hi") None Some("")
+//~ | [Some("hé"), None, None, None, None, None]
+//~ | ["h�", "��", "���", "a�", "�"]
+
+fn main() / io {
+  print("{"aé日😀".code_points()} {"".code_points()}")
+  print("{[str.from_code_point(233), str.from_code_point(55296), str.from_code_point(1114112), str.from_code_point(0)]} {str.from_code_point(1114111).map(.code_points())}")
+  print("{str.from_code_points([104, 105])} {str.from_code_points([104, 57343])} {str.from_code_points([])}")
+  print("{[str.from_utf8([104, 195, 169]), str.from_utf8([255]), str.from_utf8([192, 175]), str.from_utf8([237, 160, 128]), str.from_utf8([97, 226, 130]), str.from_utf8([244, 144, 128, 128])]}")
+  print("{[str.from_utf8_lossy([104, 255]), str.from_utf8_lossy([192, 175]), str.from_utf8_lossy([237, 160, 128]), str.from_utf8_lossy([97, 226, 130]), str.from_utf8_lossy([244])]}")
+}

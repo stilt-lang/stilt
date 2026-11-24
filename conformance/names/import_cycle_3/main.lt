@@ -1,0 +1,3 @@
+//~ rule: program.no-cycles, errors.several-places
+
+use b //~ ERROR E0206

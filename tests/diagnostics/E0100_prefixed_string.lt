@@ -1,0 +1,4 @@
+fn main() / io {
+  let name = "ada"
+  print(f"hello {name}")
+}

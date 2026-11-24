@@ -1,0 +1,29 @@
+//~ tier: advanced
+//~ rule: views.adapters
+
+use std.view
+
+// An adapter keeps its closure in the iterator it makes, so a closure that captures a view
+// would carry the view with it, as a closure that escapes does.
+fn kept(xs: List<i64>, allowed: List<i64>) -> i64 {
+  let a = view.View.all(allowed)
+  var n = 0
+  for x in view.Iter.of(xs).filter(|x| a.len() > x) { //~ ERROR E0422
+    n += x
+  }
+  n
+}
+
+// A copy of what the view reads is no view, and may be captured.
+fn copied(xs: List<i64>, allowed: List<i64>) -> i64 {
+  let limit = view.View.all(allowed).len()
+  var n = 0
+  for x in view.Iter.of(xs).filter(|x| limit > x) {
+    n += x
+  }
+  n
+}
+
+fn main() / io {
+  print("{kept([1, 2], [0])} {copied([1, 2, 3, 4], [0, 0, 0])}")
+}

@@ -1,0 +1,6 @@
+//~ rule: traits.operators, effects.without-panic, facts.inference
+
+use lib
+use pure
+
+fn main() {}

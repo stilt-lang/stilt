@@ -1,0 +1,32 @@
+//~ rule: types.expected-types
+
+type Point = { x: i64, y: i64 }
+
+fn takes(s: str) {}
+
+fn annotation() {
+  let n: i64 = "a" //~ ERROR E0311
+}
+
+fn parameter() {
+  takes(1) //~ ERROR E0311
+}
+
+fn return_type() -> str {
+  1 //~ ERROR E0311
+}
+
+fn field() -> Point {
+  Point { x: 1, y: "two" } //~ ERROR E0311
+}
+
+fn element() {
+  let xs = [1, "two"] //~ ERROR E0311
+}
+
+fn branch(n: i64) {
+  let v = match n {
+    0 => 1
+    _ => "many" //~ ERROR E0311
+  }
+}

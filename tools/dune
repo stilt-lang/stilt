@@ -1,0 +1,3 @@
+; Only the program generator here is built with dune.
+
+(dirs generator)

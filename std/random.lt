@@ -1,0 +1,89 @@
+module std.random
+
+// A pseudo-random generator that a seed reproduces in every implementation
+// (std.random).
+
+/// A number from the system's source of randomness.
+pub fn entropy() -> u64 / io = ?
+
+/// A generator of SplitMix64, whose state advances with each number it gives.
+pub type Rng = { state: u64 }
+
+impl Rng {
+  /// The generator whose state is `seed`.
+  /// ex: Rng.seeded(7).state == 7
+  pub fn seeded(seed: u64) -> Rng { Rng { state: seed } }
+
+  /// A generator seeded from `entropy()`.
+  pub fn from_entropy() -> Rng / io { Rng.seeded(entropy()) }
+
+  /// The next number of SplitMix64.
+  /// ex: { var r = Rng.seeded(0); r.next_u64() == 16294208416658607535 && r.next_u64() == 7960286522194355700 }
+  pub fn next_u64(inout self) -> u64 {
+    self.state = self.state +% 0x9E3779B97F4A7C15
+    var z = self.state
+    z = (z ^ (z >> 30)) *% 0xBF58476D1CE4E5B9
+    z = (z ^ (z >> 27)) *% 0x94D049BB133111EB
+    z ^ (z >> 31)
+  }
+
+  // A number below `m`, which is at least 1, every one equally likely: the
+  // first draw past the short stretch at the bottom of the range of `u64` that
+  // `m` doesn't divide, taken modulo `m`.
+  fn bounded(inout self, m: u64) -> u64 {
+    let floor = (0 -% m) % m
+    loop {
+      let x = self.next_u64()
+      if x >= floor { return x % m }
+    }
+  }
+
+  /// A number in `0 ..< n`, every one equally likely. Panics when `n < 1`.
+  /// ex: { var r = Rng.seeded(7); [r.below(6), r.below(6), r.below(6)] == [3, 0, 0] }
+  pub fn below(inout self, n: i64) -> i64 {
+    if n < 1 { panic("below needs a bound of at least 1, not {n}") }
+    self.bounded(n.wrap_to_u64()).wrap_to_i64()
+  }
+
+  /// A number in `lo ..< hi`, every one equally likely. Panics when
+  /// `lo >= hi`.
+  /// ex: { var r = Rng.seeded(1); let x = r.range(-3, 3); x >= -3 && x < 3 }
+  pub fn range(inout self, lo: i64, hi: i64) -> i64 {
+    if lo >= hi { panic("range needs lo < hi, not {lo} and {hi}") }
+    lo +% self.bounded((hi -% lo).wrap_to_u64()).wrap_to_i64()
+  }
+
+  /// A number in `[0, 1)`, a multiple of `2^-53`.
+  /// ex: { var r = Rng.seeded(3); let x = r.float(); x >= 0.0 && x < 1.0 }
+  pub fn float(inout self) -> f64 { (self.next_u64() >> 11).to_f64() * 1.1102230246251565e-16 }
+
+  /// `true` with probability `p`.
+  /// ex: { var r = Rng.seeded(5); r.chance(1.0) && !r.chance(0.0) }
+  pub fn chance(inout self, p: f64) -> bool { self.float() < p }
+
+  /// Puts the elements of `xs` in a random order, every one equally likely.
+  /// ex: { var r = Rng.seeded(9); var xs = [1, 2, 3, 4]; r.shuffle(inout xs); xs.sorted() == [1, 2, 3, 4] }
+  pub fn shuffle<T>(inout self, inout xs: List<T>) {
+    var i = xs.len() - 1
+    while i > 0 {
+      let j = self.below(i + 1)
+      xs.swap(i, j)
+      i -= 1
+    }
+  }
+
+  /// The elements of `xs` in a random order, as `shuffle` puts them.
+  /// ex: { var r = Rng.seeded(9); r.shuffled([1, 2, 3, 4]).sorted() == [1, 2, 3, 4] }
+  pub fn shuffled<T>(inout self, xs: List<T>) -> List<T> {
+    var out = xs
+    self.shuffle(inout out)
+    out
+  }
+
+  /// A random element of `xs`, or `None` when it is empty, which draws nothing.
+  /// ex: { var r = Rng.seeded(2); [7, 8, 9].contains(r.pick([7, 8, 9]) else 0) }
+  pub fn pick<T>(inout self, xs: List<T>) -> Option<T> {
+    if xs.is_empty() { return None }
+    xs.get(self.below(xs.len()))
+  }
+}

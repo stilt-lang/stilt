@@ -1,0 +1,6 @@
+# The toolchain of the repository, with the target that Zed builds extensions for.
+[toolchain]
+channel = "1.99"
+profile = "minimal"
+components = ["clippy", "rustfmt"]
+targets = ["wasm32-wasip2"]

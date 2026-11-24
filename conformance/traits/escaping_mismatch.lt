@@ -1,0 +1,13 @@
+//~ rule: traits.impl-signatures, effects.escaping-parameters
+
+trait Walk {
+  fn walk(self, f: fn(i64) -> i64) -> i64
+}
+
+type One = { a: i64 }
+
+impl Walk for One {
+  fn walk(self, escaping f: fn(i64) -> i64) -> i64 { //~ ERROR E0307
+    f(self.a)
+  }
+}

@@ -1,0 +1,4 @@
+[dependencies]
+warn = { path = "deps/warn", may = ["console"] }
+files = { path = "deps/files", may = ["fs"] }
+both = { path = "deps/both", may = ["io"] }

@@ -1,0 +1,35 @@
+//~ rule: types.field-access, traits.method-resolution
+//~ stdout:
+//~ | robot 7
+//~ | robot 7
+//~ | from the field
+//~ | inherent
+//~ | from the label field
+
+trait Named {
+  fn name(self) -> str
+}
+
+type Robot = { name: fn() -> str, serial: i64 }
+
+impl Named for Robot {
+  fn name(self) -> str { "robot {self.serial}" }
+}
+
+type Button = { label: fn() -> str }
+
+impl Button {
+  fn label(self) -> str { "inherent" }
+}
+
+fn main() / io {
+  let r = Robot { name: || "from the field", serial: 7 }
+  print(r.name())
+  print((r.name)())
+  let f = r.name
+  print(f())
+  let b = Button { label: || "from the label field" }
+  print(b.label())
+  let g = b.label
+  print(g())
+}

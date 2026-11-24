@@ -1,0 +1,11 @@
+── POLYMORPHIC FUNCTION TYPE OUT OF PLACE ── E0340_polymorphic_function_type_out_of_place.lt:1:14  [E0340]
+
+A polymorphic function type can't be a result; only a parameter, a field or a
+payload can have one:
+
+  1 │ fn make() -> fn<T>(T) -> T { |x| x }
+    │              ^^^^^^^^^^^^^
+
+A generic function type is only the type of a parameter or a field. Return a
+function of known types, as `fn(i64) -> i64`, or make the outer function
+generic.

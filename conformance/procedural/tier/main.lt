@@ -1,0 +1,10 @@
+//~ tier: meta
+//~ rule: macros.meta-tier
+//~ run-output: "4"
+
+// This module only uses a macro, which leaves it in the core tier whatever
+// the expansion writes; `twice`, which declares the macro, is in the meta
+// tier.
+meta use twice
+
+fn main() / io { print("{twice.twice!(2)}") }

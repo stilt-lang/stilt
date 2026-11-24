@@ -1,0 +1,14 @@
+── UNKNOWN NAME ─────────────────────────── E0211_rust_vec_type.lt:1:14  [E0211]
+
+Stilt's growable list is `List`, not `Vec`:
+
+  1 │ fn count(xs: Vec<i64>) -> i64 { xs.len() }
+    │              ^^^
+
+Stilt's collections are `List`, `Map` and `Set`, which every module sees without
+a `use`.
+
+To fix it, write `List`:
+
+  1 │ fn count(xs: List<i64>) -> i64 { xs.len() }
+    │              ~~~~

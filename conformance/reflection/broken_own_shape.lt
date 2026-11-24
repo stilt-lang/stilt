@@ -1,0 +1,19 @@
+//~ tier: meta
+//~ rule: meta.shape-and-name, errors.broken-blocks
+
+use std.meta
+
+type Box = { inner: i64 }
+
+// The part of the block breaks before the body of `shape`, which is still the type's own member:
+// it is found before `std.meta`'s, and its result is the error type, from which nothing is
+// reported.
+impl Box {
+  fn shape() loop str { "own shape" } //~ ERROR E0100
+  fn name() -> str { "own name" }
+}
+
+fn main() / io {
+  print("{Box.shape()} {Box.name()}")
+  let n: i64 = Box.shape()
+}

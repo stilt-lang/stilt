@@ -1,0 +1,7 @@
+//~ rule: expressions.head-contents
+
+fn each(xs: List<i64>) {
+  match for x in xs {} { //~ ERROR E0100
+    () => ()
+  }
+}

@@ -1,0 +1,11 @@
+//~ rule: program.panic-location
+//~ stdout:
+//~ | start
+//~ panic: bounds
+//~ panic-at: panic_location_in_std.lt:10:14
+
+fn main() / io {
+  print("start")
+  var xs = [1]
+  let gone = xs.remove(5)
+}

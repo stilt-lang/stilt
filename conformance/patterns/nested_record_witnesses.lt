@@ -1,0 +1,21 @@
+//~ rule: patterns.non-exhaustive-matches
+
+// The value that no arm matches may lie in a record inside a tuple, or in a tuple inside a
+// record, and the witness names it whole.
+type Reading = { valid: bool, high: bool }
+
+type Sample = { pair: (bool, bool), last: bool }
+
+fn reading(p: (Reading, bool)) -> i64 {
+  match p { //~ ERROR E0329
+    (Reading { valid: true, high: true }, true) => 1
+  }
+}
+
+fn sample(s: Sample) -> i64 {
+  match s { //~ ERROR E0329
+    Sample { pair: (true, true), last: true } => 1
+  }
+}
+
+fn main() {}

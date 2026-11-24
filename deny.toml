@@ -1,0 +1,67 @@
+# What `cargo deny check` holds the workspace's dependencies to: licences that let the
+# toolchain ship under MIT OR Apache-2.0, one version of each crate but those listed below with
+# the crate that holds the other, and crates.io as the only source, which `just lint` checks
+# where cargo-deny is installed; and no crate that the RustSec database reports, which the lint
+# job of CI checks besides.
+
+[graph]
+# The hosts that build the toolchain, and the targets that `stilt build` builds for (goals
+# targets and cross-compilation).
+targets = [
+    "aarch64-apple-darwin",
+    "aarch64-unknown-linux-gnu",
+    "aarch64-unknown-linux-musl",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-unknown-linux-musl",
+    "wasm32-wasip1",
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+# Each is permissive and compatible with distributing the toolchain under MIT OR Apache-2.0.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    # The data of Mozilla's root certificates, which `webpki-roots` embeds for fetching over
+    # HTTPS.
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+# The workspace's own crates are MIT OR Apache-2.0, as the workspace's manifest says, and
+# published nowhere.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+# A crate of the workspace names another by its path.
+allow-wildcard-paths = true
+# Each older version stays while the crate named in its reason holds it.
+skip = [
+    { crate = "bitflags@1", reason = "region, which cranelift-jit uses, is on bitflags 1" },
+    { crate = "hashbrown@0.14", reason = "rowan is on hashbrown 0.14" },
+    { crate = "hashbrown@0.16", reason = "gimli, which Cranelift uses, is on hashbrown 0.16" },
+    { crate = "mach2@0.4", reason = "region, which cranelift-jit uses, is on mach2 0.4" },
+    { crate = "rustc-hash@1", reason = "rowan is on rustc-hash 1" },
+    { crate = "syn@2", reason = "strum_macros, which derivre and llguidance use, is on syn 2" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

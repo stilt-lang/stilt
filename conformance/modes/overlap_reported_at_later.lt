@@ -1,0 +1,28 @@
+//~ rule: modes.overlapping-inout, errors.several-places
+
+type Pair = { a: i64, b: i64 }
+
+impl Pair {
+  fn take_from(inout self, inout n: i64) {
+    self.a += n
+    n = 0
+  }
+}
+
+fn swap(inout x: i64, inout y: i64) {
+  let t = x
+  x = y
+  y = t
+}
+
+fn calls() {
+  var n = 1
+  swap(
+    inout n,
+    inout n, //~ ERROR E0402
+  )
+  var p = Pair { a: 1, b: 2 }
+  p.take_from(
+    inout p.b, //~ ERROR E0402
+  )
+}

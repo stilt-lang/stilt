@@ -1,0 +1,1 @@
+type Count = i64 //~ ERROR E0100

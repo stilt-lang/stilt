@@ -1,0 +1,26 @@
+//~ rule: types.mismatch, expressions.option-fallback
+
+type Point = { x: i64, y: i64 }
+
+fn norm(p: Point) -> i64 { p.x * p.x + p.y * p.y }
+
+fn label(p: Point) -> str {
+  let n: str = norm(p) //~ ERROR E0311
+  "{p.x}, {p.y}"
+}
+
+fn distance(p: Point) -> f64 {
+  norm(p) //~ ERROR E0311
+}
+
+fn at_least_zero(o: Option<i64>) -> i64 {
+  let x: i64 = o else return 0
+  x
+}
+
+fn twice(f: fn(i64) -> i64, x: i64) -> i64 { f(f(x)) }
+
+fn main() {
+  let a = twice(|n| n + 1, 2)
+  let b = twice(norm, 2) //~ ERROR E0311
+}

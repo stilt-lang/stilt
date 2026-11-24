@@ -1,0 +1,9 @@
+; The generator's own tests: what it writes, beyond the checks of the reference interpreter
+; that `just generated` and `just mutated` run on its programs.
+
+(library
+ (name stilt_gen_tests)
+ (inline_tests)
+ (libraries stilt_gen)
+ (preprocess
+  (pps ppx_expect)))

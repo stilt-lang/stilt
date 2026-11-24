@@ -1,0 +1,17 @@
+//~ rule: values.left-to-right
+//~ stdout:
+//~ | first
+//~ | second
+//~ | 1 2
+
+fn first() -> i64 / io {
+  print("first")
+  1
+}
+
+fn second() -> i64 / io {
+  print("second")
+  2
+}
+
+fn main() / io { print("{first()} {second()}") }

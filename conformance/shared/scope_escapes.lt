@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: tasks.scope-that-escapes
+
+use std.task
+
+// A task's function that captures the scope keeps it, which only `spawn`'s receiver and a
+// parameter of its type may hold.
+fn kept() -> i64 / {io, async, raise<str>} {
+  try task.scope(|s| {
+    let t = try s.spawn(|| try s.spawn(|| 1).await()) //~ ERROR E0434
+    t.await()
+  })
+}
+
+// A scope given to a parameter of its type, and used as the receiver of `spawn`.
+fn passed(s: task.Scope<str>) -> i64 / {async, raise<str>} {
+  try s.spawn(|| 2).await()
+}
+
+fn main() / io {
+  with task.sequential() {
+    print("{try task.scope(|s| passed(s)) catch e => e.len()}")
+  }
+}

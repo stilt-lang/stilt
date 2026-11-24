@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────── E0100_type_arguments_after_colons.lt:2:22  [E0100]
+
+Stilt gives no type arguments in an expression: an annotation gives them:
+
+  2 │   let ys = [1, 2].map::<i64>(|x| x * 2)
+    │                      ^
+
+Type arguments are inferred, or given by an annotation, as `let xs: List<i64> =
+…`.
+
+To fix it, delete the type arguments:
+
+  2 │   let ys = [1, 2].map::<i64>(|x| x * 2)
+    │                      -------

@@ -1,0 +1,8 @@
+//~ tier: systems
+//~ rule: c.unsafe-because
+
+// `unsafe` takes `because` and its reason.
+
+fn main() {
+  let a = unsafe { 1 } //~ ERROR E0100
+}

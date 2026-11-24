@@ -1,0 +1,28 @@
+//~ tier: advanced
+//~ rule: tasks.sequential-run, tasks.same-output-under-every-handler
+//~ panic: bounds
+//~ panic-at: panic_first.lt:23:7
+//~ stdout:
+//~ | start
+//~ | a
+
+use std.task
+
+fn deep(n: i64) -> i64 {
+  if n == 0 { 0 } else { 1 + deep(n + 1) }
+}
+
+// The first task panics before the second runs out of stack in the sequential run, so the
+// program ends with the panic.
+fn main() / io {
+  with task.threads() {
+    print("start")
+    let a = task.spawn(|| {
+      print("a")
+      let xs: List<i64> = []
+      xs[1]
+    })
+    let b = task.spawn(|| deep(1))
+    print("{a.await() + b.await()}")
+  }
+}

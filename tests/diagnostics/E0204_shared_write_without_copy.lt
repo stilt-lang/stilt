@@ -1,0 +1,6 @@
+fn grown(xs: List<i64>) -> List<i64> without copy {
+  var ys = xs
+  let before = ys
+  ys.push(1)
+  before
+}

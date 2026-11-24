@@ -1,0 +1,9 @@
+── EDIT THAT DOESN'T PARSE AS ITS PART ───────────────────────── edit 1  [E0704]
+
+The new text of `main.totals` isn't one function declaration:
+
+  1 │ type Totals = { sum: i64 }
+    │ ^
+
+A body's new text is a block, and a declaration's is one declaration of the same
+kind. Nothing was written.

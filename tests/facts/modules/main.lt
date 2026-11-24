@@ -1,0 +1,8 @@
+//~ tier: core
+
+use geometry
+
+fn main() / io {
+  let total = geometry.area([2, 3]) //~ PANIC OVERFLOW ALLOC
+  print("{total}") //~ ALLOC CONSOLE
+}

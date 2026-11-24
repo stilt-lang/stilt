@@ -1,0 +1,3 @@
+use std.clock
+
+pub fn stamp() -> i64 / io without clock { clock.unix_ms() }

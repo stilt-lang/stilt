@@ -1,0 +1,19 @@
+//~ rule: patterns.pattern-types, patterns.or-patterns, errors.phase-by-form
+
+type C = | A(i64) | B(i64)
+
+fn bound_twice(c: C) -> i64 {
+  let (a, a) = (1, 2) //~ ERROR E0208
+  let k = 1
+  k = 2
+  match c {
+    A(_) => 1
+  }
+}
+
+fn alternatives(c: C) -> i64 {
+  let n = match c {
+    A(x) | B(y) => 1 //~ ERROR E0217
+  }
+  ?
+}

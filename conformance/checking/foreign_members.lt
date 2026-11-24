@@ -1,0 +1,23 @@
+//~ rule: errors.broken-blocks, errors.broken-parts
+
+// In an impl's block, a member that begins with another language's word for a function, or
+// with `mutating` or `async` before `fn`, is a part of its own: it declares that member, every
+// use of which has the error type, and the members around it stay whole. The impl is one part
+// of the file, which reports only its first syntax error.
+type Counter = { n: i64 }
+
+impl Counter {
+  fn get(self) -> i64 { self.n }
+  mutating fn bump(self) { self.n += 1 } //~ ERROR E0100
+  def reset(self):
+    self.n = 0
+  async fn later(self) -> i64 { self.n }
+  fn twice(self) -> i64 { self.n * 2 }
+}
+
+fn main() / io {
+  var c = Counter { n: 1 }
+  c.bump()
+  c.reset()
+  print("{c.get()} {c.twice()} {c.later()}")
+}

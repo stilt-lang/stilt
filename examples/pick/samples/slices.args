@@ -1,0 +1,3 @@
+-c
+.books[-3:] | map({title: .title[:12], tags: .tags[1:]})
+samples/books.json

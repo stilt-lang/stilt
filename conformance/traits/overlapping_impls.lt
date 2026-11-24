@@ -1,0 +1,15 @@
+//~ rule: traits.coherence
+
+trait Named {
+  fn name(self) -> str
+}
+
+type Thing = {}
+
+impl Named for Thing {
+  fn name(self) -> str { "a" }
+}
+
+impl Named for Thing { //~ ERROR E0304
+  fn name(self) -> str { "b" }
+}

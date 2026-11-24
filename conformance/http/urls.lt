@@ -1,0 +1,22 @@
+//~ rule: std.http-client
+//~ stdout:
+//~ | Url("https://example.com/") Url("ftp://example.com/") Url("example.com")
+//~ | Url("http:///x") Url("http://user@host/") Url("http://host:99999/") Url("http://[::1/")
+//~ | true
+
+use std.http
+use std.io
+use std.net
+
+fn fetched(url: str) -> str / io {
+  try "{http.get(url).status}" catch e because "the test prints the error" => "{e}"
+}
+
+fn main() / {io, raise<io.IoError>} {
+  print("{fetched("https://example.com/")} {fetched("ftp://example.com/")} {fetched("example.com")}")
+  print("{fetched("http:///x")} {fetched("http://user@host/")} {fetched("http://host:99999/")} {fetched("http://[::1/")}")
+  var listener = try net.listen("127.0.0.1", 0)
+  let port = listener.port()
+  listener.close()
+  print("{fetched("http://127.0.0.1:{port}/") == "Io(Other(\"127.0.0.1:{port}\"))"}")
+}

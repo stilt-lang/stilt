@@ -1,0 +1,8 @@
+*.vsix
+package-lock.json
+jsconfig.json
+node_modules/.bin/**
+node_modules/typescript/**
+node_modules/@types/**
+node_modules/@vscode/vsce/**
+syntaxes/stilt.tmLanguage.template.json

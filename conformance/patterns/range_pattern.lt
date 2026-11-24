@@ -1,0 +1,9 @@
+//~ rule: syntax.patterns, patterns.no-other-forms
+
+fn size(n: i64) -> str {
+  match n {
+    0 => "none",
+    1..=9 => "few", //~ ERROR E0100
+    _ => "many",
+  }
+}

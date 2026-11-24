@@ -1,0 +1,2 @@
+//~ rule: lexical.float-literals, errors.syntax-errors
+const A: f64 = 00.5 //~ ERROR E0004

@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: variadics.spread-expressions, variadics.spread-checks, errors.error-type
+
+// A spread that names no pack tuple, whose `e` holds a key path where no
+// function is expected: both mistakes are reported.
+fn lengths<..Ts>(lists: (..List<Ts>)) -> List<i64> { [...len()] } //~ ERROR E0343 ERROR E0324
+
+// A tuple with such a spread has the error type, whose length nothing gives, so
+// pushing it where a pack tuple is expected is no second error.
+fn firsts<..Ts>(lists: (..List<Ts>)) -> List<(..Ts)> {
+  var out: List<(..Ts)> = []
+  out.push((..[0])) //~ ERROR E0343
+  out
+}
+
+// A list with such a spread has elements of the error type, so its type needs no annotation.
+fn count() -> i64 { [..1].len() } //~ ERROR E0343
+
+fn main() {}

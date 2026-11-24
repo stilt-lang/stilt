@@ -1,0 +1,5 @@
+//~ rule: syntax.generic-lists, declarations.generic-lists
+
+fn f<>() -> i64 { //~ ERROR E0100
+  1
+}

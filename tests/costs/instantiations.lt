@@ -1,0 +1,49 @@
+// What a release build compiles for each function (builds.specialization and
+// builds.what-stays-generic): one function for each list of arguments that `main` reaches it at,
+// one for a function without parameters, none for a function that nothing reaches, and the code
+// with dictionaries of a polymorphic recursion and of a function used only as a polymorphic value.
+
+use std.array
+
+type Nested<T> = | Flat(T) | Nest(Nested<List<T>>)
+
+fn largest<T: Ord>(xs: List<T>) -> T { //~ FOR T = i64 | T = str
+  var best = xs[0] //~ KEPT bounds
+  for x in xs {
+    if x > best { best = x }
+  }
+  best
+}
+
+fn swap<A, B>(p: (A, B)) -> (B, A) { (p.1, p.0) } //~ FOR A = i64, B = str
+
+fn width<n: i64>(a: array.Array<i64, n>) -> i64 { n } //~ FOR n = 3 | n = 5
+
+fn unused<T: Show>(x: T) -> str { "{x}" } //~ UNREACHED
+
+fn total(xs: List<i64>) -> i64 { //~ ONCE
+  var t = 0
+  for x in xs { t = t + x } //~ KEPT overflow
+  t
+}
+
+// `depth` calls itself at `Nested<List<T>>`, so its group keeps its dictionaries.
+fn depth<T>(n: Nested<T>) -> i64 { //~ DICTIONARIES T = i64
+  match n {
+    Flat(_) => 0
+    Nest(inner) => 1 + depth(inner) //~ DICTIONARY recursion KEPT overflow
+  }
+}
+
+// `f` is a polymorphic argument, called through its dictionaries.
+fn both(f: fn<T: Show>(T) -> str, n: i64) -> str { "{f(n)} {f("s")}" } //~ ONCE DICTIONARY argument
+
+fn quoted<T: Show>(x: T) -> str { "'{x}'" } //~ DICTIONARIES
+
+fn main() / io { //~ ONCE
+  let three: array.Array<i64, 3> = [1, 2, 3]
+  let five: array.Array<i64, 5> = [1, 2, 3, 4, 5]
+  print("{largest([3, 1, 2])} {largest(["b", "a"])} {swap((1, "a"))}")
+  print("{width(three)} {width(five)} {total([1, 2])}")
+  print("{depth(Nest(Flat([1])))} {both(quoted, 2)}")
+}

@@ -1,0 +1,3 @@
+use std.fs
+
+pub fn has(path: str) -> bool / io { fs.exists(path) }

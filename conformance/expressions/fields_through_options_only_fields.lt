@@ -1,0 +1,11 @@
+//~ rule: types.only-fields
+
+type Address = { city: str, codes: List<i64> }
+
+fn length(o: Option<Address>) {
+  let _ = o.city.len() //~ ERROR E0314
+}
+
+fn first(o: Option<Address>) {
+  let _ = o.codes[0] //~ ERROR E0317
+}

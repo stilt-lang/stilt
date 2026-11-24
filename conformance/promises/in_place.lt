@@ -1,0 +1,57 @@
+//~ rule: facts.own-storage, facts.last-use, facts.writes-in-place, facts.in-place-parameters, facts.copy-at-call, facts.in-place-promise
+//~ run-output: "[2, 3, 4] [0, 2] [0, 5] [7, 8] [1, 2] [2, 3] [1, 0, 0] [9, 4] [3, 9]"
+
+// A `let` parameter rebound by `var` at its last use: the `var` holds the parameter's own
+// storage, so its writes through an index are in place.
+fn bump_all(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs
+  for i in 0..ys.len() { ys[i] += 1 }
+  ys
+}
+
+fn zero_first(inout xs: List<i64>) without alloc { xs[0] = 0 }
+
+// Passes its own `inout` parameter on, named whole.
+fn reset(inout xs: List<i64>) without alloc { zero_first(inout xs) }
+
+// Passes its own `let` parameter on at its last use.
+fn bumped(xs: List<i64>) -> List<i64> without alloc { bump_all(xs) }
+
+// Recursion that passes its `inout` parameter on.
+fn zero_from(inout xs: List<i64>, i: i64) without alloc {
+  if i < xs.len() {
+    xs[i] = 0
+    zero_from(inout xs, i + 1)
+  }
+}
+
+// Each assignment before the write gives `ys` storage of its own: a parameter at its last use.
+fn either(xs: List<i64>, zs: List<i64>, c: bool) -> List<i64> without alloc {
+  var ys = xs
+  if c { ys = zs }
+  ys[0] = 9
+  ys
+}
+
+// An `inout` parameter assigned a parameter at its last use holds that one's storage.
+fn take(inout xs: List<i64>, ys: List<i64>) without alloc {
+  xs = ys
+  xs[1] = 9
+}
+
+fn main() / io {
+  let a = [1, 2, 3]
+  var b = [1, 2]
+  reset(inout b)
+  var c = [4, 5]
+  zero_first(inout c)
+  // `d` is used after the call, so the call copies it, and `d` keeps its value.
+  let d = [1, 2]
+  let e = bump_all(d)
+  var f = [1, 2, 3]
+  zero_from(inout f, 1)
+  // A list literal is a value that nothing else holds, so it goes to `bump_all` as it is.
+  var g = [0, 0]
+  take(inout g, [3, 4])
+  print("{bump_all(a)} {b} {c} {bumped([6, 7])} {d} {e} {f} {either([1, 2], [3, 4], true)} {g}")
+}

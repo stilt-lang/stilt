@@ -1,0 +1,72 @@
+//~ tier: advanced
+//~ rule: tasks.with-waits, tasks.sequential-run, tasks.same-output-under-every-handler, shared.when-order
+//~ stdout:
+//~ | main 0
+//~ | a0=1 b0=2 d0 c0
+//~ | main 1
+//~ | a1=1 b1=2 d1 c1
+//~ | main 2
+//~ | a2=1 b2=2 d2 c2
+//~ | ["a0", "b0", "d0", "c0", "a1", "b1", "d1", "c1", "a2", "b2", "d2", "c2"]
+//~ | main 0
+//~ | a0=1 b0=2 d0 c0
+//~ | main 1
+//~ | a1=1 b1=2 d1 c1
+//~ | main 2
+//~ | a2=1 b2=2 d2 c2
+//~ | ["a0", "b0", "d0", "c0", "a1", "b1", "d1", "c1", "a2", "b2", "d2", "c2"]
+//~ stderr:
+//~ | err a0
+//~ | err b0
+//~ | err a1
+//~ | err b1
+//~ | err a2
+//~ | err b2
+//~ | err a0
+//~ | err b0
+//~ | err a1
+//~ | err b1
+//~ | err a2
+//~ | err b2
+
+use std.io
+use std.sync
+use std.task
+
+fn leaf(log: sync.Shared<List<str>>, name: str, n: i64) -> i64 / io {
+  io.write("{name}={n} ")
+  eprint("err {name}")
+  when log { log.push(name) }
+  n
+}
+
+// Writes without a newline, to stderr, and to a shared list, from nested tasks, each where
+// the sequential run makes it.
+fn run(h: handler async) / io {
+  let log = sync.Shared.new([])
+  with h {
+    for k in 0..3 {
+      print("main {k}")
+      let a = task.spawn(|| leaf(log, "a{k}", 1))
+      task.spawn(|| leaf(log, "b{k}", 2))
+      let c = task.spawn(|| {
+        let d = task.spawn(|| {
+          io.write("d{k} ")
+          when log { log.push("d{k}") }
+        })
+        io.write("c{k}")
+        d.await()
+        when log { log.push("c{k}") }
+      })
+      c.await()
+      print("")
+      let _ = a.await()
+    }
+  }
+  when log { print("{log}") }
+}
+
+fn main() / io {
+  run(task.threads())
+  run(task.sequential())
+}

@@ -1,0 +1,63 @@
+---
+// The page of each file and directory of the repository that a page links to and that is no
+// page itself (src/lib/sources.ts): a file's text, highlighted, with its lines numbered, or a
+// directory's files, each linked to its page.
+import type { GetStaticPaths } from "astro";
+import Doc from "../../layouts/Doc.astro";
+import { language, lines } from "../../lib/highlight";
+import { kind, read } from "../../lib/repo";
+import { listing, sources } from "../../lib/sources";
+
+export const getStaticPaths = (() =>
+  sources().map((path) => ({ params: { path }, props: { path } }))) satisfies GetStaticPaths;
+
+const { path } = Astro.props as { path: string };
+const directory = kind(path) === "directory";
+const name = directory ? `${path}/` : path;
+const href = `/source/${path}/`;
+const parts = path.split("/");
+const last = parts.pop();
+const listed = directory ? listing(path) : [];
+const text = directory ? "" : read(path);
+const github = `https://github.com/stilt-lang/stilt/${directory ? "tree" : "blob"}/main/${path}`;
+
+/** The highlighted lines, each with the ID `L` and its number, so a link can name a line. */
+function numbered(html: string): string {
+  let n = 0;
+  return html.replace(/<span class="line">/g, () => `<span class="line" id="L${++n}">`);
+}
+---
+
+<Doc title={name} section="source" href={href} blocks={[]}>
+  <h1 slot="title" class="mb-6 font-mono text-[1.1875rem] font-semibold break-all text-ink">
+    {parts.length > 0 && <span class="text-muted">{parts.join("/")}/</span>}{last}{directory && "/"}
+  </h1>
+  {
+    directory ? (
+      <ul class="files">
+        {listed.map((entry) => (
+          <li>{entry.href ? <a href={entry.href}>{entry.name}</a> : <span class="text-muted">{entry.name}</span>}</li>
+        ))}
+      </ul>
+    ) : (
+      <figure class="code numbered">
+        <figcaption>
+          <span class="code-label">{text.split("\n").length - (text.endsWith("\n") ? 1 : 0)} lines</span>
+          <span class="code-actions">
+            <button type="button" class="code-action" data-copy>Copy</button>
+            <a class="code-action" href={github}>View on GitHub</a>
+          </span>
+        </figcaption>
+        <pre><code set:html={numbered(lines(text, language(path)))} /></pre>
+      </figure>
+    )
+  }
+</Doc>
+
+<style>
+  .files { list-style: none; padding: 0; font-family: var(--mono); font-size: 0.8125rem; }
+  .files li { margin: 0; padding: 0.2rem 0; border-bottom: 1px solid var(--rule); }
+  .files a { text-decoration: none; }
+  .files a:hover { text-decoration: underline; }
+  pre :global(.line:target) { background: var(--sky-wash); }
+</style>

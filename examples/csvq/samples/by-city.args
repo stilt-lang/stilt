@@ -1,0 +1,11 @@
+samples/orders.csv
+--group
+city
+--sum
+qty
+--mean
+price
+--count
+--sort
+sum(qty)
+--desc

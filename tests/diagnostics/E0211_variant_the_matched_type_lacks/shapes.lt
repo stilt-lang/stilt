@@ -1,0 +1,1 @@
+pub type Shape = | Circle(f64) | Square(f64)

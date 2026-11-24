@@ -1,0 +1,3 @@
+[dependencies]
+shout = { path = "deps/shout" } # //~ ERROR E0608
+echo = { path = "deps/echo" } # //~ ERROR E0608

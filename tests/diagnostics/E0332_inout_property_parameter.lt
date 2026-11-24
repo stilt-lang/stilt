@@ -1,0 +1,2 @@
+/// prop: |inout xs: List<i64>| reverse(reverse(xs)) == xs
+fn reverse(xs: List<i64>) -> List<i64> { xs.fold([], |acc, x| [x].concat(acc)) }

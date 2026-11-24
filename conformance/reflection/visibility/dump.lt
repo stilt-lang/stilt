@@ -1,0 +1,33 @@
+use std.meta
+
+// A shape gives every field of its type, whatever its visibility (meta.private-fields,
+// traits.receiver-types).
+pub fn describe<T>(value: T) -> str {
+  var parts: List<str> = []
+  match T.shape() {
+    Record(fields) => {
+      for f in fields { parts.push("{f.name()}={shown(f.get(value))}") }
+    }
+    _ => {}
+  }
+  "\{{", ".join(parts)}}"
+}
+
+fn shown<X>(x: X) -> str {
+  if X: Show { "{x}" } else { "?" }
+}
+
+pub fn bumped<T>(value: T) -> T {
+  match T.shape() {
+    Record(fields) => fields.build(|f| step(f.get(value)))
+    _ => value
+  }
+}
+
+fn step<F>(value: F) -> F {
+  match F.shape() {
+    Int(n) => n.parse("{(n.text(value).to_i64() else 0) + 1}") else value
+    Str(s) => s.make("work")
+    _ => value
+  }
+}

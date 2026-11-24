@@ -1,0 +1,28 @@
+# The Rust versions of the programs of `std.par`'s scaling, which use Rayon. A workspace of its
+# own, outside the repository's, built by `stilt-bench compare` (../../src/compare.rs).
+[package]
+name = "par-baselines"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[workspace]
+
+[dependencies]
+rayon = "1"
+
+[[bin]]
+name = "mandelbrot"
+path = "mandelbrot/main.rs"
+
+[[bin]]
+name = "primes"
+path = "primes/main.rs"
+
+[[bin]]
+name = "states"
+path = "states/main.rs"
+
+[profile.release]
+opt-level = 3

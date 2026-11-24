@@ -1,0 +1,97 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+
+use std.cli
+
+type Fail = | Fail
+
+type Op =
+  | Push(i64)
+  | Load(i64)
+  | Store(i64)
+  | Add
+  | Mul
+  | Rem
+  | Lt
+  | JumpUnless(i64)
+  | Jump(i64)
+  | Halt
+
+fn program(bound: i64) -> List<Op> / raise<Fail> {
+  [
+    Push(0),
+    Store(0),
+    Push(0),
+    Store(1),
+    Load(0),
+    Push(bound),
+    Lt,
+    JumpUnless(22),
+    Load(1),
+    Load(0),
+    Load(0),
+    Mul,
+    Add,
+    Push(1000003),
+    Rem,
+    Store(1),
+    Load(0),
+    Push(1),
+    Add,
+    Store(0),
+    Jump(4),
+    Halt,
+    Load(1),
+    Halt,
+  ]
+}
+
+fn run(code: List<Op>) -> i64 / raise<Fail> {
+  var stack = []
+  var locals = [0, 0]
+  var pc = 0
+  loop {
+    match code[pc] {
+      Push(n) => stack.push(n)
+      Load(i) => stack.push(locals[i])
+      Store(i) => { locals[i] = stack.pop() else 0 }
+      Add => {
+        let b = stack.pop() else 0
+        let a = stack.pop() else 0
+        stack.push(a + b)
+      }
+      Mul => {
+        let b = stack.pop() else 0
+        let a = stack.pop() else 0
+        stack.push(a * b)
+      }
+      Rem => {
+        let b = stack.pop() else 0
+        let a = stack.pop() else 0
+        stack.push(a % b)
+      }
+      Lt => {
+        let b = stack.pop() else 0
+        let a = stack.pop() else 0
+        stack.push(if a < b { 1 } else { 0 })
+      }
+      JumpUnless(target) => {
+        if (stack.pop() else 0) == 0 {
+          pc = target
+          continue
+        }
+      }
+      Jump(target) => {
+        pc = target
+        continue
+      }
+      Halt => return stack.pop() else 0
+    }
+    pc += 1
+  }
+}
+
+fn main() / {io, raise<Fail>} {
+  let size = (cli.arg(0) else "").to_i64() else 1500000
+  print("{try run(try program(size))}")
+}

@@ -1,0 +1,8 @@
+/// Totals what the orders sold.
+fn totals(orders: List<i64>) -> i64 {
+  var sum = 0
+  for qty in orders {
+    sum += qty
+  }
+  sum
+}

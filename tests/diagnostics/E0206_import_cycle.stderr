@@ -1,0 +1,9 @@
+── IMPORT CYCLE ───────────────────────────────────────── orders.lt:1:1  [E0206]
+
+Modules depend on one another in a cycle: orders -> customers -> orders:
+
+  1 │ use customers
+    │ ^^^^^^^^^^^^^
+
+Modules can't import one another in a cycle. Move what both need into a third
+module, which each imports.

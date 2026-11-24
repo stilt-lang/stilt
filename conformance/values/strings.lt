@@ -1,0 +1,20 @@
+//~ rule: values.independent-copies, values.strings
+//~ stdout:
+//~ | true false true
+//~ | 2 5
+//~ | café caf
+
+fn main() / io {
+  let a = "ca"
+  let b = "fé"
+  let joined = "{a}{b}"
+  let same = joined == "café"
+  let other = joined == "cafe"
+  let ordered = "abc" < "abd"
+  print("{same} {other} {ordered}")
+  let accent = "é"
+  print("{accent.len()} {joined.len()}")
+  var s = joined
+  s = s.slice(0, 3)
+  print("{joined} {s}")
+}

@@ -1,0 +1,15 @@
+name = "proof-map"
+version = "0.1.0"
+defaultTargets = ["proof-map"]
+
+[[require]]
+name = "stilt"
+path = "../../formal"
+
+[[lean_lib]]
+name = "ProofMap"
+
+[[lean_exe]]
+name = "proof-map"
+root = "Main"
+supportInterpreter = true

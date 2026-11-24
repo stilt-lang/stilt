@@ -1,0 +1,87 @@
+// The alerts: the entries that need someone now, and the bursts of errors.
+
+use events.access
+use events.entry
+use events.ops
+use events.time
+
+/// The number of failed logins in a row of one user that raises an alert.
+pub const FAILURES: i64 = 3
+
+/// The number of errors in five minutes that makes a burst.
+pub const BURST: i64 = 3
+
+/// A line for each entry that needs someone now, in the order of the entries: a disk nearly
+/// full, a panic, an operation that gave up retrying, and a user's third failed login in a
+/// row; then a line for each five minutes that held a burst of errors.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  var out = ["== alerts =="]
+  var failures: Map<str, i64> = Map.with_default(0)
+  for e in es {
+    let alert = match e.event {
+      Disk(d) if d.critical() => Some("disk {d.mount} at {d.percent}%")
+      Panic(c) => Some("panic in {c.thread}: {c.message}")
+      Retry(r) if r.last() => Some("{r.op} gave up after {r.attempt} attempts")
+      Auth(l) => {
+        failures[l.user] = if l.ok { 0 } else { failures[l.user] + 1 }
+        if failures[l.user] == FAILURES {
+          Some("{l.user} failed to log in {FAILURES} times in a row")
+        } else {
+          None
+        }
+      }
+      _ => None
+    }
+    if let Some(a) = alert { out.push("{e.at.clock()} {e.source.text()} {a}") }
+  }
+  out.extend(bursts(es))
+  out
+}
+
+/// A line for each five minutes of an hour that held at least `BURST` errors, in the order they
+/// first held one, with the times of their first and last.
+/// ex: bursts([]) == []
+pub fn bursts(es: List<entry.Entry>) -> List<str> {
+  let errors = es.filter(|e| e.level == time.Error)
+  var out: List<str> = []
+  for (_, of) in errors.group_by(|e| (e.at.date.text(), e.at.hour, e.at.minute / 5)) {
+    let [first, ..] = of else continue
+    let last = of.last() else continue
+    if of.len() >= BURST {
+      out.push("{of.len()} errors from {first.at.clock()} to {last.at.clock()}")
+    }
+  }
+  out
+}
+
+// An entry of an event at a time, the tests' own.
+fn at(minute: u8, second: u8, level: time.Level, event: entry.Event) -> entry.Entry {
+  let stamp = time.Stamp {
+    date: time.Date { year: 2026, month: 11, day: 3 },
+    hour: 9,
+    minute,
+    second,
+  }
+  entry.Entry { at: stamp, source: time.Source { host: "web", index: 1 }, level, event }
+}
+
+test "a third failed login in a row raises an alert, and a success starts the count again" {
+  let ip = access.Ip { a: 10, b: 0, c: 0, d: 1 }
+  let fail = entry.Auth(access.Login { user: "ana", ip, ok: false, attempts: None })
+  let pass = entry.Auth(access.Login { user: "ana", ip, ok: true, attempts: None })
+  let es = [fail, fail, pass, fail, fail, fail].enumerate(0).map(
+    |(i, e)| at(0, i.to_u8() else 0, time.Warn, e),
+  )
+  assert lines(es) == ["== alerts ==", "09:00 web-1 ana failed to log in 3 times in a row"]
+}
+
+test "errors in the same five minutes make a burst, and those in the next don't join it" {
+  let crash = entry.Panic(ops.Crash { thread: "t-1", message: "boom" })
+  let es = [
+    at(1, 0, time.Error, crash),
+    at(3, 0, time.Error, crash),
+    at(4, 59, time.Error, crash),
+    at(5, 0, time.Error, crash),
+  ]
+  assert bursts(es) == ["3 errors from 09:01 to 09:04"]
+}

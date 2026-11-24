@@ -1,0 +1,10 @@
+//~ rule: effects.without-panic, facts.inference, facts.calls-through-function-values
+
+use lib
+use pure
+
+fn main() / io {
+  let divide = lib.divider()
+  print("{pure.apply(divide, 5)}")
+  print("{pure.apply(|n| 10 / n, 2)}")
+}

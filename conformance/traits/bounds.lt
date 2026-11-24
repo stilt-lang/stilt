@@ -1,0 +1,29 @@
+//~ rule: traits.unsatisfied-bounds
+//~ stdout:
+//~ | largest 3
+//~ | largest b
+//~ | none
+//~ | true false
+//~ | {"a": 1} {(1, 2): 1}
+
+fn largest<T: Ord + Show>(xs: List<T>) -> str {
+  let top = xs.sorted().last() else return "none"
+  "largest {top}"
+}
+
+fn same<T: Eq>(a: T, b: T) -> bool { a == b }
+
+fn single<K: Eq + Hash>(k: K) -> Map<K, i64> {
+  var m: Map<K, i64> = Map.new()
+  m[k] = 1
+  m
+}
+
+fn main() / io {
+  print(largest([3, 1, 2]))
+  print(largest(["b", "a"]))
+  let empty: List<i64> = []
+  print(largest(empty))
+  print("{same((1, "a"), (1, "a"))} {same([1], [2])}")
+  print("{single("a")} {single((1, 2))}")
+}

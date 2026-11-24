@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: syntax.macros, macros.patterns, macros.templates, macros.matching, macros.expansion
+//~ stdout:
+//~ | 0
+//~ | 6
+//~ | [(1, "a"), (2, "b")]
+
+// A repetition without a separator, of names.
+syntax total {
+  ($($n: name)*) => 0 $(+ $n)*
+}
+
+// Two fragments of one repetition, mapped together.
+syntax pairs {
+  [$($k: expr => $v: expr),*] => [$(($k, $v)),*]
+}
+
+fn main() / io {
+  let a = 1
+  let b = 2
+  let c = 3
+  print("{total!()}")
+  print("{total!(a b c)}")
+  print("{pairs![1 => "a", 2 => "b"]}")
+}

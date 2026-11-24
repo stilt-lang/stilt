@@ -1,0 +1,10 @@
+//~ tier: advanced
+
+// An open parameter type, a record bound and a pack put the module that writes them in the
+// advanced tier (records.advanced-tier; variadics.advanced-tier).
+
+pub fn greet(p: { name: str, .. }) -> str { "hello {p.name}" } //~ ALLOC
+
+pub fn age_of<P: { age: i64, .. }>(p: P) -> i64 { p.age }
+
+pub fn count<..Ts>(xs: (..Ts)) -> i64 { [..{ let _ = xs; 1 }].len() } //~ ALLOC

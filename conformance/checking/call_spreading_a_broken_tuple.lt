@@ -1,0 +1,10 @@
+//~ tier: advanced
+//~ rule: variadics.spread-checks, errors.error-type
+
+// The tuple's type names an unknown name, reported where it is written. Its spread stands for a
+// number of arguments that nothing gives, so the call that spreads it gets no error of its own.
+fn apply<..Ts>(g: fn(..Ts) -> i64, args: (..Missing)) -> i64 { //~ ERROR E0211
+  g(..args)
+}
+
+fn main() {}

@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: program.output-flushing, program.exit-statuses, handlers.handler-literals
+//~ stdout:
+//~ | before
+//~ | asked
+//~ stderr:
+//~ | error: refused
+//~ exit: 1
+
+// An operation's body prints, then raises: the raise escapes `main`, and what the body
+// printed before it stays printed.
+
+effect Ask {
+  fn ask() -> i64 / raise<str>
+}
+
+fn main() / {io, raise<str>} {
+  print("before")
+  let h = handler Ask {
+    fn ask() -> i64 / raise<str> {
+      print("asked")
+      raise "refused"
+    }
+  }
+  print("{try with h { Ask.ask() }}")
+}

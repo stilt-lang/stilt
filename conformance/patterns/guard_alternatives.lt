@@ -1,0 +1,26 @@
+//~ rule: patterns.guards
+//~ stdout:
+//~ | guard 5
+//~ | guard 30
+//~ | big 30
+//~ | guard 50
+//~ | big 50
+//~ | small
+
+fn big(x: i64) -> bool / io {
+  print("guard {x}")
+  x > 10
+}
+
+fn pick(xs: List<i64>) -> str / io {
+  match xs {
+    [x, ..] | [_, x, ..] if big(x) => "big {x}"
+    _ => "small"
+  }
+}
+
+fn main() / io {
+  print(pick([5, 30]))
+  print(pick([50, 1]))
+  print(pick([]))
+}

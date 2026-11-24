@@ -1,0 +1,10 @@
+── NO SUCH FIELD ────────────────────────── E0313_no_such_field.lt:3:32  [E0313]
+
+`Order` has no field `amount`:
+
+  3 │ fn amount(o: Order) -> i64 { o.amount }
+    │                                ^^^^^^
+
+Check the field's name against the type's declaration. A `Shared<T>`'s fields
+are read inside `when`, and a field read through an `Option` is the field of the
+value inside it.

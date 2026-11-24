@@ -1,0 +1,8 @@
+use std.cli; use std.fs
+/// One validated row of the orders file.
+type Order = { customer: str, qty: i64, price: f64 }
+/// Parses one `customer,qty,price` row.
+fn parse_line(n: i64, text: str) -> Order / raise<str>
+/// Revenue per customer, largest first.
+fn totals(orders: List<Order>) -> List<(str, f64)>
+fn main() / {io, raise<str>}

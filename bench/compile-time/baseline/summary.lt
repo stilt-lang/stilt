@@ -1,0 +1,92 @@
+// The report's numbers as one value of JSON, written and read back by hand (std.json), the
+// histograms' buckets among them.
+
+use std.json
+use charts
+use decode
+use tally
+use events.entry
+use events.time
+
+/// The numbers of the report: the lines, the entries and the lines not read, the entries of
+/// each topic and of each level, and the histograms.
+pub type Summary = {
+  lines: i64,
+  entries: i64,
+  skipped: i64,
+  topics: Map<str, i64>,
+  levels: Map<str, i64>,
+  charts: charts.Charts,
+}
+
+/// The summary of what the log held.
+pub fn of(t: tally.Tally) -> Summary {
+  let es = t.entries()
+  var topics: Map<str, i64> = Map.new()
+  for topic in entry.TOPICS { topics[topic] = es.count(|e| e.event.topic() == topic) }
+  var levels: Map<str, i64> = Map.new()
+  for level in time.LEVELS { levels[level.label()] = es.count(|e| e.level == level) }
+  Summary {
+    lines: t.lines,
+    entries: es.len(),
+    skipped: t.skipped.len(),
+    topics,
+    levels,
+    charts: t.charts,
+  }
+}
+
+/// The summary as JSON, and whether that reads back equal.
+pub fn lines(t: tally.Tally) -> List<str> {
+  let s = of(t)
+  let text = write(s)
+  let same = Result.of(|| try read(text)).ok() == Some(s)
+  ["== summary as JSON ==", text, "reads back equal: {same}"]
+}
+
+/// The summary as one line of JSON.
+pub fn write(s: Summary) -> str { json.render(s.to_json()) }
+
+/// The summary that a line of JSON holds.
+pub fn read(text: str) -> Summary / raise<json.Error> {
+  try Summary.from_json(try json.parse(text))
+}
+
+impl Summary {
+  /// The summary that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Summary / raise<json.Error> {
+    let ms = try decode.members(v, path, "Summary")
+    Summary {
+      lines: try decode.int(try decode.field(ms, "lines", path), "{path}.lines"),
+      entries: try decode.int(try decode.field(ms, "entries", path), "{path}.entries"),
+      skipped: try decode.int(try decode.field(ms, "skipped", path), "{path}.skipped"),
+      topics: try decode.counts(try decode.field(ms, "topics", path), "{path}.topics"),
+      levels: try decode.counts(try decode.field(ms, "levels", path), "{path}.levels"),
+      charts: try charts.Charts.read(try decode.field(ms, "charts", path), "{path}.charts"),
+    }
+  }
+}
+
+impl json.ToJson for Summary {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("lines", decode.number(self.lines)),
+        ("entries", decode.number(self.entries)),
+        ("skipped", decode.number(self.skipped)),
+        ("topics", counts(self.topics)),
+        ("levels", counts(self.levels)),
+        ("charts", self.charts.to_json()),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Summary {
+  fn from_json(v: json.Value) -> Summary / raise<json.Error> { try Summary.read(v, "$") }
+}
+
+// A map of counts as JSON: an object, a member for each key.
+fn counts(m: Map<str, i64>) -> json.Value {
+  json.Object(m.entries().map(|(k, n)| (k, decode.number(n))))
+}

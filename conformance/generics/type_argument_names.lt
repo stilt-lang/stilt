@@ -1,0 +1,17 @@
+//~ tier: meta
+//~ rule: generics.value-argument-names
+
+use std.array
+
+fn twice(x: i64) -> i64 { x + x }
+
+fn main() {
+  // A function, a local and a module name no type, so none of them stands
+  // for a type parameter.
+  let a: List<print> = [] //~ ERROR E0347
+  let b: Option<twice> = None //~ ERROR E0347
+  let c: array.Array<twice, 2> = [1, 2] //~ ERROR E0347
+  let d: Map<str, array> = Map.new() //~ ERROR E0347
+  let n = 1
+  let e: List<n> = [] //~ ERROR E0347
+}

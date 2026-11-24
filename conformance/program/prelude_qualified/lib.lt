@@ -1,0 +1,8 @@
+pub fn print(n: i64) -> i64 { //~ ERROR E0209
+  n
+}
+
+pub fn uses() {
+  print("text")
+  print(1)
+}

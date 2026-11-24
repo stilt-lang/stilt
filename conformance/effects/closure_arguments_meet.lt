@@ -1,0 +1,10 @@
+//~ rule: effects.one-error-type, effects.rows-that-meet
+
+type A = { a: i64 }
+type B = { b: i64 }
+
+fn pick<T>(x: T, y: T) -> T { y }
+
+fn choose() {
+  let h = pick(|| raise A { a: 1 }, || raise B { b: 2 }) //~ ERROR E0503
+}

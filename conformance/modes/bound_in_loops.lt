@@ -1,0 +1,25 @@
+//~ rule: values.passing-values, expressions.loops
+//~ run-output: "8 [1, 1, 1, 1]"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(0)
+  ys
+}
+
+fn main() / io {
+  var n = 0
+  var seen = []
+  for xs in [[1], [2]] {
+    n += grown(xs).len()
+    seen.push(xs.len())
+  }
+  var i = 0
+  while i < 2 {
+    let s = [i]
+    n += grown(s).len()
+    seen.push(s.len())
+    i += 1
+  }
+  print("{n} {seen}")
+}

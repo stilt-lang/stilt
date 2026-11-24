@@ -1,0 +1,8 @@
+fn first_negative(xs: List<i64>) -> Option<i64> {
+  xs.find(|x| {
+    if x < 0 { break }
+    false
+  })
+}
+
+fn main() {}

@@ -1,0 +1,44 @@
+//~ tier: advanced
+//~ rule: syntax.types, syntax.effect-forms, handlers.effects-in-rows, handlers.handler-literals, handlers.handler-types, handlers.with
+//~ stdout:
+//~ | 3
+//~ | inner 1
+//~ | outer 1
+//~ | 7
+
+effect Ask<T> {
+  fn ask() -> T
+}
+
+effect Log {
+  fn log(msg: str)
+}
+
+// A handler is a value: stored in a record and passed to a function.
+type Setup = { asks: handler Ask<i64> }
+
+fn doubled() -> i64 / Ask<i64> { Ask.ask() + Ask.ask() }
+
+fn run(h: handler Ask<i64>) -> i64 {
+  with h { doubled() + 1 }
+}
+
+fn main() / io {
+  let setup = Setup { asks: handler Ask<i64> { fn ask() -> i64 { 1 } } }
+  print("{run(setup.asks)}")
+  // The inner handler hides the outer one, and its own body performs
+  // `Log` on the outer one.
+  let outer = handler Log { fn log(msg: str) { print("outer {msg}") } }
+  with outer {
+    let inner = handler Log {
+      fn log(msg: str) {
+        print("inner {msg}")
+        Log.log(msg)
+      }
+    }
+    with inner {
+      Log.log("1")
+    }
+  }
+  print("{with (handler Ask<i64> { fn ask() -> i64 { 3 } }) { doubled() + 1 }}")
+}

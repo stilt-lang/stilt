@@ -1,0 +1,19 @@
+//~ rule: values.inout-arguments, facts.joins, facts.paths-that-leave
+//~ panic: bounds
+//~ panic-at: order_caught.lt:16:53
+
+type Oops = { code: i64 }
+
+fn drain(inout xs: List<i64>) -> i64 / raise<Oops> {
+  xs.clear()
+  raise Oops { code: 1 }
+}
+
+// The call empties the list before it raises, and the `inout` argument keeps
+// the change.
+fn caught() -> i64 {
+  var xs = [1, 2, 3]
+  try drain(inout xs) catch Oops { code } => code + xs[0]
+}
+
+fn main() / io { print("{caught()}") }

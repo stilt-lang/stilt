@@ -1,0 +1,25 @@
+//~ rule: lexical.identifiers, lexical.case, lexical.wildcard, lexical.keywords, lexical.reserved-words, syntax.token-classes
+//~ stdout:
+//~ | 1 2 3 4 5 6
+//~ | 7 8 9 10 11
+
+type _Pair = { _first: i64, second_2: i64 }
+
+const _LIMIT: i64 = 11
+
+fn _helper(x9: i64) -> i64 { x9 }
+
+fn main() / io {
+  let iffy = 1
+  let letter = 2
+  let __private = 3
+  let p = _Pair { _first: 4, second_2: 5 }
+  let selfish = 6
+  let types = 7
+  let effects = 8
+  let reference = 9
+  let yielded = 10
+  let _ = 0
+  print("{iffy} {letter} {__private} {p._first} {p.second_2} {selfish}")
+  print("{types} {effects} {reference} {yielded} {_helper(_LIMIT)}")
+}

@@ -1,0 +1,30 @@
+//~ rule: std.io
+//~ stdin: "a\nb\r\nc\xffd\nlast"
+//~ stdout:
+//~ | a
+//~ | b
+//~ | c�d
+//~ | last
+//~ | None None
+
+use std.clock
+use std.io
+
+// The protocol doesn't say when stdin arrives, so a poll that gives `None` is asked again, for a
+// line that the input holds.
+fn next() -> str / io {
+  loop {
+    match io.poll_line() {
+      Some(line) => return line
+      None => clock.sleep_ms(1)
+    }
+  }
+}
+
+fn main() / io {
+  print(next())
+  print(next())
+  print(next())
+  print(next())
+  print("{io.poll_line()} {io.poll_line()}")
+}

@@ -1,0 +1,11 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+type Fail = | Fail
+
+fn step(acc: i64, i: i64) -> i64 / raise<Fail> { (acc + i * 7) % 1000003 }
+
+fn main() / {io, raise<Fail>} {
+  var acc = 0
+  for i in 0..60000000 { acc = try step(acc, i) }
+  print("{acc}")
+}

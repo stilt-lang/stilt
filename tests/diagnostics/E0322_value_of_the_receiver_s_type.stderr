@@ -1,0 +1,22 @@
+── UNUSED VALUE ───────────── E0322_value_of_the_receiver_s_type.lt:3:3  [E0322]
+
+This value of type `List<str>` is unused:
+
+  3 │   names.reversed()
+    │   ^^^^^^^^^^^^^^^^
+
+A value that a statement computes and drops is usually a mistake, such as
+calling a method that returns a new list instead of changing the old one. Use
+the value, or write `let _ = …` to drop it on purpose.
+
+Two ways to fix it:
+
+  1. Assign it to `names`:
+
+  3 │   names = names.reversed()
+    │   ++++++++
+
+  2. Discard it on purpose:
+
+  3 │   let _ = names.reversed()
+    │   ++++++++

@@ -1,0 +1,13 @@
+//~ tier: systems
+//~ rule: c.types-c-takes, errors.error-type
+
+// A pointer to a type that fails to resolve points at the error type, from which no diagnostic
+// arises: the unknown name is the only error, at any depth.
+
+use std.c
+
+extern fn pointee(p: c.Ptr<Missing>) -> i32 //~ ERROR E0211
+
+extern fn deeper(p: c.Ptr<c.Ptr<Missing>>, s: c.Str) -> i32 //~ ERROR E0211
+
+fn main() {}

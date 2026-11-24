@@ -1,0 +1,10 @@
+── INHERENT METHOD HIDES A TRAIT METHOD ── E0308_inherent_method_hides_a_trait_method.lt:7:1  [E0308]
+
+`Point` has an inherent method `show`, which this impl of `Show` would hide;
+rename one:
+
+  7 │ impl Show for Point {
+    │ ^^^^^^^^^^^^^^^^^^^^^
+
+A method's name means one member of a type, so an inherent method and a trait's
+method can't share it. Rename the inherent method.

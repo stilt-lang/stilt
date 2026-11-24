@@ -1,0 +1,29 @@
+//~ tier: advanced
+//~ rule: handlers.no-inout-parameter, handlers.resuming-keeps-exclusivity
+//~ stdout:
+//~ | 102
+//~ | 2 2
+
+// The operation takes a value and returns the new one, which the block assigns; the body
+// writes only its own copy after `resume`.
+effect Bump {
+  fn bump(n: i64) -> i64
+}
+
+fn main() / io {
+  let h = handler Bump -> i64 {
+    fn bump(n: i64) -> i64 {
+      var mine = n + 1
+      let v = resume(mine)
+      mine += 100
+      print("{mine}")
+      v
+    }
+  }
+  var x = 1
+  let r = with h {
+    x = Bump.bump(x)
+    x
+  }
+  print("{x} {r}")
+}

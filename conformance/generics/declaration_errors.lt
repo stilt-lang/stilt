@@ -1,0 +1,39 @@
+//~ tier: meta
+//~ rule: generics.value-parameters, generics.value-parameters-determined
+
+use std.array
+
+type Mod<p: u64> = { value: u64 }
+
+type Point = { x: i64, y: i64 }
+
+// Two value parameters of one name.
+fn twice<n: i64, n: i64>(a: array.Array<i64, n>) {} //~ ERROR E0208
+
+// A method's value parameter named as its impl's.
+impl<p: u64> Mod<p> {
+  fn scale<p: u64>(self, by: Mod<p>) {} //~ ERROR E0208
+}
+
+// A value parameter's type is an integer type or `bool`.
+type Ratio<x: f64> = { n: i64 } //~ ERROR E0345
+
+type Named<s: str> = { n: i64 } //~ ERROR E0345
+
+type At<p: Point> = { n: i64 } //~ ERROR E0345
+
+// A function's value parameter that only its row names, and one that
+// nothing names, which no call could give a value.
+fn raised<n: i64>(g: fn() / raise<array.Array<i64, n>>) {} //~ ERROR E0346
+
+fn nowhere<n: i64>() {} //~ ERROR E0346
+
+// A value parameter whose type E0345 reports has the error type, from which nothing else arises.
+fn misplaced<x: { v: i64 }>(p: i64) {} //~ ERROR E0345
+
+// An impl's type is its constructor applied to its parameters, each once.
+impl Mod<7> {} //~ ERROR E0302
+
+impl<p: u64, q: u64> Mod<p> {} //~ ERROR E0302
+
+fn main() {}

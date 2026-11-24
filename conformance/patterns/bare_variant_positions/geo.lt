@@ -1,0 +1,11 @@
+pub type Size = | Meters(i64)
+
+pub type Shape = | Square(i64) | Line(i64, i64)
+
+pub type Fault = | TooBig(i64) | Negative
+
+pub fn measure(n: i64) -> i64 / raise<Fault> {
+  if n > 100 { raise TooBig(n) }
+  if n < 0 { raise Negative }
+  n
+}

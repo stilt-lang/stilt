@@ -1,0 +1,29 @@
+//~ rule: facts.calls-through-function-values, facts.without, facts.io-and-capabilities
+//~ stdout:
+//~ | hi
+//~ | hi
+//~ | hello ada
+//~ | false
+
+use std.fs
+
+// A call through a function value adds nothing: the closure's capabilities are its writer's.
+fn twice(f: fn() / io) / io without fs, console {
+  f()
+  f()
+}
+
+// Neither `net` nor `spawn` is reached by printing or reading files.
+fn greet(name: str) -> bool / io without net, spawn {
+  print("hello {name}")
+  fs.exists("no/such/file")
+}
+
+// `exit` performs `io` with no capability.
+fn done() -> Never / io without fs, net, clock, env, console, rand, spawn { exit(0) }
+
+fn main() / io {
+  twice(|| print("hi"))
+  print("{greet("ada")}")
+  done()
+}

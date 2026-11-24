@@ -1,0 +1,83 @@
+//~ tier: advanced
+//~ rule: variadics.type-spreads, variadics.pack-tuples, variadics.spread-expressions, variadics.spread-checks
+
+// A pack is written spread.
+fn bare<..Ts>(xs: Ts) -> i64 { 0 } //~ ERROR E0343
+
+// A spread names exactly one pack.
+fn plain(xs: (..i64)) -> i64 { 0 } //~ ERROR E0343
+
+fn both<..Ts, ..Us>(xs: (..(Ts, Us))) -> i64 { 0 } //~ ERROR E0343
+
+fn nested<..Ts>(xs: (..List<(..Ts)>)) -> i64 { 0 } //~ ERROR E0343
+
+// Two pack tuples of different packs in one spread expression.
+fn mixed<..Ts, ..Us>(a: (..Ts), b: (..Us)) -> List<i64> { [..{ let p = (a, b); 0 }] } //~ ERROR E0343
+
+// A pack tuple named in a closure inside a spread.
+fn captured<..Ts>(a: (..Ts)) -> List<i64> { [..{ let f = || a; 0 }] } //~ ERROR E0343
+
+// A spread expression names a pack tuple.
+fn empty_spread() -> List<i64> { [..1] } //~ ERROR E0343
+
+// The arity of a pack tuple isn't known.
+fn first<..Ts>(xs: (..Ts)) -> i64 {
+  let n = xs.0 //~ ERROR E0342
+  0
+}
+
+fn destructure<..Ts>(xs: (..Ts)) -> i64 {
+  let (a, b) = xs //~ ERROR E0342
+  0
+}
+
+fn each<..Ts>(xs: (..Ts)) -> i64 {
+  for x in xs {} //~ ERROR E0342
+  0
+}
+
+// `[..xs]`'s elements would differ in type.
+fn listed<..Ts>(xs: (..Ts)) -> i64 { [..xs].len() } //~ ERROR E0311
+
+// Plain arguments of a function type with a spread are no tuple of the pack, whatever their number.
+fn plain_arguments<..Ts>(g: fn(..Ts) -> i64) -> i64 { g(1, 2) } //~ ERROR E0311
+
+fn no_arguments<..Ts>(g: fn(..Ts) -> i64) -> i64 { g() } //~ ERROR E0311
+
+// A function type with a spread inside another type is that type exactly.
+fn spread_elements<..Ts>(fs: List<fn(..Ts) -> i64>) -> List<fn(i64) -> i64> { fs } //~ ERROR E0311
+
+fn spread_modes<..Ts>(fs: List<fn(inout i64, ..Ts) -> i64>) -> List<fn(i64, ..Ts) -> i64> { fs } //~ ERROR E0311
+
+// A closure before the pack tuple in a spread doesn't hold the name after it.
+fn after_closure<..Ts>(xs: (..Ts)) -> (..Ts) {
+  (..{
+    let k = || 0
+    xs
+  })
+}
+
+// Two packs are reported where the second one is named.
+fn mixed_later<..Ts, ..Us>(a: (..Ts), b: (..Us)) -> List<i64> {
+  [..{
+    let p = a
+    let q = b //~ ERROR E0343
+    0
+  }]
+}
+
+// Two packs are reported where the second one is first named, not at its later tuples.
+fn mixed_then_more<..Ts, ..Us>(a: (..Ts), b: (..Us), d: (..Us)) -> List<i64> {
+  [..{
+    let p = a
+    let q = b //~ ERROR E0343
+    let r = d
+    0
+  }]
+}
+
+// A local whose type has an error may have been a pack tuple.
+fn broken_local(n: i64) -> List<i64> {
+  let y: Nope = n //~ ERROR E0211
+  [..y]
+}

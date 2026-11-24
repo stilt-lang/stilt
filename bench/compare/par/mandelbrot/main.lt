@@ -1,0 +1,43 @@
+// mandelbrot in parallel: the suite's mandelbrot, each row of the grid counted by `par.map`.
+
+use std.cli
+use std.par
+
+/// The points of row `y` that stay in the set for 50 iterations, and the iterations of those
+/// that escape.
+fn row(size: i64, y: i64) -> (i64, i64) {
+  let scale = size.to_f64()
+  let ci = 2.0 * y.to_f64() / scale - 1.0
+  var inside = 0
+  var escapes = 0
+  for x in 0..size {
+    let cr = 2.0 * x.to_f64() / scale - 1.5
+    var zr = 0.0
+    var zi = 0.0
+    var i = 0
+    var escaped = false
+    while i < 50 && !escaped {
+      let next = zr * zr - zi * zi + cr
+      zi = 2.0 * zr * zi + ci
+      zr = next
+      if zr * zr + zi * zi > 4.0 { escaped = true }
+      i += 1
+    }
+    if escaped { escapes += i } else { inside += 1 }
+  }
+  (inside, escapes)
+}
+
+fn main() / io {
+  let size = (cli.arg(0) else "").to_i64() else 4000
+  var ys = []
+  for y in 0..size { ys.push(y) }
+  let rows = par.map(ys, |y| row(size, y))
+  var inside = 0
+  var escapes = 0
+  for (i, e) in rows {
+    inside += i
+    escapes += e
+  }
+  print("{inside} points inside, {escapes} iterations to escape")
+}

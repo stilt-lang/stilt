@@ -1,0 +1,8 @@
+edition = "2024" # //~ ERROR E0600
+
+[package]
+name = "app"
+version = "1.0.0" # //~ ERROR E0600
+
+[dependencies]
+csv = { path = "deps/csv", features = ["fast"] } # //~ ERROR E0600

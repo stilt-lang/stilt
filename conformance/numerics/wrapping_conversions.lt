@@ -1,0 +1,26 @@
+//~ rule: numbers.wrapping-conversions, numbers.printing-integers
+//~ stdout:
+//~ | 255 44 -128 -1 9223372036854775808 0 -56
+//~ | 251 -5 -5 18446744073709551615 -1
+//~ | 65535 -1 4294967295 4294967295 -1 255 -2
+
+fn main() / io {
+  let a: i64 = 300
+  let b: i64 = 128
+  let c = u64.MAX
+  let d = i64.MIN
+  let e: u16 = 256
+  let f: u8 = 200
+  print("{(-1).wrap_to_u8()} {a.wrap_to_u8()} {b.wrap_to_i8()} {c.wrap_to_i64()} {d.wrap_to_u64()} {e.wrap_to_u8()} {f.wrap_to_i8()}")
+  let s: i8 = -5
+  let t: i64 = -1
+  print("{s.wrap_to_u8()} {s.wrap_to_u8().wrap_to_i8()} {s.wrap_to_i64()} {t.wrap_to_u64()} {t.wrap_to_u64().wrap_to_i64()}")
+  let g: i16 = -1
+  let h: u16 = 65535
+  let i: i32 = -1
+  let j: i8 = -1
+  let k = u32.MAX
+  let l: u8 = 255
+  let m: i64 = -2
+  print("{g.wrap_to_u16()} {h.wrap_to_i16()} {i.wrap_to_u32()} {j.wrap_to_u32()} {k.wrap_to_i32()} {l.wrap_to_u16()} {m.wrap_to_i64()}")
+}

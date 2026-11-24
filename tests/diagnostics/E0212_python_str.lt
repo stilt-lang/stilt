@@ -1,0 +1,5 @@
+fn main() / io {
+  let n = 3
+  let label: str = str(n)
+  print(label)
+}

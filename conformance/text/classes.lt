@@ -1,0 +1,19 @@
+//~ rule: std.text
+//~ stdout:
+//~ | true true false false
+//~ | true false true false
+//~ | true true false
+//~ | true false
+//~ | true false false
+
+// Each test holds of a text when it holds a scalar value and each has the property, so the
+// empty text has none of them.
+use std.text
+
+fn main() / io {
+  print("{text.is_letter("ñandú")} {text.is_letter("漢字")} {text.is_letter("a1")} {text.is_letter("")}")
+  print("{text.is_upper("ÉTÉ")} {text.is_upper("Été")} {text.is_lower("été")} {text.is_lower("été!")}")
+  print("{text.is_numeric("42")} {text.is_numeric("٣Ⅻ½")} {text.is_numeric("4.2")}")
+  print("{text.is_alphanumeric("route66")} {text.is_alphanumeric("route 66")}")
+  print("{text.is_whitespace(" \t\n\u{a0}\u{3000}")} {text.is_whitespace("")} {text.is_whitespace("\u{200b}")}")
+}

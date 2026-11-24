@@ -1,0 +1,22 @@
+# The size each program of the suite is given with `stilt-bench --long`, as its first
+# argument, so that its Rust baseline runs for at least a second on the reference machine and
+# process start, page faults and the timer's resolution are a small part of what is measured.
+# Without `--long`, as `just bench` runs in CI, each program runs at the size it writes as its
+# default, in a few tens of milliseconds, timed by its cycles. Each size is the program's own
+# measure: a tree's depth, a permutation's length, a grid's side, a count of iterations.
+
+binary_trees = 18
+fannkuch = 11
+fasta = 5000000
+json = 1050000
+life = 2050
+mandelbrot = 5300
+map_heavy = 13500000
+matmul = 1000
+nbody = 42000000
+nsieve = 26
+pipeline = 1800000
+sort = 13000000
+spectral_norm = 6500
+string_heavy = 14000000
+vm = 72000000

@@ -1,0 +1,82 @@
+//~ rule: modes.shared-writes, modes.shared-self-parts, modes.shared-holders, facts.copy, facts.without-copy
+
+// The caller reads an `inout` parameter when the call returns, so a write to a copy of it is
+// shared, though nothing names the parameter after the write.
+fn bumped(inout xs: List<i64>) without copy {
+  var ys = xs
+  ys.push(1) //~ ERROR E0204
+}
+
+// So is a write to a copy of a part of it.
+fn bumped_part(inout rows: List<List<i64>>) without copy {
+  var row = rows[0]
+  row.push(1) //~ ERROR E0204
+}
+
+// Once the parameter's whole is assigned, the caller reads the value assigned, not the copy.
+fn replaced(inout xs: List<i64>) without copy {
+  var ys = xs
+  xs = [0]
+  ys.push(1)
+}
+
+// A closure's next call reads the variables it captures, so a write to a copy of one is shared.
+fn twice() -> i64 without copy {
+  let base = [0]
+  let f = || {
+    var ys = base
+    ys.push(1) //~ ERROR E0204
+    ys.len()
+  }
+  f() + f()
+}
+
+type Tree = { items: List<i64>, kids: List<Tree> }
+
+// A copy of the whole binding holds the part that `x = x.kids[0]` gives `x`, so it still counts.
+fn descend(t: Tree) -> List<i64> without copy {
+  var x = Tree { items: [1], kids: [t] }
+  let z = x
+  x = x.kids[0]
+  x.items.push(9) //~ ERROR E0204
+  z.items
+}
+
+// The assignment keeps every copy made before it, of any part.
+fn beside(t: Tree) -> List<i64> without copy {
+  var x = Tree { items: [1], kids: [t] }
+  let z = x.items
+  x = x.kids[0]
+  x.items.push(9) //~ ERROR E0204
+  z
+}
+
+// After it, a copy of one part counts as a copy of every part: `x.items` is now inside `z`.
+fn moved_inside(t: Tree) -> List<Tree> without copy {
+  var x = Tree { items: [1], kids: [t] }
+  let z = x.kids
+  x = x.kids[0]
+  x.items.push(9) //~ ERROR E0204
+  z
+}
+
+// So does an assignment of another binding that holds a copy of the binding.
+fn through_a_copy() -> List<i64> without copy {
+  var x = [1]
+  let w = x
+  let z = x
+  x = z
+  x[0] = 9 //~ ERROR E0204
+  w
+}
+
+// An assignment of a fresh value replaces the copies made before it.
+fn fresh_value() -> List<i64> without copy {
+  var x = [1]
+  let w = x
+  x = [2]
+  x[0] = 9
+  w
+}
+
+fn main() / io {}

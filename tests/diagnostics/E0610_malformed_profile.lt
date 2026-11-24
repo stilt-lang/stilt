@@ -1,0 +1,5 @@
+// A profile whose second line counts 3, which isn't a power of two (builds.profile-form).
+
+fn main() / io {
+  for i in 0..3 { print("{i}") }
+}

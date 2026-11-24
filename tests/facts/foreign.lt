@@ -1,0 +1,39 @@
+//~ tier: systems
+
+// Unsafe code and foreign functions (c.unsafe-and-foreign): a function whose own code holds an
+// `unsafe` block, a closure literal's body included, has `unsafe` at the block's `unsafe`, and
+// each line that names a foreign function has `foreign` for it, a use as a value included.
+// Neither is inherited. A foreign function's code is C, so naming one adds what any C code may do,
+// `panic`, `alloc` and `div`, which its callers inherit (c.effects); `with_c_str` panics and
+// allocates, `with_mut_ptr` allocates and `with_ptr` does neither (c.lending-buffer). A module that
+// declares a foreign function is in the systems tier (c.systems-tier).
+
+use std.c
+
+extern fn strlen(s: c.Str) -> u64
+
+extern fn abs(n: i32) -> i32
+
+fn magnitude(n: i32) -> i32 {
+  unsafe because "abs takes any i32 but the least" { abs(n) } //~ PANIC ALLOC DIV UNSAFE FOREIGN abs
+}
+
+fn caller(n: i32) -> i32 {
+  magnitude(n) //~ PANIC ALLOC DIV
+}
+
+fn length(s: str) -> u64 {
+  unsafe because "with_c_str ends p with a NUL" { //~ UNSAFE
+    s.with_c_str(|p| strlen(p)) //~ PANIC ALLOC DIV FOREIGN strlen
+  }
+}
+
+fn first(xs: List<u8>) -> u8 {
+  xs.with_ptr(|p| unsafe because "xs is never empty here" { p.read() }) //~ ALLOC UNSAFE
+}
+
+fn chosen() -> fn(i32) -> i32 {
+  unsafe because "abs takes any i32 but the least" { //~ UNSAFE
+    abs //~ PANIC ALLOC DIV FOREIGN abs
+  }
+}

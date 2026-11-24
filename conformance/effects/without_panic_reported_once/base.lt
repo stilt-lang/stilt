@@ -1,0 +1,6 @@
+module base
+without panic
+
+pub fn at(xs: List<i64>) -> i64 {
+  xs[0] //~ ERROR E0204
+}

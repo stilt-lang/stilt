@@ -1,0 +1,86 @@
+//~ tier: advanced
+//~ rule: facts.native-allocation, facts.allocation, facts.without-alloc, views.adapters, views.for-over-view, polymorphism.lazy-implicit-effects, handlers.implicit-effects-and-capabilities, tasks.implicit-effects-and-capabilities, par.implicit-effects-and-capabilities
+
+// Every native allocates but those that facts.native-allocation lists, whatever its signature
+// names: a shared value, a lazy value, a task, every function of an iterator, `par`'s
+// functions, `with_c_str` and `print`. A `with`, a performance and a `for` over an iterator
+// allocate too.
+
+use std.c
+use std.lazy
+use std.par
+use std.sync
+use std.task
+use std.view
+
+fn shared() -> sync.Shared<i64> without alloc {
+  sync.Shared.new(1) //~ ERROR E0204
+}
+
+fn later() -> lazy.Lazy<i64> without alloc {
+  lazy.Lazy.new(|| 1) //~ ERROR E0204
+}
+
+fn forced(l: lazy.Lazy<i64>) -> i64 without alloc {
+  l.get() //~ ERROR E0204
+}
+
+fn spawned(escaping f: fn() -> i64) -> i64 / async without alloc {
+  task.spawn(f).await() //~ ERROR E0204
+}
+
+fn ranged() -> view.Iter<i64> without alloc {
+  view.range(0, 3) //~ ERROR E0204
+}
+
+fn listed(xs: List<i64>) -> view.Iter<i64> without alloc {
+  view.Iter.of(xs) //~ ERROR E0204
+}
+
+fn adapted(it: view.Iter<i64>) -> view.Iter<i64> without alloc {
+  it.take(2) //~ ERROR E0204
+}
+
+fn consumed(it: view.Iter<i64>) -> i64 without alloc {
+  it.count() //~ ERROR E0204
+}
+
+fn looped(it: view.Iter<i64>) -> i64 without alloc {
+  var n = 0
+  for x in it { //~ ERROR E0204
+    n += x
+  }
+  n
+}
+
+fn both(escaping f: fn() -> i64, escaping g: fn() -> i64) -> (i64, i64) without alloc {
+  par.both(f, g) //~ ERROR E0204
+}
+
+fn folded(xs: List<i64>, escaping f: fn(i64, i64) -> i64) -> i64 without alloc {
+  par.fold(xs, 0, f) //~ ERROR E0204
+}
+
+fn lent(s: str, f: fn(c.Str) -> i64) -> i64 without alloc {
+  s.with_c_str(f) //~ ERROR E0204
+}
+
+fn printed(s: str) / io without alloc {
+  print(s) //~ ERROR E0204
+}
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn asked() -> i64 / Ask without alloc {
+  Ask.ask() //~ ERROR E0204
+}
+
+fn installed(h: handler Ask) -> i64 without alloc {
+  with h { //~ ERROR E0204
+    1
+  }
+}
+
+fn main() {}

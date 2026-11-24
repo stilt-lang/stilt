@@ -1,0 +1,3 @@
+//~ rule: conformance.diagnostic-objects, conformance.inline-annotations, conformance.exact-matching, conformance.kinds-of-test, lexical.primitive-type-names
+fn pair(bool: i64, str: i64) {} //~ ERROR E0210 ERROR E0210
+fn single(f64: i64) {} // pair(1, 2) //~ ERROR E0210 WARN W0001

@@ -1,0 +1,28 @@
+// The types a hole's context defines: those that its expected type and the error it may raise
+// name, in the order they name them and each once, but the prelude's.
+
+use std.io
+
+type Point = { x: i64, y: i64 }
+
+type Shape = Circle(Point, i64) | Square(Point, i64)
+
+fn corners(s: Shape) -> List<Point> { ? } //~ HOLE
+//~ expects: List<Point>
+//~ effects: none
+//~ type: type Point = { x: i64, y: i64 }
+//~ in scope: s: Shape
+
+fn split(s: Shape) -> Option<(Shape, Point, Shape)> { ? } //~ HOLE
+//~ expects: Option<(Shape, Point, Shape)>
+//~ effects: none
+//~ type: type Shape = Circle(Point, i64) | Square(Point, i64)
+//~ type: type Point = { x: i64, y: i64 }
+//~ in scope: s: Shape
+
+fn load(path: str) -> Shape / {io, raise<io.IoError>} = ? //~ HOLE
+//~ expects: Shape
+//~ effects: io, raise<IoError>
+//~ type: type Shape = Circle(Point, i64) | Square(Point, i64)
+//~ type: pub type IoError = | NotFound(path: str) | PermissionDenied(path: str) | InvalidUtf8(path: str) | Other(path: str)
+//~ in scope: path: str

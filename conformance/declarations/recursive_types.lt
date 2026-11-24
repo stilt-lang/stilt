@@ -1,0 +1,35 @@
+//~ rule: declarations.recursive-types
+//~ stdout:
+//~ | 3
+//~ | Dir { name: "root", children: [Dir { name: "a", children: [] }] }
+//~ | More(Node { value: 1, rest: End })
+
+type Expr = | Num(i64) | Add(Expr, Expr)
+
+type Dir = { name: str, children: List<Dir> }
+
+type Link = { value: i64, next: Option<Link> }
+
+type Node = { value: i64, rest: Rest }
+
+type Rest = | End | More(Node)
+
+type Lazy = { force: fn() -> Lazy }
+
+type Index = { entries: Map<str, Index> }
+
+fn eval(e: Expr) -> i64 {
+  match e {
+    Num(n) => n
+    Add(a, b) => eval(a) + eval(b)
+  }
+}
+
+fn main() / io {
+  print("{eval(Add(Num(1), Add(Num(0), Num(2))))}")
+  let leaf = Dir { name: "a", children: [] }
+  let root = Dir { name: "root", children: [leaf] }
+  print("{root}")
+  let rest = More(Node { value: 1, rest: End })
+  print("{rest}")
+}

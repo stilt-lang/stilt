@@ -1,0 +1,3 @@
+//~ rule: lexical.case.wrong-case, declarations.type-parameters
+
+type Box<t> = { item: t } //~ ERROR E0100

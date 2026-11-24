@@ -1,0 +1,10 @@
+── MALFORMED MANIFEST ────────────────────────────────── stilt.toml:3:1  [E0600]
+
+`[package]` has no key `version`:
+
+  3 │ version = "1.0.0"
+    │ ^^^^^^^
+
+stilt.toml holds a `[package]` table with `name` and `edition`, and `link` for C
+libraries, and a `[dependencies]` table whose entries give `path`, or `from`,
+`version` and `hash`, and `may`. Fix the line it points at.

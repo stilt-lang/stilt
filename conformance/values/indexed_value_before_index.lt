@@ -1,0 +1,20 @@
+//~ rule: values.index-reads
+//~ stdout:
+//~ | list
+//~ | index
+//~ | 20
+
+fn list() -> List<i64> / io {
+  print("list")
+  [10, 20]
+}
+
+fn index() -> i64 / io {
+  print("index")
+  1
+}
+
+fn main() / io {
+  let n = list()[index()]
+  print("{n}")
+}

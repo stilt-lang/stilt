@@ -1,0 +1,5 @@
+//~ rule: numbers.no-implicit-conversions, expressions.left-operand-first, expressions.no-string-plus
+
+fn label() -> str {
+  "a" + 1 //~ ERROR E0317
+}

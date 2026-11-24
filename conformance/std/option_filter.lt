@@ -1,0 +1,16 @@
+//~ rule: expressions.key-paths, std.option-result-and-ordering
+//~ stdout:
+//~ | None Some(4) None
+//~ | Some("") None
+
+fn positive(n: i64) -> bool { n > 0 }
+
+fn main() / io {
+  let none: Option<i64> = None
+  let four: Option<i64> = Some(4)
+  let minus_four: Option<i64> = Some(-4)
+  print("{none.filter(positive)} {four.filter(positive)} {minus_four.filter(positive)}")
+  let empty: Option<str> = Some("")
+  let word: Option<str> = Some("ab")
+  print("{empty.filter(.is_empty())} {word.filter(.is_empty())}")
+}

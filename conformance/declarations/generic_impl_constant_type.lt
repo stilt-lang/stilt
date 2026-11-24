@@ -1,0 +1,8 @@
+//~ rule: declarations.impl-constants
+
+type Stack<T> = { items: List<T> }
+
+impl<T> Stack<T> {
+  const EMPTY: List<T> = [] //~ ERROR E0211
+  const SELF: Option<Self> = None //~ ERROR E0215
+}

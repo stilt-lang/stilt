@@ -1,0 +1,24 @@
+//~ rule: effects.catch-around-row-variables
+
+type ParseError = | Empty
+
+fn parse(s: str) -> i64 / raise<ParseError> { raise Empty }
+
+// `f` passes its failures through, so the inner `catch` can't catch them.
+fn nested(f: fn() -> i64, s: str) -> i64 {
+  try {
+    let n = try f() catch _ because "an inner failure counts as zero" => 0 //~ ERROR E0506
+    n + parse(s)
+  }
+    catch _ because "an outer failure counts as zero" => 0
+}
+
+fn closure_inside<e>(escaping f: fn() -> i64 / e, s: str) -> i64 / e {
+  let g = try {
+    let g = || f()
+    let n = parse(s)
+    g
+  }
+    catch _ because "a failed parse gives a constant" => || 0
+  g()
+}

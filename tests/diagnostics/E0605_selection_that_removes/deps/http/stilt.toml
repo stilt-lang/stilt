@@ -1,0 +1,7 @@
+[package]
+name = "http"
+
+[dependencies.json]
+from = "file:///repos/json"
+version = "1.6.0"
+hash = "b3:94969b160edcd776697f59d51cf2b6471c31da63bfd096fd5900ec8d8ce75a45"

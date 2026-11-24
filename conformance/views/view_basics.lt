@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: views.what-view-is, views.making-view, views.functions-of-views
+//~ stdout:
+//~ | to 2 false be
+//~ | [2, 3] Some(2) None 3 [2, 3]
+//~ | true true [98, 99] 3
+//~ | true false
+
+use std.view
+
+fn main() / io {
+  let text = "to be or"
+  let w = view.View.of(text, 0, 2)
+  let rest = view.View.of(text, 3, 8)
+  print("{w} {w.len()} {w.is_empty()} {rest.view(0, 2)}")
+  let xs = [1, 2, 3]
+  let tail = view.View.of(xs, 1, 3)
+  print("{tail} {view.get(tail, 0)} {view.get(tail, 2)} {tail[1]} {tail.copy()}")
+  print("{w.copy() == "to"} {view.View.all(xs).copy() == [1, 2, 3]} {view.bytes(view.View.of("abc", 1, 3)).collect()} {view.chars(view.View.all("héé")).count()}")
+  print("{view.View.of(xs, 0, 1) == view.View.of(xs, 0, 1)} {view.View.of(xs, 0, 1) == view.View.of(xs, 1, 2)}")
+}

@@ -1,0 +1,1 @@
+fn true() {} //~ ERROR E0100

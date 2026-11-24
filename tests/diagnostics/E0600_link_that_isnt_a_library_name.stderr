@@ -1,0 +1,11 @@
+── MALFORMED MANIFEST ────────────────────────────────── stilt.toml:3:9  [E0600]
+
+`/usr/lib/libz.dylib` isn't a C library's name, of letters, digits, `_`, `-` and
+`.`:
+
+  3 │ link = ["/usr/lib/libz.dylib"]
+    │         ^^^^^^^^^^^^^^^^^^^^^
+
+stilt.toml holds a `[package]` table with `name` and `edition`, and `link` for C
+libraries, and a `[dependencies]` table whose entries give `path`, or `from`,
+`version` and `hash`, and `may`. Fix the line it points at.

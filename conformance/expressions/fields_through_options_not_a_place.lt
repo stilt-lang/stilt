@@ -1,0 +1,25 @@
+//~ rule: types.option-field-not-place, expressions.places, modes.places
+
+type Point = { x: i64, y: i64 }
+type Shape = { corner: Option<Point> }
+
+trait Reset {
+  fn reset(inout self)
+}
+
+impl<T> Reset for Option<T> {
+  fn reset(inout self) { self = None }
+}
+
+fn bump(inout n: i64) { n += 1 }
+
+fn assign() {
+  var o: Option<Point> = Some(Point { x: 0, y: 0 })
+  o.x = 1 //~ ERROR E0401
+  bump(inout o.y) //~ ERROR E0401
+}
+
+fn receiver() {
+  var s: Option<Shape> = None
+  s.corner.reset() //~ ERROR E0401
+}

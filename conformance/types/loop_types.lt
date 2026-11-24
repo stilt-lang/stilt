@@ -1,0 +1,47 @@
+//~ rule: types.mismatch, expressions.loop-types, declarations.never
+
+fn forever() -> i64 { loop {} }
+
+fn spin(n: i64) {
+  var i = 0
+  loop {
+    if i == n { break }
+    i += 1
+  }
+}
+
+fn stops() -> i64 {
+  loop { //~ ERROR E0311
+    while (break) {}
+  }
+}
+
+fn stops_in_range(c: bool) -> i64 {
+  loop { //~ ERROR E0311
+    for i in 0..(if c { break } else { 3 }) {}
+  }
+}
+
+fn inner_only() -> i64 { loop { while true { break } } }
+
+type Failure = | Bad
+
+fn check(n: i64) -> bool / raise<Failure> {
+  if n > 0 { raise Bad }
+  true
+}
+
+fn stops_in_assignment(c: bool) -> i64 {
+  var x = 0
+  loop { //~ ERROR E0311
+    x = x + (if c { break } else { 1 })
+  }
+}
+
+fn stops_in_catch(n: i64) -> i64 {
+  loop { //~ ERROR E0311
+    let _ = try check(n) catch { Bad => break }
+  }
+}
+
+fn spins_with_text(n: i64) -> i64 { loop { let _ = "n = {n}" } }

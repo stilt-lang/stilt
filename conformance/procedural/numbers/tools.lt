@@ -1,0 +1,140 @@
+// The macros of `main.lt`, and the functions their bodies call.
+
+use std.math
+use std.meta
+use std.view
+
+fn integer_lines() -> List<str> {
+  var lines = []
+  var line = ""
+  for s in [
+    "{(-7).abs()}", "{(3).min(5)}", "{(3).max(5)}", "{(3).pow(4)}", "{(-2).pow(63)}",
+    "{(5).pow(0)}", "{(0).pow(0)}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  line = ""
+  for s in [
+    "{(-7).div_euclid(3)}", "{(-7).rem_euclid(3)}", "{(7).div_euclid(-3)}", "{(7).rem_euclid(-3)}",
+    "{(-7).div_euclid(-3)}", "{(-7).rem_euclid(-3)}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  line = ""
+  for s in [
+    "{(12).count_ones()}", "{(-1).count_ones()}", "{(1).leading_zeros()}", "{(0).leading_zeros()}",
+    "{(8).trailing_zeros()}", "{(0).trailing_zeros()}", "{(1).wrap_to_u8().leading_zeros()}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  line = ""
+  for s in ["{(12).gcd(-18)}", "{(0).gcd(0)}", "{(4).lcm(6)}", "{(0).lcm(5)}", "{(-4).lcm(6)}"] {
+    line = "{line} {s}"
+  }
+  lines.push(line.trim())
+  line = ""
+  for s in [
+    "{(5).checked_add(i64.MAX)}", "{(5).checked_sub(3)}", "{i64.MAX.checked_mul(2)}",
+    "{(3).checked_mul(4)}", "{(7).saturating_add(i64.MAX)}", "{(-7).saturating_sub(i64.MAX)}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  line = ""
+  for s in [
+    "{(300).to_u8()}", "{(200).to_u8()}", "{(300).wrap_to_u8()}", "{(-1).wrap_to_u8()}",
+    "{(200).wrap_to_i8()}", "{(-1).wrap_to_u64()}", "{(7).to_f64()}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  lines
+}
+
+fn float_lines() -> List<str> {
+  var lines = []
+  var line = ""
+  for s in [
+    "{(16.0).sqrt()}", "{(2.5).floor()}", "{(2.5).ceil()}", "{(-2.7).trunc()}", "{(2.5).round()}",
+    "{(-2.5).round()}", "{(-3.0).abs()}", "{(1.0).min(2.0)}", "{(-0.0).max(0.0)}",
+    "{f64.NAN.is_nan()}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  line = ""
+  for s in [
+    "{(2.7).to_i64()}", "{(-2.7).to_i64()}", "{(-0.5).to_u8()}", "{f64.NAN.to_i64()}",
+    "{(1e300).to_i32()}", "{(0.1).to_f32()}",
+  ] { line = "{line} {s}" }
+  lines.push(line.trim())
+  lines
+}
+
+// The transcendental functions are exact only within 4 ulps, so each is compared with its
+// value within a tolerance.
+fn near() -> i64 {
+  var near = 0
+  for close in [
+    (math.pow(2.0, 10.0) - 1024.0).abs() < 1e-9,
+    (math.exp(1.0) - f64.E).abs() < 1e-9,
+    (math.log(f64.E) - 1.0).abs() < 1e-9,
+    (math.log2(8.0) - 3.0).abs() < 1e-9,
+    (math.log10(1000.0) - 3.0).abs() < 1e-9,
+    math.sin(0.0).abs() < 1e-9,
+    (math.cos(0.0) - 1.0).abs() < 1e-9,
+    math.tan(0.0).abs() < 1e-9,
+    (math.asin(1.0) - f64.PI / 2.0).abs() < 1e-9,
+    math.acos(1.0).abs() < 1e-9,
+    (math.atan(1.0) - f64.PI / 4.0).abs() < 1e-9,
+    (math.atan2(1.0, 1.0) - f64.PI / 4.0).abs() < 1e-9,
+    math.sinh(0.0).abs() < 1e-9,
+    (math.cosh(0.0) - 1.0).abs() < 1e-9,
+    math.tanh(0.0).abs() < 1e-9,
+    (math.cbrt(27.0) - 3.0).abs() < 1e-9,
+    (math.hypot(3.0, 4.0) - 5.0).abs() < 1e-9,
+  ] { if close { near += 1 } }
+  near
+}
+
+type Temp = { c: i64 }
+
+impl Show for Temp {
+  fn show(self) -> str { "{self.c}C" }
+}
+
+type Day = { name: str, t: Temp }
+
+// What a macro's body computes with structured values: a field's own `Show` within a
+// structural one, a map with record keys, the equality of maps, a set of tuples, and the
+// adapters of `Iter` that pair, chain and test elements.
+fn structure_lines() -> List<str> {
+  var keyed: Map<Temp, str> = Map.new()
+  keyed[Temp { c: 1 }] = "cold"
+  keyed[Temp { c: 30 }] = "hot"
+  var a: Map<str, i64> = Map.new()
+  a["x"] = 1
+  a["y"] = 2
+  var b: Map<str, i64> = Map.new()
+  b["y"] = 2
+  b["x"] = 1
+  let same = a == b
+  b["x"] = 3
+  let pairs = Set.from_list([(1, 2), (1, 2), (2, 1)])
+  [
+    "{Day { name: "mon", t: Temp { c: 21 } }} {keyed.get(Temp { c: 30 })} {same} {a == b} {pairs.len()}",
+    "{view.range(0, 3).enumerate(5).collect()} {view.range(0, 3).zip(view.range(10, 13)).collect()} {view.range(0, 2).chain(view.range(5, 7)).collect()}",
+    "{view.range(0, 5).any(|x| x > 3)} {view.range(0, 5).all(|x| x < 3)} {view.range(0, 5).find(|x| x * x > 5)}",
+  ]
+}
+
+pub macro structures() -> meta.Expr {
+  let s = "\n".join(structure_lines())
+  quote { $s }
+}
+
+pub macro integers() -> meta.Expr {
+  let s = "\n".join(integer_lines())
+  quote { $s }
+}
+
+pub macro floats() -> meta.Expr {
+  let s = "\n".join(float_lines())
+  quote { $s }
+}
+
+pub macro transcendentals() -> meta.Expr {
+  let s = "{near()}"
+  quote { $s }
+}

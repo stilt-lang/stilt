@@ -1,0 +1,3 @@
+use bytes.buffer
+
+pub fn width() -> i64 { buffer.size() }

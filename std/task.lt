@@ -1,0 +1,48 @@
+module std.task
+
+// Tasks (tasks.std-task). `async` is the effect of the functions here, and the
+// handler that a `with` installs decides whether tasks run on threads or one
+// after another. A program means what its sequential run does, in which each
+// task runs to its end where it starts (tasks.sequential-run), so every handler prints the
+// same. Every item here is native (views.std-view).
+
+/// A task's handle, which gives the value the task ended with.
+pub type Task<T> = ?
+
+/// Starts a task that runs `f`, which may print and start tasks, and gives
+/// its handle.
+/// ex: with sequential() { spawn(|| 1 + 2).await() } == 3
+pub fn spawn<T>(escaping f: fn() -> T / {io, async}) -> Task<T> / async = ?
+
+impl<T> Task<T> {
+  /// Waits for the task to end, and gives its value, as often as it is
+  /// called.
+  /// ex: with threads() { let t = spawn(|| 5); t.await() + t.await() } == 10
+  pub fn await(self) -> T / async = ?
+}
+
+/// A scope of tasks that may raise `E` (tasks.scopes), which ends once
+/// every task started in it has ended.
+pub type Scope<E> = ?
+
+/// Runs `f` with a new scope, and ends once every task started in it has
+/// ended. The first raise of its tasks, in the sequential order, is the
+/// scope's (tasks.scope-failure).
+/// ex: with sequential() { try scope(|s| try s.spawn(|| 4).await() + if false { raise 1 } else { 0 }) catch e => e } == 4
+pub fn scope<T, E>(f: fn(Scope<E>) -> T / {io, async, raise<E>}) -> T / {io, async, raise<E>} = ?
+
+impl<E> Scope<E> {
+  /// Starts a task of the scope that runs `f`, which may raise `E`, and gives
+  /// its handle. A raise of the task leaves the scope.
+  /// ex: with sequential() { try scope(|s| try s.spawn(|| if true { raise 2 } else { 1 }).await()) catch e => e } == 2
+  pub fn spawn<U>(self, escaping f: fn() -> U / {io, async, raise<E>}) -> Task<U> / {async, raise<E>} = ?
+}
+
+/// The handler that runs each task on a thread of its own, with what each
+/// prints where the sequential run prints it (tasks.same-output-under-every-handler).
+/// ex: with threads() { spawn(|| [1, 2]).await().len() } == 2
+pub fn threads() -> handler async = ?
+
+/// The handler that runs each task to its end when it starts (tasks.sequential-run).
+/// ex: with sequential() { spawn(|| "a").await() } == "a"
+pub fn sequential() -> handler async = ?

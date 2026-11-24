@@ -1,0 +1,9 @@
+── INHERENT IMPL OUTSIDE THE TYPE'S MODULE ──────────────── main.lt:3:6  [E0301]
+
+Only the home module of `Shape`, `shapes`, may hold its impl blocks:
+
+  3 │ impl shapes.Shape {
+    │      ^^^^^^^^^^^^
+
+A type's own methods live in the type's module. Move the impl block there, or
+write a function in this module instead.

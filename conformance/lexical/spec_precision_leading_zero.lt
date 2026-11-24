@@ -1,0 +1,6 @@
+//~ rule: lexical.format-specs
+
+fn main() / io {
+  let f = 2.5
+  print("[{f:.02}]") //~ ERROR E0007
+}

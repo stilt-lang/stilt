@@ -1,0 +1,1 @@
+fn pub() {} //~ ERROR E0100

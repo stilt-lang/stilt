@@ -1,0 +1,17 @@
+//~ rule: syntax.heads, expressions.head-contents, effects.catch-syntax
+
+type Failure = | Bad
+
+fn check(n: i64) -> bool / raise<Failure> {
+  if n > 0 {
+    raise Bad
+  }
+  true
+}
+
+fn safe(n: i64) -> bool {
+  if try check(n) catch { Bad => false } { //~ ERROR E0100
+    return true
+  }
+  false
+}

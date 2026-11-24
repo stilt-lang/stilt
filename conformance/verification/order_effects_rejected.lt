@@ -1,0 +1,69 @@
+//~ tier: advanced
+//~ rule: effects.without-panic, handlers.with, handlers.call-that-handler-ends, projections.yield, shared.names-that-may-be-one-place, facts.rules-of-acceptance, facts.guarding-tests, facts.guards, facts.keys
+
+use std.sync
+
+effect Stop {
+  fn stop()
+}
+
+effect Ask {
+  fn ask() -> i64 / Stop
+}
+
+// A handler that takes control may end its `with` at the performance, before
+// the `push`.
+fn ended() -> i64 without panic {
+  var xs: List<i64> = []
+  let stop = handler Stop -> () { fn stop() {} }
+  with stop {
+    Stop.stop()
+    xs.push(1)
+  }
+  xs[0] //~ ERROR E0204
+}
+
+// Another handler's body may perform the operation that ends it.
+fn ended_through() -> i64 without panic {
+  var xs: List<i64> = []
+  let stop = handler Stop -> () { fn stop() {} }
+  let ask = handler Ask {
+    fn ask() -> i64 {
+      Stop.stop()
+      1
+    }
+  }
+  with stop {
+    with ask {
+      let _ = Ask.ask()
+      xs.push(1)
+    }
+  }
+  xs[0] //~ ERROR E0204
+}
+
+// A `yield` lends the list to the caller, which may change its length.
+fn whole(inout xs: List<i64>) -> inout List<i64> without panic {
+  xs.push(0)
+  yield xs
+  xs[0] = 1 //~ ERROR E0204
+}
+
+// Two names of one `when` may reach one value, so neither is a place.
+fn held(a: sync.Shared<List<i64>>, b: sync.Shared<List<i64>>) -> i64 without panic {
+  when a, b {
+    a.push(1)
+    b.clear()
+    a[0] //~ ERROR E0204
+  }
+}
+
+fn held_key(a: sync.Shared<Map<str, i64>>, b: sync.Shared<Map<str, i64>>) -> i64 without panic {
+  when a, b {
+    a["k"] = 1
+    b.clear()
+    a["k"] //~ ERROR E0204
+  }
+}
+
+fn main() {}

@@ -1,0 +1,60 @@
+//~ rule: expressions.match, patterns.match, patterns.guards, patterns.guards-and-constants
+//~ stdout:
+//~ | negative zero even odd
+//~ | first second neither
+//~ | none
+//~ | guard big
+//~ | guard small
+//~ | other
+//~ | guard big
+//~ | big
+//~ | 8 failed: zero
+
+fn classify(n: i64) -> str {
+  match n {
+    x if x < 0 => "negative"
+    0 => "zero"
+    x if x % 2 == 0 => "even"
+    _ => "odd"
+  }
+}
+
+fn first_match(p: (i64, i64)) -> str {
+  match p {
+    (0, _) => "first"
+    (_, 0) => "second"
+    _ => "neither"
+  }
+}
+
+fn note(label: str, result: bool) -> bool / io {
+  print("guard {label}")
+  result
+}
+
+fn pick(o: Option<i64>) -> str / io {
+  match o {
+    None => "none"
+    Some(x) if note("big", x > 10) => "big"
+    Some(x) if note("small", x < 0) => "small"
+    Some(_) => "other"
+  }
+}
+
+fn doubled(n: i64) -> i64 / raise<str> {
+  match n {
+    0 => raise "zero"
+    x => x * 2
+  }
+}
+
+fn main() / io {
+  print("{classify(-4)} {classify(0)} {classify(6)} {classify(7)}")
+  print("{first_match((0, 0))} {first_match((1, 0))} {first_match((1, 1))}")
+  print(pick(None))
+  print(pick(Some(5)))
+  print(pick(Some(20)))
+  let a = try doubled(4) catch _ because "zero is reported below" => 0
+  let b = try "{doubled(0)}" catch e because "the message is the result" => "failed: {e}"
+  print("{a} {b}")
+}

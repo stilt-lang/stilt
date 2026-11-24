@@ -1,0 +1,5 @@
+//~ rule: program.test-declarations
+
+test "returns a value" {
+  1 //~ ERROR E0311
+}

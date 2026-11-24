@@ -1,0 +1,8 @@
+//~ rule: std.integers
+//~ panic: overflow
+//~ panic-at: integer_gcd_min.lt:7:11
+
+fn main() / io {
+  let m: i32 = i32.MIN
+  print("{m.gcd(0)}")
+}

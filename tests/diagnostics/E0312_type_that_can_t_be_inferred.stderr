@@ -1,0 +1,9 @@
+── TYPE THAT CAN'T BE INFERRED ── E0312_type_that_can_t_be_inferred.lt:2:16  [E0312]
+
+The type of this expression can't be inferred; add an annotation:
+
+  2 │   let orders = []
+    │                ^^
+
+A type is inferred from how its value is used within its body, and nothing here
+says which it is. Write it, as `let orders: List<i64> = []`.

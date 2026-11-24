@@ -1,0 +1,13 @@
+//~ rule: numbers.no-implicit-conversions, expressions.no-string-plus
+
+fn join(a: str, b: str) -> str {
+  a + b //~ ERROR E0317
+}
+
+fn append(a: str) -> str {
+  var s = a
+  s += "!" //~ ERROR E0317
+  s
+}
+
+fn interpolate(a: str, b: str) -> str { "{a}{b}" }

@@ -1,0 +1,39 @@
+//~ tier: advanced
+//~ rule: projections.writable-bindings, projections.places-through-views, projections.yield
+
+use std.view
+
+// The `var` of a `yield` needs a view that writes.
+fn at(inout xs: List<i64>) -> inout view.View<List<i64>> {
+  yield view.View.of(xs, 0, 1) //~ ERROR E0428
+}
+
+// A `yield` of a place hands the caller that place, so a view bound by `let` can't be yielded,
+// as no `let` binding can; that it reads its source is no second error.
+fn at_let(inout xs: List<i64>) -> inout view.View<List<i64>> {
+  let v = view.View.of(xs, 0, 1)
+  yield v //~ ERROR E0403
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  var v = view.View.of(xs, 0, 1) //~ ERROR E0428
+  var ys = [3, 4]
+  var tail = view.into(inout ys, 1, 2)
+  // `tail` is a source in its own right, and a copy of it reads it.
+  var t2 = tail //~ ERROR E0428
+  var zs = [5, 6]
+  var w = view.into(inout zs, 0, 1)
+  let ws = [7]
+  w = view.View.of(ws, 0, 1) //~ ERROR E0428
+  // A view made from `tail` reads `tail`, so a change through `tail` is E0423.
+  var us = [8, 9]
+  var u = view.into(inout us, 0, 2)
+  let first = u.view(0, 1)
+  u[1] = 1 //~ ERROR E0423
+  // An element of a `let` binding is a place that can't be modified.
+  var rs = [0]
+  let r = view.into(inout rs, 0, 1)
+  r[0] = 1 //~ ERROR E0403
+  print("{v} {t2} {w} {first} {r}")
+}

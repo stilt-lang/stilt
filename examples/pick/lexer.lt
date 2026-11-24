@@ -1,0 +1,96 @@
+// Splitting a query into tokens.
+
+/// What a token is: a symbol, a name, a string's contents, a number's text, or the end.
+pub type Kind = | Symbol(str) | Name(str) | Text(str) | Number(str) | End
+
+/// A token and the column where it starts, counting characters from 1.
+pub type Token = { kind: Kind, column: i64 }
+
+/// A mistake in a query, at a column.
+pub type SyntaxError = { column: i64, message: str }
+
+const SYMBOLS: List<str> = [
+  "==", "!=", "<=", ">=", "<", ">", "|", ",", ":", "(", ")", "[", "]", "\{", "}", ".",
+]
+
+/// The tokens of a query, ending with `End`.
+/// ex: try tokens(".a[0]").map(.kind) == [Symbol("."), Name("a"), Symbol("["), Number("0"), Symbol("]"), End]
+/// ex: try tokens(".n >= -1.5").map(.column) == [1, 2, 4, 7, 11]
+/// ex: try tokens("\"a\\\"b\"").map(.kind) == [Text("a\"b"), End]
+pub fn tokens(text: str) -> List<Token> / raise<SyntaxError> {
+  let cs = text.chars()
+  var out = []
+  var pos = 0
+  while pos < cs.len() {
+    if cs[pos].is_ascii_whitespace() {
+      pos += 1
+      continue
+    }
+    let start = pos
+    let kind = match cs[pos] {
+      "\"" => try string(cs, inout pos)
+      c if c.is_ascii_digit() || c == "-" => try number(cs, inout pos)
+      c if is_word(c) => Name(run(cs, inout pos, is_word))
+      _ => try symbol(cs, inout pos)
+    }
+    out.push(Token { kind, column: start + 1 })
+  }
+  out.push(Token { kind: End, column: pos + 1 })
+  out
+}
+
+/// How a token is named in a message.
+pub fn shown(k: Kind) -> str {
+  match k {
+    Symbol(s) | Name(s) | Number(s) => "`{s}`"
+    Text(t) => "\"{t}\""
+    End => "the end"
+  }
+}
+
+fn is_word(c: str) -> bool { c.is_ascii_alphanumeric() || c == "_" }
+
+/// The characters from `pos` while `keep` holds of them, which moves `pos` past them.
+fn run(cs: List<str>, inout pos: i64, keep: fn(str) -> bool) -> str {
+  let start = pos
+  while pos < cs.len() && keep(cs[pos]) { pos += 1 }
+  "".join(cs.slice(start, pos))
+}
+
+/// A number, which JSON's grammar gives: its text is kept, as a JSON value keeps it.
+fn number(cs: List<str>, inout pos: i64) -> Kind / raise<SyntaxError> {
+  let column = pos + 1
+  let text = run(cs, inout pos, |c| c.is_ascii_digit() || [".", "-", "+", "e", "E"].contains(c))
+  if text.to_f64() == None { raise SyntaxError { column, message: "{text} isn't a number" } }
+  Number(text)
+}
+
+/// A string between quotes, in which `\` takes the next character as it is.
+fn string(cs: List<str>, inout pos: i64) -> Kind / raise<SyntaxError> {
+  let column = pos + 1
+  pos += 1
+  var out = []
+  while pos < cs.len() && cs[pos] != "\"" {
+    if cs[pos] == "\\" && pos + 1 < cs.len() { pos += 1 }
+    out.push(cs[pos])
+    pos += 1
+  }
+  if pos == cs.len() { raise SyntaxError { column, message: "a string with no end" } }
+  pos += 1
+  Text("".join(out))
+}
+
+fn symbol(cs: List<str>, inout pos: i64) -> Kind / raise<SyntaxError> {
+  let two = "".join(cs.slice(pos, (pos + 2).min(cs.len())))
+  let s = SYMBOLS.find(|s| two.starts_with(s))
+    else raise SyntaxError { column: pos + 1, message: "unexpected {cs[pos]}" }
+  pos += s.len()
+  Symbol(s)
+}
+
+test "a character that starts no token is an error at its column" {
+  assert Result.of(|| try tokens(".a + 1")) ==
+    Err(SyntaxError { column: 4, message: "unexpected +" })
+  assert Result.of(|| try tokens(".a == \"b")) ==
+    Err(SyntaxError { column: 7, message: "a string with no end" })
+}

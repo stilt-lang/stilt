@@ -1,0 +1,50 @@
+use std.meta
+
+fn take(n: i64) -> i64 { n }
+
+/// One, after the word `go`.
+pub macro go(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(ts)
+  let _ = try c.word("go")
+  try c.end()
+  quote { 1 }
+}
+
+/// The text, which must hold no `b`: an error at the first one.
+pub macro no_b(t: meta.Text) -> meta.Expr / raise<meta.Error> {
+  let s = t.value()
+  var i = 0
+  for b in s.bytes() {
+    if b == 98 { raise meta.error(t.span(i, i + 1), "no `b` here") }
+    i += 1
+  }
+  quote { $s }
+}
+
+/// The first name of the file.
+pub macro first_name(f: meta.File) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(try f.text.lex())
+  let s = (try c.name()).text()
+  quote { $s }
+}
+
+/// An error at the end of the part, always.
+pub macro fail_expr(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  raise meta.error(ts.close, "no expression here")
+}
+
+/// An error at the end of the part, always.
+pub macro fail_pattern(ts: meta.Tokens) -> meta.Pattern / raise<meta.Error> {
+  raise meta.error(ts.close, "no pattern here")
+}
+
+/// An error at the end of the part, always.
+pub macro fail_type(ts: meta.Tokens) -> meta.Type / raise<meta.Error> {
+  raise meta.error(ts.close, "no type here")
+}
+
+/// The expression, given to a function that takes an `i64`.
+pub macro needs_int(e: meta.Expr) -> meta.Expr { quote { take($e) } }
+
+/// A call that the quote's own tokens get wrong.
+pub macro wrong() -> meta.Expr { quote { take("one") } }

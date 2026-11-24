@@ -1,0 +1,3 @@
+use tools.print //~ ERROR E0209
+
+pub fn uses() { print(1) }

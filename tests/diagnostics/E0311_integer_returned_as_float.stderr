@@ -1,0 +1,15 @@
+── MISMATCHED TYPES ──────────── E0311_integer_returned_as_float.lt:4:3  [E0311]
+
+Expected `f64`, found `i64`:
+
+  4 │   total / xs.len()
+    │   ^^^^^^^^^^^^^^^^
+
+Stilt never converts a value to another type on its own. Give a value of the
+expected type, convert it with a method such as `to_f64()`, or change what
+expects it.
+
+To fix it, convert it with `.to_f64()`:
+
+  4 │   (total / xs.len()).to_f64()
+    │   +                ++++++++++

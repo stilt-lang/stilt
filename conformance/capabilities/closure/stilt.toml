@@ -1,0 +1,2 @@
+[dependencies]
+shout = { path = "deps/shout", may = ["console"] }

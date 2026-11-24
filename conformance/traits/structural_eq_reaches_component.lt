@@ -1,0 +1,16 @@
+//~ rule: traits.structural-calls
+//~ run-output: "start"
+//~ panic: explicit
+//~ panic-at: structural_eq_reaches_component.lt:9:38
+
+type Bomb = { id: i64 }
+
+impl Eq for Bomb {
+  fn eq(self, other: Bomb) -> bool { panic("eq was called") }
+}
+
+fn main() / io {
+  let x = Bomb { id: 1 }
+  print("start")
+  print("{(1, x) == (1, x)}")
+}

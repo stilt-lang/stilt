@@ -1,0 +1,270 @@
+// The patterns of the log's lines: one for the head that every line of text starts with, and
+// one for the message of each topic, each a matcher written by hand from the steps of
+// `matcher`.
+
+use matcher
+
+// The characters of the patterns' classes.
+
+fn digit(c: str) -> bool { c >= "0" && c <= "9" }
+
+fn lower(c: str) -> bool { c >= "a" && c <= "z" }
+
+fn word(c: str) -> bool { lower(c) || (c >= "A" && c <= "Z") || digit(c) || c == "_" }
+
+fn space(c: str) -> bool { c == " " || c == "\t" }
+
+// One digit or more.
+fn digits(r: matcher.Run) -> matcher.Run { r.plus(|r| r.class(digit)) }
+
+// Two digits.
+fn two(r: matcher.Run) -> matcher.Run { r.class(digit).class(digit) }
+
+// One of the words, the first preferred.
+fn either(r: matcher.Run, words: List<str>) -> matcher.Run {
+  r.alt(words.map(|w| |r: matcher.Run| r.text(w)))
+}
+
+/// The head of a line: its date and time, the host and its number, the level, the topic, and
+/// the message after it: `^(\d+)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)Z ([a-z]+)-(\d+)
+/// (DEBUG|INFO|WARN|ERROR) ([a-z]+): (.*)$`.
+/// ex: line("2026-11-03T08:15:02Z web-1 INFO http: hi").map(|m| m.get(11)) == Some("hi")
+pub fn line(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 11, true, |r| {
+    r
+      .bol()
+      .group(1, digits)
+      .text("-")
+      .group(2, two)
+      .text("-")
+      .group(3, two)
+      .text("T")
+      .group(4, two)
+      .text(":")
+      .group(5, two)
+      .text(":")
+      .group(6, two)
+      .text("Z ")
+      .group(7, |r| r.plus(|r| r.class(lower)))
+      .text("-")
+      .group(8, digits)
+      .text(" ")
+      .group(9, |r| either(r, ["DEBUG", "INFO", "WARN", "ERROR"]))
+      .text(" ")
+      .group(10, |r| r.plus(|r| r.class(lower)))
+      .text(": ")
+      .group(11, |r| r.star(|r| r.any()))
+      .eol()
+  })
+}
+
+/// A request: the method, the path and the query after its `?`, the status, the time it took
+/// and the size of the response: `^(GET|POST|PUT|DELETE) (/[a-z0-9/_.-]*)(\?([^ ]*))? (\d+)
+/// (\d+)ms (\d+)B$`.
+/// ex: http("GET /a?b=1 200 12ms 5B").map(|m| m.get(4)) == Some("b=1")
+/// ex: http("GET /a 200 12ms 5B").map(|m| m.has(3)) == Some(false)
+pub fn http(text: str) -> Option<matcher.Captures> {
+  let path = |c: str| lower(c) || digit(c) || c == "/" || c == "_" || c == "." || c == "-"
+  matcher.search(text, 7, true, |r| {
+    r
+      .bol()
+      .group(1, |r| either(r, ["GET", "POST", "PUT", "DELETE"]))
+      .text(" ")
+      .group(2, |r| r.text("/").star(|r| r.class(path)))
+      .opt(|r| r.group(3, |r| r.text("?").group(4, |r| r.star(|r| r.class(|c| c != " ")))))
+      .text(" ")
+      .group(5, digits)
+      .text(" ")
+      .group(6, digits)
+      .text("ms ")
+      .group(7, digits)
+      .text("B")
+      .eol()
+  })
+}
+
+/// A slow query: its table, the time it took and the rows it read: `^slow query on ([a-z_]+)
+/// took (\d+)ms rows=(\d+)$`.
+pub fn slow(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 3, true, |r| {
+    r
+      .bol()
+      .text("slow query on ")
+      .group(1, |r| r.plus(|r| r.class(|c| lower(c) || c == "_")))
+      .text(" took ")
+      .group(2, digits)
+      .text("ms rows=")
+      .group(3, digits)
+      .eol()
+  })
+}
+
+/// A login: whether it succeeded, the user, the four numbers of the address, and the attempts
+/// it took when the line says: `^login (ok|failed) user=(\w+)
+/// ip=(\d+)\.(\d+)\.(\d+)\.(\d+)( attempts=(\d+))?$`.
+/// ex: login("login failed user=ana ip=10.0.0.4 attempts=3").map(|m| m.get(8)) == Some("3")
+pub fn login(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 8, true, |r| {
+    r
+      .bol()
+      .text("login ")
+      .group(1, |r| either(r, ["ok", "failed"]))
+      .text(" user=")
+      .group(2, |r| r.plus(|r| r.class(word)))
+      .text(" ip=")
+      .group(3, digits)
+      .text(".")
+      .group(4, digits)
+      .text(".")
+      .group(5, digits)
+      .text(".")
+      .group(6, digits)
+      .opt(|r| r.group(7, |r| r.text(" attempts=").group(8, digits)))
+      .eol()
+  })
+}
+
+/// A cache lookup: whether it hit, and the key's space and number: `^(hit|miss)
+/// key=([a-z]+):(\d+)$`.
+pub fn lookup(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 3, true, |r| {
+    r
+      .bol()
+      .group(1, |r| either(r, ["hit", "miss"]))
+      .text(" key=")
+      .group(2, |r| r.plus(|r| r.class(lower)))
+      .text(":")
+      .group(3, digits)
+      .eol()
+  })
+}
+
+/// A cache eviction: the key's space and number, and the size it freed: `^evict
+/// key=([a-z]+):(\d+) size=(\d+)$`.
+pub fn evict(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 3, true, |r| {
+    r
+      .bol()
+      .text("evict key=")
+      .group(1, |r| r.plus(|r| r.class(lower)))
+      .text(":")
+      .group(2, digits)
+      .text(" size=")
+      .group(3, digits)
+      .eol()
+  })
+}
+
+/// A job: whether it started, finished or failed, its name, and the time it took or the reason
+/// it failed: `^(started|finished|failed) name=([a-z_]+)( in (\d+)ms| reason="([^"]*)")?$`.
+/// ex: job("failed name=backup reason=\"disk full\"").map(|m| m.get(5)) == Some("disk full")
+pub fn job(text: str) -> Option<matcher.Captures> {
+  let took = |r: matcher.Run| r.text(" in ").group(4, digits).text("ms")
+  let why = |r: matcher.Run| r
+    .text(" reason=\"")
+    .group(5, |r| r.star(|r| r.class(|c| c != "\"")))
+    .text("\"")
+  matcher.search(text, 5, true, |r| {
+    r
+      .bol()
+      .group(1, |r| either(r, ["started", "finished", "failed"]))
+      .text(" name=")
+      .group(2, |r| r.plus(|r| r.class(|c| lower(c) || c == "_")))
+      .opt(|r| r.group(3, |r| r.alt([took, why])))
+      .eol()
+  })
+}
+
+/// A disk's mount point and how full it is, in percent: `^(/[a-z/]*) at (\d+)%$`.
+pub fn disk(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 2, true, |r| {
+    r
+      .bol()
+      .group(1, |r| r.text("/").star(|r| r.class(|c| lower(c) || c == "/")))
+      .text(" at ")
+      .group(2, digits)
+      .text("%")
+      .eol()
+  })
+}
+
+/// A deploy: the three numbers of the version, who deployed it, and the hosts it went to:
+/// `^version (\d+)\.(\d+)\.(\d+) by (\w+) to ([a-z0-9,-]+)$`.
+/// ex: deploy("version 1.4.2 by ana to web-1,web-2").map(|m| m.get(5)) == Some("web-1,web-2")
+pub fn deploy(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 5, true, |r| {
+    r
+      .bol()
+      .text("version ")
+      .group(1, digits)
+      .text(".")
+      .group(2, digits)
+      .text(".")
+      .group(3, digits)
+      .text(" by ")
+      .group(4, |r| r.plus(|r| r.class(word)))
+      .text(" to ")
+      .group(5, |r| r.plus(|r| r.class(|c| lower(c) || digit(c) || c == "," || c == "-")))
+      .eol()
+  })
+}
+
+/// A setting changed: its key, and its value before and after: `^set ([a-z_.]+) from (\S+) to
+/// (\S+)$`.
+pub fn setting(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 3, true, |r| {
+    r
+      .bol()
+      .text("set ")
+      .group(1, |r| r.plus(|r| r.class(|c| lower(c) || c == "_" || c == ".")))
+      .text(" from ")
+      .group(2, |r| r.plus(|r| r.class(|c| !space(c))))
+      .text(" to ")
+      .group(3, |r| r.plus(|r| r.class(|c| !space(c))))
+      .eol()
+  })
+}
+
+/// A panic: the thread and its message: `^thread ([a-z]+-\d+) panicked: (.+)$`.
+pub fn crash(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 2, true, |r| {
+    r
+      .bol()
+      .text("thread ")
+      .group(1, |r| r.plus(|r| r.class(lower)).text("-").plus(|r| r.class(digit)))
+      .text(" panicked: ")
+      .group(2, |r| r.plus(|r| r.any()))
+      .eol()
+  })
+}
+
+/// A retry: the operation, the attempt, how many it may make, and the wait before it:
+/// `^([a-z]+) attempt (\d+) of (\d+) after (\d+)ms$`.
+pub fn retry(text: str) -> Option<matcher.Captures> {
+  matcher.search(text, 4, true, |r| {
+    r
+      .bol()
+      .group(1, |r| r.plus(|r| r.class(lower)))
+      .text(" attempt ")
+      .group(2, digits)
+      .text(" of ")
+      .group(3, digits)
+      .text(" after ")
+      .group(4, digits)
+      .text("ms")
+      .eol()
+  })
+}
+
+/// A time of day, as the command line writes one: its hour, of one digit or two, and its
+/// minute: `^(\d\d?):(\d\d)$`.
+/// ex: clock("8:05").map(|m| m.int(1) * 60 + m.int(2)) == Some(485)
+/// ex: clock("8h05").is_none()
+pub fn clock(text: str) -> Option<matcher.Captures> {
+  matcher.search(
+    text,
+    2,
+    true,
+    |r| r.bol().group(1, |r| r.class(digit).opt(|r| r.class(digit))).text(":").group(2, two).eol(),
+  )
+}

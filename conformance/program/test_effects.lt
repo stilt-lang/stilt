@@ -1,0 +1,12 @@
+//~ rule: program.test-declarations, program.test-results
+
+fn parse(s: str) -> i64 / raise<str> { s.to_i64() else raise "not a number: {s}" }
+
+test "parses" { //~ PASS
+  print("parsing")
+  assert try parse("12") == 12
+}
+
+test "fails to parse" { //~ FAIL
+  let _ = try parse("x")
+}

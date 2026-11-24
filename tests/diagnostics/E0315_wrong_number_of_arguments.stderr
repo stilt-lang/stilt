@@ -1,0 +1,9 @@
+── WRONG NUMBER OF ARGUMENTS ── E0315_wrong_number_of_arguments.lt:3:31  [E0315]
+
+This takes 2 arguments, but 1 is given:
+
+  3 │ fn square(side: i64) -> i64 { area(side) }
+    │                               ^^^^^^^^^^
+
+A call gives one argument per parameter, in order, since Stilt has no default
+arguments and no overloading.

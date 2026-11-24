@@ -1,0 +1,2 @@
+//~ rule: lexical.source-text, syntax.first-error, errors.invalid-source-text
+fn main() {}

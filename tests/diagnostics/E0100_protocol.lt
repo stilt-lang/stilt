@@ -1,0 +1,5 @@
+protocol Shape {
+  fn area(self) -> f64
+}
+
+fn main() {}

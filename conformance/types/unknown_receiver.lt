@@ -1,0 +1,19 @@
+//~ rule: numbers.literal-defaults, types.known-types, traits.method-resolution
+
+fn lengths(words: List<str>) -> List<i64> { words.map(|w| w.len()) }
+
+fn first_length() -> i64 {
+  let measure = |w| w.len() //~ ERROR E0312
+  measure("abc")
+}
+
+fn absolute() -> i64 {
+  let x = -5
+  x.abs()
+}
+
+fn total(prices: List<f64>) -> f64 {
+  var sum = 0
+  for p in prices { sum += p }
+  sum
+}

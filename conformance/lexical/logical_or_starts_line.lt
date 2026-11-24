@@ -1,0 +1,6 @@
+//~ rule: lexical.continuation-lines, expressions.block-value
+fn either(a: bool, b: bool) -> bool {
+  let t = a
+    || b //~ ERROR E0322
+  t
+}

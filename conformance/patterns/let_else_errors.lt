@@ -1,0 +1,16 @@
+//~ rule: expressions.option-fallback, patterns.let-else
+
+fn value(o: Option<i64>) -> i64 {
+  let Some(n) = o else 0 //~ ERROR E0311
+  n
+}
+
+fn pair(o: Option<(i64, i64)>) -> i64 {
+  let (a, b) = o else 0 //~ ERROR E0311
+  a + b
+}
+
+fn never(o: Option<i64>) -> i64 {
+  let Some(n) = o else panic("no value")
+  n
+}

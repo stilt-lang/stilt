@@ -1,0 +1,7 @@
+//~ rule: declarations.wrong-kind-of-name
+
+type Point = { x: i64, y: i64 }
+
+fn origin() -> Point {
+  Point(1, 2) //~ ERROR E0212
+}

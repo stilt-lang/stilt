@@ -1,0 +1,19 @@
+//~ rule: program.test-results, program.assert-expr, effects.without-panic
+
+module main
+without panic
+
+fn halve(n: i64) -> i64 { n / 2 }
+
+test "a limited module's tests may assert" { //~ PASS
+  assert halve(4) == 2
+}
+
+test "a failed assert fails only its test" { //~ FAIL
+  assert halve(5) == 3
+}
+
+test "a test may index a list" { //~ PASS
+  let xs = [halve(2)]
+  assert xs[0] == 1
+}

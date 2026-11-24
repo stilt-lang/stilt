@@ -1,0 +1,20 @@
+//~ rule: expressions.scope
+
+fn before() -> i64 {
+  let x = y //~ ERROR E0211
+  let y = 1
+  x
+}
+
+fn after_block() -> i64 {
+  { let z = 1 }
+  z //~ ERROR E0211
+}
+
+fn arm(v: Option<i64>) -> i64 {
+  let n = match v {
+    Some(k) => k
+    None => 0
+  }
+  n + k //~ ERROR E0211
+}

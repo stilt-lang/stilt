@@ -1,0 +1,3 @@
+pub fn each(rows: List<str>, f: fn(str)) {
+  for row in rows { f(row) }
+}

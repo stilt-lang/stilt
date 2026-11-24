@@ -1,0 +1,12 @@
+//~ rule: std.no-panics-by-default, std.list-slicing
+//~ stdout:
+//~ | [[1], [2]]
+//~ stderr:
+//~ | panic: explicit: "chunks needs a size of at least 1, not 0"
+//~ |   at list_chunks_panic.lt:11:11
+//~ panic: explicit
+
+fn main() / io {
+  print("{[1, 2].chunks(1)}")
+  let _ = [1, 2].chunks(0)
+}

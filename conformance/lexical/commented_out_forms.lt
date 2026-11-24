@@ -1,0 +1,23 @@
+//~ rule: lexical.commented-out-code
+// pub fn f() {} //~ WARN W0001
+// impl Point {} //~ WARN W0001
+// trait Named { fn name(self) -> str } //~ WARN W0001
+// a; b //~ WARN W0001
+// 1 + 1 //~ WARN W0001
+// match x { _ => 0 } //~ WARN W0001
+// assert ok //~ WARN W0001
+// var n = 0 //~ WARN W0001
+// -x
+// (x)
+// break
+// "a {f(x)} b"
+//
+//   
+// TODO(ana): tidy up
+// see f(x)
+// f(x) is wrong
+// returns -1 on error
+// x = 1 is the default
+// Point { x: 1 }: the origin
+
+fn main() {}

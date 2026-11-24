@@ -1,0 +1,17 @@
+//~ rule: numbers.integer-literals, types.expected-types
+//~ run-output: "1.0 [2.5, 1.0] 2.0 3.0 3.0 W { v: 4.0 }"
+
+type W = { v: f64 }
+
+fn half(x: f64) -> f64 { x / 2.0 }
+
+fn three() -> f64 { 3 }
+
+fn main() / io {
+  let a: f64 = 1
+  let xs = [2.5, 1]
+  let b = half(4)
+  let c = if false { 1.5 } else { 3 }
+  let w = W { v: 4 }
+  print("{a} {xs} {b} {c} {three()} {w}")
+}

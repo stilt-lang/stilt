@@ -1,0 +1,9 @@
+── INVALID MODULE NAME ───────────────────────────────── Helpers.lt:1:1  [E0200]
+
+`Helpers` is not a valid module name:
+
+  1 │ pub fn greet() -> str { "hello" }
+    │ ^
+
+A module's name is its file's path, so each file and directory is named with a
+lowercase identifier, as `order_lines.lt`, and not `std` or a dependency's name.

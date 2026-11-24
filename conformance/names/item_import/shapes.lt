@@ -1,0 +1,8 @@
+pub type Shape = | Circle(i64) | Square(i64)
+
+pub fn size(s: Shape) -> i64 {
+  match s {
+    Circle(r) => r
+    Square(a) => a * 0 + 1
+  }
+}

@@ -1,0 +1,13 @@
+── SYNTAX ERROR ─────────────────────────── E0100_python_lambda.lt:1:56  [E0100]
+
+Stilt writes a closure as `|x| x * 2`:
+
+  1 │ fn doubled(xs: List<i64>) -> List<i64> { xs.map(lambda x: x * 2) }
+    │                                                        ^
+
+A closure is its parameters between `|`, then its body.
+
+To fix it, write the closure with `|`:
+
+  1 │ fn doubled(xs: List<i64>) -> List<i64> { xs.map(|x| x * 2) }
+    │                                                 ~~~

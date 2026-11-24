@@ -1,0 +1,11 @@
+//~ rule: types.fields-through-option, std.option-result-and-ordering
+
+type Address = { city: str }
+
+fn zip(o: Option<Address>) {
+  let _ = o.zip //~ ERROR E0313
+}
+
+fn city(r: Result<Address, str>) {
+  let _ = r.city //~ ERROR E0313
+}

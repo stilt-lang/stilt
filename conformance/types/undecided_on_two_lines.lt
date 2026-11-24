@@ -1,0 +1,7 @@
+//~ rule: types.undecided-type-location
+
+fn make() -> i64 {
+  let xs = [] //~ ERROR E0312
+  let ys = List.new() //~ ERROR E0312
+  0
+}

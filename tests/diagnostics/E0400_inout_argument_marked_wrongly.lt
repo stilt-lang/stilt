@@ -1,0 +1,6 @@
+fn bump(inout count: i64) { count += 1 }
+
+fn twice(inout count: i64) {
+  bump(inout count)
+  bump(count)
+}

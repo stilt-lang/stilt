@@ -1,0 +1,35 @@
+pub type Shape = | Circle(f64) | Square(f64)
+
+pub type Point = { x: f64, y: f64 }
+
+type Hidden = { n: i64 }
+
+pub trait Area {
+  fn area(self) -> f64
+}
+
+impl Area for Shape {
+  fn area(self) -> f64 {
+    match self {
+      Circle(r) => r * r
+      Square(s) => s * s
+    }
+  }
+}
+
+impl Shape {
+  pub const ZERO: f64 = 0.0
+  const LIMIT: f64 = 10.0
+
+  pub fn unit() -> Shape { Circle(1.0) }
+
+  fn secret(self) -> f64 { Shape.LIMIT }
+}
+
+impl Hidden {
+  pub fn make() -> Hidden { Hidden { n: 1 } }
+}
+
+pub fn helper() -> f64 { 1.0 }
+
+fn private_helper() -> f64 { 2.0 }

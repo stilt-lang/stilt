@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: syntax.macro-uses, macros.checked-templates, macros.uses
+//~ stdout:
+//~ | one a
+//~ | 1
+
+syntax pair {
+  ($a: pattern, $b: pattern) => ($a, $b)
+}
+
+fn main() / io {
+  let p = (1, "a")
+  match p {
+    pair!(1, s) => print("one {s}")
+    _ => print("other")
+  }
+  let pair!(n, _) = p
+  print("{n}")
+}

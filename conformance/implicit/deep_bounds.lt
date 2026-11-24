@@ -1,0 +1,42 @@
+//~ rule: facts.inference
+//~ stdout:
+//~ | 100 1
+
+// Instantiating a generic function names the impl methods that its bounds require, and an impl's
+// own bounds once for all of a trait's methods. So a value nested 21 deep through impls with
+// bounds is checked at once, though each level's impl has three methods.
+
+trait Chooser {
+  fn choose<T>(self, a: T, b: T) -> T
+  fn wrap<T>(self, a: T) -> Option<T>
+  fn pair<T>(self, a: T) -> (T, T) {
+    (self.choose(a, a), a)
+  }
+}
+
+type W = { first: bool }
+
+impl Chooser for W {
+  fn choose<T>(self, a: T, b: T) -> T { if self.first { a } else { b } }
+  fn wrap<T>(self, a: T) -> Option<T> { if self.first { Some(a) } else { None } }
+}
+
+type Flip<C> = { inner: C }
+
+impl<C: Chooser> Chooser for Flip<C> {
+  fn choose<T>(self, a: T, b: T) -> T { self.inner.choose(b, a) }
+  fn wrap<T>(self, a: T) -> Option<T> { self.inner.wrap(a) }
+}
+
+fn score<C: Chooser>(c: C, a: i64, b: i64) -> i64 without panic {
+  c.choose(a, b)
+}
+
+fn main() / io {
+  let deep = Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: Flip { inner: W { first: true } } } } } } } } } } } } } } } } } } } } } }
+  let kept = match deep.wrap(1) {
+    Some(n) => n
+    None => 0
+  }
+  print("{score(deep, 1, 100)} {kept}")
+}

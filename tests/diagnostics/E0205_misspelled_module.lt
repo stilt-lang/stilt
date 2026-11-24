@@ -1,0 +1,3 @@
+use std.fss
+
+fn main() {}

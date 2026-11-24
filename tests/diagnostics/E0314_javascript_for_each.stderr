@@ -1,0 +1,9 @@
+── NO SUCH METHOD OR MEMBER ────────── E0314_javascript_for_each.lt:3:9  [E0314]
+
+`List<str>` has no method `forEach`; a `for` loop goes through the elements:
+
+  3 │   names.forEach(|n| print(n))
+    │         ^^^^^^^
+
+Stilt writes a loop over a collection as `for x in xs { … }`, and `map` and
+`filter` make new lists.

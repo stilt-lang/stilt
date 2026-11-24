@@ -1,0 +1,21 @@
+//~ tier: meta
+//~ rule: modes.copy-on-write-types, modes.shared-writes, facts.copy
+
+use std.array
+
+// An array holds its elements inline, as a tuple does, so an array of lists is a
+// copy-on-write type: a write to an element while a copy of the array lasts copies.
+fn shares(a: array.Array<List<i64>, 2>) -> i64 without copy {
+  var b = a
+  b[0].push(1) //~ ERROR E0204
+  a[0].len() + b[0].len()
+}
+
+// An array of integers holds nothing copy-on-write, so its copy is never shared.
+fn plain(a: array.Array<i64, 2>) -> i64 without copy {
+  var b = a
+  b[0] = 5
+  a[0] + b[0]
+}
+
+fn main() / io {}

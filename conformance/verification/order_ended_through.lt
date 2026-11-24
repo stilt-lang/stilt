@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: handlers.with, handlers.call-that-handler-ends, facts.joins, facts.paths-that-leave
+//~ panic: bounds
+//~ panic-at: order_ended_through.lt:30:3
+
+effect Stop {
+  fn stop()
+}
+
+effect Ask {
+  fn ask() -> i64 / Stop
+}
+
+// The body of `ask` performs the operation that ends the outer `with`.
+fn ended_through() -> i64 {
+  var xs: List<i64> = []
+  let stop = handler Stop -> () { fn stop() {} }
+  let ask = handler Ask {
+    fn ask() -> i64 {
+      Stop.stop()
+      1
+    }
+  }
+  with stop {
+    with ask {
+      let _ = Ask.ask()
+      xs.push(1)
+    }
+  }
+  xs[0]
+}
+
+fn main() / io { print("{ended_through()}") }

@@ -1,0 +1,41 @@
+//~ tier: advanced
+//~ rule: projections.results-that-write
+//~ run-output: "[9, 8, 3, 4] [5] [1, 2, 0, 0]"
+
+use std.view
+
+fn left(inout xs: List<i64>) -> view.View<List<i64>> {
+  view.into(inout xs, 0, xs.len() / 2)
+}
+
+fn two(inout xs: List<i64>, ys: List<i64>) -> view.View<List<i64>> {
+  view.into(inout xs, 0, 1)
+}
+
+// A projection yielding a writable view of its `inout` parameter.
+fn right(inout xs: List<i64>) -> inout view.View<List<i64>> {
+  yield view.into(inout xs, xs.len() / 2, xs.len())
+}
+
+fn zero(inout v: view.View<List<i64>>) {
+  for i in 0..v.len() {
+    v[i] = 0
+  }
+}
+
+fn main() / io {
+  var xs = [1, 2, 3, 4]
+  {
+    // The result writes `xs`, the one argument `left` could view, so it is bound by `var`.
+    var h = left(inout xs)
+    h[0] = 9
+    h[1] = 8
+  }
+  var ys = [5, 6]
+  let zs = [0]
+  // Bound by `let`, the result reads `ys` and `zs`.
+  let k = two(inout ys, zs)
+  var ws = [1, 2, 3, 4]
+  zero(inout right(inout ws))
+  print("{xs} {k} {ws}")
+}

@@ -1,0 +1,34 @@
+//~ rule: expressions.for-iterables, traits.map-equality, std.maps, std.show-output
+//~ stdout:
+//~ | {"b": 2, "a": 4} 2 ["b", "a"] [2, 4] [("b", 2), ("a", 4)] true false Some(3) None
+//~ | {"x": 5} 0 None 1
+//~ | false true
+//~ | {(1, "k"): [9]}
+//~ | b=2
+//~ | a=4
+
+fn main() / io {
+  var m = Map.new()
+  m.insert("a", 1)
+  m.insert("b", 2)
+  m.insert("a", 3)
+  let removed = m.remove("a")
+  let missing = m.remove("z")
+  m.insert("a", 4)
+  print("{m} {m.len()} {m.keys()} {m.values()} {m.entries()} {m.contains("b")} {m.is_empty()} {removed} {missing}")
+  var d = Map.with_default(0)
+  d["x"] += 5
+  print("{d} {d["missing"]} {d.get("missing")} {d.len()}")
+  var n = Map.new()
+  n["b"] = 2
+  n["a"] = 5
+  var other = Map.with_default(7)
+  other["a"] = 4
+  other["b"] = 2
+  print("{m == n} {m == other}")
+  var nested = Map.new()
+  nested[(1, "k")] = [1]
+  nested[(1, "k")][0] = 9
+  print("{nested}")
+  for (k, v) in m { print("{k}={v}") }
+}

@@ -1,0 +1,3 @@
+// A `-` written apart from its number negates it, and one written against it is part of the literal
+// (numbers.negative-literals). The formatter keeps each as it is, though the tree is the same.
+fn bounds() -> (i8, i8, i8) { (-128, - 128, -(128)) }

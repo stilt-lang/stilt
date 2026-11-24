@@ -1,0 +1,140 @@
+//~ tier: advanced
+//~ rule: handlers.with, handlers.resuming
+//~ stdout:
+//~ | failed: bottom
+//~ | -1
+//~ | after t3 with 3
+//~ | after t2 with 3
+//~ | after t1 with 3
+//~ | [("t1!", 10), ("t2!", 20), ("t3!", 30)]
+//~ | 700
+//~ | 42
+//~ | 2
+//~ | 0
+
+effect Ask {
+  fn ask(tag: str, n: i64) -> (str, i64)
+}
+
+effect Fail {
+  fn fail(msg: str) -> i64
+}
+
+type Oops = { code: i64, why: str }
+
+effect Risky {
+  fn risky(n: i64) -> i64 / raise<Oops>
+}
+
+fn deep(n: i64) -> i64 / {Fail, raise<Oops>} {
+  if n == 0 {
+    Fail.fail("bottom")
+  } else if n == 100 {
+    raise Oops { code: 1, why: "x" }
+  } else {
+    try deep(n - 1) + 1
+  }
+}
+
+// A body that never resumes ends its `with` through every call between, and
+// through a `catch` of another error.
+fn guarded(n: i64) -> i64 / Fail {
+  let r = try deep(n) catch {
+    Oops { code, why } => code
+  }
+  r + 1000
+}
+
+fn pair(n: i64) -> (str, i64) / Ask { Ask.ask("t{n}", n) }
+
+fn uses_risky() -> i64 / {Risky, raise<Oops>} {
+  try Risky.risky(1) + Risky.risky(2)
+}
+
+fn main() / io {
+  let to_default = handler Fail -> i64 {
+    fn fail(msg: str) -> i64 {
+      print("failed: {msg}")
+      -1
+    }
+  }
+  print("{with to_default { guarded(3) }}")
+  // Bodies that resume wait for the rest of the block, the latest first.
+  let echo = handler Ask -> List<(str, i64)> {
+    fn ask(tag: str, n: i64) -> (str, i64) {
+      let rest = resume(("{tag}!", n * 10))
+      print("after {tag} with {rest.len()}")
+      rest
+    }
+  }
+  let all = with echo { [1, 2, 3].map(|n| pair(n)) }
+  print("{all}")
+  // An operation's body raises at the performance.
+  let strict = handler Risky {
+    fn risky(n: i64) -> i64 / raise<Oops> {
+      if n == 2 { raise Oops { code: 7, why: "two" } } else { n }
+    }
+  }
+  let got = try with strict { uses_risky() } catch {
+    Oops { code, why } => code * 100
+  }
+  print("{got}")
+  // A block that ends otherwise than with its value leaves the bodies that
+  // wait for it, which never go on.
+  print("{early()}")
+  print("{looped()}")
+  print("{ended()}")
+}
+
+fn early() -> i64 / io {
+  let wait = handler Ask -> i64 {
+    fn ask(tag: str, n: i64) -> (str, i64) {
+      let r = resume((tag, n))
+      print("never")
+      r
+    }
+  }
+  with wait {
+    let (t, n) = Ask.ask("x", 5)
+    if n == 5 { return 42 }
+    n
+  }
+}
+
+fn looped() -> i64 / io {
+  var total = 0
+  let wait = handler Ask -> i64 {
+    fn ask(tag: str, n: i64) -> (str, i64) {
+      let r = resume((tag, n))
+      r + 1
+    }
+  }
+  for i in [1, 2, 3] {
+    let v = with wait {
+      let (t, n) = Ask.ask("y", i)
+      if n == 2 { break }
+      n
+    }
+    total += v
+  }
+  total
+}
+
+fn ended() -> i64 / io {
+  let wait = handler Ask -> i64 {
+    fn ask(tag: str, n: i64) -> (str, i64) {
+      let r = resume((tag, n))
+      print("never")
+      r
+    }
+  }
+  let to_zero = handler Fail -> i64 {
+    fn fail(msg: str) -> i64 { 0 }
+  }
+  with to_zero {
+    with wait {
+      let (t, n) = Ask.ask("z", 1)
+      Fail.fail("out") + n
+    }
+  }
+}

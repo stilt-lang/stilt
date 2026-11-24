@@ -1,0 +1,9 @@
+//~ rule: types.only-fields, expressions.left-operand-first
+
+fn add(o: Option<i64>) -> i64 {
+  o + 1 //~ ERROR E0317
+}
+
+fn negate(o: Option<i64>) -> i64 {
+  -o //~ ERROR E0317
+}

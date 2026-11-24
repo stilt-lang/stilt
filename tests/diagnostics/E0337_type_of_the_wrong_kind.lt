@@ -1,0 +1,7 @@
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+}
+
+fn size<F: Mappable>(xs: F) -> i64 { 0 }
+
+fn main() {}

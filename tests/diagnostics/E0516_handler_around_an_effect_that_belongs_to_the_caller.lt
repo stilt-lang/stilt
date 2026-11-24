@@ -1,0 +1,7 @@
+effect Ask {
+  fn ask() -> i64
+}
+
+fn run(f: fn() -> i64) -> i64 {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { f() }
+}

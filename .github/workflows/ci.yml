@@ -1,0 +1,158 @@
+# What a pull request must pass. Every job calls the recipes of the justfile, which `just ci` runs
+# on one machine: the shards below are the same recipes divided between runners, so the two can't
+# drift. Hosted runners have far fewer cores than a developer's machine, hence the shards. The
+# timing recipes, `latency` and `bench`, run in performance.yml; the recipes that need Docker on
+# a Mac, `cross` and `debuggers`, and the long runs run in nightly.yml.
+
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+
+jobs:
+  static:
+    name: Formatting and lints
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          clang: 'false'
+          cache-key: static
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
+        with:
+          tool: cargo-deny@0.19.1
+      - run: just fmt-check lint
+      - name: Check the dependencies against the RustSec advisories
+        run: cargo deny --log-level error check advisories
+
+  shard:
+    name: ${{ matrix.shard.name }} (${{ matrix.os }})
+    if: ${{ !github.event.repository.private }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-24.04, ubuntu-24.04-arm]
+        shard:
+          - name: unit tests
+            recipes: test formatter facts holes alternatives diagnostics diagnostics-tokens
+            release: false
+          - name: conformance
+            recipes: conformance guide examples coverage site
+            release: false
+          - name: compiler agrees
+            recipes: parse check grammar ports
+            release: false
+          - name: runs
+            recipes: run
+            release: false
+          - name: differential
+            recipes: differential
+            release: true
+          - name: generated programs
+            recipes: generated mutated stress
+            release: false
+          - name: scale and memory
+            recipes: scale memory
+            release: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: ${{ matrix.os }}-${{ matrix.shard.release }}
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+      # The website builds with Astro, which needs a newer Node than the runners hold.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: ${{ contains(matrix.shard.recipes, 'site') }}
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Build everything once
+        run: |
+          just build
+          if [ "${{ matrix.shard.release }}" = true ]; then cargo build --release --workspace; fi
+      - name: Run the recipes
+        env:
+          # The build above is the only one, as in `just ci`.
+          STILT_BUILT: '1'
+        run: just ${{ matrix.shard.recipes }}
+      - name: Keep the logs of a failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: logs-${{ matrix.shard.recipes }}-${{ matrix.os }}
+          path: target/*-logs
+          if-no-files-found: ignore
+
+  formal:
+    name: Lean model
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          clang: 'false'
+          lean: 'true'
+          cache-key: formal
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+      - run: just formal
+
+  change-file:
+    name: Change file
+    if: ${{ !github.event.repository.private && github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-changes-file') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+      - name: Require a change file
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          added=$(git diff --name-only --diff-filter=A "$BASE...HEAD" -- changes/ | grep -v '^changes/README.md$' || true)
+          if [ -z "$added" ]; then
+            echo "::error::This pull request adds no file to changes/. Describe the change in a file there (see changes/README.md), or ask a maintainer for the no-changes-file label."
+            exit 1
+          fi
+          uv run tools/release/notes.py --check
+
+  passed:
+    name: CI passed
+    # The one check that branch protection and the merge queue require.
+    if: ${{ always() && !github.event.repository.private }}
+    needs: [static, shard, formal, change-file]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          case " $RESULTS " in
+            *" failure "* | *" cancelled "*) exit 1 ;;
+          esac

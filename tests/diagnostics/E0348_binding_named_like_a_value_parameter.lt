@@ -1,0 +1,6 @@
+use std.array
+
+fn last<n: i64>(a: array.Array<i64, n>) -> i64 {
+  let n = n - 1
+  a[n]
+}

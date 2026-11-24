@@ -1,0 +1,8 @@
+syntax pair {
+  ($a: pattern, $b: pattern) => ($a, $b)
+}
+
+fn main() / io {
+  let p = pair!(1, 2)
+  print("{p}")
+}

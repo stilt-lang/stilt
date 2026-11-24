@@ -1,0 +1,5 @@
+[package]
+name = "b"
+
+[dependencies]
+a = { path = "../../../../../conformance/packages/cycle_of_two/deps/a" }

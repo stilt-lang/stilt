@@ -1,0 +1,38 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.with, handlers.call-that-handler-ends
+//~ run-output: "100"
+
+// Effekt, examples/pos/abort_inside_handler.effekt: the handler of `op` computes the value to
+// resume with under a handler of its own. That computation performs `inner` from inside a
+// recursive call, and the handler of `inner` doesn't resume, so its value, 100, is the value
+// of the `with` inside the body, and so of the body and of the outer `with`. The rest of the
+// block after `Op.op()` never runs, so nothing prints "resumed with".
+
+effect Op {
+  fn op() -> i64
+}
+
+effect Inner {
+  fn inner() -> i64
+}
+
+fn compute(n: i64) -> i64 / Inner {
+  if n > 3 { Inner.inner() } else { compute(n + 1) }
+}
+
+fn main() / io {
+  let to_100 = handler Inner -> i64 {
+    fn inner() -> i64 { 100 }
+  }
+  let answer = handler Op -> i64 {
+    fn op() -> i64 {
+      with to_100 { resume(compute(0)) }
+    }
+  }
+  let x = with answer {
+    let r = Op.op()
+    print("resumed with {r}")
+    r + 1
+  }
+  print("{x}")
+}

@@ -1,0 +1,11 @@
+//~ rule: std.width-fill-and-alignment
+//~ stdout:
+//~ | [42   ]
+//~ | [   42]
+
+fn pad<T: Show>(x: T) -> str { "[{x:5}]" }
+
+fn main() / io {
+  print(pad(42))
+  print("[{42:5}]")
+}

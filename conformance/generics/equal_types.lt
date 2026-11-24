@@ -1,0 +1,19 @@
+//~ tier: meta
+//~ rule: syntax.value-arguments, generics.equal-types
+//~ run-output: "6 6 1000000007"
+
+type Mod<p: u64> = { value: u64 }
+
+const PRIME: u64 = 1_000_000_007
+
+fn add<p: u64>(a: Mod<p>, b: Mod<p>) -> Mod<p> { Mod { value: (a.value + b.value) % p } }
+
+fn modulus<p: u64>(m: Mod<p>) -> u64 { p }
+
+fn main() / io {
+  // A constant and the literals of its value give one type.
+  let a: Mod<PRIME> = Mod { value: 3 }
+  let b: Mod<1_000_000_007> = a
+  let c: Mod<0x3B9ACA07> = b
+  print("{add(a, b).value} {add(b, c).value} {modulus(c)}")
+}

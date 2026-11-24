@@ -1,0 +1,39 @@
+//~ tier: meta
+//~ rule: meta.not-static
+
+const N: i64 = 3
+
+fn length(k: i64) -> i64 { k }
+
+fn parts(xs: List<i64>, x: i64, o: Option<i64>) / io {
+  comptime for v in xs {} //~ ERROR E0349
+  var m = 2
+  comptime for i in 0..m {} //~ ERROR E0349
+  comptime for i in [print("x")] {} //~ ERROR E0349
+  let f = length
+  comptime for i in 0..f(2) {} //~ ERROR E0349
+  comptime if (|| true)() {} //~ ERROR E0349
+  // The first part that isn't static, in evaluation order.
+  comptime for i in 0..length(x) {} //~ ERROR E0349
+  comptime if ({ true }) {} //~ ERROR E0349
+}
+
+// A later branch's condition, an `else if let`'s scrutinee and a guard.
+fn chains(x: i64, o: Option<i64>) / io {
+  comptime if N == 1 {
+    print("one")
+  } else if x == 2 { //~ ERROR E0349
+    print("two")
+  }
+  comptime if N == 1 {
+    print("one")
+  } else if let Some(k) = o { //~ ERROR E0349
+    print("{k}")
+  }
+  comptime match N {
+    3 if x > 1 => print("three"), //~ ERROR E0349
+    _ => print("other"),
+  }
+}
+
+fn main() {}

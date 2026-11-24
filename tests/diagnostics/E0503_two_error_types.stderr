@@ -1,0 +1,9 @@
+── TWO ERROR TYPES ─────────────────────── E0503_two_error_types.lt:5:3  [E0503]
+
+This raises `str`, but the same code raises `ParseError`:
+
+  5 │   raise "not a number: {text}"
+    │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Code raises one error type. Declare one type with a variant for each failure, or
+convert one error into the other where they meet.

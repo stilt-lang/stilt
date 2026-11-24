@@ -1,0 +1,3 @@
+fn Area(w: i64, h: i64) -> i64 { w * h }
+
+fn main() / io { print("{Area(2, 3)}") }

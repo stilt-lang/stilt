@@ -1,0 +1,32 @@
+//~ rule: expressions.option-fallback, expressions.let-else, patterns.else-after-pattern
+//~ stdout:
+//~ | default
+//~ | 3 7
+//~ | 0 2
+//~ | 3 4
+//~ | none
+
+fn noisy(v: i64) -> i64 / io {
+  print("default")
+  v
+}
+
+fn first_or_zero(xs: List<i64>) -> i64 { xs.first() else return 0 }
+
+fn main() / io {
+  let some: Option<i64> = Some(3)
+  let none: Option<i64> = None
+  let a = some else noisy(1)
+  let b = none else noisy(7)
+  print("{a} {b}")
+  print("{first_or_zero([])} {first_or_zero([2])}")
+  let Some(x) = some else return
+  let y = none else x + 1
+  print("{x} {y}")
+  let c = none
+    else {
+    print("none")
+    return
+  }
+  print("not reached {c}")
+}

@@ -1,0 +1,18 @@
+//~ rule: numbers.format-specs, std.bytes-and-scalars, std.width-fill-and-alignment, std.precision, std.integer-kinds, std.scientific-notation, std.format-special-values
+//~ stdout:
+//~ | [   255] [-5  ] [  7  ] [*7**] [ana   ] [éééü]
+//~ | [ff] [80] [200] [FF] [101] [8000000000000000]
+//~ | [3.14] [2] [0.12] [1.23e4] [1.2345e4] [0e0] [-0.0e0]
+//~ | [     nan] [-inf  ] [inf]
+
+fn main() / io {
+  let max = u8.MAX
+  print("[{max:>6}] [{-5:<4}] [{7:^5}] [{7:*^4}] [{"ana":6}] [{"ü":é>4}]")
+  let m: i8 = -1
+  let low = i8.MIN
+  let wide = i64.MIN
+  print("[{m:x}] [{low:x}] [{low:o}] [{255:X}] [{5:b}] [{wide:x}]")
+  print("[{3.14159:.2}] [{2.5:.0}] [{0.125:.2}] [{12345.0:.2e}] [{12345.0:e}] [{0.0:e}] [{-0.0:.1e}]")
+  let zero = 0.0
+  print("[{zero / zero:8.2}] [{-1.0 / zero:<6e}] [{1.0 / zero:.3}]")
+}

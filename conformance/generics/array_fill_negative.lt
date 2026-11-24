@@ -1,0 +1,18 @@
+//~ tier: meta
+//~ rule: generics.arrays, generics.array-sizes
+//~ run-output: "[0, 0]"
+//~ panic: bounds
+//~ panic-at: array_fill_negative.lt:11:46
+
+use std.array
+
+type Grid<k: i64> = { cells: array.Array<i64, k> }
+
+fn grid<k: i64>() -> Grid<k> { Grid { cells: array.fill(0) } }
+
+fn main() / io {
+  let g: Grid<2> = grid()
+  print("{g.cells}")
+  // A negative size that `Grid`'s argument carries to `Array`.
+  let bad: Grid<-1> = grid()
+}

@@ -1,0 +1,33 @@
+//~ rule: declarations.never
+//~ stdout:
+//~ | 13
+//~ | 100
+//~ | -1
+
+fn fail() -> Never { panic("never called") }
+
+fn check(n: i64) -> i64 / {io, raise<str>} {
+  let a: i64 = if n < 0 { raise "negative" } else { n }
+  let b: str = if a > 100 { return 100 } else { "small" }
+  var total = 0
+  for i in 0..10 {
+    let step: i64 = if i == 2 { continue } else { i }
+    let stop: i64 = if i > 4 { break } else { step }
+    total += stop
+  }
+  let c: i64 = if total > 1000 { exit(9) } else { total }
+  let d: str = if c > 1000 { panic("too big") } else { b }
+  let e: i64 = if d == "large" { unreachable() } else { c }
+  let f: i64 = if e > 1000 { loop {} } else { e }
+  let g: i64 = if f > 1000 { fail() } else { f }
+  g + a
+}
+
+fn main() / io {
+  let first = try check(5) catch _ because "check rejects negatives" => -1
+  print("{first}")
+  let second = try check(500) catch _ because "check rejects negatives" => -1
+  print("{second}")
+  let third = try check(-1) catch _ because "check rejects negatives" => -1
+  print("{third}")
+}

@@ -1,0 +1,10 @@
+use dump
+
+// A type private to this module, whose fields therefore are too.
+type Spot = { name: str, secret: i64 }
+
+// The module hands values of its private type to functions of another
+// module that reflect, which read every field.
+pub fn described() -> str { dump.describe(Spot { name: "home", secret: 42 }) }
+
+pub fn bumped() -> str { "{dump.bumped(Spot { name: "home", secret: 42 })}" }

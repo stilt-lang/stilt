@@ -1,0 +1,18 @@
+// states in parallel: advances each of a list of generators 400 steps in place with
+// `par.each`, then folds their states into one checksum with `par.fold`.
+
+use std.cli
+use std.par
+
+fn main() / io {
+  let count = (cli.arg(0) else "").to_i64() else 2000000
+  var states: List<u64> = []
+  for i in 0..count { states.push(i.wrap_to_u64() *% 2654435761 +% 1) }
+  par.each(inout states, |inout s| {
+    for _ in 0..400 {
+      s = s *% 6364136223846793005 +% 1442695040888963407
+      s = s ^ (s >> 29)
+    }
+  })
+  print("checksum {par.fold(states, 0, |a, b| a ^ b)} of {count} states")
+}

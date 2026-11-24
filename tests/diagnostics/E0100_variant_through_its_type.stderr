@@ -1,0 +1,16 @@
+── SYNTAX ERROR ──────────────── E0100_variant_through_its_type.lt:5:10  [E0100]
+
+Stilt names a variant alone, as `Circle(r)`, not through its type:
+
+  5 │     Shape::Circle(r) => 3.14 * r * r
+    │          ^
+
+A variant's name is visible wherever its type is, in patterns and in expressions
+alike.
+
+To fix it, name the variant alone:
+
+  5 │     Shape::Circle(r) => 3.14 * r * r
+    │     -------
+  6 │     Shape::Square(a) => a * a
+    │     -------

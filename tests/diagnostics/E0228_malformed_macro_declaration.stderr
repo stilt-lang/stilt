@@ -1,0 +1,11 @@
+── MALFORMED MACRO DECLARATION ── E0228_malformed_macro_declaration.lt:4:21  [E0228]
+
+A macro takes no `i64`: its parameters take `meta.Expr`, `meta.Pattern`,
+`meta.Type`, `meta.Text`, `meta.File` or `meta.Tokens`:
+
+  4 │ pub macro double(n: i64) -> meta.Expr { quote { $n * 2 } }
+    │                     ^^^
+
+A procedural macro works on code, not values: it takes `meta.Expr`,
+`meta.Pattern`, `meta.Type`, `meta.Text`, `meta.File` or a last `meta.Tokens`,
+and gives a `meta.Expr`, `meta.Pattern` or `meta.Type`.

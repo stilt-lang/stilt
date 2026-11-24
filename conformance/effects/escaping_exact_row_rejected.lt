@@ -1,0 +1,10 @@
+//~ rule: effects.inference, effects.escaping-parameters
+
+type Button = { label: str, on_click: fn() / io }
+
+fn button(label: str, escaping on_click: fn() / io) -> Button { Button { label, on_click } }
+
+fn main() / io {
+  let b = button("fail", || raise "no") //~ ERROR E0502
+  b.on_click()
+}

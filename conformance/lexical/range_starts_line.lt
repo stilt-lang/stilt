@@ -1,0 +1,9 @@
+//~ rule: lexical.continuation-lines, lexical.terminator-positions, syntax.range-precedence
+fn count() -> i64 {
+  var n = 0
+  for i in 0 //~ ERROR E0100
+    ..3 {
+    n += 1
+  }
+  n
+}

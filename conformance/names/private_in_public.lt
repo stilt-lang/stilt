@@ -1,0 +1,14 @@
+//~ rule: program.private-in-signatures
+
+type Hidden = { x: i64 }
+
+trait Secret {}
+
+pub fn reveal(h: Hidden) {} //~ ERROR E0214
+pub type Wrapper = { inner: Hidden } //~ ERROR E0214
+pub fn bounded<T: Secret>(x: T) {} //~ ERROR E0214
+pub const ORIGIN: Hidden = Hidden { x: 0 } //~ ERROR E0214
+
+impl Hidden {
+  pub fn new() -> Hidden { Hidden { x: 0 } }
+}

@@ -1,0 +1,3 @@
+fn risky() throws -> i64 { 1 }
+
+fn main() / io { print("{risky()}") }

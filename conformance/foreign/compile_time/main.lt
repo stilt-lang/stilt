@@ -1,0 +1,12 @@
+//~ tier: systems
+//~ rule: macros.step-limits, c.calls
+
+// Compile-time code performs nothing, so a macro's run that calls a foreign
+// function, or lends C a list, stops where it would reach C.
+meta use reaching
+
+fn magnitude() -> i32 { reaching.magnitude!() } //~ ERROR E0226
+
+fn address() -> u64 { reaching.address!() } //~ ERROR E0226
+
+fn main() {}

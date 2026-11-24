@@ -1,0 +1,5 @@
+//~ rule: conformance.annotations, lexical.line-comments, syntax.doc-comment-text, program.doc-examples
+
+/// Doubles a number.
+/// ex: double(2) == 4 // a comment ends the example //~ PASS
+fn double(x: i64) -> i64 { x * 2 }

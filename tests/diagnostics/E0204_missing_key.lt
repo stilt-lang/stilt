@@ -1,0 +1,4 @@
+module main
+without panic
+
+pub fn stock(counts: Map<str, i64>, item: str) -> i64 { counts[item] }

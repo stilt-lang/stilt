@@ -1,0 +1,26 @@
+//~ rule: syntax.if-let-heads, expressions.if-let, patterns.match
+//~ stdout:
+//~ | found 3
+//~ | none
+//~ | -1
+//~ | skipped
+//~ | 3 2
+
+fn first(xs: List<i64>) -> Option<i64> {
+  if let [x, ..] = xs { return Some(x) }
+  None
+}
+
+fn main() / io {
+  if let Some(n) = first([3, 4]) { print("found {n}") }
+  if let Some(n) = first([]) { print("found {n}") } else { print("none") }
+  let v = if let Some(n) = first([]) { n } else { -1 }
+  print("{v}")
+  var count = 0
+  if let Some(_) = first([]) { count += 10 }
+  if let None = first([5]) { count += 100 } else { print("skipped") }
+  var total = 0
+  for xs in [[1, 3], [], [2]] { if let [a, ..] = xs { total += a } }
+  let w: i64 = if let (a, b) = (total - 1, 2) { a + b - 1 } else { 0 } //~ WARN W0303
+  print("{w} {count + 2}")
+}

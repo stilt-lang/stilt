@@ -1,0 +1,36 @@
+//~ rule: numbers.negative-literals, numbers.unsigned-negation, numbers.printing-integers, patterns.pattern-forms
+//~ stdout:
+//~ | -128 -32768 -2147483648 -9223372036854775808 0 0
+//~ | -5 127 min other zero
+//~ | -2.5 -0.0 -1e-7
+
+fn classify(n: i8) -> str {
+  match n {
+    - 128 => "min"
+    -1 => "minus one"
+    _ => "other"
+  }
+}
+
+fn unsigned(n: u8) -> str {
+  match n {
+    -0 => "zero"
+    _ => "positive"
+  }
+}
+
+fn main() / io {
+  let a: i8 = -128
+  let b: i16 = -32768
+  let c: i32 = -2147483648
+  let d: i64 = -9223372036854775808
+  let e: u8 = -0
+  let f: u64 = -0
+  print("{a} {b} {c} {d} {e} {f}")
+  let g: i8 = - 5
+  let h: i8 = -127
+  print("{g} {-h} {classify(a)} {classify(h)} {unsigned(e)}")
+  let x: f64 = -2.5
+  let y: f32 = -0.0
+  print("{x} {y} {-1e-7}")
+}

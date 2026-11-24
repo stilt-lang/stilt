@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────────── E0100_python_not.lt:1:37  [E0100]
+
+Stilt writes `!`, not `not`:
+
+  1 │ fn closed(open: bool) -> bool { not open }
+    │                                     ^^^^
+
+`&&`, `||` and `!` work on `bool`s.
+
+To fix it, write `!`:
+
+  1 │ fn closed(open: bool) -> bool { !open }
+    │                                 ~

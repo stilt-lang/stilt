@@ -1,0 +1,11 @@
+── VALUE OF A FRESH TYPE LEAVING ITS ARM ── E0351_value_of_a_fresh_type_leaving_its_arm.lt:6:51  [E0351]
+
+This value's type holds `E`, a fresh type of this arm, so it can't decide a type
+that is open outside it:
+
+  6 │     List(c) => { for x in c.get(value) { acc.push(x) } }
+    │                                                   ^
+
+A value whose type is fresh to a reflecting arm can't leave it, since no code
+outside can name that type. Compute what you need inside the arm, such as a
+count, and give that.

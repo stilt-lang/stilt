@@ -1,0 +1,16 @@
+// An impl or a trait isn't a block: its members go one per line, even one, and an empty one has
+// empty braces.
+type Stack = { items: List<i64> }
+
+impl Stack { const LIMIT: i64 = 100 }
+
+impl Stack {
+    /// The number of items.
+    pub fn size(self) -> i64 {
+        self.items.len()
+    }
+}
+
+trait Named { fn name(self) -> str; fn tag(self) -> str }
+
+trait Empty {}

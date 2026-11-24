@@ -1,0 +1,38 @@
+// life: runs Conway's Game of Life on a grid that wraps around, held as one list of cells.
+
+use std.cli
+
+fn step(cells: List<bool>, n: i64) -> List<bool> {
+  // The largest side the grid may have, whose cells' indexes then stay well inside `i64`.
+  if n < 1 || n > 32768 { return cells }
+  var next = []
+  for y in 0..n {
+    for x in 0..n {
+      var alive = 0
+      for dy in 0..3 {
+        for dx in 0..3 {
+          if dy != 1 || dx != 1 {
+            let yy = (y +% dy +% n -% 1) % n
+            let xx = (x +% dx +% n -% 1) % n
+            if cells[yy *% n +% xx] { alive +%= 1 }
+          }
+        }
+      }
+      let here = cells[y *% n +% x]
+      next.push(alive == 3 || here && alive == 2)
+    }
+  }
+  next
+}
+
+fn main() / io {
+  let n = (cli.arg(0) else "").to_i64() else 256
+  var cells = []
+  var x = 11
+  for _ in 0..n *% n {
+    x = (x *% 1103515245 +% 12345) % 2147483648
+    cells.push(x % 3 == 0)
+  }
+  for _ in 0..60 { cells = step(cells, n) }
+  print("{cells.filter(|c| c).len()} cells alive")
+}

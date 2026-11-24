@@ -1,0 +1,12 @@
+//~ rule: patterns.unreachable-arms, effects.empty-try, effects.catch
+//~ run-output: "5 6 7"
+
+fn main() / io {
+  let a = try 5 catch {} //~ WARN W0500
+  let b = try 6 catch { //~ WARN W0500
+    _ => 0
+    e => 1
+  }
+  let c = try 7 catch e => 0 //~ WARN W0500
+  print("{a} {b} {c}")
+}

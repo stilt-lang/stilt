@@ -1,0 +1,6 @@
+//~ rule: conformance.run-statuses, program.missing-main
+//~ exit: 2
+
+use util
+
+fn helper() -> i64 { 1 }

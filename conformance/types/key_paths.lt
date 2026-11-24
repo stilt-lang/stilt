@@ -1,0 +1,18 @@
+//~ rule: syntax.key-paths, expressions.key-paths
+
+type Order = { id: i64, lines: List<(str, f64)>, paid: bool }
+
+fn ids(orders: List<Order>) -> List<i64> { orders.map(.id) }
+
+fn first_items(orders: List<Order>) -> List<str> { orders.map(.lines[0].0) }
+
+fn line_counts(orders: List<Order>) -> List<i64> { orders.map(.lines.len()) }
+
+fn prices(orders: List<Order>) -> List<List<f64>> { orders.map(.lines.map(.1)) }
+
+fn paid(orders: List<Order>) -> List<Order> { orders.filter(.paid) }
+
+fn loose() -> i64 {
+  let get = .id //~ ERROR E0324
+  0
+}

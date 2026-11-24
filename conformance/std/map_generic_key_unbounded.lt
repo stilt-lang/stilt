@@ -1,0 +1,5 @@
+//~ rule: traits.unsatisfied-bounds, std.map-key-bounds
+
+fn lookup<K, V>(m: Map<K, V>, k: K) -> V {
+  m[k] //~ ERROR E0318
+}

@@ -1,0 +1,8 @@
+//~ rule: lexical.format-specs
+//~ run-output: "65535 65537"
+
+fn main() / io {
+  let wide = "{1:65535}"
+  let precise = "{0.5:.65535}"
+  print("{wide.len()} {precise.len()}")
+}

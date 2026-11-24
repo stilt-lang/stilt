@@ -1,0 +1,21 @@
+//~ tier: meta
+//~ rule: std.json-writing, std.json-effects
+//~ stdout:
+//~ | [1.0,-inf is not written]
+//~ panic: explicit
+//~ panic-at: writing_nan.lt:20:9
+
+use std.json
+
+type Reading = { label: str, values: List<f64> }
+
+// A NaN or an infinity panics, with the kind `explicit`, at the call that
+// led into `std.json`, and the message names the path to it.
+fn main() / io {
+  let fine = (1.0, "-inf is not written")
+  let text = json.to_text(fine)
+  print(text.replace("\"", ""))
+  let r = Reading { label: "a", values: [1.0, f64.NAN] }
+  // The call of `to_text` is where the panic is reported.
+  print(json.to_text(r))
+}

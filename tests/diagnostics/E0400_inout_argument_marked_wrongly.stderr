@@ -1,0 +1,15 @@
+── `inout` ARGUMENT MARKED WRONGLY ── E0400_inout_argument_marked_wrongly.lt:5:8  [E0400]
+
+This parameter is `inout`, so its argument is marked `inout`:
+
+  5 │   bump(count)
+    │        ^^^^^
+
+An argument for an `inout` parameter is marked `inout` at the call, as
+`bump(inout count)`, so that a change to it is visible there; no other argument
+is.
+
+To fix it, mark it `inout`:
+
+  5 │   bump(inout count)
+    │        ++++++

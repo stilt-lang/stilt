@@ -1,0 +1,9 @@
+── WRONG NUMBER OF TYPE ARGUMENTS ── E0300_wrong_number_of_type_arguments.lt:1:17  [E0300]
+
+`Map` takes 2 type arguments, not 1:
+
+  1 │ fn count(words: Map<str>) -> i64 { words.len() }
+    │                 ^^^^^^^^
+
+A generic type takes one type argument per parameter, as `Map<str, i64>` for a
+map from strings to integers.

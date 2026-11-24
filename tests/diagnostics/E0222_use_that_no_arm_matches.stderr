@@ -1,0 +1,9 @@
+── USE THAT NO ARM MATCHES ────── E0222_use_that_no_arm_matches.lt:7:24  [E0222]
+
+No arm of `between!` matches this use: the closest expects `,` here:
+
+  7 │   print("{between!(n, 1)}")
+    │                        ^
+
+A use matches one of the macro's arms token for token. Compare it with the arm
+that the message names.

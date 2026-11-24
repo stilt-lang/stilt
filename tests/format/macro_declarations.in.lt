@@ -1,0 +1,31 @@
+// A macro's declaration is formatted token by token (macros.formatting): its arms one per line,
+// a fragment as `$x: kind`, a repetition against its separator and its operator, `=>` with a
+// space on each side, and a `{ … }` group that holds a separator laid out as a block, one line
+// for each of its runs. A `;` ends an arm only where a line break wouldn't.
+
+/// Runs a block unless a condition holds.
+pub   syntax unless {($cond:expr)$body:block=>if !( $cond )$body}
+
+syntax count { () => "none" ; ( $x : expr ) => "one {$x}" // one
+  ( $( $x : expr ) , + ) => "{[ $( $x ),+ ].len()} of them" }
+
+syntax print_all {
+  ( $( $x: expr ) ;* ) => { $( print( $x ) ) ;* }
+}
+
+syntax total { ($($n: name) *) => 0 $( + $n ) *; [] => 0 }
+
+syntax swap {
+  ($a: name, $b: name) => { let tmp = $a; $a = $b; $b = tmp }
+}
+
+syntax pairs { [ $( $k : expr => $v : expr ) , * ] => [ $( ( $k , $v ) ) , * ] }
+
+syntax first {
+      ($($x: expr),+) => { match [$($x),+] { [x, ..] => x
+            _ => 0 } }
+}
+
+syntax negate { ($x: expr) => - 1 * $x; ($x: expr, $y: expr) => -1 * $x * $y }
+
+syntax empty {}

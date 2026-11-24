@@ -1,0 +1,12 @@
+//~ tier: advanced
+//~ rule: handlers.no-effect-reaches-main
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn main() / {io, Ask} {} //~ ERROR E0512
+
+test "asks outside a with" {
+  assert Ask.ask() == 1 //~ ERROR E0512
+}

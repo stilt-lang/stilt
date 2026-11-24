@@ -1,0 +1,17 @@
+//~ rule: effects.one-error-type
+
+type ParseError = { line: i64 }
+
+fn read(path: str) -> str / raise<str> { raise "cannot read {path}" }
+
+fn parse(text: str) -> i64 / raise<ParseError> { text.to_i64() else raise ParseError { line: 1 } }
+
+fn load(path: str) -> i64 / raise<str> {
+  let text = try read(path)
+  try parse(text) //~ ERROR E0503
+}
+
+fn load_mapped(path: str) -> i64 / raise<str> {
+  let text = try read(path)
+  try parse(text) catch e => raise "line {e.line}: bad number"
+}

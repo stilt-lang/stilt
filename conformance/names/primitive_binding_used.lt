@@ -1,0 +1,7 @@
+//~ rule: lexical.primitive-type-names, errors.primitive-type-bindings
+
+fn f() -> i64 {
+  let str = "a" //~ ERROR E0210
+  let n: i64 = str
+  n
+}

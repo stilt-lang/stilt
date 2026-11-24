@@ -1,0 +1,43 @@
+// The errors by kind: the entries at the level `Error`, grouped by what they say once their
+// numbers are left out, so that the same failure on another path or at another time counts as
+// one kind.
+
+use rows
+use table
+use events.entry
+use events.time
+
+/// The text with each run of digits written `#`.
+/// ex: shape("GET /a/12 500 3ms") == "GET /a/# # #ms"
+/// ex: shape("") == ""
+pub fn shape(text: str) -> str {
+  var out: List<str> = []
+  var digits = false
+  for c in text.chars() {
+    let digit = c.is_ascii_digit()
+    if !digit { out.push(c) } else if !digits { out.push("#") }
+    digits = digit
+  }
+  "".join(out)
+}
+
+/// The kind of an error: its topic, and its summary in the shape that `shape` gives.
+pub fn kind(e: entry.Entry) -> str { "{e.event.topic()}: {shape(e.event.summary())}" }
+
+/// Each kind of error, how many times it happened and the times of its first and last, the
+/// most frequent first, and of those as frequent, the first to happen first.
+pub fn kinds(es: List<entry.Entry>) -> List<rows.ErrorRow> {
+  var out: List<rows.ErrorRow> = []
+  for (error, of) in es.filter(|e| e.level == time.Error).group_by(kind) {
+    let last = of.last() else continue
+    out.push(
+      rows.ErrorRow { error, count: of.len(), first: of[0].at.clock(), last: last.at.clock() },
+    )
+  }
+  out.sorted_desc_by(.count)
+}
+
+/// The kinds of errors, as a table.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  ["== errors by kind =="].concat(table.render(kinds(es)))
+}

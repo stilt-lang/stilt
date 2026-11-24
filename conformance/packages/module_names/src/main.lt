@@ -1,0 +1,10 @@
+use json
+use json.decode
+use json.text.escape
+
+fn main() / io {
+  print(json.version())
+  print(decode.parse("a"))
+  print(escape.wrap("b"))
+  print(json.text.escape.wrap("c"))
+}

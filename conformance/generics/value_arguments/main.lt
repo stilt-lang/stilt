@@ -1,0 +1,35 @@
+//~ tier: meta
+//~ rule: syntax.lowercase-types, syntax.value-arguments, generics.value-arguments, generics.equal-types, generics.constant-arguments
+//~ run-output: "7 -4 true 1000000007 18446744073709551615 7 false"
+
+use numbers
+
+type Mod<p: u64> = { value: u64 }
+
+type Offset<k: i64> = { base: i64 }
+
+type Flag<on: bool> = { name: str }
+
+const PRIME: u64 = 1_000_000_007
+
+fn modulus<p: u64>(m: Mod<p>) -> u64 { p }
+
+fn offset<k: i64>(o: Offset<k>) -> i64 { o.base + k }
+
+fn on<b: bool>(f: Flag<b>) -> bool { b }
+
+// A value parameter given as a value argument.
+fn copied<p: u64>(m: Mod<p>) -> Mod<p> {
+  let same: Mod<p> = Mod { value: m.value }
+  same
+}
+
+fn main() / io {
+  let a: Mod<7> = Mod { value: 1 }
+  let b: Offset<-5> = Offset { base: 1 }
+  let c: Flag<true> = Flag { name: "c" }
+  let d: Mod<PRIME> = Mod { value: 1 }
+  let e: Mod<numbers.LARGEST> = Mod { value: 1 }
+  let f: Flag<false> = Flag { name: "f" }
+  print("{modulus(a)} {offset(b)} {on(c)} {modulus(d)} {modulus(e)} {modulus(copied(a))} {on(f)}")
+}

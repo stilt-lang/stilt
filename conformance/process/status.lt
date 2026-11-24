@@ -1,0 +1,13 @@
+//~ rule: std.process, std.process-runs
+//~ stdout:
+//~ | waiting: child
+//~ | status 7
+
+use std.io
+use std.process
+
+fn main() / {io, raise<io.IoError>} {
+  io.write("waiting: ")
+  let status = try process.Command.new("sh").with_args(["-c", "echo child; exit 7"]).status()
+  print("status {status}")
+}

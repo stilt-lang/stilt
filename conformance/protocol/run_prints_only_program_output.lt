@@ -1,0 +1,16 @@
+//~ rule: conformance.observables, conformance.commands, conformance.run-output, conformance.header-annotations, conformance.exact-matching, conformance.kinds-of-test
+//~ stdout:
+//~ | out
+//~ |
+//~ |   indented
+//~ stderr:
+//~ | err
+
+// print("old") //~ WARN W0001
+
+fn main() / io {
+  print("out")
+  print("")
+  eprint("err")
+  print("  indented")
+}

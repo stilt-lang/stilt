@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: records.anonymous-patterns, records.update
+//~ stdout:
+//~ | { x: 5, y: 2 }
+//~ | Person { name: "Bo", age: 36 } { name: "Bo", tag: 1 }
+//~ | Bo
+
+type Person = { name: str, age: i64 }
+
+// The caller's type comes back.
+fn renamed<P: { name: str, .. }>(p: P, to: str) -> P { { ..p, name: to } }
+
+fn name_of<P: { name: str, .. }>(p: P) -> str {
+  let { name, .. } = p
+  name
+}
+
+fn main() / io {
+  let pt = { x: 1, y: 2 }
+  let moved = { ..pt, x: 5 }
+  print("{moved}")
+  let ada = Person { name: "Ada", age: 36 }
+  print("{renamed(ada, "Bo")} {renamed({ name: "Ada", tag: 1 }, "Bo")}")
+  print(name_of(renamed(ada, "Bo")))
+}

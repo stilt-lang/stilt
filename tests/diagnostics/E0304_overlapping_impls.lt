@@ -1,0 +1,13 @@
+trait Named {
+  fn name(self) -> str
+}
+
+type Thing = {}
+
+impl Named for Thing {
+  fn name(self) -> str { "a" }
+}
+
+impl Named for Thing {
+  fn name(self) -> str { "b" }
+}

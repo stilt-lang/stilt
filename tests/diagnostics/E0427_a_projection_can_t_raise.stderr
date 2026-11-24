@@ -1,0 +1,10 @@
+── A PROJECTION CAN'T RAISE ──── E0427_a_projection_can_t_raise.lt:3:51  [E0427]
+
+A projection's call is a place, which can't sit in a `try`, so its row can't
+hold `raise`; panic instead, or have the caller check first:
+
+  3 │ fn at(inout xs: List<i64>, i: i64) -> inout i64 / raise<OutOfRange> {
+    │                                                   ^^^^^^^^^^^^^^^^^
+
+A projection's call is a place, which `try` can't mark, so a projection can't
+raise. Check before calling it, or panic on a bad index.

@@ -1,0 +1,58 @@
+//~ tier: advanced
+
+// Shared values (shared.locks and tasks.implicit-effects-and-capabilities): a `when` holds shared
+// values, which gives its function the fact `locks` and nothing else, and so does a call of a
+// function that has it, or naming one as a value; a call through a function value adds nothing of
+// `locks`, and a closure literal's body is part of the function that writes it. A `when` makes the
+// counts of what it leaves in its values atomic, and so does `Shared.new` of its value; a call of a
+// function that runs one adds none (par.atomic-sites).
+
+use std.sync
+use std.task
+
+type Account = { balance: i64 }
+
+fn deposit(a: sync.Shared<Account>, n: i64) {
+  when a { a.balance += n } //~ OVERFLOW LOCKS ATOMIC
+}
+
+fn twice(a: sync.Shared<Account>) {
+  deposit(a, 1) //~ OVERFLOW LOCKS
+  let f = deposit //~ OVERFLOW LOCKS
+  f(a, 2) //~ DIV
+}
+
+// The closure captures `a` by copy, so it is stored in a value (values.consumed-parameters).
+fn later(a: sync.Shared<Account>) -> fn() {
+  || when a { a.balance = 0 } //~ CONSUMES a ALLOC LOCKS ATOMIC
+}
+
+// `Shared.new` is a native whose result names no `str`, `List` or `Map`, so it allocates nothing
+// that facts.native-allocation counts.
+fn open() -> sync.Shared<Account> {
+  sync.Shared.new(Account { balance: 0 }) //~ ATOMIC ALLOC
+}
+
+// A function that `without locks` limits counts as one without it.
+fn calm(n: i64) -> i64 without locks { n + 1 } //~ OVERFLOW
+
+fn plain(n: i64) -> i64 { calm(n) } //~ OVERFLOW
+
+// `s.spawn` is a call through a stored function value, as `task.spawn` is, and has the capability
+// `spawn` (tasks.implicit-effects-and-capabilities); `task.scope` adds nothing of its own.
+fn scoped() -> i64 / {io, async, raise<i64>} {
+  try task.scope(|s| { //~ ALLOC
+    let t = try s.spawn(|| 1) //~ DIV SPAWN ALLOC
+    t.await() //~ ALLOC
+  })
+}
+
+// Under threads, a scope's function runs on a thread of its own with a copy of what it
+// captures, as a task's function does, so a `task.scope` whose function captures a task's
+// handle may make its count atomic (par.atomic-sites).
+fn joined(t: task.Task<i64>) -> i64 / {io, async, raise<i64>} {
+  try task.scope(|s| { //~ CONSUMES t ALLOC ATOMIC
+    let u = try s.spawn(|| 1) //~ DIV SPAWN ALLOC
+    t.await() + u.await() //~ OVERFLOW ALLOC
+  })
+}

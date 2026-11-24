@@ -1,0 +1,13 @@
+// A call whose last argument is a closure with a block keeps the line of its start, up to the
+// block's brace, when that fits in 100 columns, and the block's statements go one per line. Any
+// other argument list that doesn't fit has one argument per line.
+fn main() / io {
+  items.for_each(|item| { print(item); print(item) })
+  let total = items.fold(0, |acc, item| { let price = item.price * item.quantity; acc + price })
+  let sum = parts.map(|p| p * 2).filter(|p| p > 3).fold(0, |acc, p| { let x = acc + p; x * 2 })
+  report_every_single_item_with_a_very_long_name(first_item_to_report, second_item, |item| {
+    print(item)
+    print(item)
+  })
+  report_every_single_item_with_a_very_long_name(first_item_to_report, second_item_to_report, |item| { print(item); print(item) })
+}

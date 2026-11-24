@@ -1,0 +1,9 @@
+samples/orders.csv
+--group
+product
+--min
+date
+--max
+date
+--limit
+2

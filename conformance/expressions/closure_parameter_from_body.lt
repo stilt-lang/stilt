@@ -1,0 +1,8 @@
+//~ rule: types.known-types, expressions.closure-parameter-types
+//~ run-output: "6"
+
+fn main() / io {
+  let rate = 2
+  let scale = |x| x * rate
+  print("{scale(3)}")
+}

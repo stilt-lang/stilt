@@ -1,0 +1,5 @@
+fn main() {}
+
+test "sums" {
+  assert_eq!(2 + 2, 4)
+}

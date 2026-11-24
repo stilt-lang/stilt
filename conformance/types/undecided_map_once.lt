@@ -1,0 +1,6 @@
+//~ rule: types.undecided-type-location
+
+fn make() -> i64 {
+  let m = Map.new() //~ ERROR E0312
+  0
+}

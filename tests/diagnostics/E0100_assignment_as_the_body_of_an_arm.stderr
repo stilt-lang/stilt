@@ -1,0 +1,15 @@
+── SYNTAX ERROR ──────── E0100_assignment_as_the_body_of_an_arm.lt:4:12  [E0100]
+
+Unexpected `=`: the body of an arm is an expression, and an assignment is a
+statement:
+
+  4 │     3 => n = 1
+    │            ^
+
+The code from this token on isn't Stilt. The cause is often just before it, such
+as a bracket left open or a word from another language.
+
+To fix it, write the arm's body as a block:
+
+  4 │     3 => { n = 1 }
+    │          ++     ++

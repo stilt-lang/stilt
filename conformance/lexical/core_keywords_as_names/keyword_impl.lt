@@ -1,0 +1,1 @@
+fn impl() {} //~ ERROR E0100

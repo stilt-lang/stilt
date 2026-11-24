@@ -1,0 +1,45 @@
+//~ rule: std.natives, std.callbacks, std.list-functions, std.list-searching
+//~ stdout:
+//~ | reduce 1 2
+//~ | reduce 3 3
+//~ | Some(6)
+//~ | generate 0
+//~ | generate 1
+//~ | generate 2
+//~ | [0, 10, 20]
+//~ | take 1
+//~ | take 5
+//~ | [1]
+//~ | skip 1
+//~ | skip 5
+//~ | [5, 2]
+//~ | find 4
+//~ | find 9
+//~ | Some(1)
+//~ | key bb
+//~ | key a
+//~ | key c
+//~ | Some("a")
+//~ | point 4
+//~ | point 2
+//~ | point 3
+//~ | 3
+//~ | scan 1
+//~ | scan 2
+//~ | [0, 1, 3]
+
+fn shown(label: str, x: i64) -> i64 / io {
+  print("{label} {x}")
+  x
+}
+
+fn main() / io {
+  print("{[1, 2, 3].reduce(|a, b| { print("reduce {a} {b}"); a + b })}")
+  print("{List.generate(3, |i| shown("generate", i) * 10)}")
+  print("{[1, 5, 2].take_while(|x| shown("take", x) < 3)}")
+  print("{[1, 5, 2].skip_while(|x| shown("skip", x) < 3)}")
+  print("{[4, 9, 2].find_index(|x| shown("find", x) > 5)}")
+  print("{["bb", "a", "c"].min_by(|s| { print("key {s}"); s.len() })}")
+  print("{[1, 2, 3, 4, 5, 6, 7].partition_point(|x| shown("point", x) < 4)}")
+  print("{[1, 2].scan(0, |a, x| a + shown("scan", x))}")
+}

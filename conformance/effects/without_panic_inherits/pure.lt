@@ -1,0 +1,30 @@
+module pure
+without panic
+
+use lib
+
+pub fn through_call(xs: List<i64>) -> i64 {
+  lib.deep(xs) //~ ERROR E0204
+}
+
+pub fn safe(xs: List<i64>) -> i64 { lib.safe(xs) }
+
+pub fn named(xs: List<i64>) -> List<i64> {
+  xs.map(lib.share) //~ ERROR E0204
+}
+
+pub fn recursive() -> bool {
+  lib.even(4) //~ ERROR E0204
+}
+
+pub fn closure(xs: List<i64>) -> List<i64> {
+  xs.map(|x| 100 / x) //~ ERROR E0204
+}
+
+pub fn value_made_elsewhere(xs: List<i64>, f: fn(i64) -> i64) -> List<i64> { xs.map(f) }
+
+pub fn closure_made_elsewhere() -> fn(i64) -> i64 {
+  lib.sharer() //~ ERROR E0204
+}
+
+pub fn own_function(xs: List<i64>) -> i64 { through_call(xs) }

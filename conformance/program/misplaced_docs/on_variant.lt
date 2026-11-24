@@ -1,0 +1,4 @@
+pub type Shape =
+  /// Before a variant. //~ ERROR E0100
+  | Circle(f64)
+  | Dot

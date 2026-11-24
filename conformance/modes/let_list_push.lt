@@ -1,0 +1,7 @@
+//~ rule: modes.what-can-be-modified
+
+fn digits() -> List<i64> {
+  let xs = []
+  xs.push(1) //~ ERROR E0403
+  xs
+}

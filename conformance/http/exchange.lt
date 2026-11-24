@@ -1,0 +1,46 @@
+//~ rule: std.http-messages, std.http-server
+//~ stdout:
+//~ | Response { status: 201, headers: [("X-Seen", "/notes?id=7"), ("Connection", "close"), ("Content-Length", "21")], body: "POST draft text/plain" }
+//~ | Response { status: 400, headers: [("Connection", "close"), ("Content-Length", "0")], body: "" }
+//~ | 200 hello, world [("Transfer-Encoding", "chunked")]
+//~ | 204 [""]
+//~ | 200 ["everything until the end"]
+//~ | Message("status line") Message("body")
+
+use std.http
+use std.io
+use std.net
+
+fn opened(host: str, port: i64) -> net.Stream / {io, raise<http.Error>} { try net.connect(host, port) catch e => raise http.Io(e) }
+
+// A server's answer on a new connection to `listener`, written as it stands,
+// read by a client as an answer to `method`.
+fn answer(inout listener: net.Listener, method: str, text: str) -> http.Response / {io, raise<http.Error>} {
+  var client = try opened("127.0.0.1", listener.port())
+  var server = try listener.accept() catch e => raise http.Io(e)
+  try server.write(text) catch e => raise http.Io(e)
+  server.close()
+  try http.read_response(inout client, method)
+}
+
+fn main() / {io, raise<http.Error>} {
+  var listener = try net.listen("127.0.0.1", 0) catch e => raise http.Io(e)
+  var client = try opened("127.0.0.1", listener.port())
+  let request = http.Request.new("POST", "/notes?id=7").with_header("Content-Type", "text/plain").with_body("draft")
+  try http.write_request(inout client, request)
+  try http.serve_one(inout listener, |r| http.Response.new(201, "{r.method} {r.body} {r.header("content-type") else "none"}").with_header("X-Seen", r.target))
+  print("{try http.read_response(inout client, "POST")}")
+  var stray = try opened("127.0.0.1", listener.port())
+  try stray.write("not a request\r\n\r\n") catch e => raise http.Io(e)
+  try http.serve_one(inout listener, |_| http.Response.new(200, "never"))
+  print("{try http.read_response(inout stray, "GET")}")
+  let chunked = try answer(inout listener, "GET", "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n7\r\nhello, \r\n5;note=x\r\nworld\r\n0\r\nTrailer: t\r\n\r\n")
+  print("{chunked.status} {chunked.body} {chunked.headers}")
+  let empty = try answer(inout listener, "HEAD", "HTTP/1.1 204 No Content\r\nContent-Length: 10\r\n\r\n")
+  let closing = try answer(inout listener, "GET", "HTTP/1.1 200 OK\r\n\r\neverything until the end")
+  print("{empty.status} {[empty.body]}")
+  print("{closing.status} {[closing.body]}")
+  let garbled = try "{answer(inout listener, "GET", "HTTP/2 200\r\n\r\n")}" catch e because "the test prints the error" => "{e}"
+  let short = try "{answer(inout listener, "GET", "HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nshort")}" catch e because "the test prints the error" => "{e}"
+  print("{garbled} {short}")
+}

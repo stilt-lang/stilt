@@ -1,0 +1,25 @@
+//~ tier: advanced
+
+// Anonymous and open records (records.advanced-tier): a module that writes an anonymous record
+// type, literal or pattern, a record bound, an open record type, or an update of an anonymous or
+// bounded record is in the advanced tier. A record is held inline, so building one, updating one
+// and reading its fields allocate nothing.
+
+fn origin() -> { x: i64, y: i64 } { { x: 0, y: 0 } }
+
+fn moved(p: { x: i64, y: i64 }) -> { x: i64, y: i64 } { { ..p, x: 1 } }
+
+fn x_of(p: { x: i64, y: i64 }) -> i64 {
+  let { x, .. } = p
+  x
+}
+
+fn ages(p: { age: i64, .. }) -> i64 { p.age }
+
+fn older<P: { age: i64, .. }>(inout p: P) { p.age += 1 } //~ OVERFLOW
+
+fn main() / io {
+  var p = { age: 1, tag: true }
+  older(inout p) //~ OVERFLOW
+  print("{x_of(moved(origin()))} {ages(p)}") //~ ALLOC CONSOLE
+}

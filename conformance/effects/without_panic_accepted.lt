@@ -1,0 +1,33 @@
+//~ rule: effects.panic-kinds, effects.panicking-operations, effects.without-panic
+//~ run-output: "3 1 25 {\"a\": 2, \"b\": 1} [1, 2]"
+
+module main
+without panic
+
+fn halve(n: i64) -> i64 { n / 2 }
+
+fn rest(n: i64) -> i64 { n % 3 }
+
+fn square(n: i64) -> i64 { n * n }
+
+fn count(words: List<str>) -> Map<str, i64> {
+  var m: Map<str, i64> = Map.new()
+  for w in words {
+    let n = m.get(w) else 0
+    m[w] = n + 1
+  }
+  m
+}
+
+fn firsts(xs: List<List<i64>>) -> List<i64> {
+  var out: List<i64> = []
+  for x in xs {
+    let [first, ..] = x else continue
+    out.push(first)
+  }
+  out
+}
+
+fn main() / io {
+  print("{halve(7)} {rest(7)} {square(5)} {count(["a", "b", "a"])} {firsts([[1, 9], [], [2]])}")
+}

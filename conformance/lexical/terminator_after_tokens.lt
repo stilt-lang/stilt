@@ -1,0 +1,51 @@
+//~ rule: lexical.terminator-insertion, lexical.separators
+//~ stdout:
+//~ | 1 2 2.5 s true false
+//~ | 3 [1, 2] Point { x: 1, y: 2 } 7
+//~ | Point { x: 1, y: 2 }
+//~ | early
+//~ | 0
+//~ | 1
+
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  fn same(self) -> Point {
+    let me = self
+    me
+  }
+}
+
+fn add(a: i64, b: i64) -> i64 { a + b }
+
+fn early() / io {
+  print("early")
+  return
+  print("not printed after return")
+}
+
+fn main() / io {
+  let p = Point { x: 1, y: 2 }
+  let a = p.x
+  let b = 2
+  let c = 2.5
+  let s = "s"
+  let t = true
+  let f = false
+  print("{a} {b} {c} {s} {t} {f}")
+  let n = add(a, b)
+  let xs = [a, b]
+  let block = { 7 }
+  print("{n} {xs} {p} {block}")
+  print("{p.same()}")
+  early()
+  for i in 0..2 {
+    print("{i}")
+    continue
+    print("not printed after continue")
+  }
+  loop {
+    break
+    print("not printed after break")
+  }
+}

@@ -1,0 +1,5 @@
+//~ rule: variadics.spread-checks, errors.error-type
+
+// The tuple's type names an unknown name, reported where it is written, so its spread, whose
+// method call is given up, gets no error of its own.
+fn lengths<..Ts>(lists: (..List<Us>)) -> List<i64> { [..lists.len()] } //~ ERROR E0211

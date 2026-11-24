@@ -1,0 +1,41 @@
+//~ tier: advanced
+//~ rule: handlers.with, shared.when
+//~ stdout:
+//~ | 0
+//~ | 1
+//~ | 2
+//~ | 3
+
+// Effekt, examples/pos/multihandler.effekt: one `with` installs two handlers, of `Get` and of
+// `Put`, which share a state. Each read gives what the last write put. Effekt's handlers assign a
+// local variable; a Stilt handler captures by copy, so here both capture one `Shared<i64>`,
+// whose copies reach the same value.
+
+use std.sync
+
+effect Get {
+  fn get() -> i64
+}
+
+effect Put {
+  fn put(n: i64)
+}
+
+fn with_state(init: i64, prog: fn() / {Get, Put}) {
+  let s = sync.Shared.new(init)
+  let gets = handler Get { fn get() -> i64 { when s { s } } }
+  let puts = handler Put { fn put(n: i64) { when s { s = n } } }
+  with gets, puts { prog() }
+}
+
+fn main() / io {
+  with_state(0, || {
+    print("{Get.get()}")
+    Put.put(1)
+    print("{Get.get()}")
+    Put.put(2)
+    print("{Get.get()}")
+    Put.put(3)
+    print("{Get.get()}")
+  })
+}

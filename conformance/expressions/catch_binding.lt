@@ -1,0 +1,34 @@
+//~ rule: syntax.catch-attachment, expressions.catch-attachment, effects.catch-syntax, effects.innermost-catch
+//~ stdout:
+//~ | caught 1
+//~ | inner 12
+//~ | outer -1
+//~ | arm 101
+
+type Failure = | Fail(i64)
+
+fn a(n: i64) -> i64 / raise<Failure> {
+  if n > 0 { raise Fail(1) }
+  n
+}
+
+fn b(n: i64) -> i64 / raise<Failure> {
+  if n > 0 { raise Fail(2) }
+  n
+}
+
+fn outer_catch(x: i64) -> i64 { try a(try b(0) + x) catch Fail(n) => n }
+
+fn inner_catch(x: i64, y: i64) -> i64 / raise<Failure> {
+  try a(x) + try b(y) catch Fail(n) => n + 10
+}
+
+fn main() / io {
+  print("caught {outer_catch(1)}")
+  let i = try inner_catch(0, 1) catch Fail(n) => -n
+  print("inner {i}")
+  let o = try inner_catch(1, 0) catch Fail(n) => -n
+  print("outer {o}")
+  let arm = try a(1) + 1000 catch Fail(n) => n + 100
+  print("arm {arm}")
+}

@@ -1,0 +1,48 @@
+//~ rule: std.sets, expressions.loops, numbers.division-and-remainder
+//~ stdout:
+//~ | 1 7 10 13 19 23 28 31
+//~ | 4 -> 16 -> 37 -> 58 -> 89 -> 145 -> 42 -> 20 -> 4
+
+// Rosetta Code, Happy numbers: replacing a number by the sum of the squares of its digits, again
+// and again, a happy number reaches 1, and every other one loops. The first eight happy numbers
+// are 1, 7, 10, 13, 19, 23, 28 and 31 (OEIS A007770), and the unhappy ones all fall into the
+// cycle through 4.
+
+fn digit_squares(n: i64) -> i64 {
+  var rest = n
+  var sum = 0
+  while rest > 0 {
+    let d = rest % 10
+    sum += d * d
+    rest /= 10
+  }
+  sum
+}
+
+fn is_happy(n: i64) -> bool {
+  var seen = Set.new()
+  var x = n
+  while x != 1 && !seen.contains(x) {
+    seen.insert(x)
+    x = digit_squares(x)
+  }
+  x == 1
+}
+
+fn main() / io {
+  var happy = []
+  var n = 1
+  while happy.len() < 8 {
+    if is_happy(n) { happy.push("{n}") }
+    n += 1
+  }
+  print(" ".join(happy))
+  var cycle = ["4"]
+  var x = digit_squares(4)
+  while x != 4 {
+    cycle.push("{x}")
+    x = digit_squares(x)
+  }
+  cycle.push("4")
+  print(" -> ".join(cycle))
+}

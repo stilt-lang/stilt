@@ -1,0 +1,37 @@
+//~ tier: meta
+//~ rule: syntax.quotes, macros.splices, macros.literal-splices, macros.spreads, macros.linking, macros.tokens-and-code, macros.running
+//~ stdout:
+//~ | {a} "b" \c
+//~ | [-3, 13]
+//~ | 200
+//~ | 1.5
+//~ | false
+//~ | 6
+//~ | [0, 1, 2]
+//~ | 0 1 2
+//~ | 3 4
+//~ | 1-22-333
+//~ | 1_000-0xff_ff-2.5e3
+
+// Each kind of value a splice writes as a literal, and `$..` among a list's
+// elements, a tuple's, a call's arguments and a record literal's fields.
+meta use splices
+
+fn main() / io {
+  print(splices.tricky!())
+  print("{splices.negative!()}")
+  let b: u8 = splices.big!()
+  print("{b}")
+  let f: f32 = splices.half!()
+  print("{f}")
+  print("{splices.not!()}")
+  print("{splices.call_sum!(1, 2, 3)}")
+  print("{splices.listed!(1, 2)}")
+  let (x, y, z) = splices.tupled!(1, 2)
+  print("{x} {y} {z}")
+  let r = splices.record!(a = 3, b = 4)
+  print("{r.a} {r.b}")
+  print(splices.digits!(1 22 333))
+  // A number's text is as written, its `_` kept (macros.tokens-and-code).
+  print(splices.digits!(1_000 0xff_ff 2.5e3))
+}

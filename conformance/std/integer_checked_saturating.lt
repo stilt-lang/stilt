@@ -1,0 +1,26 @@
+//~ rule: std.integers
+//~ stdout:
+//~ | Some(5) None None
+//~ | Some(-128) None Some(254) None
+//~ | None Some(0) None
+//~ | Some(-9223372036854775808) None None
+//~ | Some(18446744073709551615) None
+//~ | 127 -128 255 0
+//~ | 9223372036854775807 -9223372036854775808 18446744073709551615 0
+//~ | -5 7
+
+fn main() / io {
+  let i8_max: i8 = i8.MAX
+  print("{i64.checked_add(2, 3)} {i8_max.checked_add(1)} {i8.MIN.checked_sub(1)}")
+  let minus: i8 = -127
+  let u8_half: u8 = 127
+  print("{minus.checked_sub(1)} {minus.checked_mul(2)} {u8_half.checked_mul(2)} {u8_half.checked_mul(3)}")
+  let zero: u8 = 0
+  print("{zero.checked_sub(1)} {zero.checked_mul(255)} {i64.MIN.checked_mul(-1)}")
+  print("{i64.MIN.checked_add(0)} {i64.MAX.checked_mul(2)} {i64.MIN.checked_sub(1)}")
+  print("{u64.MAX.checked_sub(0)} {u64.MAX.checked_add(1)}")
+  print("{i8_max.saturating_add(1)} {i8.MIN.saturating_sub(1)} {u8.MAX.saturating_add(9)} {zero.saturating_sub(1)}")
+  print("{i64.MAX.saturating_add(i64.MAX)} {i64.MIN.saturating_add(i64.MIN)} {u64.MAX.saturating_add(1)} {u64.MIN.saturating_sub(7)}")
+  let small: i16 = 2
+  print("{small.saturating_sub(7)} {small.saturating_add(5)}")
+}

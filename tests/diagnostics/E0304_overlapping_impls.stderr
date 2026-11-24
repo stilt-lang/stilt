@@ -1,0 +1,9 @@
+── OVERLAPPING IMPLS ────────────────── E0304_overlapping_impls.lt:11:1  [E0304]
+
+`Thing` already has an impl of `Named`:
+
+  11 │ impl Named for Thing {
+     │ ^^^^^^^^^^^^^^^^^^^^^^
+
+A type has at most one impl of each trait, so a call always means one thing.
+Delete one of the impls, or merge them.

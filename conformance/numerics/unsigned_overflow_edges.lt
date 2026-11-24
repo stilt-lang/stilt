@@ -1,0 +1,129 @@
+//~ rule: program.test-results, numbers.integer-panics, std.integers
+
+test "u8 stays in range at its edges" { //~ PASS
+  let max = u8.MAX
+  let min = u8.MIN
+  assert max - 1 + 1 == 255
+  assert min + 1 - 1 == 0
+  assert min + max == max
+  assert max - max == min
+  assert max * 1 == max
+  assert max / 2 * 2 + 1 == max
+  assert min * max == 0
+}
+
+test "u8 + above MAX" { //~ FAIL
+  let max = u8.MAX
+  let _ = max + 1
+}
+
+test "u8 + of MAX and MAX" { //~ FAIL
+  let max = u8.MAX
+  let _ = max + max
+}
+
+test "u8 - below MIN" { //~ FAIL
+  let min = u8.MIN
+  let _ = min - 1
+}
+
+test "u8 * above MAX" { //~ FAIL
+  let max = u8.MAX
+  let _ = max * 2
+}
+
+test "u16 stays in range at its edges" { //~ PASS
+  let max = u16.MAX
+  let min = u16.MIN
+  assert max - 1 + 1 == 65535
+  assert min + 1 - 1 == 0
+  assert min + max == max
+  assert max - max == min
+  assert max * 1 == max
+  assert max / 2 * 2 + 1 == max
+  assert min * max == 0
+}
+
+test "u16 + above MAX" { //~ FAIL
+  let max = u16.MAX
+  let _ = max + 1
+}
+
+test "u16 + of MAX and MAX" { //~ FAIL
+  let max = u16.MAX
+  let _ = max + max
+}
+
+test "u16 - below MIN" { //~ FAIL
+  let min = u16.MIN
+  let _ = min - 1
+}
+
+test "u16 * above MAX" { //~ FAIL
+  let max = u16.MAX
+  let _ = max * 2
+}
+
+test "u32 stays in range at its edges" { //~ PASS
+  let max = u32.MAX
+  let min = u32.MIN
+  assert max - 1 + 1 == 4294967295
+  assert min + 1 - 1 == 0
+  assert min + max == max
+  assert max - max == min
+  assert max * 1 == max
+  assert max / 2 * 2 + 1 == max
+  assert min * max == 0
+}
+
+test "u32 + above MAX" { //~ FAIL
+  let max = u32.MAX
+  let _ = max + 1
+}
+
+test "u32 + of MAX and MAX" { //~ FAIL
+  let max = u32.MAX
+  let _ = max + max
+}
+
+test "u32 - below MIN" { //~ FAIL
+  let min = u32.MIN
+  let _ = min - 1
+}
+
+test "u32 * above MAX" { //~ FAIL
+  let max = u32.MAX
+  let _ = max * 2
+}
+
+test "u64 stays in range at its edges" { //~ PASS
+  let max = u64.MAX
+  let min = u64.MIN
+  assert max - 1 + 1 == 18446744073709551615
+  assert min + 1 - 1 == 0
+  assert min + max == max
+  assert max - max == min
+  assert max * 1 == max
+  assert max / 2 * 2 + 1 == max
+  assert min * max == 0
+}
+
+test "u64 + above MAX" { //~ FAIL
+  let max = u64.MAX
+  let _ = max + 1
+}
+
+test "u64 + of MAX and MAX" { //~ FAIL
+  let max = u64.MAX
+  let _ = max + max
+}
+
+test "u64 - below MIN" { //~ FAIL
+  let min = u64.MIN
+  let _ = min - 1
+}
+
+test "u64 * above MAX" { //~ FAIL
+  let max = u64.MAX
+  let _ = max * 2
+}

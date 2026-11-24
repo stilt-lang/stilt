@@ -1,0 +1,26 @@
+// logscan: reads a service's log from standard input, a line of text or of JSON per entry, and
+// prints what it found: the entries of each topic, level and host, their pace, histograms, what
+// the requests, logins, cache and jobs did, the changes, the alerts, the errors, and the first
+// entry of each kind as it reads back from its JSON. Its options keep some entries and leave out
+// the others, or print the entries kept as JSON instead of the report.
+
+use std.cli
+use std.io
+use codec
+use query
+use report
+use tally
+
+fn main() / io {
+  let q = match Result.of(|| try query.parse(cli.args())) {
+    Ok(q) => q
+    Err(why) => {
+      eprint(why)
+      exit(2)
+    }
+  }
+  var t = tally.new(q)
+  for (n, text) in io.read_lines().enumerate(1) { t.read(n, text) }
+  let out = if q.export { t.seen.map(|s| codec.write(s.entry)) } else { report.lines(t) }
+  for line in out { print(line) }
+}

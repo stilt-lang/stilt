@@ -1,0 +1,48 @@
+//~ rule: facts.guarding-tests, facts.divisors
+//~ run-output: "5 0 5 -1 5 7 5 9 5 0"
+
+// The negation of a test reaches the code after an `if` when each path of its
+// then-branch ends in `return`, `break`, `continue`, `raise` or a call of type `Never`.
+
+fn stop() -> Never { loop {} }
+
+fn nested(n: i64, d: i64, quiet: bool) -> i64 without panic {
+  if d == 0 {
+    if quiet { return 0 } else { return -1 }
+  }
+  n / d
+}
+
+fn matched(n: i64, d: i64, k: i64) -> i64 without panic {
+  if d == 0 {
+    match k {
+      0 => return 7,
+      _ => return 9,
+    }
+  }
+  n / d
+}
+
+fn never(n: i64, d: i64) -> i64 without panic {
+  if d == 0 { stop() }
+  n / d
+}
+
+fn raised(n: i64, d: i64) -> i64 / raise<str> without panic {
+  if d == 0 { raise "zero" }
+  n / d
+}
+
+fn skipped(n: i64, ds: List<i64>) -> i64 without panic {
+  var s = 0
+  for d in ds {
+    if d == 0 { continue }
+    s += n / d
+  }
+  s
+}
+
+fn main() / io {
+  let r = try raised(10, 2) catch _ because "the divisor is 2" => 0
+  print("{nested(10, 2, true)} {nested(10, 0, true)} {nested(10, 2, false)} {nested(10, 0, false)} {matched(10, 2, 0)} {matched(10, 0, 0)} {r} {matched(10, 0, 1)} {skipped(10, [0, 2])} {skipped(10, [0])}")
+}

@@ -1,0 +1,13 @@
+── UNEXPECTED CHARACTER ────────────────── E0002_backtick_string.lt:3:9  [E0002]
+
+Stilt writes a string in double quotes, and inserts a value as `{name}`:
+
+  3 │   print(`hello ${name}`)
+    │         ^
+
+Every string inserts the value of each `{…}` in it, as `"hello {name}"`.
+
+To fix it, write it in double quotes:
+
+  3 │   print("hello {name}")
+    │         ~      ~     ~

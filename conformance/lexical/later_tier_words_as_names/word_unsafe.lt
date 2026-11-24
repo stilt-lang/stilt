@@ -1,0 +1,3 @@
+fn f() {
+  let unsafe = 1 //~ ERROR E0100
+}

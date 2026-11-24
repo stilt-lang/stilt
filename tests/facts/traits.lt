@@ -1,0 +1,39 @@
+//~ tier: core
+
+type Score = { points: i64 }
+
+impl Eq for Score {
+  fn eq(self, other: Score) -> bool {
+    self.points / other.points == 1 //~ PANIC OVERFLOW
+  }
+}
+
+// `==` names the impl's `eq`.
+fn same(a: Score, b: Score) -> bool {
+  a == b //~ PANIC OVERFLOW
+}
+
+// Inside generic code, a call through a bound adds nothing; instantiating the function names
+// the impl's methods that its bounds require.
+fn equal<T: Eq>(a: T, b: T) -> bool { a == b }
+
+fn scores(a: Score, b: Score) -> bool {
+  equal(a, b) //~ PANIC OVERFLOW
+}
+
+trait Measured {
+  fn size(self) -> i64
+
+  fn share(self) -> i64 {
+    100 / self.size() //~ PANIC OVERFLOW
+  }
+}
+
+impl Measured for Score {
+  fn size(self) -> i64 { self.points }
+}
+
+// A trait's default method is named as any other method is.
+fn shared(s: Score) -> i64 {
+  s.share() //~ PANIC OVERFLOW
+}

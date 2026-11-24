@@ -1,0 +1,18 @@
+//~ rule: std.sets, traits.structural-impls, std.show-output
+//~ stdout:
+//~ | Set([3, 2, 5]) 3 true Set([3, 2, 5, 4]) Set([2]) Set([3, 5])
+//~ | Set([3, 5, 4]) false true
+//~ | true true Set([3, 5]) Set([1, 0])
+//~ | Set(["b", "a"]) ["b", "a"] false
+
+fn main() / io {
+  var a = Set.from_list([3, 1, 3, 2])
+  let b = Set.from_list([2, 4])
+  a.insert(5)
+  a.remove(1)
+  print("{a} {a.len()} {a.contains(2)} {a.union(b)} {a.intersection(b)} {a.difference(b)}")
+  print("{a.symmetric_difference(b)} {a.is_subset(b)} {b.is_disjoint(Set.from_list([7]))}")
+  print("{Set.from_list([1, 2]) == Set.from_list([2, 1])} {a != b} {a.filter(|x| x > 2)} {a.map(|x| x % 2)}")
+  let words = Set.from_list(["b", "a"])
+  print("{words} {words.to_list()} {Set.from_list([1]).is_empty()}")
+}

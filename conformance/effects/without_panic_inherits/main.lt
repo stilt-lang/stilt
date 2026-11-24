@@ -1,0 +1,6 @@
+//~ rule: effects.without-panic, facts.inference, facts.calls-through-function-values
+
+use lib
+use pure
+
+fn main() {}

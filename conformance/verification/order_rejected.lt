@@ -1,0 +1,137 @@
+//~ rule: values.index-reads, values.assignment-order, values.compound-assignment-order, effects.without-panic, facts.rules-of-acceptance, facts.guarding-tests, facts.guards, facts.keys, facts.closest-rule
+
+// No rule of acceptance proves these operations, each of which panics when it
+// runs: the runs of `order_*.lt` panic where these would.
+
+type Count = { n: i64 }
+
+fn bump(inout c: Count, by: i64) without panic { c.n += by }
+
+// The store reads the value `j` had when the index was evaluated, at least
+// 6, and no test gives `j >= 0` or `j < ys.len()`.
+fn store_old(n: i64) -> List<i64> without panic {
+  var ys = [0, 0, 0, 0, 0, 0]
+  var j = n
+  if j >= 6 { ys[j] = { j = 5; 1 } } //~ ERROR E0204
+  ys
+}
+
+fn store_cleared() -> List<i64> without panic {
+  var xs = [1, 2]
+  xs[0] = { xs.clear(); 1 } //~ ERROR E0204
+  xs
+}
+
+// A read checks the index against the length before the index's `push`.
+fn read_pushed() -> i64 without panic {
+  var xs = [1, 2, 3]
+  xs[{ xs.push(0); 3 }] //~ ERROR E0204
+}
+
+fn field_cleared() -> Map<str, Count> without panic {
+  var m: Map<str, Count> = Map.new()
+  m["a"] = Count { n: 1 }
+  m["a"].n = { m.clear(); 0 } //~ ERROR E0204
+  m
+}
+
+fn argument_cleared() -> Map<str, Count> without panic {
+  var m: Map<str, Count> = Map.new()
+  m["a"] = Count { n: 1 }
+  bump(inout m["a"], { m.clear(); 1 }) //~ ERROR E0204
+  m
+}
+
+// No test gives `i < xs.len()`.
+fn summed(n: i64) -> i64 without panic {
+  let xs = [7]
+  var s = 0
+  var i = 0
+  while i < n {
+    s += xs[i] //~ ERROR E0204
+    i += 1
+  }
+  s
+}
+
+// The test compares `i` with 3, not with the length, and the sum assigns `i`.
+fn shifted(n: i64) -> i64 without panic {
+  let xs = [1, 2, 3]
+  var i = n
+  if i >= 0 && i < 3 {
+    i = i + { i = 0; 1 }
+    xs[i] //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+// The scrutinee's `pop` leaves one element.
+fn matched_pop() -> i64 without panic {
+  var xs = [1, 2]
+  let got = match xs.pop() {
+    Some(x) => x
+    None => 0
+  }
+  got + xs[1] //~ ERROR E0204
+}
+
+fn grow_by(inout n: i64) -> bool without panic {
+  n += 5
+  true
+}
+
+// The guard takes the scrutinee's binding `inout`.
+fn guarded() -> i64 without panic {
+  let xs = [1, 2, 3]
+  var k = 0
+  let got = match k {
+    _ if grow_by(inout k) => 1
+    _ => 2
+  }
+  got + xs[k] //~ ERROR E0204
+}
+
+// An or-pattern's guard may run once for each way the pattern matches, and
+// each run pops.
+fn popped_twice() -> i64 without panic {
+  var xs = [1, 2]
+  match (0, 0) {
+    (0, _) | (_, 0) if { let _ = xs.pop(); xs.is_empty() } => xs[0] //~ ERROR E0204
+    _ => 0
+  }
+}
+
+fn empties(inout xs: List<i64>) -> bool without panic {
+  xs.clear()
+  true
+}
+
+// The right operand of `&&` takes the list `inout` after the left proves it
+// isn't empty.
+fn emptied(xs: List<i64>) -> i64 without panic {
+  var ys = xs
+  if !ys.is_empty() && empties(inout ys) { ys[0] } else { 0 } //~ ERROR E0204
+}
+
+type Oops = { code: i64 }
+
+fn drain(inout xs: List<i64>) -> i64 / raise<Oops> without panic {
+  xs.clear()
+  raise Oops { code: 1 }
+}
+
+// The `catch` arm runs after the call empties the list.
+fn caught() -> i64 without panic {
+  var xs = [1, 2, 3]
+  try drain(inout xs) catch Oops { code } => code + xs[0] //~ ERROR E0204
+}
+
+// The counter of `0..=hi` has no type, so it reaches 256, and the code after
+// the loop is reached.
+fn after_inclusive() -> i64 without panic {
+  let xs = [1]
+  let hi: u8 = 255
+  for _ in 0..=hi {}
+  xs[1] //~ ERROR E0204
+}

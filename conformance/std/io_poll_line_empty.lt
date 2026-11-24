@@ -1,0 +1,12 @@
+//~ rule: std.io
+//~ run-output: "None None None"
+
+use std.io
+
+// With no input, nothing is ever waiting: before the end of the input, and after `read_line`
+// has seen it.
+fn main() / io {
+  let first = io.poll_line()
+  let read = io.read_line()
+  print("{first} {read} {io.poll_line()}")
+}

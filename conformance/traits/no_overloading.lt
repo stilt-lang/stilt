@@ -1,0 +1,26 @@
+//~ rule: traits.ambiguous-methods, traits.qualified-calls, traits.no-overloading
+
+trait Store {
+  fn put(self, x: i64) -> str
+}
+
+trait Label {
+  fn put(self, x: str) -> str
+}
+
+type Shelf = {}
+
+impl Store for Shelf {
+  fn put(self, x: i64) -> str { "number" }
+}
+
+impl Label for Shelf {
+  fn put(self, x: str) -> str { "text" }
+}
+
+fn main() / io {
+  let s = Shelf {}
+  print(s.put(1)) //~ ERROR E0319
+  print(Store.put(s, 1))
+  print(Label.put(s, "x"))
+}

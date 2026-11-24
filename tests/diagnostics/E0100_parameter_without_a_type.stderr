@@ -1,0 +1,9 @@
+── SYNTAX ERROR ───────────────── E0100_parameter_without_a_type.lt:1:9  [E0100]
+
+Stilt writes a parameter's type after it, as `a: i64`:
+
+  1 │ fn add(a, b) { a + b }
+    │         ^
+
+Types are inferred inside a body, never in a signature, so a reader sees what a
+function takes.

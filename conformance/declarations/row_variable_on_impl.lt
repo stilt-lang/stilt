@@ -1,0 +1,5 @@
+//~ rule: syntax.lowercase-generics, effects.row-variables
+
+type Wrapper<T> = { inner: T }
+
+impl<e> Wrapper<i64> {} //~ ERROR E0100

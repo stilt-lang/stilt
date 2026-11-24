@@ -1,0 +1,5 @@
+//~ rule: traits.required-traits, traits.built-in-impls
+
+fn same(f: fn(), g: fn()) -> bool {
+  f == g //~ ERROR E0318
+}

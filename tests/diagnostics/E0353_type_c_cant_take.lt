@@ -1,0 +1,4 @@
+use std.c
+
+/// zlib's CRC-32 of `len` bytes from `buf`, continuing `crc`.
+pub extern fn crc32(crc: u64, buf: List<u8>, len: u32) -> u64

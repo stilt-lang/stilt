@@ -1,0 +1,7 @@
+//~ rule: program.what-use-binds, program.qualified-names
+
+use std.cli
+
+fn count() -> i64 / io {
+  args().len() //~ ERROR E0211
+}

@@ -1,0 +1,6 @@
+//~ rule: types.undecided-type-location
+
+fn count() -> i64 {
+  let xs = [] //~ ERROR E0312
+  xs.len()
+}

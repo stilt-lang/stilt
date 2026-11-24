@@ -1,0 +1,26 @@
+//~ rule: program.panic-report, std.finding-keys
+//~ stdout:
+//~ | 2 false
+//~ stderr:
+//~ | panic: explicit: "eq 2 2"
+//~ |   at map_compares_only_equal_hashes.lt:12:38
+//~ panic: explicit
+
+type Key = { id: i64 }
+
+impl Eq for Key {
+  fn eq(self, other: Self) -> bool { panic("eq {self.id} {other.id}") }
+}
+
+impl Hash for Key {
+  fn hash(self) -> u64 { self.id.wrap_to_u64() }
+}
+
+fn main() / io {
+  var m = Map.new()
+  m.insert(Key { id: 1 }, "a")
+  m[Key { id: 2 }] = "b"
+  let absent = Key { id: 3 }
+  print("{m.len()} {m.contains(absent)}")
+  let _ = m.get(Key { id: 2 })
+}

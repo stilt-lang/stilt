@@ -1,0 +1,64 @@
+//~ rule: syntax.heads, syntax.expression-parentheses, expressions.heads, expressions.head-contents, effects.catch-syntax
+//~ stdout:
+//~ | none
+//~ | 3
+//~ | origin
+//~ | 2
+//~ | 1 2
+//~ | 7
+//~ | 8
+//~ | block
+//~ | if
+//~ | match
+//~ | loop
+//~ | while
+//~ | for
+//~ | catch
+//~ | short
+
+type Point = { x: i64, y: i64 }
+type Bag = { items: List<i64> }
+type Failure = | Bad
+
+const MAX: i64 = 3
+
+fn check(n: i64) -> bool / raise<Failure> {
+  if n > 0 { raise Bad }
+  true
+}
+
+fn main() / io {
+  let x: Option<i64> = None
+  if x == None { print("none") }
+  var n = 0
+  while n < MAX { n += 1 }
+  print("{n}")
+  let p = Point { x: 0, y: 0 }
+  if p == (Point { x: 0, y: 0 }) { print("origin") }
+  var k = 0
+  while k < (Bag { items: [1, 2] }).items.len() { k += 1 }
+  print("{k}")
+  match (Point { x: 1, y: 2 }) {
+    Point { x, y } => print("{x} {y}")
+  }
+  for i in (Bag { items: [7, 8] }).items { print("{i}") }
+  if ({ n == 3 }) { print("block") }
+  if (if n > 0 { true } else { false }) { print("if") }
+  if (match n {
+    3 => true
+    _ => false
+  }) { print("match") }
+  match (loop { break }) {
+    () => print("loop")
+  }
+  match (while false {}) {
+    () => print("while")
+  }
+  match (for j in [1] {}) {
+    () => print("for")
+  }
+  if (try check(n) catch {
+    Bad => true
+  }) { print("catch") }
+  if try check(0) catch Bad => false { print("short") }
+}

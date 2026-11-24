@@ -1,0 +1,7 @@
+use audit
+use logger
+
+fn main() / io {
+  logger.console().log("a")
+  audit.audit("b")
+}

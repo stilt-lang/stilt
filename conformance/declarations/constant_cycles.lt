@@ -1,0 +1,36 @@
+//~ rule: declarations.constant-cycles, errors.several-places
+
+const A: i64 = B
+const B: i64 = A //~ ERROR E0327
+const PAIR: (i64, i64) = (1, PAIR.0) //~ ERROR E0327 ERROR E0326
+
+type Grid = { size: i64 }
+
+impl Grid {
+  const SIZE: i64 = DEFAULT
+}
+
+const DEFAULT: i64 = Grid.SIZE //~ ERROR E0327
+const AFTER: i64 = A
+const ALONE: i64 = ALONE //~ ERROR E0327
+
+trait Limits {
+  const MAX: i64
+}
+
+type Gauge = { level: i64 }
+
+// A cycle may pass through the constant of a trait impl.
+impl Limits for Gauge {
+  const MAX: i64 = TOP
+}
+
+const TOP: i64 = Gauge.MAX //~ ERROR E0327
+
+type Node = | Leaf | Link(Node) | Both(Node, i64)
+
+// A cycle that refers to another cycle is still a cycle of its own.
+const FIRST: i64 = SECOND
+const SECOND: i64 = FIRST //~ ERROR E0327
+const OUTER: Node = Both(INNER, FIRST)
+const INNER: Node = Link(OUTER) //~ ERROR E0327

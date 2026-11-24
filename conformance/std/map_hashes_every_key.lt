@@ -1,0 +1,20 @@
+//~ rule: program.panic-report, std.finding-keys
+//~ stdout:
+//~ | start
+//~ stderr:
+//~ | panic: explicit: "hash 7"
+//~ |   at map_hashes_every_key.lt:12:26
+//~ panic: explicit
+
+type Key = { id: i64 }
+
+impl Hash for Key {
+  fn hash(self) -> u64 { panic("hash {self.id}") }
+}
+
+fn main() / io {
+  let m: Map<Key, i64> = Map.new()
+  print("start")
+  let key = Key { id: 7 }
+  print("{m.contains(key)}")
+}

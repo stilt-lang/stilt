@@ -1,0 +1,5 @@
+use csv
+
+fn main() / io {
+  csv.each(["a", "b"], |row| print(row))
+}

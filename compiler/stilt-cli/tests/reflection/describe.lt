@@ -1,0 +1,38 @@
+// The Reference's example: a function that describes any value by its shape, through `comptime
+// match` and `comptime for`, which run as the forms they annotate (meta.erasure).
+
+use std.meta
+
+type Point = { x: i64, y: i64 }
+type Figure = | Dot | Circle(Point, f64)
+
+fn describe<T>(value: T) -> str {
+  comptime match T.shape() {
+    Int(n) => n.text(value)
+    Float(x) => "{x.get(value)}"
+    Record(fields) => {
+      var parts: List<str> = []
+      comptime for f in fields { parts.push("{f.name()}={describe(f.get(value))}") }
+      "\{{", ".join(parts)}}"
+    }
+    Tuple(fields) => {
+      var parts: List<str> = []
+      comptime for f in fields { parts.push(describe(f.get(value))) }
+      "({", ".join(parts)})"
+    }
+    Variants(cases) => {
+      var text = ""
+      comptime for c in cases {
+        if let Some(payload) = c.get(value) { text = "{c.name()}{describe(payload)}" }
+      }
+      text
+    }
+    _ => T.name()
+  }
+}
+
+fn main() / io {
+  print(describe(Point { x: 1, y: 2 }))
+  print(describe(Circle(Point { x: 0, y: 3 }, 1.5)))
+  print(describe(Dot))
+}

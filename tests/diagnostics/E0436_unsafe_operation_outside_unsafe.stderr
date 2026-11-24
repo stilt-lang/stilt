@@ -1,0 +1,11 @@
+── UNSAFE OPERATION OUTSIDE `unsafe` ── E0436_unsafe_operation_outside_unsafe.lt:6:23  [E0436]
+
+This is an unsafe operation, which only an `unsafe because "…" { … }` block may
+hold:
+
+  6 │   text.with_c_str(|s| strlen(s))
+    │                       ^^^^^^^^^
+
+Calling C, or reading through a pointer, can break every guarantee Stilt makes,
+so it stands inside `unsafe because "…" { … }`, whose reason says why the code
+is sound.

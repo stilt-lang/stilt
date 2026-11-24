@@ -1,0 +1,9 @@
+//~ rule: program.visibility
+
+use shapes
+
+fn main() / io {
+  let s = shapes.Shape.unit()
+  print("{s.area()}")
+  print("{s.scale()}") //~ ERROR E0213
+}

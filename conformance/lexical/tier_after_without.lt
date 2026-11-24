@@ -1,0 +1,3 @@
+//~ rule: lexical.contextual-keywords.as-names, program.header-limits
+module main
+  without advanced //~ ERROR E0100

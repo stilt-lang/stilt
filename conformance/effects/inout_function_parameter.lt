@@ -1,0 +1,19 @@
+//~ rule: effects.inout-function-arguments, effects.non-escaping-parameters
+//~ stdout:
+//~ | first
+//~ | second
+
+// An `inout` parameter is kept by its caller, so its row is exact and the
+// function may store it.
+fn swap_in(inout f: fn() / io) -> List<fn() / io> {
+  let old = [f]
+  f = || print("second")
+  old
+}
+
+fn main() / io {
+  var g: fn() / io = || print("first")
+  let old = swap_in(inout g)
+  for h in old { h() }
+  g()
+}

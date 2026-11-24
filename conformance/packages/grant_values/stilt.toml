@@ -1,0 +1,4 @@
+[dependencies]
+# `net` is a capability that `may` grants (facts.capability-grants), and `sockets` names nothing.
+csv = { path = "deps/csv", may = ["sockets"] } # //~ ERROR E0600
+json = { path = "deps/json", may = ["io", "io"] } # //~ ERROR E0600

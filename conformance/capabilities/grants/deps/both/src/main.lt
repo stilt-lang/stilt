@@ -1,0 +1,7 @@
+use std.fs
+
+// `io` grants every capability.
+pub fn checked(path: str) -> bool / io {
+  if fs.exists(path) { print("found") }
+  true
+}

@@ -1,0 +1,14 @@
+── SYNTAX ERROR ──────────────── E0100_rust_reference_parameter.lt:1:14  [E0100]
+
+Stilt has no references: a parameter takes a value:
+
+  1 │ fn len_of(s: &str) -> i64 { s.len() }
+    │              ^
+
+A parameter takes a value, which the function can't change. One written `inout`
+changes the caller's variable, which the call marks `inout` too.
+
+To fix it, take the value:
+
+  1 │ fn len_of(s: &str) -> i64 { s.len() }
+    │              -

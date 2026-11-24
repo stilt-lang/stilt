@@ -1,0 +1,12 @@
+//~ rule: expressions.consumed-arguments
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(2)
+  ys
+}
+
+fn call() -> List<i64> {
+  let xs = [1]
+  grown(let xs) //~ ERROR E0100
+}

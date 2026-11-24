@@ -1,0 +1,27 @@
+//~ tier: advanced
+//~ rule: syntax.statements, projections.call-is-place
+//~ run-output: "[1, 2, 1, 2, 9] [1] 5"
+
+use std.view
+
+fn items(inout xs: List<i64>) -> inout List<i64> {
+  yield xs
+}
+
+fn count(xs: List<i64>) -> i64 {
+  xs.len()
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  // A `for` over a projection's call iterates a copy, so the body may change `xs`.
+  for x in items(inout xs) {
+    xs.push(x)
+  }
+  // A view of a projection's call has a temporary as its source, so `xs` may change while it lives.
+  let v = view.View.of(items(inout xs), 0, 1)
+  xs.push(9)
+  // A projection's call passed to a `let` parameter is read.
+  let n = count(items(inout xs))
+  print("{xs} {v} {n}")
+}

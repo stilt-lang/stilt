@@ -1,0 +1,45 @@
+//~ rule: traits.declaring-trait, traits.impl-members, traits.method-resolution, traits.qualified-calls
+//~ stdout:
+//~ | hello ana
+//~ | bonjour bo
+//~ | hello ana
+//~ | bonjour bo
+//~ | 1 2
+//~ | bonjour bo
+
+trait Greeter {
+  fn name(self) -> str
+
+  fn greet(self) -> str { "hello {self.name()}" }
+
+  fn pick<T>(self, a: T, b: T) -> T { a }
+}
+
+type English = { who: str }
+
+type French = { who: str }
+
+impl Greeter for English {
+  fn name(self) -> str { self.who }
+}
+
+impl Greeter for French {
+  fn name(self) -> str { self.who }
+
+  fn greet(self) -> str { "bonjour {self.name()}" }
+
+  fn pick<U>(self, a: U, b: U) -> U { b }
+}
+
+fn welcome<T: Greeter>(x: T) -> str { x.greet() }
+
+fn main() / io {
+  let e = English { who: "ana" }
+  let f = French { who: "bo" }
+  print(e.greet())
+  print(f.greet())
+  print(welcome(e))
+  print(welcome(f))
+  print("{e.pick(1, 2)} {f.pick(1, 2)}")
+  print(Greeter.greet(f))
+}

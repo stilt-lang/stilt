@@ -1,0 +1,11 @@
+── `when` IN A LAZY VALUE'S FUNCTION ── E0435_when_in_a_lazy_values_function.lt:7:20  [E0435]
+
+A `Lazy`'s function must not wait, but this `when` holds shared values; read
+them before `Lazy.new`:
+
+  7 │   lazy.Lazy.new(|| when rates { amount * rates.euro })
+    │                 ───────────────────────────────────── `Lazy.new` computes its value with this function
+    │                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A `Lazy` computes its value whenever it is first asked for, so its function must
+not wait for shared values. Read them before, and capture the copy.

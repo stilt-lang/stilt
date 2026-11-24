@@ -1,0 +1,17 @@
+//~ rule: expressions.loop-types, declarations.never
+//~ run-output: "5 3"
+
+fn find_five() -> i64 {
+  var i = 0
+  loop {
+    i += 1
+    if i == 5 { return i }
+  }
+}
+
+fn first_big(xs: List<i64>) -> i64 {
+  for x in xs { if x > 2 { return x } }
+  0
+}
+
+fn main() / io { print("{find_five()} {first_big([1, 3, 4])}") }

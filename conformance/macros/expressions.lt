@@ -1,0 +1,61 @@
+//~ tier: advanced
+//~ rule: syntax.macros, syntax.macro-uses, macros.syntax-declarations, macros.patterns, macros.templates, macros.uses, macros.matching, macros.expansion, macros.nested-expansions
+//~ stdout:
+//~ | no
+//~ | a
+//~ | b
+//~ | c
+//~ | none
+//~ | one 7
+//~ | many 3
+//~ | 6
+//~ | 10
+//~ | hi
+//~ | hi
+
+syntax unless {
+  ($cond: expr) $body: block => if !($cond) $body
+}
+
+syntax print_all {
+  ($($x: expr);*) => { $(print($x));* }
+}
+
+// The first arm that matches is used.
+syntax count {
+  () => "none"
+  ($x: expr) => "one {$x}"
+  ($($x: expr),+) => "many {[$($x),+].len()}"
+}
+
+// A fragment stays one form, as if parenthesized.
+syntax double {
+  ($x: expr) => $x * 2
+}
+
+// A macro may use itself.
+syntax add_all {
+  ($x: expr) => $x
+  ($x: expr, $($rest: expr),+) => $x + add_all!($($rest),+)
+}
+
+// A fragment named twice is evaluated twice.
+syntax twice {
+  ($e: expr) => {
+    $e
+    $e
+  }
+}
+
+fn main() / io {
+  unless!(1 > 2) { print("no") }
+  unless!(2 > 1) { print("yes") }
+  print_all!("a"; "b"; "c")
+  print_all!()
+  print(count!())
+  print(count!(7))
+  print(count!(1, 2, 3))
+  print("{double!(1 + 2)}")
+  print("{add_all!(1, 2, 3, 4)}")
+  twice!(print("hi"))
+}

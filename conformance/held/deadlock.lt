@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: shared.when-on-value-already-held
+//~ panic: deadlock
+//~ panic-at: deadlock.lt:12:36
+//~ stdout:
+//~ | before 1
+
+use std.sync
+
+type Counter = { n: i64 }
+
+fn bump(c: sync.Shared<Counter>) { when c { c.n += 1 } }
+
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 0 })
+  let f = || bump(c)
+  f()
+  // A call through a function value isn't a site of `locks`, so only the run sees the
+  // `when` inside this one.
+  when c {
+    print("before {c.n}")
+    f()
+    print("not reached")
+  }
+}

@@ -1,0 +1,10 @@
+//~ rule: std.option-result-and-ordering
+//~ run-output: "7 8 9 10 [\"a\"]"
+
+fn main() / io {
+  let some = "7".to_i64()
+  let ok: Result<i64, str> = Ok(9)
+  let parsed = "10".to_i64().ok_or("not a number")
+  let words: Option<List<str>> = Some(["a"])
+  print("{some.unwrap()} {Some(8).expect("eight")} {ok.unwrap()} {parsed.expect("ten")} {words.unwrap()}")
+}

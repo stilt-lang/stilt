@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────────── E0100_python_and.lt:1:53  [E0100]
+
+Stilt writes `&&`, not `and`:
+
+  1 │ fn both(ready: bool, allowed: bool) -> bool { ready and allowed }
+    │                                                     ^^^
+
+`&&`, `||` and `!` work on `bool`s.
+
+To fix it, write `&&`:
+
+  1 │ fn both(ready: bool, allowed: bool) -> bool { ready && allowed }
+    │                                                     ~~

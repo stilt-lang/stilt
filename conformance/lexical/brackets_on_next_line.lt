@@ -1,0 +1,10 @@
+//~ rule: lexical.terminator-insertion, expressions.block-value
+fn id(x: i64) -> i64 { x }
+
+fn first(xs: List<i64>) -> i64 {
+  let f = id
+  (1) //~ ERROR E0322
+  let v = xs
+  [0] //~ ERROR E0322
+  0
+}

@@ -1,0 +1,42 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.with, handlers.rows-pass-effects-on
+//~ run-output: "54"
+
+// Effekt, examples/pos/stream_push.effekt: `range` emits 1 to 9, `map` handles each emission by
+// emitting its image on the handler outside it, and `sum` adds what reaches it: 2 + 3 + … + 10
+// = 54. Effekt's `sum` adds each value to a local variable that its handler assigns; here the
+// handler takes control and adds each value to what the rest of the stream gives, which ends
+// with 0.
+
+effect Emit {
+  fn emit(n: i64)
+}
+
+fn sum(stream: fn() / Emit) -> i64 {
+  let adds = handler Emit -> i64 {
+    fn emit(n: i64) { n + resume() }
+  }
+  with adds {
+    stream()
+    0
+  }
+}
+
+fn map(stream: fn() / Emit, escaping f: fn(i64) -> i64) / Emit {
+  let images = handler Emit {
+    fn emit(n: i64) { Emit.emit(f(n)) }
+  }
+  with images { stream() }
+}
+
+fn range(from: i64, to: i64) / Emit {
+  var n = from
+  while n < to {
+    Emit.emit(n)
+    n += 1
+  }
+}
+
+fn main() / io {
+  print("{sum(|| map(|| range(1, 10), |n| n + 1))}")
+}

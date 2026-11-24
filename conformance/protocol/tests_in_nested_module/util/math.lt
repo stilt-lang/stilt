@@ -1,0 +1,8 @@
+/// Doubles a number.
+/// ex: double(3) == 6 //~ PASS
+pub fn double(x: i64) -> i64 { x * 2 }
+
+// double(1) //~ WARN W0001
+test "fails" { //~ FAIL
+  assert double(1) == 3
+}

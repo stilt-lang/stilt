@@ -1,0 +1,27 @@
+// The timeline: for each five minutes of the log that held entries, the entries of each topic,
+// a column for each topic of `entry.TOPICS`.
+
+use events.entry
+
+/// The timeline's head, then a line for each five minutes that held an entry, in the order they
+/// first held one: their start, and the entries of each topic in them.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  var head = "time "
+  for topic in entry.TOPICS { head = "{head}{topic:>7}" }
+  var out = ["== timeline ==", head]
+  for (_, of) in es.group_by(|e| (e.at.date.text(), e.at.hour, e.at.minute / 5)) {
+    out.push(row(of))
+  }
+  out
+}
+
+// The line of five minutes' entries: their start, and the entries of each topic.
+fn row(of: List<entry.Entry>) -> str {
+  let first = of[0].at
+  var line = "{first.hour:0>2}:{first.minute / 5 * 5:0>2}"
+  for topic in entry.TOPICS {
+    let n = of.count(|e| e.event.topic() == topic)
+    line = "{line}{n:>7}"
+  }
+  line
+}

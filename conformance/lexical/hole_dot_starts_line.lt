@@ -1,0 +1,6 @@
+//~ rule: lexical.continuation-lines, types.hole-before-dot, expressions.block-value
+
+fn size(s: str) -> i64 {
+  s //~ ERROR E0322
+  ?.len() //~ ERROR E0312
+}

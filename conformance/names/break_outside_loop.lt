@@ -1,0 +1,11 @@
+//~ rule: expressions.break-and-continue
+
+fn f() {
+  break //~ ERROR E0216
+}
+
+fn g(xs: List<i64>) {
+  for x in xs {
+    let skip = || continue //~ ERROR E0216
+  }
+}

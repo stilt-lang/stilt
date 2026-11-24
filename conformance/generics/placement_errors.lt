@@ -1,0 +1,22 @@
+//~ tier: meta
+//~ rule: syntax.lowercase-generics, syntax.value-arguments, syntax.polymorphic-function-types, generics.value-parameter-positions, generics.value-arguments
+
+use std.array
+
+// A trait's, an effect's and a polymorphic function type's generics are
+// type parameters only.
+trait Sized<n: i64> {} //~ ERROR E0100
+
+effect Count<n: i64> { //~ ERROR E0100
+  fn tick()
+}
+
+fn call(g: fn<n: i64>(array.Array<i64, n>)) {} //~ ERROR E0100
+
+// A pack is a list of types.
+fn packed<..n: i64>() {} //~ ERROR E0100
+
+// A value argument is never computed.
+fn grow<n: i64>(a: array.Array<i64, n + 1>) {} //~ ERROR E0100
+
+fn main() {}

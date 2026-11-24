@@ -1,0 +1,9 @@
+//~ rule: lexical.terminator-positions, lexical.terminators-never-replace-commas, syntax.grammar-errors
+type Point = { x: i64, y: i64 }
+
+fn origin() -> Point {
+  Point {
+    x: 0 //~ ERROR E0100
+    y: 0
+  }
+}

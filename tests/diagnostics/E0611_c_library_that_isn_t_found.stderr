@@ -1,0 +1,10 @@
+── C LIBRARY THAT ISN'T FOUND ────────────────────────── stilt.toml:3:9  [E0611]
+
+The C library `zlib` isn't found: the system's loader finds no libzlib:
+
+  3 │ link = ["zlib"]
+    │         ^^^^^^
+
+The system's loader finds each library of `link` as `libNAME.dylib` on macOS and
+`libNAME.so` on Linux. Install the library, or check its name: `link = ["z"]`
+names zlib.

@@ -1,0 +1,33 @@
+//~ rule: std.io
+//~ stdin: "one\ntwo\nthree\nfour\nfive\nsix\n"
+//~ stdout:
+//~ | Some("one")
+//~ | two
+//~ | Some("three")
+//~ | four
+//~ | ["five\nsix\n"]
+//~ | None None
+
+use std.clock
+use std.io
+
+// The protocol doesn't say when stdin arrives, so a poll that gives `None` is asked again, for a
+// line that the input holds.
+fn next() -> str / io {
+  loop {
+    match io.poll_line() {
+      Some(line) => return line
+      None => clock.sleep_ms(1)
+    }
+  }
+}
+
+// `poll_line`, `read_line` and `read_all` read one stream, so none loses a line to another.
+fn main() / io {
+  print("{io.read_line()}")
+  print(next())
+  print("{io.read_line()}")
+  print(next())
+  print("{[io.read_all()]}")
+  print("{io.poll_line()} {io.read_line()}")
+}

@@ -1,0 +1,19 @@
+//~ rule: std.io
+//~ stdout:
+//~ | one
+//~ | two, three
+//~ | four
+//~ stderr:
+//~ | err line
+
+use std.io
+
+fn main() / io {
+  print("one")
+  io.write("two, ")
+  io.write("three")
+  print("")
+  io.ewrite("err ")
+  io.ewrite("line\n")
+  print("four")
+}

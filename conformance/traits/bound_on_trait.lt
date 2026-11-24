@@ -1,0 +1,5 @@
+//~ rule: syntax.bounds-placement, traits.bounds
+
+trait Sorted: Ord { //~ ERROR E0100
+  fn smallest(self) -> i64
+}

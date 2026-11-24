@@ -1,0 +1,31 @@
+//~ rule: std.process, std.process-runs, std.process-starting
+//~ stdout:
+//~ | 3 ["out\n", "err\n"]
+//~ | 0 ["a\nb"]
+//~ | hi unset
+//~ | ["/\n"]
+//~ | ["�x"]
+//~ | -9
+//~ | 200000
+
+use std.io
+use std.process
+
+fn main() / {io, raise<io.IoError>} {
+  let out = try process.run("sh", ["-c", "printf 'out\\n'; printf 'err\\n' >&2; exit 3"])
+  print("{out.status} {[out.stdout, out.stderr]}")
+  let cat = try process.Command.new("cat").with_input("a\nb").output()
+  print("{cat.status} {[cat.stdout]}")
+  let sh = process.Command.new("sh").with_env("GREETING", "hi")
+  let set = try sh.with_args(["-c", "printf %s \"$GREETING\""]).output()
+  let removed = try sh.without_env("GREETING").with_args(["-c", "printf %s \"$\{GREETING-unset}\""]).output()
+  print("{set.stdout} {removed.stdout}")
+  let here = try process.Command.new("pwd").with_dir("/").output()
+  print("{[here.stdout]}")
+  let bytes = try process.run("printf", ["\\377x"])
+  print("{[bytes.stdout]}")
+  let killed = try process.run("sh", ["-c", "kill -9 $$"])
+  print("{killed.status}")
+  let long = try process.Command.new("cat").with_input("x".repeat(200000)).output()
+  print("{long.stdout.len()}")
+}

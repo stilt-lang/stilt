@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────── E0100_several_values_after_return.lt:2:15  [E0100]
+
+Stilt returns several values as one tuple, as `return (a, b)`:
+
+  2 │   return a / 2, b / 2
+    │               ^
+
+A tuple groups values in parentheses. A failure is raised with `raise`, not
+returned beside the result.
+
+To fix it, return a tuple:
+
+  2 │   return (a / 2, b / 2)
+    │          +            +

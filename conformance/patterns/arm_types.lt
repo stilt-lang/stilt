@@ -1,0 +1,22 @@
+//~ rule: types.expected-types, patterns.arm-types
+
+fn label(b: bool) -> i64 {
+  match b {
+    true => 1
+    false => "no" //~ ERROR E0311
+  }
+}
+
+fn checked(b: bool) -> i64 {
+  match b {
+    true => 1
+    false => panic("unchecked")
+  }
+}
+
+fn never_first(o: Option<str>) -> str {
+  match o {
+    None => return "none"
+    Some(s) => s
+  }
+}

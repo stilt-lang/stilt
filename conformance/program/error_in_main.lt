@@ -1,0 +1,8 @@
+//~ rule: program.programs-with-errors, program.bodies-with-errors
+//~ panic: check-error
+//~ panic-at: error_in_main.lt:5:4
+
+fn main() / io {
+  print("never")
+  let n: i64 = "one" //~ ERROR E0311
+}

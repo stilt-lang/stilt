@@ -1,0 +1,11 @@
+── A VIEW OUTLIVES ITS SOURCE ── E0422_a_view_outlives_its_source.lt:6:3  [E0422]
+
+This view is returned, but it views `ys`, a local of this function:
+
+  5 │   let v = view.View.all(ys)
+    │       ─ `v` views `ys` from here
+  6 │   v
+    │   ^
+
+The view reads a local that is gone when the function returns. Return a value of
+its own, or view a parameter instead.

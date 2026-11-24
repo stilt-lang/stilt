@@ -1,0 +1,36 @@
+//~ tier: advanced
+//~ rule: polymorphism.instantiation, polymorphism.arguments, traits.bound-arguments
+
+fn both(f: fn<T: Show>(T) -> str, n: i64, s: str) -> str { "{f(n)} and {f(s)}" }
+
+fn numbered(n: i64) -> str { "{n}" }
+
+fn sorted_text<T: Ord + Show>(x: T) -> str { "{x}" }
+
+fn same(f: fn<T>(T) -> T) -> i64 { f(1) }
+
+fn main() {
+  // `numbered` fixes `T` to `i64`.
+  let a = both(numbered, 1, "a") //~ ERROR E0311
+  let b = both(|x: i64| "{x}", 1, "a") //~ ERROR E0311
+  // The expected type gives `T` only `Show`.
+  let c = both(sorted_text, 1, "a") //~ ERROR E0318
+  let d = both(|x| "{x < x}", 1, "a") //~ ERROR E0318
+  // The closure's result is its rigid parameter, not a `str`.
+  let e = both(|x| x, 1, "a") //~ ERROR E0311
+  // `|x| 0` returns an `i64` where `T` is expected.
+  let f = same(|x| 0) //~ ERROR E0311
+}
+
+trait Convert<T> {
+  fn convert(self) -> T
+}
+
+type Name = { text: str }
+
+impl Convert<str> for Name {
+  fn convert(self) -> str { self.text }
+}
+
+// Each instantiation gives the bound's trait its argument: `Name`'s impl is `Convert<str>`.
+fn measured(f: fn<T: Convert<i64>>(T) -> i64, n: Name) -> i64 { f(n) } //~ ERROR E0318

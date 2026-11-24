@@ -1,0 +1,1 @@
+fn f(n: i64) -> str { "{n:xx}" } //~ ERROR E0007

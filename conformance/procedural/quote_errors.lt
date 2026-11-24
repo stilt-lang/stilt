@@ -1,0 +1,25 @@
+//~ tier: meta
+//~ rule: macros.splices, macros.spreads, macros.quote-hygiene
+
+use std.meta
+
+fn listed() -> meta.Expr {
+  let xs = [1, 2]
+  quote { [$xs] } //~ ERROR E0311
+}
+
+// The quote's `n` names nothing of the module: the fix writes `$n`.
+fn local() -> meta.Expr {
+  let n = 3
+  quote { n + 1 } //~ ERROR E0211
+}
+
+fn expr_as_pattern(e: meta.Expr) -> meta.Pattern {
+  quote pattern { Some($e) } //~ ERROR E0311
+}
+
+fn text_as_type(s: str) -> meta.Type {
+  quote type { List<$s> } //~ ERROR E0311
+}
+
+fn main() {}

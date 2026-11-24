@@ -1,0 +1,5 @@
+use std.view
+
+fn count(v: view.View<i64>) -> i64 { v.len() }
+
+fn main() {}

@@ -1,0 +1,10 @@
+── MISMATCHED TYPES ───────── E0311_shift_amount_not_an_integer.lt:1:50  [E0311]
+
+Expected an integer type for the shift amount, found `f64`:
+
+  1 │ fn mask(bits: u64, square: f64) -> u64 { bits << square }
+    │                                                  ^^^^^^
+
+Stilt never converts a value to another type on its own. Give a value of the
+expected type, convert it with a method such as `to_f64()`, or change what
+expects it.

@@ -1,0 +1,47 @@
+//~ tier: meta
+//~ rule: syntax.lowercase-generics, generics.value-parameters, generics.value-parameters-determined, generics.value-parameters-in-body, generics.value-parameter-inference, generics.arrays
+//~ stdout:
+//~ | 3 200 on
+//~ | 7 5
+//~ | 12
+
+use std.array
+
+// A value parameter that none of its type's fields names.
+type Mod<p: u64> = { value: u64 }
+
+// One that a field's type names.
+type Buffer<n: i64> = { items: array.Array<i64, n> }
+
+type Small<k: u8> = { tag: str }
+
+type Flag<on: bool> = { name: str }
+
+// An impl's value parameter, which its methods read.
+impl<p: u64> Mod<p> {
+  fn modulus(self) -> u64 { p }
+  fn plus(self, other: Mod<p>) -> Mod<p> { Mod { value: (self.value + other.value) % p } }
+}
+
+fn size<n: i64>(b: Buffer<n>) -> i64 { n }
+
+fn tag<k: u8>(s: Small<k>) -> u8 { k }
+
+fn state<on: bool>(f: Flag<on>) -> str { if on { "on" } else { "off" } }
+
+// A row variable and a value parameter in one list.
+fn total<e, n: i64>(b: Buffer<n>, escaping f: fn(i64) -> i64 / e) -> i64 / e {
+  var sum = 0
+  for x in b.items { sum = sum + f(x) }
+  sum
+}
+
+fn main() / io {
+  let b: Buffer<3> = Buffer { items: [1, 2, 3] }
+  let s: Small<200> = Small { tag: "s" }
+  let f: Flag<true> = Flag { name: "f" }
+  print("{size(b)} {tag(s)} {state(f)}")
+  let m: Mod<7> = Mod { value: 6 }
+  print("{m.modulus()} {m.plus(m).value}")
+  print("{total(b, |x| x * 2)}")
+}

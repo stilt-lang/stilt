@@ -1,0 +1,9 @@
+── FIELD GIVEN TWICE OR LEFT OUT ── E0316_field_given_twice_or_left_out.lt:3:23  [E0316]
+
+This literal lacks the field `total`:
+
+  3 │ fn first() -> Order { Order { id: 1 } }
+    │                       ^^^^^
+
+A record literal gives every field once, and a record pattern names every field,
+or ends with `..` to leave the others out.

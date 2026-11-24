@@ -1,0 +1,19 @@
+//~ rule: traits.bounded-blocks
+
+type Pair<T> = { a: T, b: T }
+
+impl<T: Ord> Pair<T> {
+  fn larger(self) -> T { if self.a < self.b { self.b } else { self.a } }
+}
+
+impl<T> Pair<T> {
+  fn swap(self) -> Pair<T> { Pair { a: self.b, b: self.a } }
+}
+
+fn biggest(p: Pair<i64>) -> i64 { p.swap().larger() }
+
+fn callbacks(p: Pair<fn()>) -> Pair<fn()> {
+  let q = p.swap()
+  let _ = q.larger() //~ ERROR E0318
+  q
+}

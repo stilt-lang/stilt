@@ -1,0 +1,25 @@
+//~ rule: effects.non-escaping-parameters, effects.marking
+
+fn halve(n: i64) -> i64 / raise<str> {
+  if n % 2 != 0 { raise "{n} is odd" }
+  n / 2
+}
+
+fn twice(x: i64, f: fn(i64) -> i64) -> i64 { f(f(x)) }
+
+fn quiet(n: i64) -> i64 { twice(n, |x| x + 1) }
+
+fn unmarked(n: i64) -> i64 / raise<str> {
+  twice(n, halve) //~ ERROR E0505
+}
+
+fn unhandled(n: i64) -> i64 {
+  try twice(n, halve) //~ ERROR E0502
+}
+
+fn loud(n: i64) -> i64 {
+  twice(n, |x| { //~ ERROR E0502
+    print("{x}")
+    x
+  })
+}

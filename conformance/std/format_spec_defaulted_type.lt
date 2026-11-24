@@ -1,0 +1,6 @@
+//~ rule: numbers.literal-defaults, std.invalid-specs
+
+fn main() / io {
+  let x = 5
+  print("{x:.2}") //~ ERROR E0325
+}

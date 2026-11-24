@@ -1,0 +1,5 @@
+fn main() / io {
+  let xs: List<i64> = []
+  let x = xs.first() ?? 0
+  print("{x}")
+}

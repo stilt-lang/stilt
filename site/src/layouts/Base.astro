@@ -1,0 +1,78 @@
+---
+// The frame of every page: its head, the header, the page, the footer and the search dialog.
+// The theme is set before the page paints, so a reader who chose one never sees the other.
+import Footer from "../components/Footer.astro";
+import Header from "../components/Header.astro";
+import Search from "../components/Search.astro";
+import type { Section } from "../lib/map";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  section: Section;
+  description?: string;
+  /** Whether the page fills the window's width, as the playground does. */
+  wide?: boolean;
+}
+
+const { title, section, description, wide = false } = Astro.props;
+const full = section === "home" ? title : `${title} · Stilt`;
+const summary =
+  description ??
+  "Stilt is a compiled programming language. Its compiler shows you what each function costs: where it allocates, copies, or can panic.";
+const icon =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>.m{stroke:#0a0a0a}.d{fill:#0a0a0a}@media(prefers-color-scheme:dark){.m{stroke:#fafafa}.d{fill:#fafafa}}</style><path class="m" d="M4 22a12 12 0 0 1 24 0" fill="none" stroke-width="3.25" stroke-linecap="round"/><circle class="d" cx="22.5" cy="7.5" r="2.9"/></svg>`,
+  );
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{full}</title>
+    <meta name="description" content={summary} />
+    <meta property="og:title" content={full} />
+    <meta property="og:description" content={summary} />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href={icon} />
+    <script is:inline>
+      {
+        const chosen = localStorage.getItem("theme");
+        if (chosen === "light" || chosen === "dark") document.documentElement.dataset.theme = chosen;
+      }
+    </script>
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-ground focus:px-3 focus:py-2"
+      >Skip to the page</a
+    >
+    <Header section={section} wide={wide} />
+    <main id="main" class="flex-1 min-w-0" data-pagefind-body={section === "playground" || section === "source" ? undefined : ""}>
+      <slot />
+    </main>
+    <Footer wide={wide} />
+    <Search />
+    <script>
+      // Each block's Copy button copies its code: a session's commands alone, never what they
+      // print, and never the marks that an example's expected diagnostics put on its lines.
+      document.addEventListener("click", async (event) => {
+        const button = (event.target as Element).closest<HTMLButtonElement>("[data-copy]");
+        const pre = button?.closest("figure")?.querySelector("pre");
+        if (!button || !pre) return;
+        const code = pre.cloneNode(true) as HTMLElement;
+        for (const extra of code.querySelectorAll(".mark, .line.out")) extra.remove();
+        const commands = code.querySelectorAll(".line.cmd");
+        const text = commands.length ? [...commands].map((l) => l.textContent).join("\n") : code.textContent ?? "";
+        await navigator.clipboard.writeText(text);
+        button.textContent = "Copied";
+        setTimeout(() => (button.textContent = "Copy"), 1400);
+      });
+    </script>
+  </body>
+</html>

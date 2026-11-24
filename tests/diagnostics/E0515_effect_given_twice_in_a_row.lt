@@ -1,0 +1,7 @@
+effect State<S> {
+  fn get() -> S
+}
+
+fn count() -> i64 / {State<i64>, State<str>} {
+  State.get()
+}

@@ -1,0 +1,2 @@
+[dependencies]
+csv = { path = "deps/csv" } # //~ ERROR E0608

@@ -1,0 +1,16 @@
+//~ rule: program.panic-location
+//~ stderr:
+//~ | panic: explicit: "compared"
+//~ |   at panic_in_operator.lt:10:39
+//~ panic: explicit
+
+type Token = { id: i64 }
+
+impl Eq for Token {
+  fn eq(self, other: Token) -> bool { panic("compared") }
+}
+
+fn main() / io {
+  let a = Token { id: 1 }
+  print("{a == a}")
+}

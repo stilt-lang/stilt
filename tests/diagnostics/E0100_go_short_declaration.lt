@@ -1,0 +1,4 @@
+fn main() / io {
+  count := 5
+  print("{count}")
+}

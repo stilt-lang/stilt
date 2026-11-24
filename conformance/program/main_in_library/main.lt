@@ -1,0 +1,6 @@
+//~ rule: program.main, program.missing-main
+//~ run-output: "6"
+
+use lib
+
+fn main() / io { print("{lib.main(3)}") }

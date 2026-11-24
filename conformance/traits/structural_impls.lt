@@ -1,0 +1,17 @@
+//~ rule: traits.method-resolution, traits.structural-impls
+
+type Button = { label: str, show: fn() -> str }
+
+type Labeled<T> = { item: T }
+
+fn caption(b: Button) -> str { b.show() }
+
+fn shown(l: Labeled<i64>) -> str { l.show() }
+
+fn callbacks(l: Labeled<fn()>) -> str {
+  l.show() //~ ERROR E0318
+}
+
+fn pair() -> str {
+  (|| "ok", 1).show() //~ ERROR E0318
+}

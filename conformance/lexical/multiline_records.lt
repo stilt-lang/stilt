@@ -1,0 +1,19 @@
+//~ rule: lexical.terminators-never-replace-commas
+//~ run-output: "Point { x: 1, y: 2 } 3"
+
+type Point = {
+  x: i64,
+  y: i64
+}
+
+fn main() / io {
+  let p = Point {
+    x: 1,
+    y: 2,
+  }
+  let Point {
+    x,
+    y
+  } = p
+  print("{p} {x + y}")
+}

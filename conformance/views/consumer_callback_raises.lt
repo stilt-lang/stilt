@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: views.consumers
+//~ run-output: "6 bad"
+
+use std.view
+
+fn add(s: i64, x: i64) -> i64 / raise<str> {
+  if x < 0 { raise "bad" }
+  s + x
+}
+
+// A consumer calls its callback at once, so its effects pass through to the caller.
+fn total(xs: List<i64>) -> i64 / raise<str> {
+  try view.Iter.of(xs).fold(0, |s, x| add(s, x))
+}
+
+fn main() / io {
+  let a = try total([1, 2, 3]) catch e => panic(e)
+  let b = try "{total([1, -1])}" catch e => e
+  print("{a} {b}")
+}

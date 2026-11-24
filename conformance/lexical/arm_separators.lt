@@ -1,0 +1,11 @@
+//~ rule: lexical.separators, expressions.match
+//~ run-output: "one two three other"
+
+fn name(n: i64) -> str {
+  match n { 1 => "one"; 2 => "two", 3 => "three";
+    _ => "other"; }
+}
+
+fn main() / io {
+  print("{name(1)} {name(2)} {name(3)} {name(4)}")
+}

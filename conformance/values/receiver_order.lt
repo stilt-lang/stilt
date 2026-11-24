@@ -1,0 +1,16 @@
+//~ rule: values.inout-argument-order, modes.durations
+//~ stdout:
+//~ | index
+//~ | argument
+//~ | [[5]]
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn main() / io {
+  var lists: List<List<i64>> = [[]]
+  lists[note("index", 0)].push(note("argument", 5))
+  print("{lists}")
+}

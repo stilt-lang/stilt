@@ -1,0 +1,14 @@
+//~ rule: lexical.contextual-keywords.as-names
+//~ stdin: "hello\n"
+//~ run-output: "hello"
+
+use std.io
+
+fn echo() / io {
+  let line = io.read_line() else ""
+  print(line)
+}
+
+fn main() / io {
+  echo()
+}

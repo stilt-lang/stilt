@@ -1,0 +1,16 @@
+//~ rule: errors.declarations-with-errors
+
+fn takes(x: Missing) -> i64 { //~ ERROR E0211
+  1
+}
+
+fn gives() -> Unknown { //~ ERROR E0211
+  1
+}
+
+fn f() -> i64 {
+  let a = takes("any value")
+  let b: str = gives()
+  let c = gives().field.method()
+  takes(1, 2) //~ ERROR E0315
+}

@@ -1,0 +1,9 @@
+//~ rule: syntax.programs, program.forms, program.module-header, program.panic-report
+//~ stderr:
+//~ | panic: explicit: "module main"
+//~ |   at single-file.lt:9:13
+//~ panic: explicit
+
+module main
+
+fn main() { panic("module main") }

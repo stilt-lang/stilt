@@ -1,0 +1,14 @@
+── SYNTAX ERROR ────────────────────────────────── E0100_throws.lt:1:12  [E0100]
+
+Stilt names what a function raises in its row, as `/ raise<E>`:
+
+  1 │ fn risky() throws -> i64 { 1 }
+    │            ^^^^^^
+
+The row after `/` lists what the function performs: `io`, and the error type it
+raises.
+
+To fix it, delete `throws`:
+
+  1 │ fn risky() throws -> i64 { 1 }
+    │            -------

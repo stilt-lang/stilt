@@ -1,0 +1,13 @@
+//~ rule: facts.analysis-order, facts.proved-indexes
+//~ panic: bounds
+//~ panic-at: order_swapped.lt:9:15
+
+// `swap`'s first argument is the value `i` had where it was evaluated, 3.
+fn swapped(n: i64) -> List<i64> {
+  var xs = [1, 2, 3]
+  var i = n
+  if i >= 3 { xs.swap(i, { i = 0; 0 }) }
+  xs
+}
+
+fn main() / io { print("{swapped(3)}") }

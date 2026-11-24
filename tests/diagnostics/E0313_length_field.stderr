@@ -1,0 +1,13 @@
+── NO SUCH FIELD ─────────────────────────── E0313_length_field.lt:3:14  [E0313]
+
+`List<{integer}>` has no field `length`; a length is the method `len()`:
+
+  3 │   print("{xs.length}")
+    │              ^^^^^^
+
+Strings, lists, arrays, maps and sets have a `len` method.
+
+To fix it, call `len()`:
+
+  3 │   print("{xs.len()}")
+    │              ~~~~~

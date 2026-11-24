@@ -1,0 +1,3 @@
+fn count(words: Map<str>) -> i64 { words.len() }
+
+fn main() {}

@@ -1,0 +1,25 @@
+//~ rule: std.maps, std.map-element-places, std.list-sorting, traits.structural-impls
+//~ stdout:
+//~ | the 4
+//~ | cat 2
+//~ | hat 2
+//~ | sat 2
+//~ | and 1
+//~ | too 1
+
+// Rosetta Code, Word frequency, on a fixed sentence instead of a book: the words, lowercased and
+// without punctuation, counted and listed most frequent first, ties in alphabetical order.
+
+const TEXT: str = "The cat and the hat. The cat sat; the hat sat too!"
+
+fn words(text: str) -> List<str> {
+  let letters = text.ascii_lower().chars().map(|c| if c.is_ascii_alpha() { c } else { " " })
+  "".join(letters).split_whitespace()
+}
+
+fn main() / io {
+  var counts = Map.with_default(0)
+  for w in words(TEXT) { counts[w] += 1 }
+  let ranked = counts.entries().sorted_by(|(w, n)| (-n, w))
+  for (w, n) in ranked { print("{w} {n}") }
+}

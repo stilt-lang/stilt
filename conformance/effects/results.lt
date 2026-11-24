@@ -1,0 +1,35 @@
+//~ rule: effects.empty-try, effects.result, std.option-result-and-ordering
+//~ stdout:
+//~ | no value
+//~ | 4 0
+//~ | Ok(4)
+//~ | Ok(3) Err("5 is odd")
+//~ | 5
+
+fn half(n: i64) -> i64 / raise<str> {
+  if n % 2 != 0 { raise "{n} is odd" }
+  n / 2
+}
+
+fn main() / io {
+  let good: Result<i64, str> = Ok(4)
+  let bad: Result<i64, str> = Err("no value")
+  let a = try good.get()
+    catch e because "the error is printed instead" => {
+    print(e)
+    0
+  }
+  let b = try bad.get()
+    catch e because "the error is printed instead" => {
+    print(e)
+    0
+  }
+  print("{a} {b}")
+  let same = try good //~ WARN W0500
+  print("{same}")
+  let three = Result.of(|| try half(6))
+  let odd = Result.of(|| try half(5))
+  print("{three} {odd}")
+  let back = try Result.of(|| try half(10)).get() catch _ because "ten is even" => 0
+  print("{back}")
+}

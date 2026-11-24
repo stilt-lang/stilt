@@ -1,0 +1,25 @@
+//~ rule: traits.structural-calls, traits.floats, std.list-sorting, std.option-result-and-ordering
+//~ stdout:
+//~ | [(1, "b"), (1, "d"), (2, "a"), (2, "c")]
+//~ | [(2, "a"), (2, "c"), (1, "b"), (1, "d")]
+//~ | [(1, "b"), (1, "d"), (2, "a"), (2, "c")]
+//~ | [-inf, -1.0, -0.0, 0.0, 3.0, inf, nan]
+//~ | [nan, inf, 3.0, 0.0, -0.0, -1.0, -inf]
+//~ | ["B", "a", "b", "é"] [None, Some(-1), Some(2)] [Ok(2), Ok(5), Err(1)]
+//~ | [("x", 2), ("y", 2), ("z", 1)] [("z", 1), ("y", 2), ("x", 2)]
+
+fn main() / io {
+  let pairs = [(2, "a"), (1, "b"), (2, "c"), (1, "d")]
+  print("{pairs.sorted_by(|p| p.0)}")
+  print("{pairs.sorted_desc_by(|p| p.0)}")
+  print("{pairs.sorted()}")
+  let zero = 0.0
+  let floats = [3.0, zero / zero, -0.0, 1.0 / zero, zero, -1.0, -1.0 / zero]
+  print("{floats.sorted()}")
+  print("{floats.sorted_desc_by(|x| x)}")
+  let options = [Some(2), None, Some(-1)]
+  let results: List<Result<i64, i64>> = [Err(1), Ok(5), Ok(2)]
+  print("{["b", "é", "a", "B"].sorted()} {options.sorted()} {results.sorted()}")
+  let counts = [("y", 2), ("z", 1), ("x", 2)]
+  print("{counts.sorted_desc_by(|c| c.1).sorted_by(|c| c.0).sorted_desc_by(|c| c.1)} {counts.sorted_by(|c| c.1)}")
+}

@@ -1,0 +1,9 @@
+── REFUTABLE PATTERN ─────────────────── E0321_refutable_pattern.lt:2:7  [E0321]
+
+This pattern can fail to match, which isn't allowed here:
+
+  2 │   let Some(n) = name
+    │       ^^^^^^^
+
+This pattern can fail to match, so the code needs a way out: write `let Some(n)
+= name else return …`, or use `match` or `if let`.

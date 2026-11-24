@@ -1,0 +1,38 @@
+name: Divergence between the compiler and the reference interpreter
+description: A program on which `stilt` and `stilt-ref` disagree. A divergence is a bug.
+labels: [bug, divergence]
+body:
+  - type: textarea
+    id: program
+    attributes:
+      label: The program
+      description: The smallest program on which they disagree.
+      render: stilt
+    validations:
+      required: true
+  - type: textarea
+    id: compiler
+    attributes:
+      label: What `stilt` does
+      description: The command, its output and its exit status.
+    validations:
+      required: true
+  - type: textarea
+    id: interpreter
+    attributes:
+      label: What `stilt-ref` does
+      description: The command, its output and its exit status.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: What the Reference says
+      description: The paragraph that decides which is right, if you found one. If the Reference is silent, say so.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `stilt --version`.
+    validations:
+      required: true

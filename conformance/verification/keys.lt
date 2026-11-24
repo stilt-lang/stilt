@@ -1,0 +1,52 @@
+//~ rule: facts.verification, facts.what-proofs-change, facts.rules-of-acceptance, facts.keys
+//~ run-output: "1 2 3 0 4 5 2 0"
+
+// A key found by a test, or stored before the read, is present, for `str`
+// and `i64` keys and for a literal.
+
+fn stored(k: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m[k] = 1
+  m[k]
+}
+
+fn inserted(k: i64) -> i64 without panic {
+  var m: Map<i64, i64> = Map.new()
+  m.insert(k, 2)
+  m[k]
+}
+
+fn found(m: Map<str, i64>, k: str) -> i64 without panic {
+  if m.contains(k) { m[k] } else { 0 }
+}
+
+fn literal() -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m["a"] = 4
+  m["a"]
+}
+
+// A store of another key, and a write through this one, keep it present.
+fn kept(j: i64, k: i64) -> i64 without panic {
+  var m: Map<i64, i64> = Map.new()
+  m[k] = 5
+  m[j] = 0
+  m[k] += 0
+  m[k]
+}
+
+// An `if` whose condition is `!m.contains(x)` and whose branch stores `x`.
+fn counted(words: List<str>, w: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  for x in words {
+    if !m.contains(x) { m[x] = 0 }
+    m[x] += 1
+  }
+  if m.contains(w) { m[w] } else { 0 }
+}
+
+fn main() / io {
+  let m = Map.from_entries([("x", 3)])
+  let words = ["a", "b", "a"]
+  print("{stored("a")} {inserted(7)} {found(m, "x")} {found(m, "y")} {literal()} {kept(1, 2)} {counted(words, "a")} {counted(words, "c")}")
+}

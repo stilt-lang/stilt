@@ -1,0 +1,34 @@
+// The pace of the log: for each five minutes that held entries, how many, the requests and the
+// time they took, and the errors.
+
+use requests
+use rows
+use table
+use events.entry
+use events.time
+
+/// Each five minutes that held entries, in the order they first held one: their start, their
+/// entries, their requests and the time those took on average and at most, and their errors.
+pub fn rows_of(es: List<entry.Entry>) -> List<rows.PaceRow> {
+  var out: List<rows.PaceRow> = []
+  for (_, of) in es.group_by(|e| (e.at.date.text(), e.at.hour, e.at.minute / 5)) {
+    let first = of[0].at
+    let ms = requests.of(of).map(|(_, r)| r.millis)
+    out.push(
+      rows.PaceRow {
+        at: "{first.hour:0>2}:{first.minute / 5 * 5:0>2}",
+        entries: of.len(),
+        requests: ms.len(),
+        mean: if ms.is_empty() { 0 } else { i64.sum(ms) / ms.len() },
+        slowest: ms.max() else 0,
+        errors: of.count(|e| e.level == time.Error),
+      },
+    )
+  }
+  out
+}
+
+/// The pace, as a table.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  ["== pace =="].concat(table.render(rows_of(es)))
+}

@@ -1,0 +1,28 @@
+//~ tier: advanced
+//~ rule: shared.names-that-may-be-one-place
+
+use std.sync
+
+type Account = { balance: i64, items: List<i64> }
+
+fn both(inout x: i64, inout y: i64) {
+  x += 1
+  y += 10
+}
+
+// Two names of one `when` with the same type may reach one value, so they are one binding.
+fn same(a: sync.Shared<Account>, b: sync.Shared<Account>) {
+  when a, b {
+    both(inout a.balance, inout b.balance) //~ ERROR E0402
+  }
+}
+
+fn iterated(a: sync.Shared<Account>, b: sync.Shared<Account>) {
+  when a, b {
+    for x in a.items {
+      b.items.push(x) //~ ERROR E0404
+    }
+  }
+}
+
+fn main() {}

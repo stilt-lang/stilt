@@ -1,0 +1,9 @@
+//~ tier: meta
+//~ rule: macros.parts
+//~ run-output: "0 3"
+
+// A `meta.Tokens` last parameter takes every part from its own on, which
+// may be none.
+meta use count
+
+fn main() / io { print("{count.count!()} {count.count!(a, b)}") }

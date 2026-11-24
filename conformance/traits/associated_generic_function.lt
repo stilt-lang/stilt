@@ -1,0 +1,15 @@
+//~ rule: traits.associated-functions, types.no-type-arguments
+//~ run-output: "1 one"
+
+// An associated function of a generic impl may have type parameters of its own, and the call
+// infers both the impl's and its own.
+type Box<T> = { inner: T }
+
+impl<T> Box<T> {
+  fn paired<U>(a: T, b: U) -> (Box<T>, U) { (Box { inner: a }, b) }
+}
+
+fn main() / io {
+  let (b, s) = Box.paired(1, "one")
+  print("{b.inner} {s}")
+}

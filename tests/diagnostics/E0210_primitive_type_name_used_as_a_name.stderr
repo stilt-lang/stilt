@@ -1,0 +1,9 @@
+── PRIMITIVE TYPE NAME USED AS A NAME ── E0210_primitive_type_name_used_as_a_name.lt:2:7  [E0210]
+
+`str` is a primitive type name:
+
+  2 │   let str = "a"
+    │       ^^^
+
+Type names such as `str`, `i64` and `bool` can't name anything else. Choose
+another name, such as `text`.

@@ -1,0 +1,10 @@
+── CATCH-ALL WITHOUT A REASON ── W0501_catch_all_without_a_reason.lt:5:52  [W0501]
+
+This arm catches every error and drops it, so it raises again, uses the error or
+gives a reason: `because "…"`:
+
+  5 │ fn count(text: str) -> i64 { try parse(text) catch _ => 0 }
+    │                                                    ^
+
+An arm that drops every error hides failures. Raise the error again, use it, or
+say why dropping it is right, as `catch _ because "…" => …`.

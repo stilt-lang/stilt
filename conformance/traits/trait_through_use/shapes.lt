@@ -1,0 +1,1 @@
+pub type Square = { side: i64 }

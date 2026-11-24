@@ -1,0 +1,11 @@
+── FACT BEYOND A `without` LIMIT ───── E0204_allocating_callee.lt:11:51  [E0204]
+
+`digits` allocates, through `List.new`, but `digit_count` says `without alloc`:
+
+  11 │ pub fn digit_count(n: i64) -> i64 without alloc { digits(n).len() }
+     │                                           ───── the limit
+     │                                                   ^^^^^^^^^
+
+Code under `without alloc` makes no list or string. Let the caller make it, and
+take it `inout`: writes through its indexes stay in its storage, as `out[i] = x`
+does.

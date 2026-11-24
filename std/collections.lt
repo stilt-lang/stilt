@@ -1,0 +1,174 @@
+module std.collections
+
+// A double-ended queue and a priority queue (std.deque and std.heap).
+
+/// A double-ended queue: the elements of `head` in reverse order, then those
+/// of `tail`, so that both ends push and pop at the end of a list.
+pub type Deque<T> = { head: List<T>, tail: List<T> }
+
+impl<T> Deque<T> {
+  /// An empty deque.
+  /// ex: Deque.new().to_list().concat([1]) == [1]
+  pub fn new() -> Deque<T> { Deque { head: [], tail: [] } }
+
+  /// The deque of the elements of `xs`, the first at the front.
+  /// ex: Deque.from_list([1, 2]).front() == Some(1)
+  pub fn from_list(xs: List<T>) -> Deque<T> { Deque { head: [], tail: xs } }
+
+  /// The number of elements.
+  /// ex: Deque.from_list([1, 2]).len() == 2
+  pub fn len(self) -> i64 { self.head.len() + self.tail.len() }
+
+  /// Whether the deque has no elements.
+  /// ex: !Deque.from_list([1]).is_empty()
+  pub fn is_empty(self) -> bool { self.head.is_empty() && self.tail.is_empty() }
+
+  /// Adds `x` at the front.
+  /// ex: { var d = Deque.from_list([2]); d.push_front(1); d.to_list() == [1, 2] }
+  pub fn push_front(inout self, x: T) { self.head.push(x) }
+
+  /// Adds `x` at the back.
+  /// ex: { var d = Deque.from_list([1]); d.push_back(2); d.to_list() == [1, 2] }
+  pub fn push_back(inout self, x: T) { self.tail.push(x) }
+
+  /// Removes and returns the element at the front.
+  /// ex: { var d = Deque.from_list([1, 2]); d.pop_front() == Some(1) && d.to_list() == [2] }
+  pub fn pop_front(inout self) -> Option<T> {
+    if self.head.is_empty() {
+      // Half of the elements, the front half, move to `head`.
+      let k = (self.tail.len() + 1) / 2
+      self.head = self.tail.take(k).reversed()
+      self.tail = self.tail.skip(k)
+    }
+    self.head.pop()
+  }
+
+  /// Removes and returns the element at the back.
+  /// ex: { var d = Deque.from_list([1, 2]); d.pop_back() == Some(2) && d.to_list() == [1] }
+  pub fn pop_back(inout self) -> Option<T> {
+    if self.tail.is_empty() {
+      // Half of the elements, the back half, move to `tail`.
+      let elements = self.head.reversed()
+      let k = elements.len() / 2
+      self.head = elements.take(k).reversed()
+      self.tail = elements.skip(k)
+    }
+    self.tail.pop()
+  }
+
+  /// The element at the front.
+  /// ex: Deque.from_list([1, 2]).front() == Some(1)
+  pub fn front(self) -> Option<T> { self.head.last().or(self.tail.first()) }
+
+  /// The element at the back.
+  /// ex: Deque.from_list([1, 2]).back() == Some(2)
+  pub fn back(self) -> Option<T> { self.tail.last().or(self.head.first()) }
+
+  /// The elements, from the front to the back.
+  /// ex: { var d = Deque.new(); d.push_back(2); d.push_front(1); d.to_list() == [1, 2] }
+  pub fn to_list(self) -> List<T> { self.head.reversed().concat(self.tail) }
+}
+
+// A deque compares, hashes and shows as the list of its elements, however
+// they lie between its two lists.
+impl<T: Eq> Eq for Deque<T> {
+  fn eq(self, other: Deque<T>) -> bool { self.to_list() == other.to_list() }
+}
+
+impl<T: Ord> Ord for Deque<T> {
+  fn compare(self, other: Deque<T>) -> Ordering { Ord.compare(self.to_list(), other.to_list()) }
+}
+
+impl<T: Hash> Hash for Deque<T> {
+  fn hash(self) -> u64 { self.to_list().hash() }
+}
+
+impl<T: Show> Show for Deque<T> {
+  fn show(self) -> str { "Deque({self.to_list()})" }
+}
+
+/// A priority queue whose `pop` gives the smallest element first: a binary
+/// heap, in which element `i` of `items` is no greater than elements `2i + 1`
+/// and `2i + 2`.
+pub type Heap<T> = { items: List<T> }
+
+impl<T: Ord> Heap<T> {
+  /// An empty heap.
+  /// ex: Heap.new().to_list().concat([1]) == [1]
+  pub fn new() -> Heap<T> { Heap { items: [] } }
+
+  /// The heap of the elements of `xs`.
+  /// ex: Heap.from_list([3, 1, 2]).peek() == Some(1)
+  pub fn from_list(xs: List<T>) -> Heap<T> {
+    var heap = Heap.new()
+    for x in xs { heap.push(x) }
+    heap
+  }
+
+  /// The number of elements.
+  /// ex: Heap.from_list([3, 1]).len() == 2
+  pub fn len(self) -> i64 { self.items.len() }
+
+  /// Whether the heap has no elements.
+  /// ex: !Heap.from_list([1]).is_empty()
+  pub fn is_empty(self) -> bool { self.items.is_empty() }
+
+  /// The smallest element.
+  /// ex: Heap.from_list([2, 1]).peek() == Some(1)
+  pub fn peek(self) -> Option<T> { self.items.first() }
+
+  /// Adds `x`.
+  /// ex: { var h = Heap.from_list([2]); h.push(1); h.peek() == Some(1) }
+  pub fn push(inout self, x: T) {
+    self.items.push(x)
+    var i = self.items.len() - 1
+    while i > 0 {
+      let parent = (i - 1) / 2
+      if self.items[parent] <= self.items[i] { break }
+      self.items.swap(i, parent)
+      i = parent
+    }
+  }
+
+  /// Removes and returns the smallest element.
+  /// ex: { var h = Heap.from_list([3, 1, 2]); [h.pop(), h.pop(), h.pop(), h.pop()] == [Some(1), Some(2), Some(3), None] }
+  pub fn pop(inout self) -> Option<T> {
+    let last = self.items.pop() else return None
+    let top = self.items.first() else return Some(last)
+    self.items[0] = last
+    var i = 0
+    loop {
+      let left = 2 * i + 1
+      let right = left + 1
+      var smallest = i
+      if left < self.items.len() && self.items[left] < self.items[smallest] { smallest = left }
+      if right < self.items.len() && self.items[right] < self.items[smallest] { smallest = right }
+      if smallest == i { break }
+      self.items.swap(i, smallest)
+      i = smallest
+    }
+    Some(top)
+  }
+
+  /// The elements in ascending order.
+  /// ex: Heap.from_list([3, 1, 2]).to_list() == [1, 2, 3]
+  pub fn to_list(self) -> List<T> { self.items.sorted() }
+}
+
+// A heap compares, hashes and shows as the list of its elements in ascending
+// order, however they lie in its binary heap.
+impl<T: Ord> Eq for Heap<T> {
+  fn eq(self, other: Heap<T>) -> bool { Ord.compare(self.to_list(), other.to_list()) == Equal }
+}
+
+impl<T: Ord> Ord for Heap<T> {
+  fn compare(self, other: Heap<T>) -> Ordering { Ord.compare(self.to_list(), other.to_list()) }
+}
+
+impl<T: Ord + Hash> Hash for Heap<T> {
+  fn hash(self) -> u64 { self.to_list().hash() }
+}
+
+impl<T: Ord + Show> Show for Heap<T> {
+  fn show(self) -> str { "Heap({self.to_list()})" }
+}

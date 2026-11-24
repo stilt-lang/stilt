@@ -1,0 +1,22 @@
+//~ rule: std.lists, std.list-functions, expressions.range-iteration
+//~ stdout:
+//~ | open: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+//~ | closed: 90
+
+// Rosetta Code, 100 doors: 100 closed doors are passed 100 times, the i-th pass toggling every
+// i-th door. The doors left open are those whose number has an odd count of divisors, the
+// perfect squares.
+
+fn main() / io {
+  var open = List.repeat(false, 101)
+  for pass in 1..=100 {
+    var door = pass
+    while door <= 100 {
+      open[door] = !open[door]
+      door += pass
+    }
+  }
+  let opened = List.generate(100, |i| i + 1).filter(|d| open[d])
+  print("open: {opened}")
+  print("closed: {100 - opened.len()}")
+}

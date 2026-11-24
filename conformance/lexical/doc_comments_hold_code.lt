@@ -1,0 +1,10 @@
+//~ rule: lexical.doc-comments, lexical.commented-out-code, syntax.doc-comment-runs
+//~ run-output: "3"
+
+/// let x = f(1)
+/// x + 2
+fn f(n: i64) -> i64 { n }
+
+fn main() / io {
+  print("{f(3)}")
+}

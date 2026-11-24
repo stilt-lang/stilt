@@ -1,0 +1,72 @@
+//~ tier: meta
+//~ rule: meta.shapes, meta.shape-accessors, meta.fresh-types, meta.bound-tests
+//~ stdout:
+//~ | option Some(3) None
+//~ | list [1, 2] []
+//~ | set [Key { id: 1, label: "a" }, Key { id: 2, label: "b" }] made [Key { id: 1, label: "c" }, Key { id: 2, label: "b" }]
+//~ | map [(#1, "x"), (#2, "y")] made [(#1, "z"), (#2, "y")]
+//~ | array [4, 5, 6] 3 true false
+
+use std.meta
+use std.array
+
+// Keys that are equal when their ids are.
+type Key = { id: i64, label: str }
+
+impl Eq for Key {
+  fn eq(self, other: Self) -> bool { self.id == other.id }
+}
+
+impl Hash for Key {
+  fn hash(self) -> u64 { self.id.wrap_to_u64() }
+}
+
+// The same, shown by id alone.
+type Id = { id: i64, label: str }
+
+impl Eq for Id {
+  fn eq(self, other: Self) -> bool { self.id == other.id }
+}
+
+impl Hash for Id {
+  fn hash(self) -> u64 { self.id.wrap_to_u64() }
+}
+
+impl Show for Id {
+  fn show(self) -> str { "#{self.id}" }
+}
+
+// A value's text, where its type shows.
+fn shown<X>(x: X) -> str {
+  if X: Show { "{x}" } else { "?" }
+}
+
+// Each case of a container, through its accessors, whose element, key and
+// value types are fresh types of the arm. `make` of a set keeps the first of
+// equal elements, and of a map the last value of equal keys, at the position
+// of the first, each by the type's own `Eq` and `Hash`.
+fn parts<T>(value: T, more: T) -> str {
+  match T.shape() {
+    Option(c) => "option {shown(c.get(value))} {shown(c.get(c.make(None)))}"
+    List(c) => "list {shown(c.get(value))} {shown(c.get(c.make(c.get(value).take(0))))}"
+    Set(c) => "set {shown(c.get(value))} made {shown(c.get(c.make(c.get(more).concat(c.get(value)))))}"
+    Map(c) => "map {shown(c.get(value))} made {shown(c.get(c.make(c.get(value).concat(c.get(more)))))}"
+    Array(c) => "array {shown(c.get(value))} {c.len()} {c.make(c.get(value)).is_some()} {c.make([]).is_some()}"
+    _ => "other"
+  }
+}
+
+fn main() / io {
+  print(parts(Some(3), None))
+  print(parts([1, 2], []))
+  let keys = Set.from_list([Key { id: 1, label: "a" }, Key { id: 2, label: "b" }])
+  print(parts(keys, Set.from_list([Key { id: 1, label: "c" }])))
+  var m = Map.new()
+  m.insert(Id { id: 1, label: "a" }, "x")
+  m.insert(Id { id: 2, label: "b" }, "y")
+  var n = Map.new()
+  n.insert(Id { id: 1, label: "c" }, "z")
+  print(parts(m, n))
+  let a: array.Array<i64, 3> = [4, 5, 6]
+  print(parts(a, a))
+}

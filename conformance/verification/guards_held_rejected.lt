@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: shared.names-that-may-be-one-place, facts.rules-of-acceptance, facts.acceptance-places, facts.guards
+
+use std.sync
+
+// Two names of one `when` may reach one value, so neither is a place, and an
+// index through one is never proved.
+
+fn first(xs: sync.Shared<List<i64>>) -> i64 without panic {
+  when xs {
+    if !xs.is_empty() { xs[0] } else { 0 } //~ ERROR E0204
+  }
+}
+
+fn at(xs: List<i64>, i: sync.Shared<i64>) -> i64 without panic {
+  when i {
+    if i >= 0 && i < xs.len() { xs[i] } else { 0 } //~ ERROR E0204
+  }
+}

@@ -1,0 +1,13 @@
+//~ rule: effects.row-variables, effects.non-escaping-parameters
+
+fn written<e>(f: fn() / e) / e { //~ ERROR E0509
+  f()
+}
+
+fn nested<e>(f: fn(fn() / e)) {} //~ ERROR E0509
+
+fn labelled<e>(f: fn() -> i64 / {io, e}, g: fn() / e) {} //~ ERROR E0509 ERROR E0509
+
+fn kept<e>(escaping f: fn() / e) / e { f() }
+
+fn listed<e>(fs: List<fn() / e>) / e { for f in fs { f() } }

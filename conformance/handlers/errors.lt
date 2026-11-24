@@ -1,0 +1,152 @@
+//~ tier: advanced
+//~ rule: handlers.effects-in-rows, handlers.performing-operation, handlers.handler-literals, handlers.resuming, handlers.resume-at-most-once, handlers.resume-outside-operation, handlers.with-pairing
+
+effect Ask {
+  fn ask() -> i64
+  fn tell(n: i64)
+}
+
+effect State<S> {
+  fn get() -> S
+}
+
+fn unhandled() -> i64 { Ask.ask() } //~ ERROR E0502
+
+fn twice_in_row() / {State<i64>, State<str>} {} //~ ERROR E0515
+
+fn missing() {
+  let h = handler Ask { fn ask() -> i64 { 1 } } //~ ERROR E0511
+}
+
+fn extra() {
+  let h = handler Ask { //~ ERROR E0511
+    fn ask() -> i64 { 1 }
+    fn tell(n: i64) {}
+    fn other() {}
+  }
+}
+
+fn wrong_type() {
+  let h = handler Ask { //~ ERROR E0511
+    fn ask() -> str { "1" }
+    fn tell(n: i64) {}
+  }
+}
+
+fn stray() -> i64 {
+  resume(1) //~ ERROR E0513
+}
+
+fn implicit() {
+  let h = handler Ask {
+    fn ask() -> i64 { resume(1) } //~ ERROR E0513
+    fn tell(n: i64) {}
+  }
+}
+
+fn twice() {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      resume(1)
+      resume(2) //~ ERROR E0514
+    }
+    fn tell(n: i64) { resume() }
+  }
+}
+
+effect Check {
+  fn check(b: bool) -> i64
+}
+
+// A `resume` after a branch, an arm or an operand that may have resumed may resume a second time.
+fn after_branches() {
+  let h = handler Check -> bool {
+    fn check(b: bool) -> i64 {
+      if b { let _ = resume(1) }
+      let _ = resume(2) //~ ERROR E0514
+      match b {
+        true => { let _ = resume(3) } //~ ERROR E0514
+        false => {}
+      }
+      let _ = b && resume(4) //~ ERROR E0514
+      resume(5) //~ ERROR E0514
+    }
+  }
+}
+
+// One arm that resumes is enough: the path through it resumes again at the end.
+fn after_one_arm() {
+  let h = handler Check -> bool {
+    fn check(b: bool) -> i64 {
+      match b {
+        true => { let _ = resume(1) }
+        false => {}
+      }
+      resume(2) //~ ERROR E0514
+    }
+  }
+}
+
+type Oops = { code: i64 }
+
+effect Risky {
+  fn risky(n: i64) -> i64 / raise<Oops>
+}
+
+// A path that a `return` or a `raise` ends after its `resume` holds no second one.
+fn ends_paths() {
+  let h = handler Risky -> i64 {
+    fn risky(n: i64) -> i64 / raise<Oops> {
+      if n == 1 {
+        let r = resume(1)
+        return r
+      }
+      if n == 2 {
+        let r = resume(2)
+        raise Oops { code: r }
+      }
+      resume(n)
+    }
+  }
+}
+
+fn in_loop() {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      for i in 0..2 {
+        resume(i) //~ ERROR E0514
+      }
+      0
+    }
+    fn tell(n: i64) { resume() }
+  }
+}
+
+fn in_closure() {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      let again = || resume(1) //~ ERROR E0514
+      0
+    }
+    fn tell(n: i64) { resume() }
+  }
+}
+
+fn answer_type() -> str {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 { resume(1) }
+    fn tell(n: i64) { resume() }
+  }
+  with h { "text" } //~ ERROR E0311
+}
+
+// `e` isn't paired with `Ask`, so this `with` would handle the caller's `Ask`.
+fn unpaired<e>(escaping f: fn() / e) / e {
+  let h = handler Ask {
+    fn ask() -> i64 { 1 }
+    fn tell(n: i64) {}
+  }
+  with h {
+    f() //~ ERROR E0516
+  }
+}

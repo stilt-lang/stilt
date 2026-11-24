@@ -1,0 +1,9 @@
+── NOT A PLACE ────────────────────────────── E0401_not_a_place.lt:4:14  [E0401]
+
+Only a variable, a field or an element can be passed `inout`:
+
+  4 │   bump(inout count + 1)
+    │              ^^^^^^^^^
+
+Only a variable, a field or an element can be assigned or passed `inout`. Put
+the value in a `var` first, and pass that.

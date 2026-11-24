@@ -1,0 +1,6 @@
+use std.fs
+
+// Prints, which `console` grants, and reads the file system, which it doesn't.
+pub fn log(msg: str) / io {
+  if !fs.exists("quiet") { print(msg) }
+}

@@ -1,0 +1,49 @@
+//~ tier: systems
+//~ rule: c.unsafe-because, c.module-std-c, c.element-types, c.lending-buffer, c.both-implementations
+//~ stdout:
+//~ | [9, 9, 9, 4]
+//~ | world
+//~ | h�i
+//~ | true
+//~ | 6
+//~ | 3
+
+// Lending C a list and a string: `memset` writes through `with_mut_ptr`, so the list holds
+// what it wrote; `strstr` gives a pointer into the copy that `with_c_str` lends, which `to_str`
+// reads, as it reads the bytes of a list that a NUL ends, an invalid UTF-8 sequence replaced by
+// U+FFFD; `getenv` gives NULL for a variable that isn't set. A closure inside an `unsafe` block
+// may call a foreign function.
+
+use std.c
+
+extern fn memset(dest: c.Ptr<u8>, ch: i32, count: u64) -> c.Ptr<u8>
+
+extern fn strstr(haystack: c.Str, needle: c.Str) -> c.Str
+
+extern fn strchr(s: c.Ptr<u8>, ch: i32) -> c.Str
+
+extern fn getenv(name: c.Str) -> c.Str
+
+extern fn strlen(s: c.Str) -> u64
+
+fn main() / io {
+  var buf: List<u8> = [1, 2, 3, 4]
+  buf.with_mut_ptr(|p| unsafe because "memset writes 3 of buf's 4 bytes" {
+    let _ = memset(p, 9, 3)
+  })
+  print("{buf}")
+  let found = "hello world".with_c_str(|h| {
+    "wor".with_c_str(|n| unsafe because "strstr reads two strings that NULs end, and finds the second in the first" {
+      strstr(h, n).to_str()
+    })
+  })
+  print(found)
+  let bytes: List<u8> = [104, 255, 105, 0]
+  print(bytes.with_ptr(|p| unsafe because "bytes holds a NUL after the h" { strchr(p, 104).to_str() }))
+  let unset = "STILT_NO_SUCH_VARIABLE".with_c_str(|name| unsafe because "getenv reads a string that a NUL ends" {
+    getenv(name)
+  })
+  print("{unset.is_null()}")
+  print("{"héllo".with_c_str(|s| unsafe because "s ends with a NUL" { strlen(s) })}")
+  print("{unsafe because "with_c_str ends s with a NUL" { "abc".with_c_str(|s| strlen(s)) }}")
+}

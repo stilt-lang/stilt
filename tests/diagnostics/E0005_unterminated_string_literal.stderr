@@ -1,0 +1,9 @@
+── UNTERMINATED STRING LITERAL ── E0005_unterminated_string_literal.lt:2:3  [E0005]
+
+Unterminated string literal:
+
+  2 │   "{1 +
+    │   ^^^^^
+
+A string closes on the line where it opens. For text over several lines, write
+`\n` inside it.

@@ -1,0 +1,7 @@
+//~ rule: errors.registry-phases
+
+type Loop = { next: Loop } //~ ERROR E0309
+
+fn later() -> i64 {
+  ? //~ WARN W0300
+}

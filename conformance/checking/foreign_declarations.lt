@@ -1,0 +1,39 @@
+//~ rule: errors.parts, errors.broken-parts
+
+// Each declaration below begins with another language's word, which begins a part of its own,
+// so the declarations around it stay whole. The part breaks at the word, and declares the
+// function, type or trait it names, every use of which has the error type, from which nothing
+// is reported.
+fn first() -> i64 { 1 }
+def greet(name):  //~ ERROR E0100
+  return "hi " + name
+func add(a int, b int) int { //~ ERROR E0100
+  return a + b
+}
+function scale(x) { return x * 2 } //~ ERROR E0100
+fun twice(x: Int): Int = x * 2 //~ ERROR E0100
+async fn fetch(n: i64) -> i64 { n } //~ ERROR E0100
+struct Point { x: i64, y: i64 } //~ ERROR E0100
+class Account { //~ ERROR E0100
+  balance: i64
+}
+enum Shape { Circle(f64), Square(f64) } //~ ERROR E0100
+interface Named { fn name(self) -> str } //~ ERROR E0100
+protocol Sized { fn size(self) -> i64 } //~ ERROR E0100
+extension Point { fn norm(self) -> i64 { 0 } } //~ ERROR E0100
+var counter = 0 //~ ERROR E0100
+let limit = 10 //~ ERROR E0100
+fn last() -> i64 { 2 }
+
+fn origin() -> Point { Point { x: 0, y: 0 } }
+
+fn area(s: Shape) -> f64 { 0.0 }
+
+fn label<T: Named>(t: T) -> i64 { 0 }
+
+fn main() / io {
+  print(greet("ada"))
+  print("{add(1, 2)} {scale(3)} {twice(4)} {fetch(5)} {first()} {last()}")
+  let a = Account { balance: 1 }
+  print("{a} {origin()}")
+}

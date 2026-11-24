@@ -1,0 +1,10 @@
+── EFFECT THAT REACHES `main` ─── E0512_effect_that_reaches_main.lt:6:3  [E0512]
+
+This performs `Log`, but no `with` around it handles `Log`; wrap it in one:
+`with h { … }`:
+
+  6 │   Log.log("start")
+    │   ^^^^^^^^^^^^^^^^
+
+A user-defined effect is handled before `main`, a test or an example ends. Wrap
+the code in `with (handler …) { … }`.

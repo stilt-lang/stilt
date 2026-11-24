@@ -1,0 +1,12 @@
+trait Shape {
+  fn area(self) -> f64
+}
+
+type Circle = { radius: f64 }
+
+impl Shape for Circle {
+  fn area(self) -> f64 { 3.14 * self.radius * self.radius }
+  fn perimeter(self) -> f64 { 6.28 * self.radius }
+}
+
+fn main() {}

@@ -1,0 +1,2 @@
+//~ rule: packages.grants, packages.own-effects
+//~ run-output: "3 rows"

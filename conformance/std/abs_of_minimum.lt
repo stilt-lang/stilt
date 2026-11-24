@@ -1,0 +1,10 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds, std.integers
+//~ run-output: "127"
+//~ panic: overflow
+//~ panic-at: abs_of_minimum.lt:9:11
+
+fn main() / io {
+  let m = i8.MIN
+  print("{(m + 1).abs()}")
+  print("{m.abs()}")
+}

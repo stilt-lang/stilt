@@ -1,0 +1,7 @@
+// An `if` chain in a closure's block goes on one line when it fits there, and otherwise breaks
+// the braces of every branch, its statements a level deeper than the closure's.
+fn main() / io {
+  let names = items.map(|item| { if item.price > 1000 { "expensive" } else if item.price > 100 { "fair" } else { "cheap" } })
+  let labels = items.map(|item| { if item.price > 100000 { "far too expensive for anyone" } else if item.price > 100 { "fair enough" } else { "cheap" } })
+  print("{names} {labels}")
+}

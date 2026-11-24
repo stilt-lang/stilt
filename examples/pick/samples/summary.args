@@ -1,0 +1,2 @@
+{shop, books: .books | length, authors: [.books[].author] | unique | length, sold_out: [.books[] | select(.stock == 0) | .title]}
+samples/books.json

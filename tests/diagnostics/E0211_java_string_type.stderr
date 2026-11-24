@@ -1,0 +1,14 @@
+── UNKNOWN NAME ──────────────────────── E0211_java_string_type.lt:1:16  [E0211]
+
+Stilt's string type is `str`, not `String`:
+
+  1 │ fn greet(name: String) -> str { "hello, {name}" }
+    │                ^^^^^^
+
+Stilt's primitive types are written in lower case, as `i64`, `f64`, `bool` and
+`str`.
+
+To fix it, write `str`:
+
+  1 │ fn greet(name: str) -> str { "hello, {name}" }
+    │                ~~~

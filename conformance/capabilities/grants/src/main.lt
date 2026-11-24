@@ -1,0 +1,9 @@
+use both
+use files
+use warn
+
+fn main() / io {
+  warn.odd("row")
+  print("{files.has("no/such/file")}")
+  print("{both.checked("x")}")
+}

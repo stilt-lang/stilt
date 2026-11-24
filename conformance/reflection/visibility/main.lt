@@ -1,0 +1,12 @@
+//~ tier: meta
+//~ rule: meta.private-fields
+//~ stdout:
+//~ | {name=home, secret=42}
+//~ | Spot { name: "work", secret: 43 }
+
+use geo
+
+fn main() / io {
+  print(geo.described())
+  print(geo.bumped())
+}

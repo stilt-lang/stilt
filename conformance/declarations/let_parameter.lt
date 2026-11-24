@@ -1,0 +1,5 @@
+//~ rule: declarations.parameters
+
+fn twice(let x: i64) -> i64 { //~ ERROR E0100
+  x * 2
+}

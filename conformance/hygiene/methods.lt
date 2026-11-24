@@ -1,0 +1,15 @@
+//~ rule: docs.bodies-compared, docs.same-body, docs.duplicate-bodies
+//~ run-output: "19 19"
+
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  fn norm(self) -> i64 { self.x * self.x + self.y * self.y + self.x * self.y }
+}
+
+fn norm_of(p: Point) -> i64 { p.x * p.x + p.y * p.y + p.x * p.y } //~ WARN W0302
+
+fn main() / io {
+  let p = Point { x: 2, y: 3 }
+  print("{p.norm()} {norm_of(p)}")
+}

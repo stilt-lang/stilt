@@ -1,0 +1,164 @@
+// Running a query on a value, which gives a list of values, or an error that stops it.
+
+use std.json
+use query
+use order
+use values
+
+/// The values that `q` makes from `v`, in order.
+/// ex: try run(query.Pipe(query.Each, query.Field("n")), json.Array([json.Object([("n", json.Number("1"))]), json.Null])) == [json.Number("1"), json.Null]
+/// ex: try run(query.Comma(query.Field("a"), query.Field("b")), json.Object([("a", json.Bool(true))])) == [json.Bool(true), json.Null]
+/// ex: Result.of(|| try run(query.Field("a"), json.Number("1"))) == Err("can't take the field \"a\" of a number")
+pub fn run(q: query.Query, v: json.Value) -> List<json.Value> / raise<str> {
+  match q {
+    Identity => [v]
+    Field(name) => [try values.field(v, name)]
+    Index(i) => [try values.index(v, i)]
+    Slice(from, to) => [try values.slice(v, from, to)]
+    Each => try values.each(v)
+    Pipe(a, b) => {
+      var out = []
+      for x in try run(a, v) { out.extend(try run(b, x)) }
+      out
+    }
+    Comma(a, b) => {
+      var out = try run(a, v)
+      out.extend(try run(b, v))
+      out
+    }
+    Literal(x) => [x]
+    Collect(a) => [json.Array(try run(a, v))]
+    Build(entries) => try build(entries, v)
+    Compare(op, a, b) => try comparisons(op, a, b, v)
+    And(a, b) => try logic(a, b, v, false)
+    Or(a, b) => try logic(a, b, v, true)
+    Call(name, None) => try values.plain(name, v)
+    Call(name, Some(f)) => try call(name, f, v)
+  }
+}
+
+/// An object for each choice of one value per entry, the first entry's choices outermost.
+fn build(entries: List<(str, query.Query)>, v: json.Value) -> List<json.Value> / raise<str> {
+  var partial = [[]]
+  for (key, q) in entries {
+    let choices = try run(q, v)
+    var next = []
+    for members in partial { for x in choices { next.push(members.concat([(key, x)])) } }
+    partial = next
+  }
+  partial.map(json.Object)
+}
+
+/// A comparison of each value of `b` with each of `a`, `b`'s outermost.
+fn comparisons(
+  op: str,
+  a: query.Query,
+  b: query.Query,
+  v: json.Value,
+) -> List<json.Value> / raise<str> {
+  let (lefts, rights) = (try run(a, v), try run(b, v))
+  var out = []
+  for r in rights {
+    for l in lefts {
+      let o = order.compare(l, r)
+      out.push(
+        json.Bool(
+          match op {
+            "==" => o == Equal
+            "!=" => o != Equal
+            "<" => o == Less
+            "<=" => o != Greater
+            ">" => o == Greater
+            _ => o != Less
+          },
+        ),
+      )
+    }
+  }
+  out
+}
+
+/// `and`, or `or` when `short` is true: each value of `a` that settles it is the answer, and
+/// otherwise each of `b`'s.
+fn logic(
+  a: query.Query,
+  b: query.Query,
+  v: json.Value,
+  short: bool,
+) -> List<json.Value> / raise<str> {
+  var out = []
+  for l in try run(a, v) {
+    if values.truthy(l) == short {
+      out.push(json.Bool(short))
+    } else {
+      out.extend(try run(b, v).map(|r| json.Bool(values.truthy(r))))
+    }
+  }
+  out
+}
+
+/// What the function `name` makes of `v`, given the query `f`.
+fn call(name: str, f: query.Query, v: json.Value) -> List<json.Value> / raise<str> {
+  match name {
+    "select" => try run(f, v).filter(values.truthy).map(|_| v)
+    "map" => {
+      var out = []
+      for x in try values.each(v) { out.extend(try run(f, x)) }
+      [json.Array(out)]
+    }
+    "sort_by" => {
+      var keyed = []
+      for x in try values.items(v, name) { keyed.push((json.Array(try run(f, x)), x)) }
+      [json.Array(keyed.sorted_with(|(a, _), (b, _)| order.compare(a, b)).map(.1))]
+    }
+    "has" => try run(f, v).map(|k| try has(v, k))
+    "join" => try run(f, v).map(|sep| try join(v, sep))
+    "first" => try run(f, v).take(1)
+    "last" => try run(f, v).take_last(1)
+    _ => raise "{name}(…) is no function"
+  }
+}
+
+fn has(v: json.Value, key: json.Value) -> json.Value / raise<str> {
+  match (v, key) {
+    (Object(members), Text(k)) => json.Bool(members.any(|(name, _)| name == k))
+    (Array(items), Number(n)) => json.Bool(n.to_i64().is_some_and(|i| i >= 0 && i < items.len()))
+    _ => raise "has can't look for {values.kind(key)} keys in {values.kind(v)} values"
+  }
+}
+
+/// The elements of an array as text, `sep` between them: strings as they are, numbers and
+/// booleans as JSON writes them, and `null` as nothing.
+fn join(v: json.Value, sep: json.Value) -> json.Value / raise<str> {
+  let Text(between) = sep else raise "join needs a string to put between the elements"
+  var parts = []
+  for x in try values.items(v, "join") {
+    parts.push(
+      match x {
+        Text(s) => s
+        Null => ""
+        Number(_) | Bool(_) => json.render(x)
+        _ => raise "join can't join {values.kind(x)} elements"
+      },
+    )
+  }
+  json.Text(between.join(parts))
+}
+
+test "comparisons and logic give each combination, as jq does" {
+  let both = try run(try query.parse("(1, 2) < (2, 1)") catch e => raise e.message, json.Null)
+  assert both == [json.Bool(true), json.Bool(false), json.Bool(false), json.Bool(false)]
+  let either = try run(
+    try query.parse("(false, true) or (false, true)") catch e => raise e.message,
+    json.Null,
+  )
+  assert either == [json.Bool(false), json.Bool(true), json.Bool(true)]
+}
+
+test "an object is built for each choice of its values" {
+  let built = try run(
+    try query.parse("\{a: (1, 2), b: (3, 4)} | [.a, .b]") catch e => raise e.message,
+    json.Null,
+  )
+  assert built.map(json.render) == ["[1,3]", "[1,4]", "[2,3]", "[2,4]"]
+}

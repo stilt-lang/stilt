@@ -1,0 +1,85 @@
+// life: Conway's Game of Life on a board that wraps around, drawn in the terminal. Under
+// `stilt run`, an edit of rules.lt changes the rule and the colours of the running board.
+
+use std.cli
+use std.clock
+use std.fs
+use std.io
+use board
+
+const USAGE: str = "usage: life [--size WxH] [--steps N] [--delay MS] [PATTERN]"
+
+/// What the arguments ask for: the board's size, how many generations to run before printing
+/// the board and stopping, or none to run forever, drawing each, the pause between two, and the
+/// pattern's file, in the plaintext format of `.` and `O`, `!` starting a comment.
+type Options = { width: i64, height: i64, steps: Option<i64>, delay: i64, pattern: Option<str> }
+
+/// The R-pentomino, which a board starts with when it is given no pattern.
+const START: List<str> = [".OO", "OO.", ".O."]
+
+fn main() / {io, raise<str>} {
+  let o = try options(cli.args())
+  let pattern = match o.pattern {
+    Some(path) => cells(try fs.read_lines(path) catch _ => raise "cannot read {path}")
+    None => START
+  }
+  var b = board.seeded(board.empty(o.width, o.height), pattern)
+  match o.steps {
+    Some(n) => {
+      for _ in 0..n { b = board.step(b) }
+      for row in board.rows(b) { print(row) }
+      print("{board.alive(b)} alive after {n} generations")
+    }
+    None => {
+      io.write("\u{1b}[2J")
+      var generation = 0
+      loop {
+        io.write("\u{1b}[H{board.drawn(b)}generation {generation}, {board.alive(b)} alive \u{1b}[K\n")
+        io.flush()
+        clock.sleep_ms(o.delay)
+        b = board.step(b)
+        generation += 1
+      }
+    }
+  }
+}
+
+/// The rows of a pattern's file, without its comments.
+/// ex: cells(["!Name: blinker", "OOO"]) == ["OOO"]
+fn cells(lines: List<str>) -> List<str> { lines.filter(|l| !l.starts_with("!")) }
+
+/// The options that `args` give.
+/// ex: try options(["--size", "8x4", "--steps", "3"]).steps == Some(3)
+/// ex: Result.of(|| try options(["--size", "8"])) == Err("--size needs WxH, as 40x20, not 8")
+fn options(args: List<str>) -> Options / raise<str> {
+  var o = Options { width: 40, height: 20, steps: None, delay: 100, pattern: None }
+  var i = 0
+  while i < args.len() {
+    let arg = args[i]
+    let value = args.get(i + 1) else ""
+    i += 2
+    match arg {
+      "--size" => {
+        let [w, h] = value.split("x") else raise "--size needs WxH, as 40x20, not {value}"
+        o.width = try count(w, arg)
+        o.height = try count(h, arg)
+      }
+      "--steps" => { o.steps = Some(try count(value, arg)) }
+      "--delay" => { o.delay = try count(value, arg) }
+      _ if arg.starts_with("-") => raise "unknown option {arg}\n{USAGE}"
+      _ if o.pattern == None => {
+        o.pattern = Some(arg)
+        i -= 1
+      }
+      _ => raise USAGE
+    }
+  }
+  o
+}
+
+/// The positive number `text` gives to the option `name`.
+fn count(text: str, name: str) -> i64 / raise<str> {
+  let n = text.to_i64() else raise "{name} needs a number, not {text}"
+  if n <= 0 { raise "{name} needs a number above 0, not {text}" }
+  n
+}

@@ -1,0 +1,208 @@
+// Csmith-style items: type declarations, functions, and a `main` that calls
+// every function and prints what it computes.
+//
+// Generation is type-directed. Each expression is made for the type its
+// context expects, from the variables, functions and types in scope, so a
+// program checks by construction. It terminates by construction too: every
+// loop runs a bounded number of times, a function calls only the functions
+// declared before it, and the work of each body is estimated and kept under a
+// budget. Operands that could make an operator panic are masked so that they
+// can't.
+
+use code
+use context
+use expr
+use pick
+use statements
+use ty
+
+/// A record or variant type, whose fields and payloads use only the types
+/// declared before it, so that no type contains itself. Each field draws its
+/// type before its name, and each variant its payload before its name.
+pub fn type_decl(inout p: context.Program, public: bool) -> List<(i64, str)> {
+  let name = context.fresh(inout p, "T")
+  let d = if pick.chance(inout p.r, 0.5) {
+    let n = pick.between(inout p.r, 1, 4)
+    var fields = []
+    for _ in 0..n {
+      let t = context.random_ty(inout p, true, 2)
+      fields.push((context.fresh(inout p, "fd"), t))
+    }
+    ty.Record(fields)
+  } else {
+    let n = pick.between(inout p.r, 1, 4)
+    var cases = []
+    for _ in 0..n {
+      let m = pick.between(inout p.r, 0, 2)
+      var payload = []
+      for _ in 0..m { payload.push(context.random_ty(inout p, true, 1)) }
+      cases.push((context.fresh(inout p, "C"), payload))
+    }
+    ty.Variants(cases)
+  }
+  p.decls.push((name, d))
+  let pub_ = if public { "pub " } else { "" }
+  code.line("{pub_}type {name} = {decl_text(d)}")
+}
+
+/// What follows the `=` of a declaration.
+/// ex: decl_text(ty.Variants([("C1", []), ("C2", [ty.Str, ty.Bool])])) == "| C1 | C2(str, bool)"
+/// ex: decl_text(ty.Record([("fd1", ty.Int(ty.U8))])) == "\{ fd1: u8 }"
+fn decl_text(d: ty.Decl) -> str {
+  match d {
+    Record(fields) => "\{ {", ".join(fields.map(|(f, t)| "{f}: {ty.to_string(t)}"))} }"
+    Variants(cases) => {
+      let shown = cases.map(
+        |(c, payload)| if payload.is_empty() {
+          "| {c}"
+        } else {
+          "| {c}({", ".join(payload.map(ty.to_string))})"
+        },
+      )
+      " ".join(shown)
+    }
+  }
+}
+
+fn signature(p: context.Program, f: context.FnSig, names: List<str>, public: bool) -> str {
+  let params = f.params.zip(names).map(
+    |((passed, t), name)| if passed {
+      "inout {name}: {ty.to_string(t)}"
+    } else {
+      "{name}: {ty.to_string(t)}"
+    },
+  )
+  let ret = if f.ret == ty.Unit { "" } else { " -> {ty.to_string(f.ret)}" }
+  let row = if f.raises { " / raise<{p.fault}>" } else { "" }
+  let pub_ = if public { "pub " } else { "" }
+  "{pub_}fn {f.fname}({", ".join(params)}){ret}{row} \{"
+}
+
+/// A function of the program, which can call those declared before it, and
+/// the lines that declare it. Each parameter draws its type before whether it
+/// is `inout`.
+pub fn function(
+  inout p: context.Program,
+  budget: i64,
+  public: bool,
+) -> (context.FnSig, List<(i64, str)>) {
+  let fname = context.fresh(inout p, "g")
+  let n = pick.between(inout p.r, 0, 3)
+  var params = []
+  for _ in 0..n {
+    let t = context.random_ty(inout p, true, 2)
+    params.push((pick.chance(inout p.r, 0.2), t))
+  }
+  var names = []
+  for _ in params { names.push(context.fresh(inout p, "p")) }
+  let ret = if pick.chance(inout p.r, 0.2) { ty.Unit } else { context.random_ty(inout p, true, 2) }
+  let raises = pick.chance(inout p.r, 0.25)
+  var b = context.Body { p, budget, spent: 0 }
+  let vars = params
+    .zip(names)
+    .map(|((passed, t), name)| context.Var { name, ty: t, mutable: passed })
+    .reversed()
+  let sc = context.Scope {
+    vars,
+    frozen: [],
+    in_loop: false,
+    may_raise: raises,
+    io: false,
+    returns: Some(ret),
+    weight: 1,
+  }
+  let count = pick.between(inout b.p.r, 1, 5)
+  let (after, body) = statements.stmts(inout b, sc, 3, count)
+  let result = if ret == ty.Unit {
+    []
+  } else {
+    code.line(expr.expr(inout b, after, 3, false, ret).text)
+  }
+  p = b.p
+  let f = context.FnSig { fname, params, ret, raises, cost: b.spent.max(1) }
+  p.fns.push(f)
+  (f, code.block_lines(signature(p, f, names, public), body.concat(result), "}"))
+}
+
+/// The arguments that `main` passes `f`, with the lines that declare a
+/// variable for each `inout` one, and the scope after them. Each argument
+/// comes with the variable passed `inout`, if it is one.
+fn arguments(
+  inout b: context.Body,
+  sc: context.Scope,
+  f: context.FnSig,
+) -> (context.Scope, List<(i64, str)>, List<(Option<str>, str)>) {
+  var scope = sc
+  var setup = []
+  var args = []
+  for (passed, t) in f.params {
+    let e = expr.expr(inout b, scope, 2, false, t)
+    if passed {
+      let a = context.fresh(inout b.p, "a")
+      scope = context.declare(scope, a, t, true)
+      setup.push((0, "var {a}: {ty.to_string(t)} = {e.text}"))
+      args.push((Some(a), "inout {a}"))
+    } else {
+      args.push((None, e.text))
+    }
+  }
+  (scope, setup, args)
+}
+
+/// The lines that make `call` and print what `f` returns or raises.
+fn shown(
+  inout b: context.Body,
+  sc: context.Scope,
+  f: context.FnSig,
+  call: str,
+) -> List<(i64, str)> {
+  let result = context.fresh(inout b.p, "r")
+  let caught = "catch e because \"main shows it\" =>"
+  let raised = "print(\"{f.fname} raised \{e}\")"
+  let printed = (0, "print(\"{f.fname}: \{{result}}\")")
+  match (f.ret, f.raises) {
+    (Unit, false) => [(0, call)]
+    (Unit, true) => code.line("try {call} {caught} {raised}")
+    (t, false) => [(0, "let {result}: {ty.to_string(t)} = {call}"), printed]
+    (t, true) => {
+      let fallback = expr.expr(inout b, sc, 2, false, t)
+      [
+        (0, "let {result}: {ty.to_string(t)} = try {call} {caught} \{ {raised}; {fallback.text} }"),
+        printed,
+      ]
+    }
+  }
+}
+
+/// `main`, which computes some values of its own, then calls every function
+/// and prints what each returns, raises, or leaves in its `inout` arguments.
+pub fn main_fn(inout p: context.Program) -> List<(i64, str)> {
+  var b = context.Body { p, budget: 20000, spent: 0 }
+  let sc = context.Scope {
+    vars: [],
+    frozen: [],
+    in_loop: false,
+    may_raise: false,
+    io: true,
+    returns: Some(ty.Unit),
+    weight: 1,
+  }
+  let n = pick.between(inout b.p.r, 2, 6)
+  let (after, setup) = statements.stmts(inout b, sc, 3, n)
+  var scope = after
+  var lines = setup
+  let fns = b.p.fns
+  for f in fns {
+    let (next, more, args) = arguments(inout b, scope, f)
+    scope = next
+    let call = code.call_text(f.fname, args.map(.1))
+    lines.extend(more)
+    lines.extend(shown(inout b, scope, f, call))
+    for (slot, _) in args {
+      let Some(a) = slot else continue
+      lines.push((0, "print(\"{a}: \{{a}}\")"))
+    }
+  }
+  p = b.p
+  code.block_lines("fn main() / io \{", lines, "}")
+}

@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: facts.writes-in-place
+//~ run-output: "[7, 5, 3, 8]"
+
+use std.view
+
+// A view made through an `inout` parameter that holds its own storage copies nothing.
+fn first_to_seven(inout xs: List<i64>) without alloc {
+  var v = view.into(inout xs, 0, 1)
+  v[0] = 7
+}
+
+fn mark(inout a: view.View<List<i64>>, inout b: view.View<List<i64>>) {
+  a[1] = 5
+  b[1] = 8
+}
+
+fn split_marks(inout xs: List<i64>) without alloc { view.split(inout xs, 2, mark) }
+
+fn main() / io {
+  var xs = [1, 2, 3, 4]
+  first_to_seven(inout xs)
+  split_marks(inout xs)
+  print("{xs}")
+}

@@ -1,0 +1,15 @@
+//~ rule: expressions.struct-literals, expressions.struct-literal-fields
+//~ run-output: "Point { x: 1, y: 2 } Point { x: 1, y: 2 } Point { x: 0, y: 0 } true"
+
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  fn origin() -> Self { Self { x: 0, y: 0 } }
+}
+
+fn main() / io {
+  let a = Point { x: 1, y: 2 }
+  let b = Point { y: 2, x: 1 }
+  let o = Point.origin()
+  print("{a} {b} {o} {a == b}")
+}

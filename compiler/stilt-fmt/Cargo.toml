@@ -1,0 +1,16 @@
+[package]
+name = "stilt-fmt"
+description = "The formatter of Stilt, which writes a file in its one canonical format"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-syntax = { path = "../stilt-syntax" }
+rowan.workspace = true
+rustc-hash.workspace = true
+
+[lints]
+workspace = true

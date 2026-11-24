@@ -1,0 +1,33 @@
+//~ rule: std.floats
+
+fn exact(x: f64, y: f32) -> (f64, f32, bool) {
+  (x.sqrt().floor().ceil().trunc().round().abs().min(x).max(x), y.sqrt().round().min(y), x.is_nan())
+}
+
+fn power(x: f64) -> f64 {
+  x.pow(2.0) //~ ERROR E0314
+}
+
+fn exponential(x: f64) -> f64 {
+  x.exp() //~ ERROR E0314
+}
+
+fn sine(x: f32) -> f32 {
+  x.sin() //~ ERROR E0314
+}
+
+fn logarithm(x: f64) -> f64 {
+  x.log() //~ ERROR E0314
+}
+
+fn integer_root(n: i64) -> i64 {
+  n.sqrt() //~ ERROR E0314
+}
+
+fn integer_nan(n: u8) -> bool {
+  n.is_nan() //~ ERROR E0314
+}
+
+fn integer_floor(n: i32) -> i32 {
+  n.floor() //~ ERROR E0314
+}

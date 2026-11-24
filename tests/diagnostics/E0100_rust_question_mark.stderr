@@ -1,0 +1,14 @@
+── SYNTAX ERROR ────────────────────── E0100_rust_question_mark.lt:5:61  [E0100]
+
+Stilt marks a call that can raise with `try` before it, not `?` after it:
+
+  5 │ fn total(text: str) -> i64 / raise<ParseError> { parse(text)? + 1 }
+    │                                                             ^
+
+`try` marks the calls that can raise, and passes their errors on to the caller,
+whose row names the error type.
+
+To fix it, write `try`:
+
+  5 │ fn total(text: str) -> i64 / raise<ParseError> { try parse(text) + 1 }
+    │                                                  ++++

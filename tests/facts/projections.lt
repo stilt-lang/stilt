@@ -1,0 +1,29 @@
+//~ tier: advanced
+
+// Projections and writable views (projections.declaring-projection, projections.writable-modes and projections.show): a module that declares a
+// projection is in the advanced tier, a writable binding prints which source it writes, which
+// stands for `fixed`, and a view made from a writable binding reads the binding.
+
+use std.view
+
+type Grid = { w: i64, cells: List<i64> }
+
+impl Grid {
+  // A projection's signature says what it is; `show` prints nothing more for it.
+  fn at(inout self, x: i64, y: i64) -> inout i64 {
+    yield self.cells[y * self.w + x] //~ PANIC OVERFLOW ALLOC
+  }
+}
+
+fn main() / io {
+  var g = Grid { w: 2, cells: [0, 0, 0, 0] } //~ ALLOC
+  g.at(1, 0) = 5 //~ PANIC OVERFLOW ALLOC
+  var xs = [1, 2, 3, 4] //~ ALLOC
+  {
+    var tail = view.into(inout xs, 2, 4) //~ WRITES xs PANIC ALLOC
+    tail[1] = 9 //~ PANIC
+    let w = tail.view(0, 1) //~ VIEWS tail PANIC
+    print("{w}") //~ ALLOC CONSOLE
+  }
+  print("{g.cells} {xs}") //~ ALLOC CONSOLE
+}

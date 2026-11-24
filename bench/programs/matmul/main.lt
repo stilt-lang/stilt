@@ -1,0 +1,37 @@
+// matmul: multiplies two square matrices of floats, held as lists of rows.
+
+use std.cli
+
+fn matrix(n: i64, seed: i64) -> List<List<f64>> {
+  var rows = []
+  for i in 0..n {
+    var row = []
+    for j in 0..n { row.push(((i * j + seed) % 17).to_f64() / 17.0) }
+    rows.push(row)
+  }
+  rows
+}
+
+fn multiply(a: List<List<f64>>, b: List<List<f64>>) -> List<List<f64>> {
+  let n = a.len()
+  var c = []
+  for i in 0..n {
+    let ai = a[i]
+    var row = []
+    for j in 0..n {
+      var sum = 0.0
+      for k in 0..n { sum += ai[k] * b[k][j] }
+      row.push(sum)
+    }
+    c.push(row)
+  }
+  c
+}
+
+fn main() / io {
+  let n = (cli.arg(0) else "").to_i64() else 250
+  let c = multiply(matrix(n, 1), matrix(n, 2))
+  var trace = 0.0
+  for i in 0..n { trace += c[i][i] }
+  print("{c[n / 2][n / 3]:.6} {trace:.6}")
+}

@@ -1,0 +1,20 @@
+//~ rule: declarations.methods, traits.methods
+
+fn area(self) -> f64 { //~ ERROR E0215
+  0.0
+}
+
+type Point = { x: i64 }
+
+impl Point {
+  fn origin() -> Point {
+    self //~ ERROR E0215
+  }
+}
+
+fn make() -> Self { //~ ERROR E0215
+  Point { x: 0 }
+}
+
+fn bump(inout self) { //~ ERROR E0215
+}

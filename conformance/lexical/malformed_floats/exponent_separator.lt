@@ -1,0 +1,1 @@
+const A: f64 = 1e1_0 //~ ERROR E0004

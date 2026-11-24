@@ -1,0 +1,13 @@
+//~ rule: effects.what-paired-variable-may-raise
+
+type Box = { v: i64 }
+
+fn f<e>(unused: List<fn() / {raise<Box>, e}>, escaping g: fn() -> i64 / e) -> i64 / e {
+  let h: fn() -> i64 / {raise<Box>, e} = g
+  try h() catch b because "only a Box" => b.v
+}
+
+fn main() / io {
+  let n = try f([], || raise true) catch _ because "a bool" => 0 //~ ERROR E0503
+  print("{n}")
+}

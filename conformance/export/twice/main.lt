@@ -1,0 +1,6 @@
+//~ rule: c.exported-names
+
+// Two exported functions of a package can't take one name, since C has one namespace: the
+// second, in the order of their modules' paths, is the error.
+
+fn main() {}

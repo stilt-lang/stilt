@@ -1,0 +1,178 @@
+// Reading JSON by hand, as `std.json` reads it from a type's shape (std.json-reading and
+// std.json-read-errors), so that each type's reading below gives the errors that reading it from
+// its shape would: a member that isn't there, at its path, and a value of the wrong kind, at its
+// path, with the name of the type asked for and the start of what was found.
+
+use std.json
+
+/// The error at `path`, where a value of the type named `expected` was asked for and `v` was
+/// found, written as JSON and cut to 40 characters.
+/// ex: mismatch("u8", json.Number("300"), "$.a") == json.Mismatch("$.a", "u8", "300")
+pub fn mismatch(expected: str, v: json.Value, path: str) -> json.Error {
+  json.Mismatch(path, expected, "".join(json.render(v).chars().take(40)))
+}
+
+/// The members of the object at `path`, a value of the record type named `expected`.
+pub fn members(
+  v: json.Value,
+  path: str,
+  expected: str,
+) -> List<(str, json.Value)> / raise<json.Error> {
+  match v {
+    Object(ms) => ms
+    _ => raise mismatch(expected, v, path)
+  }
+}
+
+/// The last member named `name`, or `None`.
+/// ex: member([("a", json.Null), ("a", json.Bool(true))], "a") == Some(json.Bool(true))
+pub fn member(ms: List<(str, json.Value)>, name: str) -> Option<json.Value> {
+  var found: Option<json.Value> = None
+  for (n, x) in ms { if n == name { found = Some(x) } }
+  found
+}
+
+/// The last member named `name` of the object at `path`, which must be there.
+pub fn field(ms: List<(str, json.Value)>, name: str, path: str) -> json.Value / raise<json.Error> {
+  member(ms, name) else raise json.Missing("{path}.{name}")
+}
+
+/// The `i64` at `path`: a number that writes it as it prints.
+/// ex: Result.of(|| try int(json.Number("007"), "$")) == Err(json.Mismatch("$", "i64", "007"))
+pub fn int(v: json.Value, path: str) -> i64 / raise<json.Error> {
+  match v {
+    Number(t) => {
+      let n = t.to_i64() else raise mismatch("i64", v, path)
+      if "{n}" != t { raise mismatch("i64", v, path) }
+      n
+    }
+    _ => raise mismatch("i64", v, path)
+  }
+}
+
+/// The `u8` at `path`: a number that writes it as it prints.
+/// ex: Result.of(|| try small(json.Number("256"), "$.a")) == Err(json.Mismatch("$.a", "u8", "256"))
+pub fn small(v: json.Value, path: str) -> u8 / raise<json.Error> {
+  match v {
+    Number(t) => {
+      let n = t.to_u8() else raise mismatch("u8", v, path)
+      if "{n}" != t { raise mismatch("u8", v, path) }
+      n
+    }
+    _ => raise mismatch("u8", v, path)
+  }
+}
+
+/// The `str` at `path`.
+pub fn text(v: json.Value, path: str) -> str / raise<json.Error> {
+  match v {
+    Text(s) => s
+    _ => raise mismatch("str", v, path)
+  }
+}
+
+/// The `bool` at `path`.
+pub fn flag(v: json.Value, path: str) -> bool / raise<json.Error> {
+  match v {
+    Bool(b) => b
+    _ => raise mismatch("bool", v, path)
+  }
+}
+
+/// The `List<str>` at `path`, each element at its index.
+pub fn texts(v: json.Value, path: str) -> List<str> / raise<json.Error> {
+  match v {
+    Array(items) => try items.enumerate(0).map(|(i, x)| text(x, "{path}[{i}]"))
+    _ => raise mismatch("List<str>", v, path)
+  }
+}
+
+/// The `List<i64>` at `path`, each element at its index.
+pub fn ints(v: json.Value, path: str) -> List<i64> / raise<json.Error> {
+  match v {
+    Array(items) => try items.enumerate(0).map(|(i, x)| int(x, "{path}[{i}]"))
+    _ => raise mismatch("List<i64>", v, path)
+  }
+}
+
+/// The `Option<i64>` that the member `name` of an object at `path` holds: `None` when it isn't
+/// there or is `null`.
+pub fn maybe_int(
+  ms: List<(str, json.Value)>,
+  name: str,
+  path: str,
+) -> Option<i64> / raise<json.Error> {
+  match member(ms, name) {
+    None | Some(Null) => None
+    Some(x) => Some(try int(x, "{path}.{name}"))
+  }
+}
+
+/// The `Option<str>` that the member `name` of an object at `path` holds, as `maybe_int` reads
+/// one.
+pub fn maybe_text(
+  ms: List<(str, json.Value)>,
+  name: str,
+  path: str,
+) -> Option<str> / raise<json.Error> {
+  match member(ms, name) {
+    None | Some(Null) => None
+    Some(x) => Some(try text(x, "{path}.{name}"))
+  }
+}
+
+/// The `Map<str, i64>` at `path`: an object, each member's value at its name.
+pub fn counts(v: json.Value, path: str) -> Map<str, i64> / raise<json.Error> {
+  match v {
+    Object(ms) => Map.from_entries(try ms.map(|(name, x)| (name, int(x, "{path}.{name}"))))
+    _ => raise mismatch("Map<str, i64>", v, path)
+  }
+}
+
+/// The name of a variant without a payload, which JSON writes as a string.
+pub fn bare(v: json.Value) -> Option<str> {
+  match v {
+    Text(name) => Some(name)
+    _ => None
+  }
+}
+
+/// The name and the payload of a variant with one, which JSON writes as an object of one
+/// member.
+pub fn named(v: json.Value) -> Option<(str, json.Value)> {
+  match v {
+    Object([(name, payload)]) => Some((name, payload))
+    _ => None
+  }
+}
+
+/// The `n` values of a variant's payload at `path`, an array of that length, the payload's
+/// type named `expected`.
+pub fn payload(
+  v: json.Value,
+  path: str,
+  n: i64,
+  expected: str,
+) -> List<json.Value> / raise<json.Error> {
+  match v {
+    Array(items) if items.len() == n => items
+    _ => raise mismatch(expected, v, path)
+  }
+}
+
+/// An `i64` as JSON.
+pub fn number(n: i64) -> json.Value { json.Number("{n}") }
+
+/// An option as JSON: its value's, or `null`.
+pub fn option<T>(o: Option<T>, write: fn(T) -> json.Value) -> json.Value {
+  match o {
+    Some(x) => write(x)
+    None => json.Null
+  }
+}
+
+/// A variant with a payload as JSON: an object of one member, its name, holding the payload's
+/// values in an array.
+pub fn variant(name: str, values: List<json.Value>) -> json.Value {
+  json.Object([(name, json.Array(values))])
+}

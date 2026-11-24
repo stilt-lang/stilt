@@ -1,0 +1,54 @@
+//~ rule: std.list-searching, std.option-result-and-ordering, traits.qualified-calls
+//~ stdout:
+//~ | 2 found at 0
+//~ | 5 found at 2
+//~ | 6 not found, insert at 3
+//~ | 89 found at 10
+//~ | 100 not found, insert at 11
+//~ | -4 not found, insert at 0
+//~ | true
+
+// Rosetta Code, Binary search: the half of a sorted range that can hold the value is kept until
+// the value is found or the range is empty, where the value would be inserted. Both the
+// iterative and the recursive forms are checked against the library's `binary_search`.
+
+fn search(xs: List<i64>, x: i64) -> Result<i64, i64> {
+  var lo = 0
+  var hi = xs.len()
+  while lo < hi {
+    let mid = lo + (hi - lo) / 2
+    match Ord.compare(xs[mid], x) {
+      Less => { lo = mid + 1 }
+      Greater => { hi = mid }
+      Equal => return Ok(mid)
+    }
+  }
+  Err(lo)
+}
+
+fn search_from(xs: List<i64>, x: i64, lo: i64, hi: i64) -> Option<i64> {
+  if lo >= hi { return None }
+  let mid = lo + (hi - lo) / 2
+  if xs[mid] < x {
+    search_from(xs, x, mid + 1, hi)
+  } else if xs[mid] > x {
+    search_from(xs, x, lo, mid)
+  } else {
+    Some(mid)
+  }
+}
+
+fn main() / io {
+  let xs = [2, 3, 5, 8, 13, 21, 34, 55, 60, 75, 89]
+  for x in [2, 5, 6, 89, 100, -4] {
+    match search(xs, x) {
+      Ok(i) => print("{x} found at {i}")
+      Err(i) => print("{x} not found, insert at {i}")
+    }
+  }
+  let agree = List.generate(100, |x| x - 5).all(|x| {
+    let found = search(xs, x).ok()
+    found == search_from(xs, x, 0, xs.len()) && found == xs.binary_search(x)
+  })
+  print("{agree}")
+}

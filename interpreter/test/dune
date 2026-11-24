@@ -1,0 +1,15 @@
+(library
+ (name stilt_tests)
+ (inline_tests)
+ (libraries stilt)
+ (preprocess
+  (pps ppx_expect)))
+
+; The standard library's own tests (std.examples): every doc example of std/
+; passes, as `test --std` runs them, which exits with status 1 if one fails.
+
+(rule
+ (alias runtest)
+ (action
+  (ignore-stdout
+   (run %{exe:../bin/main.exe} test --std %{dep:std_examples.lt}))))

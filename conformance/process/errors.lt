@@ -1,0 +1,35 @@
+//~ rule: std.process-starting
+//~ stdout:
+//~ | NotFound("stilt-no-such-program") NotFound("./stilt-no-such-file")
+//~ | NotFound("sh")
+//~ | NotFound("stilt-no-such-directory")
+//~ | Other("sh") Other("sh") Other("sh") Other("sh") Other("sh")
+//~ | true
+
+use std.fs
+use std.io
+use std.process
+use std.random
+
+// The status of a run, or the error that its command raises.
+fn tried(c: process.Command) -> str / io {
+  try "{c.output().status}" catch e because "the test prints each error" => "{e}"
+}
+
+fn main() / {io, raise<io.IoError>} {
+  print("{tried(process.Command.new("stilt-no-such-program"))} {tried(process.Command.new("./stilt-no-such-file"))}")
+  print(tried(process.Command.new("sh").without_env("PATH")))
+  print(tried(process.Command.new("pwd").with_dir("stilt-no-such-directory")))
+  let sh = process.Command.new("sh")
+  let nul = tried(sh.with_arg("a\0b"))
+  let named = tried(sh.with_env("A=B", "1"))
+  let empty = tried(sh.with_env("", "1"))
+  let value = tried(sh.with_env("A", "x\0y"))
+  let removed = tried(sh.without_env("A\0"))
+  print("{nul} {named} {empty} {value} {removed}")
+  let file = "/tmp/stilt-process-{random.entropy()}"
+  try fs.write(file, "echo hi\n")
+  let denied = tried(process.Command.new(file))
+  try fs.remove(file)
+  print("{denied == "PermissionDenied(\"{file}\")"}")
+}

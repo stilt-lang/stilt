@@ -1,0 +1,109 @@
+module pure
+without alloc
+
+use lib
+
+pub type Node = { next: Option<Node>, value: i64 }
+
+pub type Point = { x: i64, y: i64 }
+
+pub type Label = { text: str }
+
+impl Show for Label {
+  fn show(self) -> str { "label" }
+}
+
+pub fn list() -> List<i64> {
+  [1, 2] //~ ERROR E0204
+}
+
+pub fn empty() -> List<i64> {
+  [] //~ ERROR E0204
+}
+
+pub fn closure() -> fn(i64) -> i64 {
+  |n| n * 2 //~ ERROR E0204
+}
+
+pub fn text(l: Label) -> str {
+  "{l}" //~ ERROR E0204
+}
+
+pub fn plain() -> str { "plain" }
+
+pub fn shown(n: i64) -> str {
+  n.show() //~ ERROR E0204
+}
+
+pub fn node(v: i64) -> Node {
+  Node { next: None, value: v } //~ ERROR E0204
+}
+
+pub fn stream(escaping f: fn() -> Option<lib.Stream>) -> lib.Stream {
+  lib.Stream { head: 1, rest: f } //~ ERROR E0204
+}
+
+pub fn getter() -> fn(Label) -> str {
+  .text //~ ERROR E0204
+}
+
+pub fn point(v: i64) -> Point { Point { x: v, y: v } }
+
+pub fn tree(l: lib.Tree, r: lib.Tree) -> lib.Tree {
+  lib.Node(l, 1, r) //~ ERROR E0204
+}
+
+pub fn named(l: lib.Tree, r: lib.Tree) -> lib.Tree {
+  let make = lib.Node //~ ERROR E0204
+  make(l, 2, r)
+}
+
+pub fn leaf() -> lib.Tree { lib.Leaf }
+
+pub fn fork(f: lib.Forest) -> lib.Branch {
+  lib.Fork(f) //~ ERROR E0204
+}
+
+pub fn wrapped(v: i64) -> Option<i64> { Some(v) }
+
+// The module's limit makes `xs` hold its own storage, so its write through an index is in
+// place (facts.own-storage and facts.writes-in-place).
+pub fn store(inout xs: List<i64>) {
+  xs[0] = 1
+}
+
+pub fn bump(inout m: Map<str, i64>) {
+  m["a"] += 1 //~ ERROR E0204
+}
+
+pub fn read(xs: List<i64>) -> i64 { xs[0] }
+
+fn reset(inout n: i64) { n = 0 }
+
+pub fn reset_first(inout xs: List<i64>) {
+  reset(inout xs[0]) //~ ERROR E0204
+}
+
+pub fn push(inout xs: List<i64>) {
+  xs.push(1) //~ ERROR E0204
+}
+
+pub fn length(xs: List<i64>) -> i64 { xs.len() }
+
+pub fn first(xs: List<i64>) -> Option<i64> { xs.get(0) }
+
+pub fn words(s: str) -> List<str> {
+  s.split(" ") //~ ERROR E0204
+}
+
+pub fn called(n: i64) -> i64 {
+  lib.via(n) //~ ERROR E0204
+}
+
+pub fn summed(xs: List<i64>) -> i64 { lib.sum(xs) }
+
+pub fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }
+
+pub fn again() -> List<i64> { list() }
+
+test "the tests of a module without alloc may allocate" { assert [1, 2].len() == 2 }

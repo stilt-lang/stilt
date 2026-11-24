@@ -1,0 +1,7 @@
+//~ rule: program.header-limits, effects.without-panic, facts.allocation
+
+module main
+without alloc
+without panic //~ ERROR E0202
+
+fn first(xs: List<i64>) -> i64 { xs[0] }

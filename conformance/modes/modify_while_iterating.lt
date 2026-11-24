@@ -1,0 +1,24 @@
+//~ rule: expressions.for-iterables, modes.kinds-of-access, modes.durations, modes.change-while-iterating
+
+type Stock = { counts: Map<str, i64>, log: List<str> }
+
+fn bump(inout n: i64) { n += 1 }
+
+fn restock(inout s: Stock) {
+  for (name, n) in s.counts {
+    s.log.push(name)
+    s.counts[name] = n + 1 //~ ERROR E0404
+    s = Stock { counts: Map.new(), log: [] } //~ ERROR E0404
+  }
+  s.counts["new"] = 0
+}
+
+fn nested(inout xs: List<i64>, ys: List<i64>) {
+  for x in xs {
+    for y in ys {
+      xs[0] += y //~ ERROR E0404
+      bump(inout xs[1]) //~ ERROR E0404
+    }
+  }
+  xs.push(1)
+}

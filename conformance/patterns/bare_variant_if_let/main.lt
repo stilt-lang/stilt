@@ -1,0 +1,34 @@
+//~ rule: expressions.if-let, patterns.variants-by-type, patterns.match
+//~ stdout:
+//~ | word tea
+//~ | number 3
+//~ | pair of tea and 3
+//~ | something else
+//~ | 2 words
+
+use tokens
+
+type Mine = | Word(i64) | Other
+
+fn describe(t: tokens.Token) -> str {
+  if let Word(w) = t { "word {w}" } else if let Number(n) = t { "number {n}" } else { pair(t) }
+}
+
+fn pair(t: tokens.Token) -> str {
+  if let Pair(Word(a), Number(b)) = t { "pair of {a} and {b}" } else { "something else" }
+}
+
+fn words(ts: List<tokens.Token>) -> i64 {
+  var n = 0
+  for t in ts { if let Word(_) = t { n += 1 } }
+  n
+}
+
+fn main() / io {
+  print(describe(tokens.Word("tea")))
+  print(describe(tokens.Number(3)))
+  print(describe(tokens.Pair(tokens.Word("tea"), tokens.Number(3))))
+  print(describe(tokens.End))
+  let own = Word(1)
+  if let Word(_) = own { print("{words([tokens.Word("a"), tokens.End, tokens.Word("b")])} words") }
+}

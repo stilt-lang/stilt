@@ -1,0 +1,72 @@
+//~ rule: effects.raise, effects.marking, effects.catch, effects.result, declarations.constant-declarations
+//~ stdout:
+//~ | 1990 = MCMXC
+//~ | 2008 = MMVIII
+//~ | 1666 = MDCLXVI
+//~ | MCMXC = 1990
+//~ | MMVIII = 2008
+//~ | MDCLXVI = 1666
+//~ | Err("Q is not a Roman symbol in MXQ")
+//~ | true
+
+// Rosetta Code, Roman numerals/Encode and Roman numerals/Decode: 1990 is MCMXC, 2008 is MMVIII
+// and 1666 is MDCLXVI. A symbol worth less than the one after it is subtracted, as the C of CM.
+
+const NUMERALS: List<(i64, str)> = [
+  (1000, "M"),
+  (900, "CM"),
+  (500, "D"),
+  (400, "CD"),
+  (100, "C"),
+  (90, "XC"),
+  (50, "L"),
+  (40, "XL"),
+  (10, "X"),
+  (9, "IX"),
+  (5, "V"),
+  (4, "IV"),
+  (1, "I"),
+]
+
+fn encode(n: i64) -> str {
+  var rest = n
+  var out = ""
+  for (value, symbol) in NUMERALS {
+    while rest >= value {
+      out = "{out}{symbol}"
+      rest -= value
+    }
+  }
+  out
+}
+
+fn symbol_value(s: str) -> i64 / raise<str> {
+  match s {
+    "I" => 1
+    "V" => 5
+    "X" => 10
+    "L" => 50
+    "C" => 100
+    "D" => 500
+    "M" => 1000
+    _ => raise s
+  }
+}
+
+fn decode(numeral: str) -> i64 / raise<str> {
+  let values = try numeral.chars().map(symbol_value)
+    catch s => raise "{s} is not a Roman symbol in {numeral}"
+  var total = 0
+  for (i, v) in values.enumerate(0) {
+    let next = values.get(i + 1) else 0
+    total += if v < next { -v } else { v }
+  }
+  total
+}
+
+fn main() / {io, raise<str>} {
+  for n in [1990, 2008, 1666] { print("{n} = {encode(n)}") }
+  for s in ["MCMXC", "MMVIII", "MDCLXVI"] { print("{s} = {try decode(s)}") }
+  print("{Result.of(|| try decode("MXQ"))}")
+  print("{List.generate(3999, |i| i + 1).all(|n| Result.of(|| try decode(encode(n))) == Ok(n))}")
+}

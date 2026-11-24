@@ -1,0 +1,31 @@
+//~ tier: meta
+//~ rule: generics.array-elements, generics.array-iteration
+//~ stdout:
+//~ | [1, 2, 3] [10, 20, 31]
+//~ | [5, 2, 3]
+//~ | [6, 7, 3]
+//~ | 6
+//~ | 7
+//~ | 3
+
+use std.array
+
+fn first(inout a: array.Array<i64, 3>) { a[0] = 5 }
+
+fn bump(inout x: i64) { x += 1 }
+
+fn main() / io {
+  let original: array.Array<i64, 3> = [1, 2, 3]
+  // A copy written after it is made leaves the original as it was.
+  var copy = original
+  for i in 0..3 { copy[i] = copy[i] * 10 }
+  copy[2] += 1
+  print("{original} {copy}")
+  var v = original
+  first(inout v)
+  print("{v}")
+  bump(inout v[0])
+  v[1] = v[0] + 1
+  print("{v}")
+  for x in v { print("{x}") }
+}

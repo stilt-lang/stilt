@@ -1,0 +1,36 @@
+//~ tier: meta
+//~ rule: generics.array-elements, effects.without-panic, facts.rules-of-acceptance, facts.range-loops, facts.guards, facts.closest-rule
+
+use std.array
+
+type Board = { cells: array.Array<i64, 9> }
+
+// A literal at the size or above, and an index that no range loop names.
+fn corner(b: Board) -> i64 without panic {
+  b.cells[9] //~ ERROR E0204
+}
+
+fn lookup(t: array.Array<i64, 256>, b: u8) -> i64 without panic {
+  t[b.to_i64()] //~ ERROR E0204
+}
+
+fn sum<n: i64>(v: array.Array<i64, n>) -> i64 without panic {
+  var s = 0
+  for i in 0..n + 1 {
+    s += v[i] //~ ERROR E0204
+  }
+  s
+}
+
+fn other(v: array.Array<i64, 3>) -> i64 without panic {
+  var s = 0
+  for i in 0..4 { s += v[i] } //~ ERROR E0204
+  s
+}
+
+// An end that is neither the array's size nor its length.
+fn by_name(b: Board, m: i64) -> i64 without panic {
+  var s = 0
+  for i in 0..m { s += b.cells[i] } //~ ERROR E0204
+  s
+}

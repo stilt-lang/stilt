@@ -1,0 +1,9 @@
+//~ rule: effects.effect-names, facts.implicit-effects
+
+fn allocates() / alloc {} //~ ERROR E0501
+
+fn panics() / {io, panic} {} //~ ERROR E0501
+
+fn takes(f: fn() / alloc) {} //~ ERROR E0501
+
+fn declares<panic>() {} //~ ERROR E0501

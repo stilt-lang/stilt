@@ -1,0 +1,15 @@
+── NO SUCH FIELD ─────────────────────── E0313_misspelled_field.lt:3:32  [E0313]
+
+`Order` has no field `totl`:
+
+  3 │ fn amount(o: Order) -> i64 { o.totl }
+    │                                ^^^^
+
+Check the field's name against the type's declaration. A `Shared<T>`'s fields
+are read inside `when`, and a field read through an `Option` is the field of the
+value inside it.
+
+To fix it, write `total`:
+
+  3 │ fn amount(o: Order) -> i64 { o.total }
+    │                                ~~~~~

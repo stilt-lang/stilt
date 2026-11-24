@@ -1,0 +1,9 @@
+//~ rule: traits.methods
+
+// `Self` names nothing outside impl and trait blocks, so a member type named
+// on it there is E0215, about `Self`, and no member type that names nothing.
+fn count(v: Self.Item) -> i64 { //~ ERROR E0215
+  0
+}
+
+fn main() {}

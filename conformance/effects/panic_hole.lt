@@ -1,0 +1,11 @@
+//~ rule: declarations.running-holes, effects.panic-kinds
+//~ run-output: "start"
+//~ panic: hole
+//~ panic-at: panic_hole.lt:6:21
+
+fn later() -> i64 = ? //~ WARN W0300
+
+fn main() / io {
+  print("start")
+  print("{later()}")
+}

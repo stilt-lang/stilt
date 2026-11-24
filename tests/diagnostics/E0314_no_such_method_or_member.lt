@@ -1,0 +1,1 @@
+fn count(names: List<str>) -> i64 { names.size() }

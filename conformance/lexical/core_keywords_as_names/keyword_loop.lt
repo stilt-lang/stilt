@@ -1,0 +1,1 @@
+fn loop() {} //~ ERROR E0100

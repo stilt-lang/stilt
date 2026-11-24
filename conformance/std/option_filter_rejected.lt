@@ -1,0 +1,13 @@
+//~ rule: types.mismatch, traits.method-resolution, std.option-result-and-ordering
+
+fn positive(n: i64) -> bool { n > 0 }
+
+fn not_a_predicate(o: Option<i64>) -> Option<i64> {
+  o.filter(|n| n + 1) //~ ERROR E0311
+}
+
+fn on_a_result(r: Result<i64, str>) -> Option<i64> {
+  r.filter(positive) //~ ERROR E0314
+}
+
+fn converted(r: Result<i64, str>) -> Option<i64> { r.ok().filter(positive) }

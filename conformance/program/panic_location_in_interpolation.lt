@@ -1,0 +1,8 @@
+//~ rule: program.panic-location, numbers.integer-panics
+//~ panic: overflow
+//~ panic-at: panic_location_in_interpolation.lt:7:15
+
+fn main() / io {
+  let big = i64.MAX
+  print("sum {big + 1}")
+}

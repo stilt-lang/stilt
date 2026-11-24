@@ -1,0 +1,15 @@
+── SYNTAX ERROR ──────────────────── E0100_colon_in_a_match_arm.lt:3:12  [E0100]
+
+A `match` arm is written with `=>`, not `:`:
+
+  3 │     Some(v): "some {v}"
+    │            ^
+
+Each arm is a pattern, `=>` and the arm's value, as `Some(v) => v`.
+
+To fix it, write `=>`:
+
+  3 │     Some(v) => "some {v}"
+    │            ~~~
+  4 │     None => "none"
+    │         ~~~

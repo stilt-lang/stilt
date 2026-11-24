@@ -1,0 +1,5 @@
+# What Zed and cargo write when they build the extension: the crate's build, the component
+# built from it, and the grammar's checkout and its build.
+/target/
+/extension.wasm
+/grammars/

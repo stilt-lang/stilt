@@ -1,0 +1,10 @@
+//~ rule: effects.panic-kinds, std.lists
+//~ run-output: "[]"
+//~ panic: bounds
+//~ panic-at: list_slice_out_of_bounds.lt:9:11
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  print("{xs.slice(1, 1)}")
+  print("{xs.slice(2, 1)}")
+}

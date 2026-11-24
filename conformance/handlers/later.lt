@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: handlers.with
+//~ stdout:
+//~ | 1
+//~ | 2
+
+effect Ask {
+  fn ask() -> i64
+}
+
+// The closure is made under one handler and called again under another.
+fn make() -> (i64, fn() -> i64 / Ask) {
+  let one = handler Ask { fn ask() -> i64 { 1 } }
+  with one {
+    let f = || Ask.ask()
+    (f(), f)
+  }
+}
+
+fn main() / io {
+  let (first, f) = make()
+  print("{first}")
+  with (handler Ask { fn ask() -> i64 { 2 } }) {
+    print("{f()}")
+  }
+}

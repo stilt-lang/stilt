@@ -1,0 +1,44 @@
+//~ rule: effects.inference, effects.non-escaping-parameters, effects.marking
+//~ stdout:
+//~ | 6
+//~ | got 3
+//~ | got 4
+//~ | 5
+//~ | 3 is odd
+//~ | 0
+//~ | one
+//~ | two
+//~ | 3
+
+fn twice(x: i64, f: fn(i64) -> i64) -> i64 { f(f(x)) }
+
+fn either(f: fn() -> i64, g: fn() -> i64) -> i64 { f() + g() }
+
+fn both(f: fn(), g: fn()) {
+  f()
+  g()
+}
+
+fn halve(n: i64) -> i64 / raise<str> {
+  if n % 2 != 0 { raise "{n} is odd" }
+  n / 2
+}
+
+fn main() / {io, raise<str>} {
+  let a = try twice(24, halve)
+  print("{a}")
+  let b = twice(3, |n| {
+    print("got {n}")
+    n + 1
+  })
+  print("{b}")
+  let c = try twice(6, halve)
+    catch e because "the message says enough" => {
+    print(e)
+    0
+  }
+  print("{c}")
+  both(|| print("one"), || print("two"))
+  let d = try either(|| 1, || halve(4))
+  print("{d}")
+}

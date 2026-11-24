@@ -1,0 +1,10 @@
+── MISMATCHED TYPES ─────────────── E0311_none_for_a_plain_type.lt:2:20  [E0311]
+
+Expected `i64`, found `Option<_>`:
+
+  2 │   let count: i64 = None
+    │                    ^^^^
+
+Stilt has no null: a value that may be missing has the type `Option<i64>`, which
+is `None` or `Some(x)`. Write that type where the value is expected, or give a
+value of type `i64`.

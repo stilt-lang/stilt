@@ -1,0 +1,98 @@
+// The functions whose result fits a hole, in the order of the suite's README, and those that
+// don't fit: a function the hole may not call, by its effects, its limits, its bounds or its
+// receiver, and the function the hole is in.
+
+type Order = { name: str, qty: i64 }
+
+fn weight(o: Order) -> i64 { o.qty * 2 }
+
+fn label(o: Order) -> str { o.name }
+
+fn shout(s: str) -> str / io {
+  print(s)
+  s
+}
+
+// The module's functions first, then what the bindings of other types make, then the expected
+// type's own functions, and last what a binding of the expected type makes.
+fn heaviest(orders: List<Order>, limit: i64) -> i64 {
+  ? //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ in scope: orders: List<Order>
+  //~ in scope: limit: i64
+  //~ fits: weight(o: Order) -> i64
+  //~ fits: List.len(self) -> i64
+  //~ fits: List.count(self, p: fn(T) -> bool) -> i64
+  //~ fits: i64.sum(xs: List<i64>) -> i64
+  //~ fits: i64.abs(self) -> i64
+  //~ not: label(o: Order) -> str
+  //~ not: heaviest(orders: List<Order>, limit: i64) -> i64
+}
+
+// `pop` takes its receiver `inout`, which a `let` binding can't give.
+fn peek(xs: List<i64>) -> Option<i64> {
+  ? //~ HOLE
+  //~ expects: Option<i64>
+  //~ effects: none
+  //~ in scope: xs: List<i64>
+  //~ fits: List.first(self) -> Option<T>
+  //~ fits: List.last(self) -> Option<T>
+  //~ not: List.pop(inout self) -> Option<T>
+}
+
+fn drained(xs: List<i64>) -> Option<i64> {
+  var ys = xs
+  ? //~ HOLE
+  //~ expects: Option<i64>
+  //~ effects: none
+  //~ in scope: xs: List<i64>
+  //~ in scope: ys: List<i64>
+  //~ fits: List.pop(inout self) -> Option<T>
+}
+
+fn smallest<T: Ord>(xs: List<T>) -> Option<T> { xs.min() }
+
+// `T` has no bound, so neither `smallest` nor `min` can take it.
+fn any_of<T>(xs: List<T>) -> Option<T> {
+  ? //~ HOLE
+  //~ expects: Option<T>
+  //~ effects: none
+  //~ in scope: xs: List<T>
+  //~ fits: List.first(self) -> Option<T>
+  //~ not: smallest<T: Ord>(xs: List<T>) -> Option<T>
+  //~ not: List.min(self) -> Option<T>
+}
+
+fn quiet(s: str) -> str {
+  ? //~ HOLE
+  //~ expects: str
+  //~ effects: none
+  //~ in scope: s: str
+  //~ fits: label(o: Order) -> str
+  //~ not: shout(s: str) -> str / io
+}
+
+fn loud(s: str) -> str / io {
+  ? //~ HOLE
+  //~ expects: str
+  //~ effects: io
+  //~ in scope: s: str
+  //~ fits: label(o: Order) -> str
+  //~ fits: shout(s: str) -> str / io
+}
+
+// A list literal and a closure allocate (facts.allocation), which `without alloc` rules out.
+fn made(xs: List<i64>) -> i64 { [1, 2].len() + xs.len() }
+
+fn counted(xs: List<i64>) -> i64 without alloc {
+  ? //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ without: alloc
+  //~ in scope: xs: List<i64>
+  //~ fits: weight(o: Order) -> i64
+  //~ fits: List.len(self) -> i64
+  //~ not: made(xs: List<i64>) -> i64
+  //~ not: i64.sum(xs: List<i64>) -> i64
+}

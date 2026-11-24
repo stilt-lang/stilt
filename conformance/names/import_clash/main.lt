@@ -1,0 +1,4 @@
+//~ rule: program.import-clashes, errors.several-places
+
+use app.io
+use std.io //~ ERROR E0208

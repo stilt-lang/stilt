@@ -1,0 +1,28 @@
+//~ rule: patterns.pattern-types, patterns.floats
+
+use shapes
+
+fn radius(s: shapes.Shape) -> f64 {
+  match s {
+    shapes.Circle(r, extra) => r //~ ERROR E0315
+    shapes.Dot => 0.0
+  }
+}
+
+fn abscissa(p: shapes.Point) -> i64 {
+  match p {
+    shapes.Point { x } => x //~ ERROR E0316
+  }
+}
+
+fn is_half(f: f64) -> bool {
+  match f {
+    shapes.HALF => true //~ ERROR E0328
+    _ => false
+  }
+}
+
+fn ordinate(p: shapes.Point) -> i64 {
+  let shapes.Point { y, .. } = p
+  y
+}

@@ -1,0 +1,5 @@
+fn main() / io {
+  var i = 0
+  i++
+  print("{i}")
+}

@@ -1,0 +1,5 @@
+//~ rule: program.what-use-binds, program.namespaces
+
+use std.nothing //~ ERROR E0205
+use std.fs.read //~ ERROR E0230
+use std

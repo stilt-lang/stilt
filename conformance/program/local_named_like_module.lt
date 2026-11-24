@@ -1,0 +1,12 @@
+//~ rule: program.one-value-namespace
+//~ run-output: "3"
+
+use std.cli
+
+fn twice(fs: i64) -> i64 { fs * 2 }
+
+fn main() / io {
+  let io = 1
+  let count = cli.args().len()
+  print("{twice(io) + count + 1}")
+}

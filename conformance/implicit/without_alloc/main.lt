@@ -1,0 +1,6 @@
+//~ rule: program.module-header, effects.non-escaping-parameters, facts.calls-through-function-values, facts.allocation, facts.native-allocation, facts.without-alloc, facts.writes-in-place
+
+use lib
+use pure
+
+fn main() / io { print("{pure.apply(lib.adder(), 1)}") }

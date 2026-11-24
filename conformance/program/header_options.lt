@@ -1,0 +1,7 @@
+//~ rule: program.module-header, facts.without-copy
+//~ run-output: "options"
+
+module main
+without panic, copy
+
+fn main() / io { print("options") }

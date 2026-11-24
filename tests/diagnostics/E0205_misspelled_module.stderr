@@ -1,0 +1,14 @@
+── UNKNOWN MODULE ────────────────────── E0205_misspelled_module.lt:1:1  [E0205]
+
+There is no module `std.fss`:
+
+  1 │ use std.fss
+    │ ^^^^^^^^^^^
+
+`use` names a module, as `use std.fs`. A dependency's modules are named after
+it, once stilt.toml lists it under `[dependencies]`.
+
+To fix it, import `std.fs`:
+
+  1 │ use std.fs
+    │ ~~~~~~~~~~

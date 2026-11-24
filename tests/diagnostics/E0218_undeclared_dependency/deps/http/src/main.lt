@@ -1,0 +1,3 @@
+use json
+
+pub fn get() -> i64 { json.parse("2") }

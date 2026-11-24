@@ -1,0 +1,10 @@
+//~ tier: systems
+//~ rule: syntax.extern-functions, c.foreign-functions
+
+// `extern` before a function with a body follows `pub`, which exports it.
+
+extern fn twice(x: i64) -> i64 { //~ ERROR E0100
+  2 * x
+}
+
+fn main() {}

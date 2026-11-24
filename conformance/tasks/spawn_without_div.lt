@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: tasks.implicit-effects-and-capabilities, facts.div, facts.without-div
+
+// `task.spawn` and `s.spawn` are sites of `div`, as a call through a stored
+// function value is, whatever the closure they are given computes. A closure
+// literal passed to `task.scope` adds its sites where it is written, and
+// `await` adds none.
+
+use std.task
+
+type Stop = { n: i64 }
+
+fn started() -> i64 / {io, async} without div {
+  task.spawn(|| 1).await() //~ ERROR E0204
+}
+
+fn scoped() -> i64 / {io, async, raise<Stop>} without div {
+  try task.scope(|s| {
+    let t = try s.spawn(|| 2) //~ ERROR E0204
+    t.await()
+  })
+}
+
+fn awaited(t: task.Task<i64>) -> i64 / async without div { t.await() }
+
+fn main() {}

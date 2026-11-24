@@ -1,0 +1,4 @@
+pub fn report(rows: i64) / io {
+  let n: i64 = "rows" //~ ERROR E0311
+  print("{rows}")
+}

@@ -1,0 +1,67 @@
+// The order of JSON values that sorting and comparing use, jq's: null, false, true, numbers,
+// strings, arrays and objects, in that order, and within each kind, its own order.
+
+use std.json
+
+/// How `a` compares with `b`: numbers by their values, strings by their characters, arrays
+/// element by element, and objects by their sorted keys, then by their values in that order.
+/// ex: compare(json.Number("10"), json.Number("9.5")) == Greater
+/// ex: compare(json.Number("1"), json.Number("1.0")) == Equal
+/// ex: compare(json.Text("b"), json.Array([])) == Less
+/// ex: compare(json.Array([json.Null]), json.Array([json.Null, json.Null])) == Less
+pub fn compare(a: json.Value, b: json.Value) -> Ordering {
+  match (a, b) {
+    (Number(x), Number(y)) => numbers(x, y)
+    (Text(x), Text(y)) => Ord.compare(x, y)
+    (Array(xs), Array(ys)) => lists(xs, ys)
+    (Object(xs), Object(ys)) => {
+      let (kx, ky) = (keys(xs), keys(ys))
+      lists(kx.map(json.Text), ky.map(json.Text)).then(
+        lists(kx.map(|k| member(xs, k)), ky.map(|k| member(ys, k))),
+      )
+    }
+    _ => Ord.compare(rank(a), rank(b))
+  }
+}
+
+/// The keys of an object's members, sorted.
+pub fn keys(members: List<(str, json.Value)>) -> List<str> { members.map(.0).sorted() }
+
+/// The value of the member named `key`, or null when there is none.
+pub fn member(members: List<(str, json.Value)>, key: str) -> json.Value {
+  let (_, v) = members.find(|(k, _)| k == key) else return json.Null
+  v
+}
+
+fn rank(v: json.Value) -> i64 {
+  match v {
+    Null => 0
+    Bool(false) => 1
+    Bool(true) => 2
+    Number(_) => 3
+    Text(_) => 4
+    Array(_) => 5
+    Object(_) => 6
+  }
+}
+
+// The text of a JSON number always reads as a float.
+fn numbers(x: str, y: str) -> Ordering {
+  let (a, b) = (x.to_f64() else 0.0, y.to_f64() else 0.0)
+  if a < b { Less } else if a > b { Greater } else { Equal }
+}
+
+fn lists(xs: List<json.Value>, ys: List<json.Value>) -> Ordering {
+  for (x, y) in xs.zip(ys) {
+    let o = compare(x, y)
+    if o != Equal { return o }
+  }
+  Ord.compare(xs.len(), ys.len())
+}
+
+test "objects compare by their keys before their values, whatever their order" {
+  let a = json.Object([("b", json.Number("1")), ("a", json.Number("2"))])
+  let b = json.Object([("a", json.Number("2")), ("b", json.Number("1"))])
+  assert compare(a, b) == Equal
+  assert compare(a, json.Object([("a", json.Number("9")), ("c", json.Null)])) == Less
+}

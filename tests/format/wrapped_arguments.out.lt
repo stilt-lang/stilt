@@ -1,0 +1,35 @@
+// An argument list that doesn't fit in 100 columns has one argument per line, a comma after each
+// and its closing parenthesis on a line of its own, and the lists inside it are laid out again at
+// their new level. One that fits goes on one line, whatever the source's line breaks. A comment
+// breaks the list that holds it. A list of one string stays as it is, since no break would
+// shorten it.
+fn main() / io {
+  let kept = pick(1, 2)
+  let held = pick(
+    1, // the first
+    2,
+  )
+  let wide = describe_order(
+    customer_name,
+    shipping_address,
+    billing_address,
+    order_total,
+    tax,
+    currency_code,
+  )
+  let nested = describe_order(
+    customer_name,
+    format_address(street, city, postal_code, country_name),
+    tax_rate,
+  )
+  let deep = report(
+    summarize_orders(
+      first_customer_orders,
+      second_customer_orders,
+      third_customer_orders,
+      fourth_customer_orders,
+    ),
+    1,
+  )
+  print("a string that is far too long for the line, whatever the call around it is, as no break would shorten it")
+}

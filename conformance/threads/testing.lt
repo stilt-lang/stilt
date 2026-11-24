@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: program.test-results, tasks.sequential-run, tasks.same-output-under-every-handler
+
+use std.task
+
+fn twice(n: i64) -> i64 { n * 2 }
+
+fn main() / io {}
+
+test "tasks on threads" { //~ PASS
+  with task.threads() {
+    let a = task.spawn(|| twice(1))
+    let b = task.spawn(|| twice(2))
+    assert a.await() + b.await() == 6
+  }
+}
+
+// A task's panic ends only its test.
+test "a task panics" { //~ FAIL
+  with task.threads() {
+    let a = task.spawn(|| {
+      let xs: List<i64> = []
+      xs[0]
+    })
+    assert a.await() == 1
+  }
+}
+
+test "the next test runs" { //~ PASS
+  with task.threads() {
+    assert task.spawn(|| twice(5)).await() == 10
+  }
+}

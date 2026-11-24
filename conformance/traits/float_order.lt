@@ -1,0 +1,25 @@
+//~ rule: numbers.ieee-754, traits.operators, traits.floats
+//~ stdout:
+//~ | true false true Less
+//~ | false true false Equal
+//~ | Equal Greater Greater false
+//~ | true false false true
+//~ | [-inf, -0.0, 0.0, 1.0, nan]
+//~ | [(-0.0, "negative zero"), (0.0, "zero"), (2.0, "two")]
+//~ | [1.0, 2.5]
+
+fn main() / io {
+  let nan = 0.0 / 0.0
+  let negated_nan = -nan
+  let zero = 0.0
+  let negative_zero = -0.0
+  print("{negative_zero == zero} {negative_zero < zero} {Eq.eq(negative_zero, zero)} {Ord.compare(negative_zero, zero)}")
+  print("{nan == nan} {nan != nan} {Eq.eq(nan, nan)} {Ord.compare(nan, nan)}")
+  print("{Ord.compare(nan, negated_nan)} {Ord.compare(negated_nan, f64.INFINITY)} {Ord.compare(negated_nan, zero)} {nan < f64.INFINITY}")
+  print("{(negative_zero,) < (zero,)} {[f64.NAN] < [1.0]} {[nan] == [nan]} {(1.0, nan) > (1.0, f64.INFINITY)}")
+  let values = [f64.NAN, 1.0, zero, negative_zero, -f64.INFINITY]
+  print("{values.sorted()}")
+  print("{[(2.0, "two"), (negative_zero, "negative zero"), (zero, "zero")].sorted()}")
+  let keyed = [2.5, 1.0].sorted_by(|x| x)
+  print("{keyed}")
+}

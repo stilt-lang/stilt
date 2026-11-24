@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────── E0100_mutating_method.lt:4:3  [E0100]
+
+Stilt marks a method that changes its receiver with `inout self`:
+
+  4 │   mutating fn bump(self) { self.n += 1 }
+    │   ^^^^^^^^
+
+A method's receiver is a value, `self`; one that changes it takes `inout self`.
+
+To fix it, write `inout self`:
+
+  4 │   fn bump(inout self) { self.n += 1 }
+    │           ++++++

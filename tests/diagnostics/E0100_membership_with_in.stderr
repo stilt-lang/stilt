@@ -1,0 +1,13 @@
+── SYNTAX ERROR ─────────────────────── E0100_membership_with_in.lt:3:8  [E0100]
+
+Stilt tests whether a list holds a value with `contains`, as `xs.contains(x)`:
+
+  3 │   if 2 in xs { print("yes") }
+    │        ^^
+
+`contains` is a method of lists, sets, maps (of their keys) and strings.
+
+To fix it, write `contains`:
+
+  3 │   if xs.contains(2) { print("yes") }
+    │      ~~~~~~~~~~~~~~

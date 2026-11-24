@@ -1,0 +1,501 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "{{header}}",
+  "name": "Stilt",
+  "scopeName": "source.stilt",
+  "fileTypes": ["lt"],
+  "patterns": [{"include": "#comments"}, {"include": "#items"}, {"include": "#expressions"}],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "comment": "A test annotation, which every tool but the test runner reads as a comment (lexical.annotations).",
+          "name": "comment.line.annotation.stilt",
+          "match": "//~.*$"
+        },
+        {
+          "comment": "An example or a property of a doc comment, whose code is highlighted as code (program.doc-examples; tests.prop-lines).",
+          "match": "(///)\\s*(ex:|prop:)(.*?)(//~.*)?$",
+          "captures": {
+            "1": {"name": "comment.line.documentation.stilt"},
+            "2": {"name": "keyword.other.documentation.stilt"},
+            "3": {"patterns": [{"include": "#expressions"}]},
+            "4": {"name": "comment.line.annotation.stilt"}
+          }
+        },
+        {
+          "comment": "A doc comment (lexical.doc-comments), its code in backticks marked as code.",
+          "name": "comment.line.documentation.stilt",
+          "begin": "///",
+          "end": "$|(?=//~)",
+          "patterns": [{"name": "markup.inline.raw.stilt", "match": "`[^`]*`"}]
+        },
+        {
+          "comment": "A comment, to the end of the line (lexical.line-comments).",
+          "name": "comment.line.double-slash.stilt",
+          "match": "(//).*$",
+          "captures": {"1": {"name": "punctuation.definition.comment.stilt"}}
+        }
+      ]
+    },
+    "items": {
+      "patterns": [
+        {"include": "#function-head"},
+        {
+          "comment": "A type's or a trait's name where it is declared, and the generics after it.",
+          "begin": "\\b(type)\\s+(_*[A-Z][A-Za-z0-9_]*)|\\b(trait)\\s+(_*[A-Z][A-Za-z0-9_]*)",
+          "end": "(?!\\G)",
+          "beginCaptures": {
+            "1": {"name": "keyword.other.declaration.stilt"},
+            "2": {"name": "entity.name.type.stilt"},
+            "3": {"name": "keyword.other.declaration.stilt"},
+            "4": {"name": "entity.name.type.trait.stilt"}
+          },
+          "patterns": [{"include": "#generic-list"}]
+        },
+        {
+          "comment": "An impl block's head, up to its body: its generics, the trait it implements and the type it is for.",
+          "begin": "\\b(impl)\\b",
+          "end": "(?=\\{)",
+          "beginCaptures": {"1": {"name": "keyword.other.declaration.stilt"}},
+          "patterns": [
+            {"include": "#generic-list"},
+            {"include": "#comments"},
+            {"name": "keyword.other.declaration.stilt", "match": "\\bfor\\b"},
+            {"include": "#type-arguments"},
+            {"include": "#modules"},
+            {"include": "#types"}
+          ]
+        },
+        {
+          "comment": "A macro's name where `syntax` declares it (macros.syntax-declarations).",
+          "match": "\\b(syntax)\\s+([a-z_][A-Za-z0-9_]*)",
+          "captures": {"1": {"name": "keyword.other.declaration.stilt"}, "2": {"name": "entity.name.function.macro.stilt"}}
+        },
+        {
+          "comment": "An effect's name where it is declared (handlers.declaring-effect).",
+          "match": "\\b(effect)\\s+(_*[A-Z][A-Za-z0-9_]*)",
+          "captures": {"1": {"name": "keyword.other.declaration.stilt"}, "2": {"name": "entity.name.type.effect.stilt"}}
+        },
+        {
+          "comment": "A constant's name where it is declared (declarations.constant-declarations).",
+          "match": "\\b(const)\\s+(_*[A-Z][A-Za-z0-9_]*)",
+          "captures": {"1": {"name": "keyword.other.declaration.stilt"}, "2": {"name": "variable.other.constant.stilt"}}
+        },
+        {
+          "comment": "A test's name where it is declared (declarations.tests).",
+          "match": "\\b(test)\\s+(?=\\\")",
+          "captures": {"1": {"name": "keyword.other.declaration.stilt"}}
+        },
+        {
+          "comment": "A module path after `module`, `use` or `meta use` (program.module-header; macros.meta-use).",
+          "match": "\\b(module|meta\\s+use|use)\\s+([a-z_][A-Za-z0-9_]*(?:\\.[a-z_][A-Za-z0-9_]*)*)",
+          "captures": {
+            "1": {"name": "keyword.other.import.stilt"},
+            "2": {
+              "patterns": [
+                {"name": "entity.name.namespace.stilt", "match": "[a-z_][A-Za-z0-9_]*"},
+                {"name": "punctuation.accessor.stilt", "match": "\\."}
+              ]
+            }
+          }
+        },
+        {"include": "#limits"}
+      ]
+    },
+    "generic-list": {
+      "comment": "The generics that a function, a type or an impl declares, right after its name or `impl`, where a lowercase name with a type is a value parameter (generics.value-parameters) and an uppercase one a type parameter.",
+      "begin": "\\G\\s*(<)",
+      "end": ">",
+      "beginCaptures": {"1": {"name": "punctuation.definition.generic.begin.stilt"}},
+      "endCaptures": {"0": {"name": "punctuation.definition.generic.end.stilt"}},
+      "patterns": [
+        {
+          "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(:)(?!:)",
+          "captures": {"1": {"name": "variable.parameter.value.stilt"}, "2": {"name": "punctuation.separator.colon.stilt"}}
+        },
+        {
+          "comment": "A type parameter, or a pack of them after `..` (variadics.packs).",
+          "match": "(?<=[<,])\\s*(\\.\\.)?(_*[A-Z][A-Za-z0-9_]*)\\b",
+          "captures": {"1": {"name": "keyword.operator.spread.stilt"}, "2": {"name": "entity.name.type.parameter.stilt"}}
+        },
+        {
+          "comment": "A row variable, which stands for effects (effects.row-variables).",
+          "match": "(?<=[<,])\\s*([a-z_][A-Za-z0-9_]*)\\b(?!\\s*:)",
+          "captures": {"1": {"name": "entity.name.type.parameter.row.stilt"}}
+        },
+        {"include": "#type-arguments"},
+        {"include": "#comments"},
+        {"include": "#keywords"},
+        {"include": "#types"}
+      ]
+    },
+    "type-arguments": {
+      "comment": "Type arguments inside a list of generics, as a bound's.",
+      "begin": "<",
+      "end": ">",
+      "beginCaptures": {"0": {"name": "punctuation.definition.generic.begin.stilt"}},
+      "endCaptures": {"0": {"name": "punctuation.definition.generic.end.stilt"}},
+      "patterns": [
+        {"include": "#type-arguments"},
+        {"include": "#numbers"},
+        {"include": "#modules"},
+        {"include": "#types"},
+        {
+          "comment": "A value parameter given as a type argument (generics.value-arguments).",
+          "name": "variable.parameter.value.stilt",
+          "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "modules": {
+      "comment": "A module before the `.` of a path whose next segment is uppercase, which only a module's can be, since fields and methods are lowercase (lexical.case).",
+      "match": "\\b(?!(?:{{primitive-types}})\\b)([a-z_][A-Za-z0-9_]*)\\s*(\\.)(?=\\s*_*[A-Z])",
+      "captures": {"1": {"name": "entity.name.namespace.stilt"}, "2": {"name": "punctuation.accessor.stilt"}}
+    },
+    "function-head": {
+      "comment": "A function's head, a procedural macro's (macros.procedural-declarations) or a function type, up to its body: the only place a `/` starts an effect row (reference/03-syntax.md, fn_head, macro and fn_type). A head may span lines.",
+      "begin": "\\b(?:(fn)|(macro))\\b(?:\\s+([a-z_][A-Za-z0-9_]*))?",
+      "end": "(?=[{};]|=(?!=))",
+      "beginCaptures": {
+        "1": {"name": "keyword.other.declaration.stilt"},
+        "2": {"name": "keyword.other.declaration.stilt"},
+        "3": {"name": "entity.name.function.stilt"}
+      },
+      "patterns": [
+        {"include": "#generic-list"},
+        {"include": "#comments"},
+        {"include": "#function-head"},
+        {"include": "#limits"},
+        {
+          "match": "(/)\\s*(\\{[^}]*\\}|raise\\s*<[^>]*>|_*[A-Z][A-Za-z0-9_]*(?:<[^>]*>)?|[a-z_][A-Za-z0-9_]*)",
+          "captures": {"1": {"name": "punctuation.separator.row.stilt"}, "2": {"patterns": [{"include": "#row"}]}}
+        },
+        {"match": "\\b({{class mode}})\\b", "name": "keyword.other.mode.stilt"},
+        {"match": "\\b(self)\\b", "name": "variable.language.self.stilt"},
+        {"match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(?=:(?!:))", "captures": {"1": {"name": "variable.parameter.stilt"}}},
+        {"include": "#strings"},
+        {"include": "#numbers"},
+        {"include": "#keywords"},
+        {"include": "#modules"},
+        {"include": "#types"},
+        {"include": "#operators"}
+      ]
+    },
+    "limits": {
+      "comment": "A limit clause and its limits: the implicit effects, `locks` and the capabilities (lexical.contextual-keywords; facts.without-alloc; facts.spelling; facts.without; shared.locks).",
+      "match": "\\b(without)\\s+((?:{{limits}})(?:\\s*,\\s*(?:{{limits}}))*)",
+      "captures": {
+        "1": {"name": "keyword.other.limit.stilt"},
+        "2": {
+          "patterns": [
+            {"name": "keyword.other.reserved.stilt", "match": "\\b({{class reserved}})\\b"},
+            {"name": "support.type.effect.stilt", "match": "\\b\\w+\\b"},
+            {"name": "punctuation.separator.comma.stilt", "match": ","}
+          ]
+        }
+      }
+    },
+    "row": {
+      "comment": "A row's elements: `io`, `raise<E>`, `async`, effects a program declares with their type arguments, and row variables (effects.rows; handlers.effects-in-rows; tasks.async).",
+      "patterns": [
+        {
+          "match": "\\b(raise)\\s*(<[^>]*>)",
+          "captures": {"1": {"name": "support.type.effect.stilt"}, "2": {"patterns": [{"include": "#type-arguments"}]}}
+        },
+        {"name": "support.type.effect.stilt", "match": "\\b(io|async)\\b"},
+        {
+          "match": "\\b(_*[A-Z][A-Za-z0-9_]*)(<[^>]*>)?",
+          "captures": {"1": {"name": "entity.name.type.effect.stilt"}, "2": {"patterns": [{"include": "#type-arguments"}]}}
+        },
+        {"name": "entity.name.type.parameter.row.stilt", "match": "\\b[a-z_][A-Za-z0-9_]*\\b"},
+        {"name": "punctuation.separator.comma.stilt", "match": ","}
+      ]
+    },
+    "expressions": {
+      "patterns": [
+        {"include": "#comments"},
+        {"include": "#strings"},
+        {"include": "#numbers"},
+        {"include": "#bound-tests"},
+        {"include": "#keywords"},
+        {"include": "#annotations"},
+        {"include": "#variants"},
+        {"include": "#modules"},
+        {"include": "#types"},
+        {"include": "#macros"},
+        {"include": "#calls"},
+        {"include": "#operators"},
+        {"include": "#braces"},
+        {"include": "#variables"}
+      ]
+    },
+    "bound-tests": {
+      "comment": "A bound test, `if T: B + …`, the whole condition of an `if`, which tests the type parameter `T` for the traits it names (meta.bound-tests).",
+      "begin": "\\b(if)\\s+(_*[A-Z][A-Za-z0-9_]*)\\s*(:)(?!:)",
+      "end": "(?=\\{)",
+      "beginCaptures": {
+        "1": {"name": "keyword.control.stilt"},
+        "2": {"name": "entity.name.type.parameter.stilt"},
+        "3": {"name": "punctuation.separator.colon.stilt"}
+      },
+      "patterns": [
+        {"include": "#type-arguments"},
+        {"name": "keyword.operator.bound.stilt", "match": "\\+"},
+        {"name": "entity.name.type.trait.stilt", "match": "\\b_*[A-Z][A-Za-z0-9_]*\\b"}
+      ]
+    },
+    "braces": {
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": {"0": {"name": "punctuation.section.block.begin.stilt"}},
+      "endCaptures": {"0": {"name": "punctuation.section.block.end.stilt"}},
+      "patterns": [{"include": "#items"}, {"include": "#expressions"}]
+    },
+    "strings": {
+      "comment": "A string literal, which always interpolates (lexical.string-literals and lexical.interpolation), its escapes and its interpolations, each with its format spec.",
+      "name": "string.quoted.double.stilt",
+      "begin": "\"",
+      "end": "\"|$",
+      "beginCaptures": {"0": {"name": "punctuation.definition.string.begin.stilt"}},
+      "endCaptures": {"0": {"name": "punctuation.definition.string.end.stilt"}},
+      "patterns": [
+        {"name": "constant.character.escape.stilt", "match": "\\\\(?:[ntr0\\\\\\\"{]|u\\{[0-9A-Fa-f]{1,6}\\})"},
+        {"name": "invalid.illegal.escape.stilt", "match": "\\\\."},
+        {
+          "name": "meta.embedded.line.stilt",
+          "begin": "\\{",
+          "end": "\\}",
+          "beginCaptures": {"0": {"name": "punctuation.section.embedded.begin.stilt"}},
+          "endCaptures": {"0": {"name": "punctuation.section.embedded.end.stilt"}},
+          "patterns": [
+            {
+              "comment": "A format spec, after the interpolation's last `:` (lexical.format-specs).",
+              "match": ":(?:[^{}]?[<^>])?[0-9]*(?:\\.[0-9]+)?[xXobe]?(?=\\})",
+              "name": "storage.type.format.stilt"
+            },
+            {"include": "#expressions"}
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.stilt",
+          "match": "\\b[0-9][0-9_]*(?:\\.[0-9][0-9_]*(?:[eE][+-]?[0-9]+)?|[eE][+-]?[0-9]+)\\b"
+        },
+        {"name": "constant.numeric.integer.hexadecimal.stilt", "match": "\\b0x[0-9A-Fa-f][0-9A-Fa-f_]*\\b"},
+        {"name": "constant.numeric.integer.octal.stilt", "match": "\\b0o[0-7][0-7_]*\\b"},
+        {"name": "constant.numeric.integer.binary.stilt", "match": "\\b0b[01][01_]*\\b"},
+        {"name": "constant.numeric.integer.decimal.stilt", "match": "\\b[0-9][0-9_]*\\b"}
+      ]
+    },
+    "keywords": {
+      "comment": "The keywords and reserved words of lexical.keywords and lexical.reserved-words, and the contextual keywords of lexical.contextual-keywords that read as keywords wherever a pattern finds them. Those that direct control are keyword.control, and the rest keyword.other, as the language server's tokens give them.",
+      "patterns": [
+        {
+          "comment": "A handler's effect, and `->` with the type of a handler that takes control (handlers.handler-literals and handlers.handler-types; tasks.async).",
+          "match": "\\b(handler)\\s+(?:(async)\\b|((?:[a-z_][A-Za-z0-9_]*\\s*\\.\\s*)*)(_*[A-Z][A-Za-z0-9_]*))",
+          "captures": {
+            "1": {"name": "keyword.other.declaration.stilt"},
+            "2": {"name": "support.type.effect.stilt"},
+            "3": {
+              "patterns": [
+                {"name": "entity.name.namespace.stilt", "match": "[a-z_][A-Za-z0-9_]*"},
+                {"name": "punctuation.accessor.stilt", "match": "\\."}
+              ]
+            },
+            "4": {"name": "entity.name.type.effect.stilt"}
+          }
+        },
+        {
+          "comment": "A quote, and the form after it that its braces hold (macros.quote).",
+          "match": "\\b(quote)\\b(?:\\s+(type|pattern|field)\\b)?",
+          "captures": {"1": {"name": "keyword.other.quote.stilt"}, "2": {"name": "keyword.other.quote.stilt"}}
+        },
+        {
+          "comment": "The keywords that direct control: branches, loops, jumps, failure (effects.raise), handlers (handlers.with), tasks (tasks.async), `when` (shared.when) and `yield` (projections.yield).",
+          "name": "keyword.control.stilt",
+          "match": "\\b({{class control}})\\b"
+        },
+        {
+          "name": "keyword.other.declaration.stilt",
+          "match": "\\b({{class declaration}})\\b"
+        },
+        {"name": "keyword.other.binding.stilt", "match": "\\b({{class binding}}|{{class mode}})\\b"},
+        {"name": "keyword.other.limit.stilt", "match": "\\bwithout\\b"},
+        {
+          "comment": "A staging annotation (meta.staging-annotations) and `async` (tasks.async).",
+          "name": "keyword.other.stilt",
+          "match": "\\b({{class staging}})\\b"
+        },
+        {
+          "comment": "The keywords and reserved words that no pattern above colors apart.",
+          "name": "keyword.other.stilt",
+          "match": "\\b({{other-keywords}})\\b"
+        },
+        {"name": "keyword.other.reserved.stilt", "match": "\\b({{class reserved}})\\b"},
+        {"name": "constant.language.boolean.stilt", "match": "\\b({{class boolean}})\\b"},
+        {"name": "variable.language.self.stilt", "match": "\\b({{class self}})\\b"},
+        {"name": "variable.language.wildcard.stilt", "match": "\\b_\\b"}
+      ]
+    },
+    "annotations": {
+      "comment": "A type after the `:` of an annotation or a field, or after `->`, with the modules of its path, but a variant of the prelude's or one a payload follows.",
+      "match": "(?<![:])(:|->)(?!:)\\s*((?:[a-z_][A-Za-z0-9_]*\\s*\\.\\s*)*)(?!(?:None|Some|Ok|Err|Less|Equal|Greater)\\b)(_*[A-Z][A-Za-z0-9_]*)\\b(?!\\s*\\()",
+      "captures": {
+        "1": {"name": "punctuation.separator.colon.stilt"},
+        "2": {
+          "patterns": [
+            {"name": "entity.name.namespace.stilt", "match": "[a-z_][A-Za-z0-9_]*"},
+            {"name": "punctuation.accessor.stilt", "match": "\\."}
+          ]
+        },
+        "3": {"patterns": [{"include": "#types"}]}
+      }
+    },
+    "variants": {
+      "comment": "A variant, read as the language server reads a doc example's code: one of the prelude's (std.option-result-and-ordering), a name written after the `|` that starts a variant, whose payloads are types, or, outside an annotation, a name that no `{`, `.`, `<` or `>` follows, since a type stands in an expression only before a struct literal's braces, a function of its own or its type arguments: no type is another's name (declarations.no-aliases) and no call writes type arguments (types.no-type-arguments).",
+      "patterns": [
+        {"name": "variable.other.enummember.stilt", "match": "\\b(None|Some|Ok|Err|Less|Equal|Greater)\\b"},
+        {
+          "comment": "A variant after a `|`, with its payloads, which are types in a declaration.",
+          "begin": "(?<![|])(\\|)(?!\\|)\\s*(_*[A-Z][a-z0-9][A-Za-z0-9_]*)(\\()",
+          "end": "\\)",
+          "beginCaptures": {
+            "1": {"name": "punctuation.separator.variant.stilt"},
+            "2": {"name": "variable.other.enummember.stilt"},
+            "3": {"name": "punctuation.section.parens.begin.stilt"}
+          },
+          "endCaptures": {"0": {"name": "punctuation.section.parens.end.stilt"}},
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#modules"},
+            {"include": "#type-arguments"},
+            {"include": "#types"},
+            {"include": "#operators"},
+            {"include": "#variables"}
+          ]
+        },
+        {
+          "match": "(?<![|])(\\|)(?!\\|)\\s*(_*[A-Z][a-z0-9][A-Za-z0-9_]*)",
+          "captures": {"1": {"name": "punctuation.separator.variant.stilt"}, "2": {"name": "variable.other.enummember.stilt"}}
+        },
+        {
+          "comment": "What a comparison tests, a value, whose `{` after it opens a block, since a head holds no struct literal (expressions.heads).",
+          "match": "(?<===\\s|!=\\s)(?:([a-z_][A-Za-z0-9_]*)(\\.))?(_*[A-Z][a-z0-9][A-Za-z0-9_]*)\\b",
+          "captures": {
+            "1": {"name": "entity.name.namespace.stilt"},
+            "2": {"name": "punctuation.accessor.stilt"},
+            "3": {"name": "variable.other.enummember.stilt"}
+          }
+        },
+        {
+          "name": "variable.other.enummember.stilt",
+          "match": "(?<!\\.\\.)\\b_*[A-Z][a-z0-9][A-Za-z0-9_]*\\b(?!\\s*[{.<>])"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "comment": "The primitive types (lexical.primitive-type-names).",
+          "name": "support.type.primitive.stilt",
+          "match": "\\b({{primitive-types}})\\b"
+        },
+        {
+          "comment": "A constant, written in capitals (lexical.case).",
+          "name": "variable.other.constant.stilt",
+          "match": "\\b_*[A-Z][A-Z0-9_]+\\b"
+        },
+        {
+          "comment": "A type, a trait or a type parameter: a name that starts uppercase (lexical.case).",
+          "name": "entity.name.type.stilt",
+          "match": "\\b_*[A-Z][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "macros": {
+      "comment": "A macro's use, its path followed by `!`; a fragment of a pattern macro's patterns or templates, `$cond` or `$cond: expr`, or a repetition's `$` (macros.patterns, macros.templates and macros.uses); and a quote's splices, `$x` and `$(e)`, and spreads, `$..x` and `$..(e)` (macros.splices and macros.spreads).",
+      "patterns": [
+        {
+          "match": "\\b((?:[a-z_][A-Za-z0-9_]*\\.)*)([a-z_][A-Za-z0-9_]*)(!)(?=\\s*[(\\[{])",
+          "captures": {
+            "1": {
+              "patterns": [
+                {"name": "entity.name.namespace.stilt", "match": "[a-z_][A-Za-z0-9_]*"},
+                {"name": "punctuation.accessor.stilt", "match": "\\."}
+              ]
+            },
+            "2": {"name": "entity.name.function.macro.stilt"},
+            "3": {"name": "entity.name.function.macro.stilt"}
+          }
+        },
+        {"name": "keyword.operator.spread.stilt variable.other.fragment.stilt", "match": "\\$\\.\\.(?=[a-z_(])"},
+        {
+          "match": "(\\$)([a-z_][A-Za-z0-9_]*)(?:\\s*(:)\\s*([A-Za-z_][A-Za-z0-9_]*))?",
+          "captures": {
+            "1": {"name": "punctuation.definition.fragment.stilt variable.other.fragment.stilt"},
+            "2": {"name": "variable.other.fragment.stilt"},
+            "3": {"name": "punctuation.separator.colon.stilt"},
+            "4": {"name": "support.type.fragment.stilt"}
+          }
+        },
+        {"name": "keyword.operator.splice.stilt variable.other.fragment.stilt", "match": "\\$(?=\\()"}
+      ]
+    },
+    "calls": {
+      "patterns": [
+        {
+          "comment": "`await`, a keyword that the grammar reads as a member's name after `.` (tasks.std-task).",
+          "match": "(\\.)(await)\\b",
+          "captures": {"1": {"name": "punctuation.accessor.stilt"}, "2": {"name": "keyword.control.stilt"}}
+        },
+        {
+          "comment": "A method's name after `.`, which a call follows.",
+          "match": "(\\.)([a-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+          "captures": {"1": {"name": "punctuation.accessor.stilt"}, "2": {"name": "entity.name.function.method.stilt"}}
+        },
+        {
+          "comment": "A field's name after `.`, or a tuple's element.",
+          "match": "(\\.)([a-z_][A-Za-z0-9_]*|[0-9]+)\\b",
+          "captures": {"1": {"name": "punctuation.accessor.stilt"}, "2": {"name": "variable.other.property.stilt"}}
+        },
+        {
+          "comment": "A call of a function by its name.",
+          "name": "entity.name.function.stilt",
+          "match": "\\b[a-z_][A-Za-z0-9_]*(?=\\s*\\()"
+        }
+      ]
+    },
+    "variables": {
+      "comment": "Any other lowercase name: a variable, a parameter, a module or a function named as a value, which the language server tells apart.",
+      "name": "variable.other.stilt",
+      "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+    },
+    "operators": {
+      "comment": "The tokens of lexical.tokens, each where maximal munch reads it.",
+      "patterns": [
+        {"name": "keyword.operator.arrow.stilt", "match": "{{tokens Arrows}}"},
+        {
+          "comment": "The brackets of type arguments, which follow a name with no space, where `stilt fmt` puts spaces around a comparison or a shift.",
+          "name": "punctuation.definition.generic.stilt",
+          "match": "(?<=[A-Za-z0-9_])<(?![=<])|(?<=[A-Za-z0-9_>\\])])>(?!=)"
+        },
+        {"name": "keyword.operator.range.stilt", "match": "{{token ..}}|{{token ..=}}"},
+        {"name": "punctuation.accessor.stilt", "match": "{{token .}}"},
+        {"name": "keyword.operator.hole.stilt", "match": "{{tokens Holes}}"},
+        {"name": "keyword.operator.assignment.stilt", "match": "{{tokens Assignment}}"},
+        {"name": "keyword.operator.comparison.stilt", "match": "{{tokens Comparison}}"},
+        {"name": "keyword.operator.logical.stilt", "match": "{{tokens Logic}}"},
+        {"name": "keyword.operator.arithmetic.stilt", "match": "{{tokens Arithmetic, Wrapping arithmetic}}"},
+        {"name": "keyword.operator.bitwise.stilt", "match": "{{tokens Bitwise}}"},
+        {"name": "punctuation.separator.comma.stilt", "match": "{{token ,}}"},
+        {"name": "punctuation.separator.colon.stilt", "match": "{{token :}}"},
+        {"name": "punctuation.terminator.stilt", "match": "{{token ;}}"},
+        {"name": "invalid.illegal.reserved.stilt", "match": "{{tokens Reserved}}"}
+      ]
+    }
+  }
+}

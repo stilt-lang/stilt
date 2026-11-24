@@ -1,0 +1,16 @@
+//~ tier: meta
+//~ rule: meta.erasure, meta.static-expressions
+//~ run-output: "skipped"
+//~ panic: divide-by-zero
+//~ panic-at: static_panic.lt:9:27
+
+const ZERO: i64 = 0
+
+fn ratio(k: i64) -> i64 { 10 / k }
+
+fn main() / io {
+  // A static division by zero panics only where the run reaches it.
+  comptime if false { print("{ratio(ZERO)}") }
+  print("skipped")
+  comptime for i in 0..ratio(ZERO) { print("{i}") }
+}

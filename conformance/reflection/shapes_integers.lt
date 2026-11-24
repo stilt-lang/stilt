@@ -1,0 +1,55 @@
+//~ tier: meta
+//~ rule: meta.std-meta, meta.shape-and-name, meta.shapes, meta.shape-accessors, meta.accessor-effects
+//~ stdout:
+//~ | -128 127: 127 none none
+//~ | -32768 32767: 32767 none none
+//~ | -2147483648 2147483647: 2147483647 none none
+//~ | -9223372036854775808 9223372036854775807: 9223372036854775807 none none
+//~ | 0 255: 255 none none
+//~ | 0 65535: 65535 none none
+//~ | 0 4294967295: 4294967295 none none
+//~ | 0 18446744073709551615: 18446744073709551615 none none
+//~ | 5 -5 0 none none none none none none
+
+use std.meta
+
+// What `parse` reads of a text, written back by `text`. Every accessor
+// performs nothing, so this function's row is empty.
+fn reread<T>(n: meta.Integer<T>, text: str) -> str {
+  match n.parse(text) {
+    Some(x) => n.text(x)
+    None => "none"
+  }
+}
+
+// The limits of an integer type, and what `parse` makes of the text of its
+// maximum, of the number after it and of the number before its minimum.
+fn limits<T>(min: T, max: T, above: str, below: str) -> str {
+  match T.shape() {
+    Int(n) => {
+      let top = n.text(max)
+      "{n.text(min)} {top}: {reread(n, top)} {reread(n, above)} {reread(n, below)}"
+    }
+    _ => "no integer"
+  }
+}
+
+// Only text written as `text` writes an integer reads back.
+fn texts<T>(value: T) -> str {
+  match T.shape() {
+    Int(n) => " ".join(["5", "-5", "0", "+5", "05", "-0", " 5", "5.0", ""].map(|t| reread(n, t)))
+    _ => "no integer"
+  }
+}
+
+fn main() / io {
+  print(limits(i8.MIN, i8.MAX, "128", "-129"))
+  print(limits(i16.MIN, i16.MAX, "32768", "-32769"))
+  print(limits(i32.MIN, i32.MAX, "2147483648", "-2147483649"))
+  print(limits(i64.MIN, i64.MAX, "9223372036854775808", "-9223372036854775809"))
+  print(limits(u8.MIN, u8.MAX, "256", "-1"))
+  print(limits(u16.MIN, u16.MAX, "65536", "-1"))
+  print(limits(u32.MIN, u32.MAX, "4294967296", "-1"))
+  print(limits(u64.MIN, u64.MAX, "18446744073709551616", "-1"))
+  print(texts(0))
+}

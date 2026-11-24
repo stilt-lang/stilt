@@ -1,0 +1,4 @@
+fn main() / io {
+  let small = 10u8
+  print("{small}")
+}

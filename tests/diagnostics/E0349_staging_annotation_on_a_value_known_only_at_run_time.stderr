@@ -1,0 +1,16 @@
+── STAGING ANNOTATION ON A VALUE KNOWN ONLY AT RUN TIME ── E0349_staging_annotation_on_a_value_known_only_at_run_time.lt:2:15  [E0349]
+
+`comptime` asserts that this condition is known at compile time, but `n` is a
+parameter, known only at run time:
+
+  2 │   comptime if n > 0 { print("positive") }
+    │               ^
+
+`comptime` asserts that a value is known while compiling, which this one isn't.
+Delete `comptime`, which changes nothing the program does, or make the value a
+value parameter.
+
+To fix it, delete `comptime`, which changes nothing the program does:
+
+  2 │   comptime if n > 0 { print("positive") }
+    │   ---------

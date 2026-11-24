@@ -1,0 +1,15 @@
+//~ rule: program.exit-statuses, effects.result, std.option-result-and-ordering
+//~ stdout:
+//~ | 4
+//~ stderr:
+//~ | error: Missing("b")
+//~ exit: 1
+
+type Lookup = | Missing(str)
+
+fn find(key: str) -> Result<i64, Lookup> { if key == "a" { Ok(4) } else { Err(Missing(key)) } }
+
+fn main() / {io, raise<Lookup>} {
+  print("{try find("a").get()}")
+  print("{try find("b").get()}")
+}

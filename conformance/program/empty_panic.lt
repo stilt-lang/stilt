@@ -1,0 +1,7 @@
+//~ rule: program.prelude-functions, program.panic-detail
+//~ stderr:
+//~ | panic: explicit: ""
+//~ |   at empty_panic.lt:7:13
+//~ panic: explicit
+
+fn main() { panic("") }

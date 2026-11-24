@@ -1,0 +1,19 @@
+//~ rule: expressions.inout-arguments, declarations.function-types
+//~ run-output: "2 [1, 5]"
+
+fn bump(inout n: i64) { n += 1 }
+
+fn apply(f: fn(inout i64), inout n: i64) { f(inout n) }
+
+fn append(inout xs: List<i64>, x: i64) { xs.push(x) }
+
+fn main() / io {
+  var n = 0
+  let f: fn(inout i64) = bump
+  f(inout n)
+  apply(bump, inout n)
+  var xs = [1]
+  let g = append
+  g(inout xs, 5)
+  print("{n} {xs}")
+}

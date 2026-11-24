@@ -1,0 +1,3 @@
+fn log(message: str) / {io, io} { print(message) }
+
+fn main() {}

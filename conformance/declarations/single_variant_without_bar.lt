@@ -1,0 +1,3 @@
+//~ rule: syntax.variants, declarations.variant-types, declarations.no-aliases
+
+type UserId = UserId(i64) //~ ERROR E0100

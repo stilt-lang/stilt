@@ -1,0 +1,71 @@
+//~ rule: std.regex-matching, std.regex-replacing
+//~ stdout:
+//~ | 5-20 5-8 9-16
+//~ | 0-1 _ 0-1
+//~ | 0-4 0-1 1-4 4-4
+//~ | 0-3 0-2 _
+//~ | 0-4 2-4 2-3
+//~ | none
+//~ | [1] [22] [333]
+//~ | 0-0 1-3 4-4
+//~ | 0-0 1-1 2-2
+//~ | 0-1 2-3
+//~ | b.a d.c
+//~ | -b-c-
+//~ | f[o$][o$]
+//~ | $x
+//~ | <> <a>
+//~ | f0o
+//~ | foo
+//~ | ["a", "b", "c"]
+//~ | [""]
+//~ | ["", "a", ""]
+//~ | ["", "a", "b", ""]
+//~ | ["2027", "01", "15"]
+
+use std.regex
+
+fn compiled(source: str) -> regex.Regex {
+  try regex.compile(source) catch e => panic("{source}: {e}")
+}
+
+fn groups(source: str, text: str) -> str {
+  let gs = compiled(source).captures(text) else return "none"
+  " ".join(gs.map(|g| match g {
+    Some(m) => "{m.start}-{m.end}",
+    None => "_",
+  }))
+}
+
+fn spans(source: str, text: str) -> str {
+  " ".join(compiled(source).find_all(text).map(|m| "{m.start}-{m.end}"))
+}
+
+fn main() / io {
+  print(groups("(\\w+)@(\\w+)\\.com", "mail bob@example.com now"))
+  // A group that took no part in the match.
+  print(groups("(a)|(b)", "b"))
+  print(groups("(a|ab)(c|bcd)(d*)", "abcd"))
+  print(groups("(\\d+)-(\\d+)?", "12-"))
+  // A repeated group holds what its last repetition matched.
+  print(groups("((a)b)+", "abab"))
+  print(groups("x", "abc"))
+  print(" ".join(compiled("\\d+").find_all("a1b22c333").map(|m| "[{m.text}]")))
+  // An empty match right after another match is left out.
+  print(spans("a*", "baac"))
+  print(spans("", "ab"))
+  print(spans("x*", "xax"))
+  print(compiled("(\\w+)@(\\w+)").replace("a@b c@d", "$2.$1"))
+  print(compiled("a*").replace("baac", "-"))
+  print(compiled("(o)").replace("foo", "[$1$$]"))
+  print(compiled("a").replace("a", "$x"))
+  // A group that took no part, or that the pattern doesn't have, is "".
+  print(compiled("(a)?b").replace("b ab", "<$1$7>"))
+  print(compiled("o").replace_first("foo", "0"))
+  print(compiled("x").replace_first("foo", "0"))
+  print("{compiled(",\\s*").split("a, b,c")}")
+  print("{compiled(",").split("")}")
+  print("{compiled(",").split(",a,")}")
+  print("{compiled("x*").split("axb")}")
+  print("{compiled("[-/]").split("2027-01/15")}")
+}

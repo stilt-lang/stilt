@@ -1,0 +1,5 @@
+//~ rule: effects.without-panic, facts.inference, facts.bodies-with-errors
+
+use pure
+
+fn main() {}

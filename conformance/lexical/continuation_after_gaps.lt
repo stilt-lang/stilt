@@ -1,0 +1,22 @@
+//~ rule: lexical.continuation-lines
+//~ run-output: "yes 2"
+
+type Failure = | Failed
+
+fn fails() -> i64 / raise<Failure> { raise Failed }
+
+fn main() / io {
+  let c = true
+  let s = if c {
+    "yes"
+  }
+  // a comment between a block and its else
+
+  else {
+    "no"
+  }
+  let r = try fails()
+
+  catch Failed => 2
+  print("{s} {r}")
+}

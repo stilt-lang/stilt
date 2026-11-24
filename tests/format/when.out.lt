@@ -1,0 +1,16 @@
+// `when` names its handles separated by `, `, one space before its block, which follows the rules
+// of every block (shared.when).
+use std.sync
+
+type Account = { balance: i64 }
+
+fn transfer(a: sync.Shared<Account>, b: sync.Shared<Account>, n: i64) {
+  when a, b {
+    a.balance -= n
+    b.balance += n
+  }
+}
+
+fn read(a: sync.Shared<Account>) -> i64 { when a { a.balance } }
+
+fn touch(a: sync.Shared<Account>) without locks {}

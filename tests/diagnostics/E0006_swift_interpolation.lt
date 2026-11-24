@@ -1,0 +1,4 @@
+fn main() / io {
+  let n = 3
+  print("n is \(n)")
+}

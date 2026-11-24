@@ -1,0 +1,23 @@
+//~ rule: syntax.closing-angle-brackets, traits.show, std.show-output
+//~ stdout:
+//~ | ana ["ana", "bo"] ("a\n", "q\"") (1,) () [] {}
+//~ | Order { customer: "ana", qty: 3, price: 2.5 } Empty {} Some(Leaf) Node(Leaf, 1, Leaf)
+//~ | ["\u{1b}\u{7f}\0\t\\"] {"a": [1], "b": []} Some(Some(None))
+
+type Order = { customer: str, qty: i64, price: f64 }
+type Empty = {}
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+fn main() / io {
+  let names = ["ana", "bo"]
+  let none: List<i64> = []
+  let nothing: Map<str, i64> = Map.new()
+  print("{names[0]} {names} {("a\n", "q\"")} {(1,)} {()} {none} {nothing}")
+  let order = Order { qty: 3, customer: "ana", price: 2.5 }
+  print("{order} {Empty {}} {Some(Leaf)} {Node(Leaf, 1, Leaf)}")
+  var m = Map.new()
+  m["a"] = [1]
+  m["b"] = none
+  let deep: Option<Option<Option<i64>>> = Some(Some(None))
+  print("{["\u{1b}\u{7f}\0\t\\"]} {m} {deep}")
+}

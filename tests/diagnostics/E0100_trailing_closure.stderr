@@ -1,0 +1,14 @@
+── SYNTAX ERROR ──────────────────────── E0100_trailing_closure.lt:2:23  [E0100]
+
+Stilt passes a closure inside the call's parentheses, as `xs.map(|x| x * 2)`:
+
+  2 │   let ys = [1, 2].map { x in x * 2 }
+    │                       ^
+
+A closure is its parameters between `|`, then its body, and a call's arguments
+are always in its parentheses.
+
+To fix it, pass the closure in parentheses:
+
+  2 │   let ys = [1, 2].map(|x| x * 2)
+    │                      ~~~~~~~~~~~

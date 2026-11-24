@@ -1,0 +1,17 @@
+//~ tier: meta
+//~ rule: generics.array-elements, facts.linear-forms, facts.intervals, facts.relative-bounds, facts.analysis-order
+//~ panic: bounds
+//~ panic-at: order_block_length.lt:11:45
+
+use std.array
+
+// The comparison reads the old `i`, 0, and the index the new one, 100.
+fn block_length(a: array.Array<i64, 4>, n: i64) -> i64 {
+  var i = n
+  if i >= 0 && i < ({ i = 100; a }).len() { a[i] } else { 0 }
+}
+
+fn main() / io {
+  let a: array.Array<i64, 4> = [1, 2, 3, 4]
+  print("{block_length(a, 0)}")
+}

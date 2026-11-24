@@ -1,0 +1,5 @@
+//~ rule: expressions.closure-boundaries
+
+fn main() {
+  let fact = |n: i64| if n == 0 { 1 } else { n * fact(n - 1) } //~ ERROR E0211
+}

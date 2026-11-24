@@ -1,0 +1,13 @@
+//~ rule: std.encoding
+//~ stdout:
+//~ | 00017f80ff
+//~ | Some([0, 1, 127, 128, 255]) Some([171, 205]) Some([])
+//~ | [None, None, None, None]
+
+use std.encoding
+
+fn main() / io {
+  print(encoding.to_hex([0, 1, 127, 128, 255]))
+  print("{encoding.from_hex("00017f80FF")} {encoding.from_hex("aBcD")} {encoding.from_hex("")}")
+  print("{["abc", "0g", " 0", "0x00"].map(|s| encoding.from_hex(s))}")
+}

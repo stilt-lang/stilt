@@ -1,0 +1,9 @@
+── ALTERNATIVES BIND DIFFERENT NAMES ── E0217_alternatives_bind_different_names.lt:5:17  [E0217]
+
+This alternative binds different names from the first:
+
+  5 │     Circle(r) | Square(side) => r
+    │                 ^^^^^^^^^^^^
+
+Each alternative of a `|` pattern binds the same names, so the arm's body can
+use them whichever one matched. Give the bindings one name.

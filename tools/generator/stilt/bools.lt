@@ -1,0 +1,97 @@
+// The forms that make a `bool`: comparisons, logic, and the methods that test
+// a value.
+
+use closures
+use code
+use context
+use pick
+use ty
+
+/// A `bool` whose type is fixed without an expected type.
+pub fn cond(ex: context.Expr, inout b: context.Body, sc: context.Scope, depth: i64) -> code.Code {
+  ex.make(inout b, sc, depth, true, ty.Bool)
+}
+
+/// The forms that make a `bool`, each with its weight.
+pub fn ops(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  [
+    (4, |inout b| comparison(ex, inout b, sc, d)),
+    (
+      2,
+      |inout b| {
+        let x = cond(ex, inout b, sc, d)
+        let y = cond(ex, inout b, sc, d)
+        let op = pick.one(inout b.p.r, [" && ", " || "])
+        code.compound("{code.operand(x)}{op}{code.operand(y)}")
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let x = cond(ex, inout b, sc, d)
+        code.compound("!{code.operand(x)}")
+      },
+    ),
+    (2, |inout b| list_test(ex, inout b, sc, d)),
+    (
+      1,
+      |inout b| {
+        let sub = ex.make(inout b, sc, d, false, ty.Str)
+        let name = pick.one(inout b.p.r, ["contains", "starts_with", "ends_with"])
+        code.method_on(ex.make(inout b, sc, d, true, ty.Str), name, [sub.text])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let u = context.random_ty(inout b.p, false, 1)
+        let o = ex.make(inout b, sc, d, true, ty.OptionOf(u))
+        code.method_on(o, pick.one(inout b.p.r, ["is_some", "is_none"]), [])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let k = pick.one(inout b.p.r, ty.FLOAT_KINDS)
+        code.method_on(ex.make(inout b, sc, d, true, ty.Float(k)), "is_nan", [])
+      },
+    ),
+  ]
+}
+
+/// Two values of one type, compared. The operator is drawn after them.
+fn comparison(ex: context.Expr, inout b: context.Body, sc: context.Scope, d: i64) -> code.Code {
+  let t = context.random_ty(inout b.p, false, 1)
+  let ordered = ty.ordered(b.p.decls, t) && pick.chance(inout b.p.r, 0.5)
+  let ops = if ordered { ["<", "<=", ">", ">="] } else { ["==", "!="] }
+  let x = ex.make(inout b, sc, d, true, t)
+  let y = ex.make(inout b, sc, d, false, t)
+  let op = pick.one(inout b.p.r, ops)
+  code.compound("{code.operand(x)} {op} {code.operand(y)}")
+}
+
+/// A test of a list: whether it is empty, holds a value, or has an element,
+/// or only elements, that satisfy a closure.
+fn list_test(ex: context.Expr, inout b: context.Body, sc: context.Scope, d: i64) -> code.Code {
+  let t = context.random_ty(inout b.p, false, 1)
+  let xs = ex.make(inout b, sc, d, true, ty.ListOf(t))
+  context.run(
+    inout b,
+    [
+      (1, |inout b| code.method_on(xs, "is_empty", [])),
+      (1, |inout b| code.method_on(xs, "contains", [ex.make(inout b, sc, d, false, t).text])),
+      (
+        1,
+        |inout b| {
+          let f = closures.closure(ex, inout b, sc, d, false, t, ty.Bool)
+          code.method_on(xs, pick.one(inout b.p.r, ["any", "all"]), [f])
+        },
+      ),
+    ],
+  )
+}

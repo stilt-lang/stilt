@@ -1,0 +1,95 @@
+//~ rule: facts.div, facts.descending-self-calls, facts.without-div, facts.rules-of-acceptance, facts.shrinking-recursion, facts.closest-rule
+
+// No test guards the self-call.
+fn down(n: i64) -> i64 without div {
+  1 + down(n - 1) //~ ERROR E0204
+}
+
+// The `else` branch of `n == 0` has `n != 0`, so `zero(-1)` never ends.
+fn zero(n: i64) -> i64 without div {
+  if n == 0 { 0 } else { zero(n - 1) } //~ ERROR E0204
+}
+
+// The argument moves away from the bound.
+fn away(n: i64) -> i64 without div {
+  if n > 0 { away(n + 1) } else { 0 } //~ ERROR E0204
+}
+
+// The self-call passes a `var` that rebinds the parameter, which is no
+// `p - s` of the parameter.
+fn rebound(n: i64) -> i64 without div {
+  var m = n
+  m += 1
+  if m > 0 { rebound(m - 1) } else { 0 } //~ ERROR E0204
+}
+
+// Each self-call moves a parameter of its own.
+fn apart(a: i64, b: i64) -> i64 without div {
+  if a > 0 && b > 0 {
+    apart(a - 1, b) + apart(a, b - 1) //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+// One self-call descends structurally, and the other shrinks `n`.
+fn mixed(t: Tree, n: i64) -> i64 without div {
+  match t {
+    Leaf => 0
+    Node(l, _, _) => if n > 0 { mixed(l, n) + mixed(t, n - 1) } else { 0 } //~ ERROR E0204
+  }
+}
+
+// The step is a parameter, not known positive.
+fn by_step(n: i64, s: i64) -> i64 without div {
+  if n > 0 { by_step(n - s, s) } else { 0 } //~ ERROR E0204
+}
+
+// The bound is a parameter that a self-call changes.
+fn chased(i: i64, n: i64) -> i64 without div {
+  if i < n { chased(i + 1, n + 1) } else { i } //~ ERROR E0204
+}
+
+// A test from the side the argument moves away from bounds nothing.
+fn wrong_side(n: i64) -> i64 without div {
+  if n < 10 { wrong_side(n - 1) } else { 0 } //~ ERROR E0204
+}
+
+// A bound that is the parameter itself bounds nothing.
+fn itself(n: i64) -> i64 without div {
+  if n > n - 1 { itself(n - 1) } else { 0 } //~ ERROR E0204
+}
+
+// The argument moves from another expression than the parameter: `doubled(1)` never ends.
+fn doubled(n: i64) -> i64 without div {
+  if n > 0 { doubled(2 * n - 1) } else { 0 } //~ ERROR E0204
+}
+
+// A test that gives no comparison of the parameter bounds nothing.
+fn by_list(n: i64, xs: List<i64>) -> i64 without div {
+  if !xs.is_empty() { by_list(n - 1, xs) } else { 0 } //~ ERROR E0204
+}
+
+// A binding of the whole parameter is no strict part of it.
+fn same(t: Tree) -> i64 without div {
+  let u = t
+  same(u) //~ ERROR E0204
+}
+
+// A value made fresh is no part of the parameter, though it is smaller.
+fn fresh(t: Tree) -> i64 without div {
+  match t {
+    Leaf => 0
+    Node(_, _, _) => fresh(Leaf) //~ ERROR E0204
+  }
+}
+
+// A function without a limit whose recursion neither descends nor shrinks has `div`,
+// and so does each call of it.
+fn spin(n: i64) -> i64 { spin(n) }
+
+fn calls_spin() -> i64 without div {
+  spin(1) //~ ERROR E0204
+}

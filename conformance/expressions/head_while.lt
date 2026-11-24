@@ -1,0 +1,7 @@
+//~ rule: expressions.head-contents
+
+fn never() {
+  match while false {} { //~ ERROR E0100
+    () => ()
+  }
+}

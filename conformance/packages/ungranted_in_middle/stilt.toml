@@ -1,0 +1,3 @@
+[dependencies]
+mid = { path = "deps/mid", may = ["io"] }
+leaf = { path = "deps/leaf", may = ["io"] }

@@ -1,0 +1,18 @@
+//~ rule: values.left-to-right, expressions.conditions
+//~ stdout:
+//~ | evaluated false
+//~ | evaluated true
+//~ | false true false true
+
+fn loud(b: bool) -> bool / io {
+  print("evaluated {b}")
+  b
+}
+
+fn main() / io {
+  let a = false && loud(true)
+  let b = true || loud(false)
+  let c = true && loud(false)
+  let d = false || loud(true)
+  print("{a} {b} {c} {d}")
+}

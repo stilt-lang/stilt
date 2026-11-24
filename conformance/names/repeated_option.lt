@@ -1,0 +1,5 @@
+//~ rule: program.header-limits
+
+module main
+without panic, alloc, panic //~ ERROR E0202
+without alloc //~ ERROR E0202

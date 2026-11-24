@@ -1,0 +1,8 @@
+use std.meta
+
+pub fn kind<T>(value: T) -> str {
+  match T.shape() {
+    Record(_) => "record {T.name()}"
+    _ => "other"
+  }
+}

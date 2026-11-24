@@ -1,0 +1,34 @@
+use std.meta
+
+/// Twice the expression.
+pub macro twice(e: meta.Expr) -> meta.Expr { quote { $e * 2 } }
+
+/// A pattern that matches what either of two patterns matches.
+pub macro either(a: meta.Pattern, b: meta.Pattern) -> meta.Pattern { quote pattern { $a | $b } }
+
+/// A list of the type.
+pub macro list_of(t: meta.Type) -> meta.Type { quote type { List<$t> } }
+
+/// The text's value, with `!` after it.
+pub macro shout(t: meta.Text) -> meta.Expr {
+  let s = "{t.value()}!"
+  quote { $s }
+}
+
+/// The number of tokens of the file.
+pub macro tokens_in(f: meta.File) -> meta.Expr / raise<meta.Error> {
+  let n = (try f.text.lex()).items.len()
+  quote { $n }
+}
+
+/// The number of tokens of the part.
+pub macro count(ts: meta.Tokens) -> meta.Expr {
+  let n = ts.items.len()
+  quote { $n }
+}
+
+/// A record whose one field, `label`, holds the expression.
+pub macro labelled(e: meta.Expr) -> meta.Expr {
+  let fields = [quote field { label: $e }]
+  quote { { $..fields } }
+}

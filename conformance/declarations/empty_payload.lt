@@ -1,0 +1,3 @@
+//~ rule: syntax.variants, declarations.variant-types
+
+type Signal = | Ping() | Pong //~ ERROR E0100

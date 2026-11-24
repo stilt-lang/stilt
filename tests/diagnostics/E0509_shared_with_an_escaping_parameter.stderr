@@ -1,0 +1,15 @@
+── ROW VARIABLE ON A PARAMETER THAT PASSES ITS EFFECTS THROUGH ── E0509_shared_with_an_escaping_parameter.lt:1:35  [E0509]
+
+`f` passes its effects through, so its type names no row variable:
+
+  1 │ fn compose<e>(f: fn(i64) -> i64 / e, escaping g: fn(i64) -> i64 / e) -> fn(i64) -> i64 / e {
+    │                                   ^ its effects pass through without it
+
+A function parameter passes the effects its row doesn't name through to the
+caller, so a row variable adds nothing. Delete it, or mark the parameter
+`escaping` if the function keeps it.
+
+To fix it, mark `f` `escaping`, if the function keeps it:
+
+  1 │ fn compose<e>(escaping f: fn(i64) -> i64 / e, escaping g: fn(i64) -> i64 / e) -> fn(i64) -> i64 / e {
+    │               +++++++++

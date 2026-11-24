@@ -1,0 +1,73 @@
+//~ rule: facts.copy, facts.without-copy, modes.shared-writes, modes.shared-holders
+
+fn bump_all(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs
+  ys[0] += 1
+  ys
+}
+
+// A write while a copy lasts copies the shared value.
+fn shares(xs: List<i64>) -> List<i64> without copy {
+  var ys = xs
+  let keep = ys
+  ys.push(1) //~ ERROR E0204
+  keep
+}
+
+fn writes_copy(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  let keep = ys
+  ys[0] = 5
+  keep
+}
+
+// The copy belongs to `writes_copy`, which this function names.
+fn calls_it(xs: List<i64>) -> i64 without copy {
+  writes_copy(xs).len() //~ ERROR E0204
+}
+
+// The call copies `xs` for `bump_all`, which updates its argument in place.
+fn keeps(xs: List<i64>) -> i64 without copy {
+  let b = bump_all(xs) //~ ERROR E0204
+  b.len()
+}
+
+// A write to a `var` whose value is a copy of another binding copies too, while that binding
+// reads the value after the write.
+fn held(xs: List<i64>) -> i64 without copy {
+  var ys = xs
+  ys.push(1) //~ ERROR E0204
+  xs.len() + ys.len()
+}
+
+// So does one assigned the copy as its whole value.
+fn assigned(xs: List<i64>) -> i64 without copy {
+  var ys = [0]
+  ys = xs
+  ys.push(1) //~ ERROR E0204
+  xs.len() + ys.len()
+}
+
+// Or a copy that another binding holds and reads after the write.
+fn read_by_another(xs: List<i64>) -> i64 without copy {
+  let zs = xs
+  var ys = xs
+  ys.push(1) //~ ERROR E0204
+  zs.len() + ys.len()
+}
+
+// When nothing reads it after, the `var` is the only holder, and its write is in place.
+fn held_alone(xs: List<i64>) -> List<i64> without copy {
+  var ys = xs
+  ys.push(1)
+  ys
+}
+
+// Fresh values stay within the limit.
+fn fresh(n: i64) -> List<i64> without copy {
+  var ys = [n]
+  ys.push(n + 1)
+  ys
+}
+
+fn main() / io {}

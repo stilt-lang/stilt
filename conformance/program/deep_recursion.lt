@@ -1,0 +1,6 @@
+//~ rule: program.recursion-depth
+//~ run-output: "9998"
+
+fn depth(n: i64) -> i64 { if n == 0 { 0 } else { 1 + depth(n - 1) } }
+
+fn main() / io { print("{depth(9998)}") }

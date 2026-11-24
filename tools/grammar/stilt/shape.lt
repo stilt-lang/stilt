@@ -1,0 +1,358 @@
+// Gives the grammar the form that the emitters print: the separators that lexical.separators,
+// ignores, a start rule, only the rules the start rule reaches, and a rule for each token.
+
+use ebnf
+use expand
+use lexicon
+
+/// The grammar as the emitters print it.
+pub type Published = {
+  rules: List<(str, ebnf.Expr)>,
+  // The tokens spelled as written, each with the name of its rule, sorted by spelling.
+  literals: List<(str, str)>,
+  // The tokens spelled as written that a newline may precede without ending a statement.
+  continuing: Set<str>,
+  // The choices between tokens spelled as written, such as the binary operators, each read
+  // as one lexeme: the name of its rule and its spellings, sorted by name.
+  choices: List<(str, List<str>)>,
+}
+
+/// The name of the rule that reads the newlines between tokens as separators.
+pub const NEWLINE: str = "nl"
+
+/// The lexemes whose last character ends a line that is a statement's end.
+pub const ENDING_LEXEMES: List<str> = [
+  "lower", "upper", "int", "fraction", "float_exponent", "string", "string_tail",
+]
+
+/// The tokens after which a line ends the statement (lexical.terminator-insertion): the values `true`,
+/// `false`, `self` and `Self`, `return`, `break`, `continue` and `unsafe`, `)`, `]`, `}`, `?`,
+/// `>` and `>>`, and the contextual keywords, which are identifiers elsewhere.
+const ENDING: List<str> = [
+  "true", "false", "self", "Self", "return", "break", "continue", "unsafe", ")", "]", "}", "?", ">",
+  ">>", "io", "panic", "alloc", "because", "without", "escaping",
+]
+
+pub fn ends_statement(token: str) -> bool { ENDING.contains(token) }
+
+pub fn publish(grammar: expand.Grammar, punctuation: List<str>) -> Published / raise<str> {
+  var grammar = grammar
+  add_separators(inout grammar, punctuation)
+  grammar.rules = grammar.rules.map(|rule| (rule.0, around_braces(rule.1)))
+  grammar.set(
+    "root",
+    ebnf.Seq([ebnf.Opt(ebnf.Ref("sep")), ebnf.Ref("file"), ebnf.Opt(ebnf.Ref("sep"))]),
+  )
+  var rules = grammar.rules.map(|rule| (rule.0, simplify(rule.1)))
+  let continuing = continuing_tokens(rules)
+  var choices: Map<str, List<str>> = Map.new()
+  extract_choices(inout rules, inout choices)
+  try reachable(inout rules, choices)
+  var literals: Map<str, str> = Map.new()
+  var named = []
+  for (name, body) in rules { named.push((name, name_literals(body, inout literals))) }
+  Published {
+    rules: named,
+    literals: literals.entries().sorted_by(.0),
+    continuing,
+    choices: choices.entries().sorted_by(.0),
+  }
+}
+
+/// Defines `sep` as a run of separators (lexical.separators), and `float` as an integer, a dot and a
+/// fraction, so that no lexeme has to choose between `0.5` and `0..5` before it has seen the
+/// byte after the dot, and then the tokens of macros.patterns.
+fn add_separators(inout grammar: expand.Grammar, punctuation: List<str>) {
+  let either = ebnf.Alt([ebnf.Lit(";"), ebnf.Ref(NEWLINE)])
+  grammar.set("sep", ebnf.Seq([either, ebnf.Star(either)]))
+  let fraction = ebnf.Seq([ebnf.Ref("int"), ebnf.Lit("."), ebnf.Ref("fraction")])
+  grammar.set("float", ebnf.Alt([ebnf.Ref("float_exponent"), fraction]))
+  add_tokens(inout grammar, punctuation)
+}
+
+/// Defines the `TOKEN` of macros.patterns: an identifier, a number, a string, or one of the operators
+/// and punctuation it may be. The pieces of an interpolated string are tokens too, which the
+/// lexer only makes around a splice, so each rule that reads a `TOKEN` also reads an
+/// interpolated string whose splices hold what the rule holds.
+fn add_tokens(inout grammar: expand.Grammar, punctuation: List<str>) {
+  for (name, body) in grammar.rules.filter(|rule| uses_token(rule.1)) {
+    let string = "{name}_string"
+    grammar.set(name, with_strings(body, string))
+    // A splice holds a run of what the rule holds, or the run that the rule is.
+    let run = match body {
+      Star(_) => ebnf.Ref(name)
+      _ => ebnf.Star(ebnf.Alt([ebnf.Ref(name), ebnf.Ref("sep")]))
+    }
+    let splice = ebnf.Seq([run, ebnf.Opt(ebnf.Ref("format"))])
+    let mid = ebnf.Star(ebnf.Seq([ebnf.Ref("string_mid"), splice]))
+    grammar.set(string, ebnf.Seq([ebnf.Ref("string_head"), splice, mid, ebnf.Ref("string_tail")]))
+  }
+  let classes = ["lower", "upper", "int", "float", "string", "punctuation"]
+  grammar.set("token", ebnf.Alt(classes.map(|name| ebnf.Ref(name))))
+  grammar.set("punctuation", ebnf.Alt(punctuation.map(|text| ebnf.Lit(text))))
+}
+
+/// Whether the expression refers to `token`.
+/// ex: uses_token(ebnf.Star(ebnf.Alt([ebnf.Ref("sep"), ebnf.Ref("token")])))
+/// ex: !uses_token(ebnf.Ref("tokens"))
+fn uses_token(expr: ebnf.Expr) -> bool {
+  match expr {
+    Ref(name) => name == "token"
+    Seq(items) | Alt(items) => items.any(uses_token)
+    Opt(inner) | Star(inner) => uses_token(inner)
+    _ => false
+  }
+}
+
+/// `expr` with each `token` a choice between a token and the rule `string`.
+/// ex: with_strings(ebnf.Alt([ebnf.Ref("token"), ebnf.Ref("sep")]), "s") == ebnf.Alt([ebnf.Ref("token"), ebnf.Ref("s"), ebnf.Ref("sep")])
+/// ex: with_strings(ebnf.Opt(ebnf.Ref("token")), "s") == ebnf.Opt(ebnf.Alt([ebnf.Ref("token"), ebnf.Ref("s")]))
+fn with_strings(expr: ebnf.Expr, string: str) -> ebnf.Expr {
+  match expr {
+    Ref("token") => ebnf.Alt([expr, ebnf.Ref(string)])
+    Alt(items) => ebnf.Alt(
+      items.flat_map(
+        |item| match item {
+          Ref("token") => [item, ebnf.Ref(string)]
+          _ => [with_strings(item, string)]
+        },
+      ),
+    )
+    Seq(items) => ebnf.Seq(items.map(|item| with_strings(item, string)))
+    Opt(inner) => ebnf.Opt(with_strings(inner, string))
+    Star(inner) => ebnf.Star(with_strings(inner, string))
+    other => other
+  }
+}
+
+/// The tokens that a line may begin with, without a terminator after the line before: the
+/// ones lexical.terminator-insertion lists, `without` among them, which the grammar reads only before a
+/// limit, and the closers and operators that continue a line inside brackets (lexical.inside-brackets).
+fn continuing_tokens(rules: List<(str, ebnf.Expr)>) -> Set<str> {
+  var found = Set.from_list([".", "else", "catch", "|", "without", ",", ")", "]", ">"])
+  var stack = []
+  for (name, body) in rules { if name == "binary_op" { stack.push(body) } }
+  while true {
+    let expr = stack.pop() else break
+    match expr {
+      Lit(text) => { found.insert(text) }
+      Alt(items) | Seq(items) => stack.extend(items)
+      _ => {}
+    }
+  }
+  found
+}
+
+/// What may stand before and after a choice between tokens: a newline may precede it if it
+/// may precede one of the tokens, and one may follow it unless every token ends a statement.
+/// ex: choice_layout(Set.from_list(["+"]), ["+", "-"]) == (true, true)
+/// ex: choice_layout(Set.from_list(["+"]), [")", "]"]) == (false, false)
+pub fn choice_layout(continuing: Set<str>, spellings: List<str>) -> (bool, bool) {
+  (spellings.any(|t| continuing.contains(t)), !spellings.all(ends_statement))
+}
+
+/// `{` followed, and `}` preceded, by an optional separator.
+fn around_braces(expr: ebnf.Expr) -> ebnf.Expr {
+  let sep = ebnf.Opt(ebnf.Ref("sep"))
+  match expr {
+    Seq(items) => {
+      var out = []
+      for item in items {
+        match item {
+          Lit("\{") => out.extend([item, sep])
+          Lit("}") => out.extend([sep, item])
+          other => out.push(around_braces(other))
+        }
+      }
+      ebnf.Seq(out)
+    }
+    Alt(items) => ebnf.Alt(items.map(around_braces))
+    Opt(inner) => ebnf.Opt(around_braces(inner))
+    Star(inner) => ebnf.Star(around_braces(inner))
+    other => other
+  }
+}
+
+/// Drops what the grammar reads as nothing, such as an optional doc comment.
+/// ex: simplify(ebnf.Seq([ebnf.Empty, ebnf.Ref("a")])) == ebnf.Ref("a")
+/// ex: simplify(ebnf.Opt(ebnf.Empty)) == ebnf.Empty
+/// ex: simplify(ebnf.Star(ebnf.Seq([ebnf.Ref("a"), ebnf.Empty]))) == ebnf.Star(ebnf.Ref("a"))
+fn simplify(expr: ebnf.Expr) -> ebnf.Expr {
+  match expr {
+    Seq(items) => {
+      match items.map(simplify).filter(|e| e != ebnf.Empty) {
+        [] => ebnf.Empty
+        [only] => only
+        kept => ebnf.Seq(kept)
+      }
+    }
+    Alt(items) => ebnf.Alt(items.map(simplify))
+    Opt(inner) => match simplify(inner) {
+      Empty => ebnf.Empty
+      other => ebnf.Opt(other)
+    }
+    Star(inner) => match simplify(inner) {
+      Empty => ebnf.Empty
+      other => ebnf.Star(other)
+    }
+    other => other
+  }
+}
+
+/// Keeps the rules that `root` reaches, and fails on a name that nothing defines.
+fn reachable(inout rules: List<(str, ebnf.Expr)>, choices: Map<str, List<str>>) / raise<str> {
+  let lexemes = Set.from_list(lexicon.lexemes().map(.0).concat(choices.keys()))
+  let defined = Set.from_list(rules.map(.0))
+  var seen = Set.from_list(["root"])
+  var todo = ["root"]
+  while true {
+    let name = todo.pop() else break
+    let Some((_, body)) = rules.find(|rule| rule.0 == name) else raise "no rule defines `{name}`"
+    for next in refs_of(body) {
+      if defined.contains(next) {
+        if !seen.contains(next) {
+          seen.insert(next)
+          todo.push(next)
+        }
+      } else if !lexemes.contains(next) && next != NEWLINE {
+        raise "`{name}` uses `{next}`, which nothing defines"
+      }
+    }
+  }
+  rules = rules.filter(|rule| seen.contains(rule.0))
+}
+
+/// The names that an expression refers to, in order.
+fn refs_of(expr: ebnf.Expr) -> List<str> {
+  match expr {
+    Ref(name) => [name]
+    Seq(items) | Alt(items) => items.flat_map(refs_of)
+    Opt(inner) | Star(inner) => refs_of(inner)
+    _ => []
+  }
+}
+
+/// The spellings of an expression that is a choice between tokens.
+/// ex: spellings(ebnf.Alt([ebnf.Lit("+"), ebnf.Lit("-")])) == Some(["+", "-"])
+/// ex: spellings(ebnf.Alt([ebnf.Lit("+"), ebnf.Ref("x")])) == None
+/// ex: spellings(ebnf.Lit("+")) == None
+fn spellings(expr: ebnf.Expr) -> Option<List<str>> {
+  let Alt(items) = expr else return None
+  var out = []
+  for item in items {
+    match item {
+      Lit(text) => out.push(text)
+      _ => return None
+    }
+  }
+  Some(out)
+}
+
+/// Takes out of the rules each choice between tokens spelled as written: a rule that is such
+/// a choice stays under its name, and an inline choice gets a name of its own. A lexer that
+/// reads a choice as one lexeme has fewer lexemes to follow at once than one that reads each
+/// spelling as a lexeme.
+fn extract_choices(inout rules: List<(str, ebnf.Expr)>, inout choices: Map<str, List<str>>) {
+  var kept = []
+  for (name, body) in rules {
+    match spellings(body) {
+      Some(found) => choices.insert(name, found)
+      None => kept.push((name, body))
+    }
+  }
+  var out = []
+  for (name, body) in kept { out.push((name, inline_choices(body, inout choices))) }
+  rules = out
+}
+
+fn inline_choices(expr: ebnf.Expr, inout choices: Map<str, List<str>>) -> ebnf.Expr {
+  if let Some(found) = spellings(expr) {
+    let name = "one_of_{"_or_".join(found.map(rule_name))}"
+    choices.insert(name, found)
+    return ebnf.Ref(name)
+  }
+  match expr {
+    Seq(items) => ebnf.Seq(inline_all(items, inout choices))
+    Alt(items) => ebnf.Alt(inline_all(items, inout choices))
+    Opt(inner) => ebnf.Opt(inline_choices(inner, inout choices))
+    Star(inner) => ebnf.Star(inline_choices(inner, inout choices))
+    other => other
+  }
+}
+
+fn inline_all(items: List<ebnf.Expr>, inout choices: Map<str, List<str>>) -> List<ebnf.Expr> {
+  var out = []
+  for item in items { out.push(inline_choices(item, inout choices)) }
+  out
+}
+
+/// Replaces each token spelled as written by a use of its rule.
+fn name_literals(expr: ebnf.Expr, inout literals: Map<str, str>) -> ebnf.Expr {
+  match expr {
+    Lit(text) => {
+      let name = rule_name(text)
+      literals.insert(text, name)
+      ebnf.Ref(name)
+    }
+    Seq(items) => ebnf.Seq(name_all(items, inout literals))
+    Alt(items) => ebnf.Alt(name_all(items, inout literals))
+    Opt(inner) => ebnf.Opt(name_literals(inner, inout literals))
+    Star(inner) => ebnf.Star(name_literals(inner, inout literals))
+    other => other
+  }
+}
+
+fn name_all(items: List<ebnf.Expr>, inout literals: Map<str, str>) -> List<ebnf.Expr> {
+  var out = []
+  for item in items { out.push(name_literals(item, inout literals)) }
+  out
+}
+
+/// `kw_fn` for a word, and for punctuation `op_` and the names of its characters, such as
+/// `op_plus_percent_eq` for `+%=`.
+/// ex: rule_name("fn") == "kw_fn"
+/// ex: rule_name("Self") == "kw_cap_self"
+/// ex: rule_name("+%=") == "op_plus_percent_eq"
+fn rule_name(text: str) -> str {
+  let chars = text.chars()
+  if chars.all(|c| c.is_ascii_alpha()) {
+    let lower = text.ascii_lower()
+    return if lower == text { "kw_{text}" } else { "kw_cap_{lower}" }
+  }
+  "op_{"_".join(chars.map(char_name))}"
+}
+
+const CHAR_NAMES: List<(str, str)> = [
+  ("+", "plus"),
+  ("-", "minus"),
+  ("*", "star"),
+  ("/", "slash"),
+  ("%", "percent"),
+  ("&", "amp"),
+  ("|", "bar"),
+  ("^", "caret"),
+  ("<", "lt"),
+  (">", "gt"),
+  ("=", "eq"),
+  ("!", "bang"),
+  ("?", "question"),
+  (".", "dot"),
+  (",", "comma"),
+  (":", "colon"),
+  (";", "semi"),
+  ("(", "lparen"),
+  (")", "rparen"),
+  ("[", "lbracket"),
+  ("]", "rbracket"),
+  ("\{", "lbrace"),
+  ("}", "rbrace"),
+  ("_", "underscore"),
+  ("$", "dollar"),
+]
+
+fn char_name(c: str) -> str {
+  match CHAR_NAMES.find(|entry| entry.0 == c) {
+    Some((_, name)) => name
+    None => "other"
+  }
+}

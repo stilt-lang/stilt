@@ -1,0 +1,2 @@
+[dependencies]
+files = { path = "deps/files", may = ["console"] } # //~ ERROR E0608

@@ -1,0 +1,2 @@
+#[derive(Eq)] //~ ERROR E0100
+type Point = { x: i64 }

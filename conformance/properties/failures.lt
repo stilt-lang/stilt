@@ -1,0 +1,22 @@
+//~ rule: tests.running-cases, tests.shrinking, tests.property-results
+
+type Failure = | Bad(i64)
+
+fn check(x: i64) / raise<Failure> { if x > 3 { raise Bad(x) } }
+
+/// Divides 100.
+/// ex: hundredth(4) == 25 //~ PASS
+/// prop: |x: i64| x <= 0 || hundredth(x) <= 100 //~ PASS
+/// prop: |x: i64| hundredth(x) <= 100 //~ FAIL
+/// prop: |x: i64| { try check(x); true } //~ FAIL
+/// prop: |x: i64| x < 50 //~ FAIL
+/// ex: hundredth(3) == 34 //~ FAIL
+fn hundredth(x: i64) -> i64 { 100 / x }
+
+test "divides" { //~ PASS
+  assert hundredth(10) == 10
+}
+
+test "fails" { //~ FAIL
+  assert hundredth(1) == 1
+}

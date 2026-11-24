@@ -1,0 +1,59 @@
+//~ tier: meta
+//~ rule: meta.reflects, meta.types-without-shape, meta.bound-tests
+//~ stdout:
+//~ | record record
+//~ | {name: "h", run: <run>}
+//~ | {title: "top", items: [{title: "a", items: []}, {title: "b", items: [{title: "c", items: []}]}]}
+
+use std.meta
+
+type Handler = { name: str, run: Action }
+
+// A function, with an impl of the guard of `text`.
+type Action = { f: fn() -> i64 }
+
+trait Brief {
+  fn brief(self) -> str
+}
+
+impl Brief for Action {
+  fn brief(self) -> str { "<run>" }
+}
+
+// A tree, which holds itself through a list.
+type Menu = { title: str, items: List<Menu> }
+
+// Reflects on `T` alone: a record with a function field has a shape.
+fn kind<T>(value: T) -> str {
+  match T.shape() {
+    Record(_) => "record"
+    _ => "other"
+  }
+}
+
+// Reflects on the parts of `T`, guarded by `Brief`: a type with an impl of
+// it needs no shape, nor does what it holds.
+fn text<T>(value: T) -> str {
+  if T: Brief {
+    value.brief()
+  } else {
+    match T.shape() {
+      Str(s) => "\"{s.get(value)}\""
+      List(c) => "[{", ".join(c.get(value).map(|x| text(x)))}]"
+      Record(fields) => {
+        var parts: List<str> = []
+        for f in fields { parts.push("{f.name()}: {text(f.get(value))}") }
+        "\{{", ".join(parts)}}"
+      }
+      _ => T.name()
+    }
+  }
+}
+
+fn main() / io {
+  let h = Handler { name: "h", run: Action { f: || 1 } }
+  print("{kind(h)} {kind(Action { f: || 2 })}")
+  print(text(h))
+  let leaf = |t: str| Menu { title: t, items: [] }
+  print(text(Menu { title: "top", items: [leaf("a"), Menu { title: "b", items: [leaf("c")] }] }))
+}

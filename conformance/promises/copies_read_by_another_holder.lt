@@ -1,0 +1,40 @@
+//~ rule: modes.shared-writes, modes.shared-holders, facts.copy, facts.without-copy
+
+// `w` and `y` hold copies of `x`'s value, and `w` is read after the write to `y`, so the write is
+// shared, though `w` was declared outside the block that holds `x`.
+fn holder_outside() -> List<i64> without copy {
+  var w = [1]
+  var y = [0]
+  if w.len() > 0 {
+    var x = [5]
+    w = x
+    y = x
+    y[0] = 9 //~ ERROR E0204
+  }
+  w
+}
+
+// The same once `u`, whose value both hold, has gone out of scope.
+fn source_gone() -> List<i64> without copy {
+  var w = [1]
+  var z = [0]
+  if w.len() > 0 {
+    var u = [5]
+    w = u
+    z = u
+  }
+  z[0] = 9 //~ ERROR E0204
+  w
+}
+
+// Once `w`'s whole is assigned again, it reads the value assigned, so the write is not shared.
+fn holder_replaced() -> List<i64> without copy {
+  var w = [1]
+  var y = [0]
+  var x = [5]
+  w = x
+  y = x
+  w = [2]
+  y[0] = 9
+  w
+}

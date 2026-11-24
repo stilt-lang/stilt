@@ -1,0 +1,11 @@
+//~ rule: types.field-access, traits.method-resolution
+//~ run-output: "1 b 6 10 8 double"
+
+type Handler = { name: str, run: fn(i64) -> i64 }
+
+fn main() / io {
+  let p = (1, ("a", "b"))
+  let h = Handler { name: "double", run: |x| x * 2 }
+  let pair = (|x: i64| x * 2, 0)
+  print("{p.0} {p.1.1} {h.run(3)} {pair.0(5)} {(h.run)(4)} {h.name}")
+}

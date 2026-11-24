@@ -1,0 +1,39 @@
+//~ tier: advanced
+//~ rule: handlers.with, handlers.handler-types, handlers.resuming
+//~ run-output: "[INFO] Boom!"
+
+// Effekt, examples/pos/rethrow.effekt: `rethrow` installs a handler of `Exc` around a program,
+// whose body throws again, on the handler outside it, the message that `f` makes of the one
+// thrown. `prepend_info` gives it an `f` that asks `Info` for a prefix. The program throws
+// "Boom!", the outer handler prints "[INFO] Boom!", and neither handler of `Exc` resumes. Effekt
+// passes the outer handler as an explicit capability; in Stilt a handler's body performs its
+// own effect on the handler outside its `with`. The body also performs `Info`, through `f`,
+// which Stilt allows when the operation's row holds it, so the row of `throw` holds `Info`,
+// and the handler of `Info` is installed outside that of `Exc`.
+
+effect Exc {
+  fn throw(msg: str) / Info
+}
+
+effect Info {
+  fn get() -> str
+}
+
+fn rethrow(escaping f: fn(str) -> str / Info, p: fn() / Exc) / {Exc, Info} {
+  let again = handler Exc -> () {
+    fn throw(msg: str) / Info { Exc.throw(f(msg)) }
+  }
+  with again { p() }
+}
+
+fn prepend_info(prog: fn() / Exc) / {Exc, Info} {
+  rethrow(|msg| "{Info.get()} {msg}", prog)
+}
+
+fn main() / io {
+  let printing = handler Exc -> () {
+    fn throw(msg: str) / Info { print(msg) }
+  }
+  let info = handler Info { fn get() -> str { "[INFO]" } }
+  with info, printing { prepend_info(|| Exc.throw("Boom!")) }
+}

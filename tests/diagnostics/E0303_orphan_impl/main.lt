@@ -1,0 +1,6 @@
+use names
+use things
+
+impl names.Named for things.Thing {
+  fn name(self) -> str { "thing" }
+}

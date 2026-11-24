@@ -1,0 +1,15 @@
+; The program generator. It shares no code with the reference interpreter,
+; whose checker is what catches the generator's own mistakes. Its modules but
+; the command line are a library, which its tests in test/ use too.
+
+(library
+ (name stilt_gen)
+ (modules
+  (:standard \ main)))
+
+(executable
+ (name main)
+ (public_name stilt-gen)
+ (package stilt-ref)
+ (modules main)
+ (libraries stilt_gen cmdliner))

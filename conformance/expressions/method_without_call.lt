@@ -1,0 +1,5 @@
+//~ rule: types.field-access
+
+fn count(xs: List<i64>) -> i64 {
+  xs.len //~ ERROR E0313
+}

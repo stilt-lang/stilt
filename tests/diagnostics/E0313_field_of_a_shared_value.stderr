@@ -1,0 +1,16 @@
+── NO SUCH FIELD ───────────────── E0313_field_of_a_shared_value.lt:6:5  [E0313]
+
+`Shared<Account>` has no field `balance`: its value is reached only inside a
+`when` that names it:
+
+  6 │   a.balance
+    │     ^^^^^^^
+
+Check the field's name against the type's declaration. A `Shared<T>`'s fields
+are read inside `when`, and a field read through an `Option` is the field of the
+value inside it.
+
+To fix it, read it inside `when a`:
+
+  6 │   when a { a.balance }
+    │   +++++++++         ++

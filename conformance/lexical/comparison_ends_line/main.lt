@@ -1,0 +1,5 @@
+//~ rule: lexical.terminator-insertion, lexical.terminator-positions, lexical.continuing-expression
+fn bigger(a: i64, b: i64) -> bool {
+  a > //~ ERROR E0100
+    b
+}

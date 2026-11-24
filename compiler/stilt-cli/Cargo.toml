@@ -1,0 +1,56 @@
+[package]
+name = "stilt-cli"
+description = "The `stilt` command"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "stilt"
+path = "src/main.rs"
+
+[dependencies]
+# The keys of a release build's objects in their cache: the hash of their C, the clang and the
+# flags.
+blake3.workspace = true
+stilt-codegen-c = { path = "../stilt-codegen-c" }
+stilt-codegen-clif = { path = "../stilt-codegen-clif" }
+stilt-db = { path = "../stilt-db" }
+stilt-diag = { path = "../stilt-diag" }
+stilt-edit = { path = "../stilt-edit" }
+stilt-fmt = { path = "../stilt-fmt" }
+stilt-hir = { path = "../stilt-hir" }
+stilt-ide = { path = "../stilt-ide" }
+stilt-lsp = { path = "../stilt-lsp" }
+stilt-meta = { path = "../stilt-meta" }
+stilt-mir = { path = "../stilt-mir" }
+stilt-pkg = { path = "../stilt-pkg" }
+stilt-rc = { path = "../stilt-rc" }
+stilt-runtime = { path = "../stilt-runtime" }
+stilt-types = { path = "../stilt-types" }
+stilt-syntax = { path = "../stilt-syntax" }
+salsa.workspace = true
+clap.workspace = true
+# The user that the process at the other end of an engine's socket runs as, without `unsafe`
+# (engines.private).
+nix = { workspace = true, features = ["socket", "user"] }
+# Reads the runtime's archive, for the symbols a macOS executable takes from the system.
+object = { workspace = true, features = ["archive"] }
+# What a command and its engine say to each other, the MIR that a run receives among it, in a
+# compact binary form that serde writes (goal one-engine).
+postcard = { version = "1.1.3", default-features = false, features = ["use-std"] }
+serde.workspace = true
+serde_json.workspace = true
+clap_complete = "4.6"
+clap_mangen = "0.2"
+
+[dev-dependencies]
+# Serves test repositories over HTTPS, with a certificate authority of the test's own, so that
+# fetching over the network is tested without reaching it (packages.fetching).
+rcgen = { version = "0.13", default-features = false, features = ["crypto", "pem", "ring"] }
+rustls.workspace = true
+
+[lints]
+workspace = true

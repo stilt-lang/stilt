@@ -1,0 +1,13 @@
+module std.cli
+
+// Command-line arguments and the environment (std.cli).
+
+/// The program's arguments, not including the program's name.
+pub fn args() -> List<str> / io = ?
+
+/// Argument `i`, counting from 0, or `None` if there are fewer arguments.
+pub fn arg(i: i64) -> Option<str> / io { args().get(i) }
+
+/// The value of the environment variable `name`, or `None` when it isn't set,
+/// or when `name` is empty or holds `=` or U+0000.
+pub fn env(name: str) -> Option<str> / io = ?

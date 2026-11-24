@@ -1,0 +1,1 @@
+fn const() {} //~ ERROR E0100

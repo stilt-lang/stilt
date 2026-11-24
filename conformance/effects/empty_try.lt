@@ -1,0 +1,32 @@
+//~ rule: effects.empty-try, effects.result
+//~ run-output: "6"
+
+fn add_one(x: i64) -> i64 {
+  try x + 1 //~ WARN W0500
+}
+
+fn stored(r: Result<i64, str>) -> Result<i64, str> {
+  try r //~ WARN W0500
+}
+
+fn nothing_to_catch(x: i64) -> i64 {
+  try x catch _ => 0 //~ WARN W0500
+}
+
+fn raises_inside(x: i64) -> i64 {
+  try {
+    if x < 0 { raise "negative" }
+    x
+  }
+    catch _ because "negative input counts as zero" => 0
+}
+
+fn main() / io {
+  let r: Result<i64, str> = Ok(1)
+  let stored_value = match stored(r) {
+    Ok(n) => n
+    Err(_) => 0
+  }
+  let total = add_one(1) + stored_value + nothing_to_catch(1) + raises_inside(2)
+  print("{total}")
+}

@@ -1,0 +1,16 @@
+//~ tier: advanced
+//~ rule: macros.matching, macros.checked-templates
+//~ exit: 2
+//~ stdout:
+//~ | 2
+
+// A macro whose template names nothing, or names a macro without its `!`, has an error at its
+// declaration, in its own module, and expands no use, in any module, so its uses report nothing.
+// The program runs: only the uses are in bodies that run, and they are never reached.
+use util.marks
+
+fn shown() -> i64 { marks.twice!(1) + marks.called!() }
+
+fn main() / io {
+  print("{1 + 1}")
+}

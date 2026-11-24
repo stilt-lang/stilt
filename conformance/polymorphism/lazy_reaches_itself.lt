@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: polymorphism.lazy-waits-for-nothing, shared.when-on-value-already-held, cycles.through-shared-values
+//~ panic: deadlock
+//~ panic-at: lazy_reaches_itself.lt:21:20
+
+// A shared value may hold a `Lazy` whose function reads it, which could ask for the value it
+// is computing; its `when` panics first.
+
+use std.sync
+use std.lazy
+
+type Holder = { l: Option<lazy.Lazy<i64>> }
+
+fn later(escaping f: fn() -> i64) -> lazy.Lazy<i64> {
+  lazy.Lazy.new(f)
+}
+
+fn main() / io {
+  let h = sync.Shared.new(Holder { l: None })
+  let g = h
+  let l = later(|| when g { match g.l { Some(x) => x.get(), None => 0 } })
+  when h { h.l = Some(l) }
+  print("{l.get()}")
+}

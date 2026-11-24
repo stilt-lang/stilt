@@ -1,0 +1,9 @@
+//~ rule: types.fields-through-option, expressions.option-fallback
+
+type Customer = { name: str }
+
+type Order = { customer: Customer }
+
+fn buyer(o: Order) -> str {
+  o.customer.name else "" //~ ERROR E0311
+}

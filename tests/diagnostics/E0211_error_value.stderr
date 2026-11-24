@@ -1,0 +1,9 @@
+── UNKNOWN NAME ────────────────────────────── E0211_error_value.lt:2:6  [E0211]
+
+Stilt has no `err` to test: a call that can fail raises its error:
+
+  2 │   if err { print("failed") }
+    │      ^^^
+
+A function names what it raises in its row, as `/ raise<E>`, and `try f() catch
+e => …` handles the error where it is called.

@@ -1,0 +1,9 @@
+//~ rule: lexical.primitive-type-names, program.prelude-names
+
+fn str() {} //~ ERROR E0210
+type Point = { i64: i64 } //~ ERROR E0210
+fn f(bool: i64) {} //~ ERROR E0210
+
+fn g() {
+  let f32 = 1.0 //~ ERROR E0210
+}

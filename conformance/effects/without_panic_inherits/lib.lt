@@ -1,0 +1,15 @@
+module lib
+
+pub fn first(xs: List<i64>) -> i64 { xs[0] }
+
+pub fn deep(xs: List<i64>) -> i64 { first(xs) }
+
+pub fn safe(xs: List<i64>) -> i64 { xs.len() }
+
+pub fn share(n: i64) -> i64 { 100 / n }
+
+pub fn even(n: i64) -> bool { if n == 0 { true } else { odd(n - 1) } }
+
+pub fn odd(n: i64) -> bool { if n == 0 { 1 / n == 0 } else { even(n - 1) } }
+
+pub fn sharer() -> fn(i64) -> i64 { |n| 100 / n }

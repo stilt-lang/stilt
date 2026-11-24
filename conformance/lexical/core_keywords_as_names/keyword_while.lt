@@ -1,0 +1,1 @@
+fn while() {} //~ ERROR E0100

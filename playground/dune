@@ -1,0 +1,3 @@
+; Only the playground's interpreter is built with dune.
+
+(dirs interpreter)

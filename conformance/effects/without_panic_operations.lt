@@ -1,0 +1,63 @@
+//~ rule: effects.panic-kinds, effects.panicking-operations, effects.without-panic
+
+module main
+without panic
+
+fn at(xs: List<i64>, i: i64) -> i64 {
+  xs[i] //~ ERROR E0204
+}
+
+fn divide(a: i64, b: i64) -> i64 {
+  a / b //~ ERROR E0204
+}
+
+fn remainder(inout a: i64, b: i64) {
+  a %= b //~ ERROR E0204
+}
+
+fn halve(a: i64) -> i64 { a / 2 }
+
+fn float_divide(a: f64, b: f64) -> f64 { a / b }
+
+fn overflow(a: i64) -> i64 { a * a + 1 }
+
+fn cut(s: str) -> str {
+  s.slice(0, 1) //~ ERROR E0204
+}
+
+fn boom() {
+  panic("boom") //~ ERROR E0204
+}
+
+fn never() -> i64 {
+  unreachable() //~ ERROR E0204
+}
+
+fn checked(b: bool) {
+  assert b //~ ERROR E0204
+}
+
+fn todo() -> i64 {
+  ? //~ ERROR E0204
+}
+
+fn store(inout m: Map<str, i64>) { m["a"] = 1 }
+
+fn read(m: Map<str, i64>) -> i64 {
+  m["a"] //~ ERROR E0204
+}
+
+fn read_with_default() -> i64 {
+  let m: Map<str, i64> = Map.with_default(0)
+  m["a"] //~ ERROR E0204
+}
+
+fn bump(inout m: Map<str, i64>) {
+  m["a"] += 1 //~ ERROR E0204
+}
+
+fn uses_at(xs: List<i64>) -> i64 { at(xs, 0) }
+
+fn apply(f: fn(i64) -> i64) -> i64 { f(1) }
+
+test "the tests of a module without panics may assert" { assert divide(4, 2) == 2 }

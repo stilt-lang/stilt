@@ -1,0 +1,21 @@
+//~ rule: effects.error-type-raises, errors.error-type-raises
+
+type Problem = | Empty
+
+fn parse(s: str) -> i64 / raise<ParseEror> { //~ ERROR E0211
+  0
+}
+
+fn fetch() -> i64 / raise<Problem> { raise Empty }
+
+fn unmarked() -> i64 { parse("1") }
+
+fn caught() -> i64 { try parse("2") catch _ because "a failure counts as zero" => 0 }
+
+fn beside() -> i64 {
+  try {
+    let a = parse("3")
+    a + fetch()
+  }
+    catch Empty => 0
+}

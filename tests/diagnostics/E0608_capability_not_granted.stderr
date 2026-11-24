@@ -1,0 +1,16 @@
+── EFFECT THAT THE MANIFEST DOESN'T GRANT ────────────── stilt.toml:5:1  [E0608]
+
+`logs.log` uses `fs`, by calling `fs.exists` at deps/logs/src/main.lt:4:7, but
+this manifest doesn't grant `fs` to `logs`:
+
+  5 │ logs = { path = "deps/logs", may = ["console"] }
+    │ ^^^^
+
+A dependency performs only the effects and capabilities that its entry grants
+with `may`, as `may = ["fs"]`, and `unsafe` code only with `unsafe`. Grant what
+it needs, if you trust it with that.
+
+To fix it, grant `fs` and `console` to `logs`:
+
+  5 │ logs = { path = "deps/logs", may = ["fs", "console"] }
+    │                                    ~~~~~~~~~~~~~~~~~

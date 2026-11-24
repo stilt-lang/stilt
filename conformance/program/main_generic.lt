@@ -1,0 +1,3 @@
+//~ rule: program.main
+
+fn main<T>() {} //~ ERROR E0310

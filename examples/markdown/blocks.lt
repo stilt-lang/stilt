@@ -1,0 +1,264 @@
+// Reading the lines of a Markdown document into its blocks.
+
+/// A block of a document. The text of a heading and of a paragraph is still Markdown, whose
+/// spans `inline` reads.
+pub type Block =
+  | Heading(i64, str)
+  | Paragraph(str)
+  | Code(str, List<str>)
+  | Quote(List<Block>)
+  | Bullets(List<List<Block>>, bool)
+  | Numbered(i64, List<List<Block>>, bool)
+  | Rule
+
+/// The marker that starts a list item: `-`, `*` or `+`, or a number and `.` or `)`. `indent`
+/// is the column where the item's text starts, which its later lines are indented to.
+type Marker = { number: Option<i64>, sign: str, indent: i64, text: str }
+
+/// The blocks of a document's lines, a list being tight when no blank line separates its items
+/// or the blocks of an item.
+/// ex: parse(["# Hi", "", "some", "text"]) == [Heading(1, "Hi"), Paragraph("some\ntext")]
+/// ex: parse(["- a", "- b"]) == [Bullets([[Paragraph("a")], [Paragraph("b")]], true)]
+/// ex: parse(["> quoted", "***"]) == [Quote([Paragraph("quoted")]), Rule]
+pub fn parse(lines: List<str>) -> List<Block> {
+  var blocks = []
+  var i = 0
+  while i < lines.len() {
+    if is_blank(lines[i]) {
+      i += 1
+      continue
+    }
+    blocks.push(block(lines, inout i))
+  }
+  blocks
+}
+
+/// The block that starts at the non-blank line `i`, which moves past it.
+fn block(lines: List<str>, inout i: i64) -> Block {
+  let line = lines[i]
+  if let Some((level, text)) = heading(line) {
+    i += 1
+    return Heading(level, text)
+  }
+  if is_rule(line) {
+    i += 1
+    return Rule
+  }
+  if let Some((open, info)) = fence(line) { return code(lines, inout i, open, info) }
+  if quoted(line) != None { return blockquote(lines, inout i) }
+  if let Some(m) = marker(line) { return list(lines, inout i, m) }
+  paragraph(lines, inout i)
+}
+
+fn is_blank(line: str) -> bool { line.trim().is_empty() }
+
+/// The number of spaces that start `line`.
+/// ex: indentation("   x") == 3
+fn indentation(line: str) -> i64 { line.len() - line.trim_start().len() }
+
+/// Whether `line` starts a block other than a paragraph, and so ends a paragraph before it.
+fn interrupts(line: str) -> bool {
+  heading(line) != None ||
+    is_rule(line) ||
+    fence(line) != None ||
+    quoted(line) != None ||
+    marker(line).is_some_and(|m| m.text != "")
+}
+
+/// The level and text of a heading: one to six `#`, then a space, the text, and perhaps more
+/// `#`s after a space, which aren't part of it.
+/// ex: heading("## Two ##") == Some((2, "Two"))
+/// ex: heading("#5 apples") == None
+/// ex: heading("#") == Some((1, ""))
+fn heading(line: str) -> Option<(i64, str)> {
+  if indentation(line) > 3 { return None }
+  let text = line.trim()
+  let level = text.chars().take_while(|c| c == "#").len()
+  if level == 0 || level > 6 { return None }
+  let rest = text.slice(level, text.len())
+  if rest != "" && !rest.starts_with(" ") { return None }
+  let rest = rest.trim()
+  var end = rest.len()
+  while end > 0 && rest.slice(end - 1, end) == "#" { end -= 1 }
+  if end == 0 || rest.slice(end - 1, end) == " " { return Some((level, rest.slice(0, end).trim())) }
+  Some((level, rest))
+}
+
+/// Whether `line` is a thematic break: three or more `-`, `*` or `_`, all the same, perhaps
+/// with spaces between them.
+/// ex: is_rule("- - -")
+/// ex: !is_rule("--")
+/// ex: !is_rule("-*-")
+fn is_rule(line: str) -> bool {
+  if indentation(line) > 3 { return false }
+  let marks = line.replace(" ", "")
+  marks.len() >= 3 && ["-", "*", "_"].any(|c| marks.replace(c, "").is_empty())
+}
+
+/// The opening of a fenced code block, three or more backticks or tildes, and its info
+/// string's first word.
+/// ex: fence("```rust ignore") == Some(("```", "rust"))
+/// ex: fence("~~~~") == Some(("~~~~", ""))
+/// ex: fence("``") == None
+fn fence(line: str) -> Option<(str, str)> {
+  if indentation(line) > 3 { return None }
+  let text = line.trim()
+  let c = text.slice(0, text.len().min(1))
+  if c != "`" && c != "~" { return None }
+  let open = "".join(text.chars().take_while(|x| x == c))
+  if open.len() < 3 { return None }
+  let info = text.slice(open.len(), text.len()).trim()
+  if c == "`" && info.contains("`") { return None }
+  Some((open, info.split_whitespace().first() else ""))
+}
+
+/// The lines of a fenced code block, up to a closing fence of the same character and at least
+/// as long, or to the end of the document.
+fn code(lines: List<str>, inout i: i64, open: str, info: str) -> Block {
+  let lead = indentation(lines[i])
+  i += 1
+  var body = []
+  while i < lines.len() {
+    let line = lines[i]
+    i += 1
+    let t = line.trim()
+    if indentation(line) <= 3 && t.starts_with(open) && t.replace(open.slice(0, 1), "").is_empty() {
+      break
+    }
+    body.push(line.slice(indentation(line).min(lead), line.len()))
+  }
+  Code(info, body)
+}
+
+/// The text of a line of a block quote, after its `>` and the space after that.
+/// ex: quoted("> a") == Some("a")
+/// ex: quoted(">b") == Some("b")
+/// ex: quoted("a > b") == None
+fn quoted(line: str) -> Option<str> {
+  if indentation(line) > 3 { return None }
+  let rest = line.trim_start().strip_prefix(">") else return None
+  Some(rest.strip_prefix(" ") else rest)
+}
+
+/// A block quote: its lines with `>`, and the lines that continue its last paragraph.
+fn blockquote(lines: List<str>, inout i: i64) -> Block {
+  var body = []
+  while i < lines.len() {
+    match quoted(lines[i]) {
+      Some(text) => body.push(text)
+      None => {
+        let last = body.last() else ""
+        if is_blank(lines[i]) || is_blank(last) || interrupts(lines[i]) || fence(last) != None {
+          break
+        }
+        body.push(lines[i])
+      }
+    }
+    i += 1
+  }
+  Quote(parse(body))
+}
+
+/// A paragraph: lines up to a blank one or one that starts another block, each without the
+/// spaces that start it.
+fn paragraph(lines: List<str>, inout i: i64) -> Block {
+  var text = [lines[i].trim_start()]
+  i += 1
+  while i < lines.len() && !is_blank(lines[i]) && !interrupts(lines[i]) {
+    text.push(lines[i].trim_start())
+    i += 1
+  }
+  Paragraph("\n".join(text).trim_end())
+}
+
+/// The marker of a list item that starts `line`.
+/// ex: marker("- item") == Some(Marker { number: None, sign: "-", indent: 2, text: "item" })
+/// ex: marker(" 12) twelve") == Some(Marker { number: Some(12), sign: ")", indent: 5, text: "twelve" })
+/// ex: marker("-item") == None
+/// ex: marker("*") == Some(Marker { number: None, sign: "*", indent: 2, text: "" })
+fn marker(line: str) -> Option<Marker> {
+  let lead = indentation(line)
+  if lead > 3 { return None }
+  let rest = line.slice(lead, line.len())
+  let digits = rest.chars().take_while(|c| c.is_ascii_digit()).len()
+  let (number, sign) = if digits > 0 && digits <= 9 {
+    (rest.slice(0, digits).to_i64(), rest.slice(digits, (digits + 1).min(rest.len())))
+  } else {
+    (None, rest.slice(0, rest.len().min(1)))
+  }
+  let width = if number == None { 1 } else { digits + 1 }
+  let signs = if number == None { ["-", "*", "+"] } else { [".", ")"] }
+  if !signs.contains(sign) { return None }
+  let after = rest.slice(width, rest.len())
+  if after.trim().is_empty() {
+    return Some(Marker { number, sign, indent: lead + width + 1, text: "" })
+  }
+  let spaces = indentation(after)
+  if spaces == 0 { return None }
+  let gap = if spaces > 4 { 1 } else { spaces }
+  Some(Marker { number, sign, indent: lead + width + gap, text: after.slice(gap, after.len()) })
+}
+
+/// The list that starts with the item at line `i`: the items whose markers have its sign.
+fn list(lines: List<str>, inout i: i64, first: Marker) -> Block {
+  var items = []
+  var tight = true
+  loop {
+    let m = marker(lines[i]) else break
+    if m.sign != first.sign { break }
+    i += 1
+    let body = item(lines, inout i, m)
+    if body.skip_while(is_blank).skip_last(1).any(is_blank) { tight = false }
+    items.push(parse(body))
+    var j = i
+    while j < lines.len() && is_blank(lines[j]) { j += 1 }
+    let next = lines.get(j) else break
+    if !marker(next).is_some_and(|n| n.sign == first.sign) || is_rule(next) { break }
+    if j > i { tight = false }
+    i = j
+  }
+  match first.number {
+    Some(n) => Numbered(n, items, tight)
+    None => Bullets(items, tight)
+  }
+}
+
+/// The lines of a list item, without its indentation: its first line's text, then the lines
+/// indented to its text and the blank lines between them, and the lines that continue its
+/// last paragraph.
+fn item(lines: List<str>, inout i: i64, m: Marker) -> List<str> {
+  var body = [m.text]
+  while i < lines.len() {
+    let line = lines[i]
+    if is_blank(line) {
+      var j = i
+      while j < lines.len() && is_blank(lines[j]) { j += 1 }
+      if j == lines.len() || indentation(lines[j]) < m.indent { break }
+      body.push("")
+    } else if indentation(line) >= m.indent {
+      body.push(line.slice(m.indent, line.len()))
+    } else if !is_blank(body.last() else "") && !interrupts(line) {
+      body.push(line.trim_start())
+    } else {
+      break
+    }
+    i += 1
+  }
+  body
+}
+
+test "a blank line between items makes a list loose" {
+  assert parse(["1. a", "", "2. b"]) == [Numbered(1, [[Paragraph("a")], [Paragraph("b")]], false)]
+}
+
+test "items hold indented blocks, nested lists among them" {
+  let doc = ["- a", "  - b", "  - c", "- d", "", "  more", "lazy"]
+  let inner = Bullets([[Paragraph("b")], [Paragraph("c")]], true)
+  assert parse(doc) ==
+    [Bullets([[Paragraph("a"), inner], [Paragraph("d"), Paragraph("more\nlazy")]], false)]
+}
+
+test "a fence runs to its closing fence or the end" {
+  assert parse(["```", "x", "``` ", "y"]) == [Code("", ["x"]), Paragraph("y")]
+  assert parse(["~~~ py", "x"]) == [Code("py", ["x"])]
+}

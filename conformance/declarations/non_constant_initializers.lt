@@ -1,0 +1,17 @@
+//~ rule: declarations.constant-expressions
+
+fn width() -> i64 { 10 }
+
+const SUM: i64 = 1 + 2 //~ ERROR E0326
+const NOT: bool = !true //~ ERROR E0326
+const NAMED: fn() -> i64 = width //~ ERROR E0326
+const CLOSURE: fn() -> i64 = || 1 //~ ERROR E0326
+const BLOCK: i64 = { 1 } //~ ERROR E0326
+const CHOICE: i64 = if true { 1 } else { 2 } //~ ERROR E0326
+const ITEMS: List<i64> = [1, width()] //~ ERROR E0326
+const LATER: i64 = ? //~ ERROR E0326
+const NEGATIVE: i64 = -5
+const NESTED: Option<(i64, str)> = Some((-1, "a"))
+const EMPTY: List<i64> = []
+const NOTHING: () = ()
+const FLAG: bool = false

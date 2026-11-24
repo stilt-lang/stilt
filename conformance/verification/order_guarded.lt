@@ -1,0 +1,21 @@
+//~ rule: facts.writes-through-calls, facts.joins, facts.paths-that-leave, facts.match-arms
+//~ panic: bounds
+//~ panic-at: order_guarded.lt:18:9
+
+fn grow_by(inout n: i64) -> bool {
+  n += 5
+  true
+}
+
+// The guard makes the scrutinee's binding 5.
+fn guarded() -> i64 {
+  let xs = [1, 2, 3]
+  var k = 0
+  let got = match k {
+    _ if grow_by(inout k) => 1
+    _ => 2
+  }
+  got + xs[k]
+}
+
+fn main() / io { print("{guarded()}") }

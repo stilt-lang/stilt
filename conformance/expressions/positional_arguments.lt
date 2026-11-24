@@ -1,0 +1,8 @@
+//~ rule: expressions.arguments
+//~ run-output: "7 -7 9"
+
+fn sub(a: i64, b: i64) -> i64 { a - b }
+
+fn largest(xs: List<i64>) -> i64 { xs.fold(xs[0], |m, x| m.max(x)) }
+
+fn main() / io { print("{sub(10, 3)} {sub(3, 10)} {largest([3, 9, 4])}") }

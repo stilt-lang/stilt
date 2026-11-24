@@ -1,0 +1,128 @@
+// What the users did: their logins, and what the cache did with what they asked for.
+
+use rows
+use table
+use events.access
+use events.entry
+
+/// The logins and the cache.
+pub fn lines(es: List<entry.Entry>) -> List<str> { logins(es).concat(caches(es)) }
+
+// The logins that entries hold, each with its entry.
+fn logins_of(es: List<entry.Entry>) -> List<(entry.Entry, access.Login)> {
+  es.filter_map(
+    |e| match e.event {
+      Auth(l) => Some((e, l))
+      _ => None
+    },
+  )
+}
+
+/// How many logins succeeded and failed, each user's, and the logins from outside the private
+/// networks.
+pub fn logins(es: List<entry.Entry>) -> List<str> {
+  let ls = logins_of(es)
+  let ok = ls.count(|(_, l)| l.ok)
+  var out = ["== logins ==", "{ok} ok, {ls.len() - ok} failed"]
+  out.extend(table.render(users(ls.map(.1))))
+  out.extend(table.render(addresses(ls.map(.1))))
+  for (e, l) in ls.filter(|(_, l)| !l.ip.private()) {
+    out.push("from outside: {l.ip.text()} as {l.user} at {e.at.clock()}")
+  }
+  out
+}
+
+/// Each address's logins, those that failed, the users who logged in from it, and whether it
+/// is outside the private networks, in the order the addresses first appear.
+/// ex: addresses([]) == []
+pub fn addresses(ls: List<access.Login>) -> List<rows.AddressRow> {
+  var out: List<rows.AddressRow> = []
+  for (_, of) in ls.group_by(|l| l.ip.text()) {
+    let ip = of[0].ip
+    let failed = of.count(|l| !l.ok)
+    out.push(
+      rows.AddressRow {
+        address: ip.text(),
+        logins: of.len(),
+        failed,
+        users: of.map(.user).distinct(),
+        outside: !ip.private(),
+      },
+    )
+  }
+  out
+}
+
+/// Each user's logins that succeeded and failed, the attempts they took, and the addresses
+/// they came from, in the order the users first appear.
+/// ex: users([]) == []
+pub fn users(ls: List<access.Login>) -> List<rows.UserRow> {
+  var out: List<rows.UserRow> = []
+  for (user, of) in ls.group_by(.user) {
+    let ok = of.count(.ok)
+    let addresses = of.map(|l| l.ip.text()).distinct()
+    out.push(
+      rows.UserRow {
+        user,
+        ok,
+        failed: of.len() - ok,
+        attempts: i64.sum(of.map(.tries())),
+        addresses,
+      },
+    )
+  }
+  out
+}
+
+/// The cache's hits, misses and evictions, and each space's.
+pub fn caches(es: List<entry.Entry>) -> List<str> {
+  let cs = es.filter_map(
+    |e| match e.event {
+      Cache(c) => Some(c)
+      _ => None
+    },
+  )
+  let by_space = spaces(cs)
+  let hits = i64.sum(by_space.map(.hits))
+  let misses = i64.sum(by_space.map(.misses))
+  let freed = i64.sum(by_space.map(.freed))
+  let rate = rows.percent(hits, hits + misses)
+  ["== cache ==", "{hits} hits, {misses} misses, {rate}% hit, {freed} bytes freed"].concat(
+    table.render(by_space),
+  )
+}
+
+/// Each space's hits, misses and evictions, and the bytes they freed, in the order the spaces
+/// first appear.
+/// ex: spaces([access.Hit(access.Key { space: "a", id: 1 }), access.Evict(access.Key { space: "a", id: 2 }, 9)]) == [rows.SpaceRow { space: "a", hits: 1, misses: 0, evictions: 1, freed: 9 }]
+pub fn spaces(cs: List<access.Cache>) -> List<rows.SpaceRow> {
+  var out: List<rows.SpaceRow> = []
+  for (space, of) in cs.group_by(|c| c.key().space) {
+    let freed = i64.sum(
+      of.map(
+        |c| match c {
+          Evict(_, n) => n
+          _ => 0
+        },
+      ),
+    )
+    let hits = of.count(|c| c.action() == "hit")
+    let misses = of.count(|c| c.action() == "miss")
+    out.push(rows.SpaceRow { space, hits, misses, evictions: of.len() - hits - misses, freed })
+  }
+  out
+}
+
+test "each user's attempts add up, and each address counts the users who came from it" {
+  let home = access.Ip { a: 10, b: 0, c: 0, d: 1 }
+  let away = access.Ip { a: 8, b: 8, c: 4, d: 4 }
+  let ls = [
+    access.Login { user: "ana", ip: home, ok: false, attempts: Some(2) },
+    access.Login { user: "bo", ip: away, ok: true, attempts: None },
+    access.Login { user: "ana", ip: away, ok: true, attempts: Some(3) },
+  ]
+  assert users(ls).map(|u| (u.user, u.attempts, u.addresses)) ==
+    [("ana", 5, ["10.0.0.1", "8.8.4.4"]), ("bo", 1, ["8.8.4.4"])]
+  assert addresses(ls).map(|a| (a.address, a.users, a.outside)) ==
+    [("10.0.0.1", ["ana"], false), ("8.8.4.4", ["bo", "ana"], true)]
+}

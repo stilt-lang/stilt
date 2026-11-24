@@ -1,0 +1,17 @@
+//~ rule: types.field-access
+
+type Point = { x: i64, y: i64 }
+
+fn missing(p: Point) -> i64 {
+  p.z //~ ERROR E0313
+}
+
+fn out_of_range(t: (i64, str)) -> i64 {
+  t.2 //~ ERROR E0313
+}
+
+fn not_a_record(n: i64) -> i64 {
+  n.x //~ ERROR E0313
+}
+
+fn present(p: Point, t: (i64, str)) -> i64 { p.y + t.0 }

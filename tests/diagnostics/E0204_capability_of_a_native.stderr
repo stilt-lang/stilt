@@ -1,0 +1,11 @@
+── FACT BEYOND A `without` LIMIT ── E0204_capability_of_a_native.lt:3:44  [E0204]
+
+`clock.unix_ms` uses `clock`, but `stamp` says `without clock`:
+
+  3 │ pub fn stamp() -> i64 / io without clock { clock.unix_ms() }
+    │                                    ───── the limit
+    │                                            ^^^^^^^^^^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

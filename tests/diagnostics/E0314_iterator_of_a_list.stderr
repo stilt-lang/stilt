@@ -1,0 +1,10 @@
+── NO SUCH METHOD OR MEMBER ────────── E0314_iterator_of_a_list.lt:3:15  [E0314]
+
+`List<{integer}>` has no method `iter`; a collection's own methods, as `map`,
+take it directly:
+
+  3 │   let ys = xs.iter().map(|x| x * 2)
+    │               ^^^^
+
+Lists, maps and sets have `map`, `filter`, `fold` and the rest as methods of
+their own, and `view.Iter.of(xs)` gives a lazy iterator.

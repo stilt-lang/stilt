@@ -1,0 +1,2 @@
+[dependencies]
+stamp = { path = "deps/stamp" } # //~ ERROR E0608

@@ -1,0 +1,71 @@
+//~ rule: effects.without-panic, facts.rules-of-acceptance, facts.divisors, facts.closest-rule
+
+fn ratio(n: i64, d: i64) -> i64 without panic {
+  n / d //~ ERROR E0204
+}
+
+// The step under the test writes `d`.
+fn stepped(n: i64, d0: i64) -> i64 without panic {
+  var d = d0
+  if d != 0 {
+    d -= 1
+    n / d //~ ERROR E0204
+  } else {
+    0
+  }
+}
+
+// The divisor is no name or literal, whatever the test compares.
+fn shifted(n: i64, x: i64) -> i64 without panic {
+  if x - 1 != 0 { n / (x - 1) } else { 0 } //~ ERROR E0204
+}
+
+fn next(n: i64, d: i64) -> i64 without panic {
+  if d >= 0 { n % (d + 1) } else { 0 } //~ ERROR E0204
+}
+
+// A parameter is never known positive.
+fn tested(n: i64, d: i64) -> i64 without panic {
+  if d >= 0 { n / d } else { 0 } //~ ERROR E0204
+}
+
+// A divisor written as the literal zero is never proved.
+fn by_zero(n: i64) -> i64 without panic {
+  n / 0 //~ ERROR E0204
+}
+
+// A loop that holds the division is between its test and it whole: the write after it
+// comes before the division on the next turn, after the inner loop as before it.
+fn after_inner_for(n: i64, d0: i64) -> i64 without panic {
+  var d = d0
+  var s = 0
+  if d != 0 {
+    for _ in 0..3 {
+      for _ in 0..2 { s += 1 }
+      s += n / d //~ ERROR E0204
+      d -= 1
+    }
+  }
+  s
+}
+
+fn after_inner_while(n: i64, d0: i64) -> i64 without panic {
+  var d = d0
+  var s = 0
+  if d != 0 {
+    for _ in 0..3 {
+      var k = 0
+      while k < 2 { k += 1 }
+      s += n / d //~ ERROR E0204
+      d -= 1
+    }
+  }
+  s
+}
+
+// A test's facts end with the code it guards.
+fn after_branch(n: i64, d: i64) -> i64 without panic {
+  var s = 0
+  if d != 0 { s = 1 }
+  s + n / d //~ ERROR E0204
+}

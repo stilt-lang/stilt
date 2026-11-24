@@ -1,0 +1,9 @@
+── `break` OR `continue` OUTSIDE A LOOP ── E0216_break_or_continue_outside_a_loop.lt:3:16  [E0216]
+
+`break` is outside the body of every loop:
+
+  3 │     if x < 0 { break }
+    │                ^^^^^
+
+`break` and `continue` act on a `for` or `while` loop, and can't cross a
+closure. To stop at the first match, use a method such as `find` or `any`.

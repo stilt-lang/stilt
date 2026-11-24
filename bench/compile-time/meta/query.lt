@@ -1,0 +1,121 @@
+// The command line: which entries the report counts, and whether to print them as JSON instead
+// of the report.
+
+use patterns
+use events.entry
+use events.ops
+use events.time
+
+/// What the command line asks for: the hosts and the topics whose entries to keep, all of them
+/// when there are none; the least level to keep; the minutes of the day from which and until
+/// which to keep entries; and whether to print the entries kept, as JSON, instead of the report.
+pub type Query = {
+  hosts: List<str>,
+  topics: List<str>,
+  least: Option<time.Level>,
+  since: Option<i64>,
+  until: Option<i64>,
+  export: bool,
+}
+
+/// How to run the program.
+pub const USAGE: str = "usage: logscan [--host HOST]... [--topic TOPIC]... [--level LEVEL] [--since HH:MM] [--until HH:MM] [--export] < LOG"
+
+/// The query that keeps every entry and prints the report.
+pub const EVERYTHING: Query = Query {
+  hosts: [],
+  topics: [],
+  least: None,
+  since: None,
+  until: None,
+  export: false,
+}
+
+/// The query that the arguments write.
+/// ex: try parse([]) == EVERYTHING
+/// ex: (try parse(["--host", "web-1", "--since", "8:30"])).since == Some(510)
+/// ex: (try parse(["--level", "warn", "--export"])).least == Some(time.Warn)
+/// ex: Result.of(|| try parse(["--since", "8h"])) == Err("`8h` isn't a time of day, as HH:MM")
+/// ex: Result.of(|| try parse(["--topic"])) == Err("`--topic` needs a value")
+pub fn parse(args: List<str>) -> Query / raise<str> {
+  var q = EVERYTHING
+  var i = 0
+  while i < args.len() {
+    let option = args[i]
+    if option == "--export" {
+      q.export = true
+      i += 1
+      continue
+    }
+    let value = args.get(i + 1) else raise "`{option}` needs a value"
+    match option {
+      "--host" => q.hosts.push(value)
+      "--topic" => q.topics.push(try topic(value))
+      "--level" => {
+        q.least = Some(time.Level.parse(value.ascii_upper()) else raise "`{value}` isn't a level")
+      }
+      "--since" => { q.since = Some(try minutes(value)) }
+      "--until" => { q.until = Some(try minutes(value)) }
+      _ => raise "unknown option `{option}`; {USAGE}"
+    }
+    i += 2
+  }
+  q
+}
+
+// A topic of the log.
+fn topic(value: str) -> str / raise<str> {
+  if !entry.TOPICS.contains(value) {
+    raise "`{value}` isn't a topic: the topics are {", ".join(entry.TOPICS)}"
+  }
+  value
+}
+
+// The minute of the day that `HH:MM` writes.
+fn minutes(text: str) -> i64 / raise<str> {
+  let c = patterns.clock(text) else raise "`{text}` isn't a time of day, as HH:MM"
+  let (h, m) = (c.int(1), c.int(2))
+  if h > 23 || m > 59 { raise "`{text}` isn't a time of day, as HH:MM" }
+  h * 60 + m
+}
+
+impl Query {
+  /// Whether the query keeps the entry: its host, its topic, its level and its minute.
+  /// ex: EVERYTHING.keeps(sample())
+  /// ex: !Query { ..EVERYTHING, least: Some(time.Error) }.keeps(sample())
+  /// ex: !Query { ..EVERYTHING, until: Some(8 * 60 + 22) }.keeps(sample())
+  pub fn keeps(self, e: entry.Entry) -> bool {
+    let minute = e.at.hour.to_i64() * 60 + e.at.minute.to_i64()
+    let level = match self.least {
+      Some(l) => e.level.rank() >= l.rank()
+      None => true
+    }
+    let since = match self.since {
+      Some(m) => minute >= m
+      None => true
+    }
+    let until = match self.until {
+      Some(m) => minute < m
+      None => true
+    }
+    let host = self.hosts.is_empty() || self.hosts.contains(e.source.text())
+    let topic = self.topics.is_empty() || self.topics.contains(e.event.topic())
+    host && topic && level && since && until
+  }
+}
+
+// The entry the examples above keep or leave out.
+fn sample() -> entry.Entry {
+  let at = time.Stamp {
+    date: time.Date { year: 2026, month: 11, day: 3 },
+    hour: 8,
+    minute: 22,
+    second: 49,
+  }
+  entry.Entry {
+    at,
+    source: time.Source { host: "ops", index: 1 },
+    level: time.Warn,
+    event: entry.Disk(ops.Disk { mount: "/var", percent: 91 }),
+  }
+}

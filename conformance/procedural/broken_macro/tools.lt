@@ -1,0 +1,4 @@
+use std.meta
+
+/// Two, written wrong.
+pub macro two() -> meta.Expr { quote { 2 + } } //~ ERROR E0100

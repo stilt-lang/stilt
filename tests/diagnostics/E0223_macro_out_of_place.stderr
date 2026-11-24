@@ -1,0 +1,9 @@
+── MACRO OUT OF PLACE ──────────────── E0223_macro_out_of_place.lt:6:11  [E0223]
+
+`pair!` is a pattern macro, but it stands here where an expression does:
+
+  6 │   let p = pair!(1, 2)
+    │           ^^^^
+
+A macro whose arms give expressions stands where an expression does, and one
+whose arms give patterns where a pattern does, as in `let pair!(a, b) = p`.

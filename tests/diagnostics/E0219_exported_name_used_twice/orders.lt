@@ -1,0 +1,4 @@
+/// The total of the orders.
+pub extern fn total(orders: i64) -> i64 {
+  orders
+}

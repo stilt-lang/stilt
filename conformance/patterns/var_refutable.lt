@@ -1,0 +1,6 @@
+//~ rule: patterns.irrefutable-positions
+
+fn f(xs: List<i64>) -> i64 {
+  var [a, b] = xs //~ ERROR E0321
+  a + b
+}

@@ -1,0 +1,47 @@
+//~ rule: std.show-output, std.random, std.random-numbers, std.shuffling
+//~ stdout:
+//~ | 16294208416658607535 7960286522194355700 487617019471545679
+//~ | [3, 0, 0, 3, 4]
+//~ | [2, -2, -3, 2, 0] 4849545566009754240
+//~ | 0.11345034205715454 0.7002935135929024 0.6129746825466243
+//~ | true false
+//~ | [4, 6, 1, 3, 2, 5]
+//~ | Some(8) None Rng { state: 11400714819323198487 }
+//~ | true 10 true
+//~ | Rng { state: 5 }
+
+use std.random
+
+fn main() / io {
+  var r = random.Rng.seeded(0)
+  print("{r.next_u64()} {r.next_u64()} {r.next_u64()}")
+  var s = random.Rng.seeded(7)
+  print("{[s.below(6), s.below(6), s.below(6), s.below(6), s.below(6)]}")
+  var t = random.Rng.seeded(1)
+  print("{[t.range(-3, 3), t.range(-3, 3), t.range(-3, 3), t.range(-3, 3), t.range(-3, 3)]} {t.range(i64.MIN, i64.MAX)}")
+  var f = random.Rng.seeded(3)
+  print("{f.float()} {f.float()} {f.float()}")
+  var c = random.Rng.seeded(4)
+  print("{c.chance(1.0)} {c.chance(0.0)}")
+  var u = random.Rng.seeded(9)
+  print("{u.shuffled([1, 2, 3, 4, 5, 6])}")
+  var p = random.Rng.seeded(2)
+  let picked = p.pick([7, 8, 9])
+  let none: List<i64> = []
+  print("{picked} {p.pick(none)} {p}")
+  var many = random.Rng.seeded(11)
+  var seen = Set.new()
+  var within = true
+  for _ in 0..1000 {
+    let x = many.below(10)
+    within = within && x >= 0 && x < 10
+    seen.insert(x)
+  }
+  var floats = true
+  for _ in 0..1000 {
+    let x = many.float()
+    floats = floats && x >= 0.0 && x < 1.0
+  }
+  print("{within} {seen.len()} {floats}")
+  print("{random.Rng.seeded(5)}")
+}

@@ -1,0 +1,14 @@
+── UNKNOWN NAME ───────────────────────── E0211_misspelled_name.lt:1:49  [E0211]
+
+Unknown name `cuont`:
+
+  1 │ fn average(count: i64, sum: i64) -> i64 { sum / cuont }
+    │                                                 ^^^^^
+
+Check the spelling. A local is visible after its `let`, and an item of another
+module is named through it, as `fs.exists` after `use std.fs`.
+
+To fix it, write `count`:
+
+  1 │ fn average(count: i64, sum: i64) -> i64 { sum / count }
+    │                                                 ~~~~~

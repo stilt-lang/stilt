@@ -1,0 +1,3 @@
+pub fn g() -> i64 { //~ ERROR E0200
+  "not a number" //~ ERROR E0311
+}

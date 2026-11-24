@@ -1,0 +1,19 @@
+//~ rule: effects.rows, effects.repeated-elements, effects.effect-names, effects.escaping-parameters, facts.implicit-effects
+
+fn twice(f: fn() / {io, io}) {} //~ ERROR E0500
+
+fn two_errors() -> i64 / {raise<str>, raise<i64>} { //~ ERROR E0500
+  0
+}
+
+fn two_variables<e, d>(escaping f: fn() / {e, d}) {} //~ ERROR E0500
+
+fn written() / alloc {} //~ ERROR E0501
+
+fn declared<panic>() {} //~ ERROR E0501
+
+fn written_panic() / {io, panic} {} //~ ERROR E0501
+
+fn labelled<e>(escaping f: fn() / {io, raise<str>, e}) / {io, raise<str>, e} { try f() }
+
+fn unordered<e>(escaping f: fn() / {e, raise<str>, io}) / {raise<str>, io, e} { try f() }

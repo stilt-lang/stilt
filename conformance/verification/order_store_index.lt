@@ -1,0 +1,14 @@
+//~ rule: values.assignment-order, facts.analysis-order
+//~ panic: bounds
+//~ panic-at: order_store_index.lt:10:15
+
+// The store checks the index's value from before the right side, which runs
+// first: 6, out of range, though `j` is 5 when the store happens.
+fn store_old(n: i64) -> List<i64> {
+  var ys = [0, 0, 0, 0, 0, 0]
+  var j = n
+  if j >= 6 { ys[j] = { j = 5; 1 } }
+  ys
+}
+
+fn main() / io { print("{store_old(6)}") }

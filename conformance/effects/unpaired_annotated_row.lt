@@ -1,0 +1,12 @@
+//~ rule: effects.function-values, effects.catch-around-row-variables
+
+type Box = { v: i64 }
+
+fn f<e>(escaping g: fn() / e) -> i64 / e {
+  let h: fn() / {raise<Box>, e} = g
+  try {
+    h() //~ ERROR E0506
+    0
+  }
+    catch x because "only a Box was expected" => x.v
+}

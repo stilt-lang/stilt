@@ -1,0 +1,3 @@
+//~ rule: syntax.lowercase-generics, declarations.type-parameters, effects.row-variables
+
+type Task<e> = { run: fn() / e } //~ ERROR E0100

@@ -1,0 +1,23 @@
+//~ rule: syntax.paths, program.what-use-binds, program.namespaces, program.meeting-the-error-type
+//~ run-output: "4 3"
+
+// A `use` imports modules, never items. One that names an item of a module, by its last name
+// or by a name before the last, is E0230, and binds its name to the error type, so the code that
+// names the item that way is no further error. A path that names no item of a module, a module
+// written with the wrong case among them, is E0205.
+use std.sync.Shared //~ ERROR E0230
+use std.io.read_line //~ ERROR E0230
+use std.sync.Shared.new //~ ERROR E0230
+use shapes.Circle //~ ERROR E0230
+use shapes.inner.area //~ ERROR E0230
+use std.Io //~ ERROR E0205
+use std.io.nothing //~ ERROR E0205
+use shapes.inner
+use shapes
+
+// The functions that name nothing imported run.
+fn total(s: shapes.Shape) -> i64 { shapes.size(s) + inner.area() }
+
+fn main() / io { print("{total(shapes.Square(1))} {shapes.inner.area()}") }
+
+fn uses(h: Shared<i64>) -> i64 { Circle(read_line()) }

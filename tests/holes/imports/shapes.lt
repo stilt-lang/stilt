@@ -1,0 +1,3 @@
+pub fn unit() -> i64 { 1 }
+
+fn hidden() -> i64 { 2 }

@@ -1,0 +1,14 @@
+//~ rule: docs.body-size
+//~ run-output: "8 8"
+
+type Order = { name: str, qty: i64 }
+
+// A string literal is one token, even when it interpolates, so each body holds 19.
+fn labels(o: Order) -> List<str> { ["{o.name} {o.qty * 2 + 1}", "a", "b", "c", "d", "e", "f", "g"] }
+
+fn labels_again(o: Order) -> List<str> { ["{o.name} {o.qty * 2 + 1}", "a", "b", "c", "d", "e", "f", "g"] }
+
+fn main() / io {
+  let o = Order { name: "a", qty: 2 }
+  print("{labels(o).len()} {labels_again(o).len()}")
+}

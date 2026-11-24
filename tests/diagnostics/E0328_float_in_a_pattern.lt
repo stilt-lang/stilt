@@ -1,0 +1,6 @@
+fn describe(temperature: f64) -> str {
+  match temperature {
+    0 => "freezing"
+    _ => "not freezing"
+  }
+}

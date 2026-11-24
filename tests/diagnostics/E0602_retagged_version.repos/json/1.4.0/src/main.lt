@@ -1,0 +1,1 @@
+pub fn parse(text: str) -> i64 { 1 }

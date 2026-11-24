@@ -1,0 +1,11 @@
+type Failure = | Failure(str)
+
+fn risky() -> i64 / raise<Failure> { raise Failure("no") }
+
+fn main() / io {
+  let v = try { risky() } catch (e) {
+    print("failed: {e}")
+    0
+  }
+  print("{v}")
+}

@@ -1,0 +1,13 @@
+── INVALID ESCAPE ─────────────────── E0006_swift_interpolation.lt:3:15  [E0006]
+
+Stilt inserts a value in a string with `{n}`, not `\(n)`:
+
+  3 │   print("n is \(n)")
+    │               ^
+
+Every string inserts the value of each `{…}` in it, as `"hello {name}"`.
+
+To fix it, write `{…}`:
+
+  3 │   print("n is {n}")
+    │               ~~~

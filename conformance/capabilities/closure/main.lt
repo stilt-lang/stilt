@@ -1,0 +1,2 @@
+//~ rule: facts.calls-through-function-values, facts.own-capabilities
+//~ run-output: "a"

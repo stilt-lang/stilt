@@ -1,0 +1,16 @@
+// `if let`: one space around `let` and `=`, a block of one statement on one line when it fits,
+// `else if let` after the closing brace, a record pattern in the head, and a head too long for
+// one line, which breaks before its `else` and goes two levels in.
+fn main() {
+  if let  Some( x )=first(xs){print(x)}
+  let v = if let Some(x)=a { x } else if let Some(y)=b { y }
+  else { 0 }
+  if let Circle(r)|Square(r) = shape { let d = r * 2; print(d) } else if let Rect(w,h) = shape { print(w * h) }
+  if let Point { x, y: 0 } = p {
+    print(x)
+  }
+  else {
+    print(y)
+  }
+  if let Some(order) = orders.find(|o| o.customer == customer_name && o.status == Status.Open) else fallback { print(order) }
+}

@@ -1,0 +1,44 @@
+//~ tier: core
+
+// Verification (facts.shown-proofs): a check that a rule of acceptance proves shows where its panic
+// would have been, and its near miss keeps `PANIC`.
+
+fn first(xs: List<i64>) -> i64 {
+  if !xs.is_empty() { xs[0] } else { 0 } //~ PROVED bounds
+}
+
+fn second(xs: List<i64>) -> i64 {
+  if !xs.is_empty() { xs[1] } else { 0 } //~ PANIC
+}
+
+fn rises(xs: List<i64>) -> i64 {
+  var n = 0
+  for i in 0..xs.len() {
+    if xs[i + 1] > xs[i] { n += 1 } //~ PANIC OVERFLOW PROVED bounds
+  }
+  n
+}
+
+fn ratio(n: i64, d: i64) -> i64 {
+  if d != 0 { n / d } else { 0 } //~ OVERFLOW PROVED divide-by-zero
+}
+
+fn stored() -> i64 {
+  var m: Map<str, i64> = Map.new() //~ ALLOC
+  m["a"] = 1 //~ ALLOC
+  m["a"] //~ PROVED missing-key
+}
+
+fn up(n: i64) -> i64 {
+  var i = 0
+  while i < n { i += 1 } //~ OVERFLOW
+  i
+}
+
+fn up_stalled(n: i64, step: bool) -> i64 {
+  var i = 0
+  while i < n { //~ DIV
+    if step { i += 1 } //~ OVERFLOW
+  }
+  i
+}

@@ -1,0 +1,10 @@
+//~ rule: syntax.holes-before-dots, types.hole-before-dot, declarations.typed-holes
+//~ run-output: "not yet"
+
+fn later() {
+  for _ in ?..3 {} //~ WARN W0300
+}
+
+fn main() / io {
+  print("not yet")
+}

@@ -1,0 +1,8 @@
+//~ rule: traits.orphan-rule
+
+use names
+use things
+
+impl names.Named for things.Thing { //~ ERROR E0303
+  fn name(self) -> str { "thing" }
+}

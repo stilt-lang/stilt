@@ -1,0 +1,15 @@
+//~ tier: advanced
+//~ rule: projections.cannot-raise
+
+type Bad = | Bad
+
+// A projection's row holds no `raise<E>`.
+fn at(inout xs: List<i64>, i: i64) -> inout i64 / raise<Bad> { //~ ERROR E0427
+  yield xs[i]
+}
+
+fn main() / io {
+  var xs = [1]
+  at(inout xs, 0) = 2
+  print("{xs}")
+}

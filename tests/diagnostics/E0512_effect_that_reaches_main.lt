@@ -1,0 +1,7 @@
+effect Log {
+  fn log(msg: str)
+}
+
+fn main() / io {
+  Log.log("start")
+}

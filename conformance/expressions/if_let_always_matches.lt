@@ -1,0 +1,31 @@
+//~ rule: expressions.if-let-always
+//~ stdout:
+//~ | Some(1)
+//~ | 1
+//~ | always
+//~ | pair 1 2
+//~ | meters 3.0
+//~ | either 4
+//~ | zero
+//~ | constant
+
+// An `if let` whose pattern matches every value of its type always runs its first block, and
+// gets W0303 at its pattern. One whose pattern leaves a value, or holds a constant, gets none.
+type Length = | Meters(f64)
+
+type Side = | Left(i64) | Right(i64)
+
+const ZERO: i64 = 0
+
+fn main() / io {
+  let xs = [1]
+  if let x = xs.first() { print("{x}") } //~ WARN W0303
+  if let Some(x) = xs.first() { print("{x}") }
+  if let _ = xs.first() { print("always") } //~ WARN W0303
+  if let (a, b) = (1, 2) { print("pair {a} {b}") } //~ WARN W0303
+  if let Meters(m) = Meters(3.0) { print("meters {m}") } //~ WARN W0303
+  if let Left(n) | Right(n) = Right(4) { print("either {n}") } //~ WARN W0303
+  if let 0 = 0 { print("zero") }
+  if let ZERO = 0 { print("constant") }
+  if let Left(n) = Right(5) { print("left {n}") }
+}

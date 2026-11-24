@@ -1,0 +1,8 @@
+//~ rule: types.closures-not-generalized
+
+fn f() -> bool {
+  let id = |x| x
+  let b = id(true)
+  let s = id("s") //~ ERROR E0311
+  b
+}

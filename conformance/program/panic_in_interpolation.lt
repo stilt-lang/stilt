@@ -1,0 +1,12 @@
+//~ rule: program.panic-location, effects.panic-kinds
+//~ run-output: "5"
+//~ panic: divide-by-zero
+//~ panic-at: panic_in_interpolation.lt:11:11
+
+fn main() / io {
+  let n = 10
+  let d = 2
+  print("{n / d}")
+  let z = d - 2
+  print("{n / z}")
+}

@@ -1,0 +1,65 @@
+//~ tier: advanced
+//~ rule: modes.handles, modes.shared-writes, modes.shared-holders, shared.when, facts.without-copy
+
+// The end of a `when` gives each name's value back to its handle, where a later `when` may write
+// it: a copy that lasts past the `when` makes the end shared, and so does a copy that a name holds
+// of a binding read after it. `Shared.new` gives a value to a handle the same way.
+
+use std.sync
+
+fn grab(a: sync.Shared<List<i64>>) -> List<i64> without copy {
+  when a { a } //~ ERROR E0204
+}
+
+fn kept_inside(a: sync.Shared<List<i64>>) -> i64 without copy {
+  when a {
+    let z = a
+    z.len()
+  }
+}
+
+fn stored(a: sync.Shared<List<i64>>, ys: List<i64>) -> i64 without copy {
+  when a { a = ys } //~ ERROR E0204
+  ys.len()
+}
+
+fn stored_at_last_use(a: sync.Shared<List<i64>>) without copy {
+  var ys = [1]
+  ys.push(2)
+  when a { a = ys }
+}
+
+// What the handle holds lasts on, so a later write to the binding it came from is shared.
+fn written_after(a: sync.Shared<List<i64>>) without copy {
+  var ys = [1]
+  when a { a = ys }
+  ys.push(2) //~ ERROR E0204
+}
+
+// A parameter's caller may still read it.
+fn made(xs: List<i64>) -> sync.Shared<List<i64>> without copy {
+  sync.Shared.new(xs) //~ ERROR E0204
+}
+
+fn made_and_read() -> i64 without copy {
+  var xs = [1]
+  xs.push(2)
+  let h = sync.Shared.new(xs) //~ ERROR E0204
+  xs.len()
+}
+
+fn made_at_last_use() -> sync.Shared<List<i64>> without copy {
+  var xs = [1]
+  xs.push(2)
+  sync.Shared.new(xs)
+}
+
+// The copy is the code's that keeps it, so a write through the handle copies nothing here.
+fn alone(a: sync.Shared<List<i64>>) -> i64 without copy {
+  when a {
+    a.push(1)
+    a.len()
+  }
+}
+
+fn main() {}

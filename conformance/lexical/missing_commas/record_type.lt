@@ -1,0 +1,4 @@
+type Size = {
+  width: i64 //~ ERROR E0100
+  height: i64
+}

@@ -1,0 +1,17 @@
+//~ rule: traits.implementing-trait, traits.method-resolution
+
+trait Describe {
+  fn describe(self) -> str
+}
+
+type Box<T> = { item: T }
+
+impl<T: Show> Describe for Box<T> {
+  fn describe(self) -> str { "box of {self.item}" }
+}
+
+fn words(b: Box<str>) -> str { b.describe() }
+
+fn callbacks(b: Box<fn()>) -> str {
+  b.describe() //~ ERROR E0318
+}

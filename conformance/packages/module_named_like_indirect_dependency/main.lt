@@ -1,0 +1,2 @@
+//~ rule: packages.imports, packages.modules-of-dependencies
+//~ run-output: "8 1"

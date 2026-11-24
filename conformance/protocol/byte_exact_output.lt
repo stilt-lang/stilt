@@ -1,0 +1,4 @@
+//~ rule: conformance.observables, conformance.header-annotations, conformance.quoted-strings
+//~ run-output: "a\tb  \"q\" \\ é \nsecond line "
+
+fn main() / io { print("a\tb  \"q\" \\ é \nsecond line ") }

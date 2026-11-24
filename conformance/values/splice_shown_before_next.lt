@@ -1,0 +1,17 @@
+//~ rule: values.left-to-right
+//~ run-output: "made 1"
+//~ panic: explicit
+//~ panic-at: splice_shown_before_next.lt:9:26
+
+type Loud = { n: i64 }
+
+impl Show for Loud {
+  fn show(self) -> str { panic("shown {self.n}") }
+}
+
+fn make(n: i64) -> Loud / io {
+  print("made {n}")
+  Loud { n }
+}
+
+fn main() / io { print("{make(1)} {make(2)}") }

@@ -1,0 +1,14 @@
+//~ tier: advanced
+//~ rule: tasks.async, tasks.std-task, tasks.task-functions, tasks.sequential-run
+//~ stdout:
+//~ | 4
+
+use std.task
+
+// `async` passes through a function generic in its row.
+fn twice<e>(escaping f: fn() -> i64 / e) -> i64 / e { f() + f() }
+
+// `main` may perform `async`, and runs tasks in order.
+fn main() / {io, async} {
+  print("{twice(|| task.spawn(|| 2).await())}")
+}

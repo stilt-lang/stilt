@@ -1,0 +1,8 @@
+//~ rule: expressions.head-contents
+
+fn ready() -> bool {
+  if { true } { //~ ERROR E0100
+    return true
+  }
+  false
+}

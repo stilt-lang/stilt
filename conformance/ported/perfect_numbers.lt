@@ -1,0 +1,28 @@
+//~ rule: numbers.division-and-remainder, std.list-functions, std.clamp-and-sum
+//~ stdout:
+//~ | [6, 28, 496, 8128]
+//~ | 28 = 1 + 2 + 4 + 7 + 14
+
+// Rosetta Code, Perfect numbers: a number is perfect when it is the sum of its proper divisors.
+// Below 10000 there are four, 6, 28, 496 and 8128 (OEIS A000396).
+
+fn proper_divisors(n: i64) -> List<i64> {
+  var small = []
+  var large = []
+  var d = 1
+  while d * d <= n {
+    if n % d == 0 {
+      small.push(d)
+      if d * d != n && d != 1 { large.push(n / d) }
+    }
+    d += 1
+  }
+  small.concat(large.reversed())
+}
+
+fn is_perfect(n: i64) -> bool { n > 1 && i64.sum(proper_divisors(n)) == n }
+
+fn main() / io {
+  print("{List.generate(10000, |n| n).filter(is_perfect)}")
+  print("28 = {" + ".join(proper_divisors(28).map(|d| "{d}"))}")
+}

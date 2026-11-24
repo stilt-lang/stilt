@@ -1,0 +1,1 @@
+fn log(message: str) { print(message) }

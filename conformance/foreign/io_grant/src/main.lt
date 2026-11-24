@@ -1,0 +1,3 @@
+use cl
+
+fn main() / io { print("{cl.length("hello")}") }

@@ -1,0 +1,11 @@
+meta use rx
+use matcher
+
+fn clock(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(\\d\\d?):(\\d\\d$")
+  m(text)
+}
+
+fn main() / io {
+  if let Some(c) = clock("8:05") { print(c.get(1)) }
+}

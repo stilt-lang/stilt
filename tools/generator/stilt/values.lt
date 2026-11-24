@@ -1,0 +1,120 @@
+// Values built from literals and constructors, of every type.
+
+use code
+use context
+use lit
+use pick
+use ty
+
+/// An integer literal of kind `k`. A literal takes its type from the context
+/// and defaults to `i64` (numbers.literal-defaults), so one whose type must be known is
+/// a constant, or an `i64` converted with a wrapping conversion.
+pub fn int_lit(inout r: pick.Rng, known: bool, k: ty.IntKind) -> code.Code {
+  if known && k != ty.I64 {
+    let name = ty.int_name(k)
+    return pick.run(
+      inout r,
+      [
+        (1, |inout r| code.atom("{name}.MAX")),
+        (1, |inout r| code.atom("{name}.MIN")),
+        (
+          4,
+          |inout r| code.method_on(code.compound(lit.int(inout r, ty.I64)), "wrap_to_{name}", []),
+        ),
+      ],
+    )
+  }
+  let text = lit.int(inout r, k)
+  if text.starts_with("-") { code.compound_with(text, known) } else { code.atom_with(text, known) }
+}
+
+pub fn float_lit(inout r: pick.Rng, known: bool, k: ty.FloatKind) -> code.Code {
+  let name = ty.float_name(k)
+  if pick.chance(inout r, 0.1) {
+    let constant = pick.one(inout r, ["PI", "E", "NAN", "INFINITY"])
+    return code.atom("{name}.{constant}")
+  }
+  let text = lit.float(inout r)
+  let literal = if text.starts_with("-") {
+    code.compound_with(text, known)
+  } else {
+    code.atom_with(text, known)
+  }
+  if known && k == ty.F32 { code.method_on(literal, "to_f32", []) } else { literal }
+}
+
+/// A value built from literals and constructors.
+pub fn value(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  t: ty.Ty,
+) -> code.Code {
+  match t {
+    Int(k) => int_lit(inout b.p.r, known, k)
+    Float(k) => float_lit(inout b.p.r, known, k)
+    Bool => code.atom(if pick.chance(inout b.p.r, 0.5) { "true" } else { "false" })
+    Str => code.atom(lit.string(inout b.p.r))
+    Unit => code.atom("()")
+    Tuple(ts) => {
+      var items = []
+      for u in ts { items.push(ex.make(inout b, sc, depth - 1, known, u)) }
+      code.atom_with("({texts(items)})", items.all(.known))
+    }
+    ListOf(u) => list(ex, inout b, sc, depth, known, u)
+    OptionOf(u) => {
+      if pick.chance(inout b.p.r, 0.25) { return code.atom_with("None", false) }
+      let x = ex.make(inout b, sc, depth - 1, known, u)
+      code.atom_with("Some({x.text})", x.known)
+    }
+    MapOf(_, v) => {
+      if pick.chance(inout b.p.r, 0.7) { return code.atom_with("Map.new()", false) }
+      code.atom_with("Map.with_default({ex.make(inout b, sc, depth - 1, false, v).text})", false)
+    }
+    Named(name) => declared(ex, inout b, sc, depth, name)
+  }
+}
+
+fn texts(items: List<code.Code>) -> str { ", ".join(items.map(.text)) }
+
+fn list(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  u: ty.Ty,
+) -> code.Code {
+  if pick.chance(inout b.p.r, 0.15) { return code.atom_with("[]", false) }
+  let first = ex.make(inout b, sc, depth - 1, known, u)
+  var items = [first]
+  let n = pick.between(inout b.p.r, 0, 3)
+  for _ in 0..n { items.push(ex.make(inout b, sc, depth - 1, false, u)) }
+  code.atom_with("[{texts(items)}]", first.known)
+}
+
+/// A value of the record or variant type `name`.
+fn declared(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  name: str,
+) -> code.Code {
+  match context.decl(b, name) {
+    Record(fields) => {
+      var inits = []
+      for (f, u) in fields { inits.push("{f}: {ex.make(inout b, sc, depth - 1, false, u).text}") }
+      code.atom("{name} \{ {", ".join(inits)} }")
+    }
+    Variants(cases) => {
+      let (case, payload) = pick.one(inout b.p.r, cases)
+      if payload.is_empty() { return code.atom(case) }
+      var args = []
+      for u in payload { args.push(ex.make(inout b, sc, depth - 1, false, u).text) }
+      code.atom(code.call_text(case, args))
+    }
+  }
+}

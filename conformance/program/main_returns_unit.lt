@@ -1,0 +1,4 @@
+//~ rule: program.main, program.exit-statuses
+//~ run-output: "unit"
+
+pub fn main() -> () / io { print("unit") }

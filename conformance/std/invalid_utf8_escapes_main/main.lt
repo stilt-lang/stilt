@@ -1,0 +1,15 @@
+//~ rule: program.exit-statuses, std.show-names-and-escapes, std.cli
+//~ stdout:
+//~ | reading
+//~ stderr:
+//~ | error: InvalidUtf8("truncated.txt")
+//~ exit: 1
+
+use std.fs
+use std.io
+
+fn main() / {io, raise<io.IoError>} {
+  print("reading")
+  let text = try fs.read("truncated.txt")
+  print(text)
+}

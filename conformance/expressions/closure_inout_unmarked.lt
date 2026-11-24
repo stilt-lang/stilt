@@ -1,0 +1,10 @@
+//~ rule: expressions.inout-closure-parameters, expressions.inout-arguments
+
+fn main() {
+  var n = 0
+  let bump = |inout n: i64| { n += 1 }
+  bump(n) //~ ERROR E0400
+  bump(inout n)
+  let read = |m: i64| m + 1
+  let _ = read(inout n) //~ ERROR E0400
+}

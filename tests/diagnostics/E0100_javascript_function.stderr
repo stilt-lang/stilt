@@ -1,0 +1,14 @@
+── SYNTAX ERROR ────────────────────── E0100_javascript_function.lt:1:1  [E0100]
+
+Stilt declares a function with `fn`, not `function`:
+
+  1 │ function add(a: i64, b: i64) -> i64 { a + b }
+    │ ^^^^^^^^
+
+A function is `fn`, its name, its parameters with their types, and `->` and its
+result type.
+
+To fix it, write `fn`:
+
+  1 │ fn add(a: i64, b: i64) -> i64 { a + b }
+    │ ~~

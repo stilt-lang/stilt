@@ -1,0 +1,2 @@
+//~ tier: meta
+//~ rule: macros.expansion-effects, packages.ungranted-effects

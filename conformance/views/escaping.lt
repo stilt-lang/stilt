@@ -1,0 +1,44 @@
+//~ tier: advanced
+//~ rule: views.escaping, views.across-calls, projections.results-that-write
+
+use std.view
+
+// A view of a local would outlive it.
+fn of_local() -> view.View<str> {
+  let s = "ab"
+  view.View.all(s) //~ ERROR E0422
+}
+
+// A result writes its `inout` parameter, so a view that reads it can't be returned
+// (projections.results-that-write, ).
+fn of_inout(inout s: str) -> view.View<str> {
+  view.View.all(s) //~ ERROR E0428
+}
+
+// A closure that captures a view and escapes would carry it out.
+fn captured(s: str) -> fn() -> i64 {
+  let v = view.View.all(s)
+  || v.len() //~ ERROR E0422
+}
+
+// A block's value can't view a binding the block makes, which ends with the block.
+fn of_block() -> i64 {
+  let v = {
+    var ys = [1, 2]
+    view.View.of(ys, 0, 1) //~ ERROR E0422
+  }
+  v[0]
+}
+
+type Bag = { items: List<i64> }
+
+// A record isn't viewable, so a view of its field views the callee's copy of the
+// parameter, not the caller's argument (views.across-calls).
+fn of_field(b: Bag) -> view.View<List<i64>> {
+  view.View.all(b.items) //~ ERROR E0422
+}
+
+fn main() / io {
+  var s = "ab"
+  print("{of_local()} {of_inout(inout s)} {captured(s)()} {of_block()} {of_field(Bag { items: [1] })}")
+}

@@ -1,0 +1,17 @@
+//~ rule: values.inout-argument-order, traits.methods, modes.durations
+//~ stdout:
+//~ | index
+//~ | argument
+//~ panic: bounds
+//~ panic-at: receiver_read_panics.lt:15:3
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn main() / io {
+  var lists: List<List<i64>> = [[]]
+  lists[note("index", 3)].push(note("argument", 5))
+  print("not reached")
+}

@@ -1,0 +1,21 @@
+//~ rule: std.str-classes
+//~ stdout:
+//~ | [true, true, false]
+//~ | [true, false, false]
+//~ | [true, false, false]
+//~ | [true, false, false]
+//~ | [true, false, false]
+//~ | [true, false, false]
+//~ | [true, false, false]
+//~ | [true, false, true]
+
+fn main() / io {
+  print("{["abc".is_ascii(), "".is_ascii(), "é".is_ascii()]}")
+  print("{["0123456789".is_ascii_digit(), "".is_ascii_digit(), "1a".is_ascii_digit()]}")
+  print("{["AbZz".is_ascii_alpha(), "".is_ascii_alpha(), "a1".is_ascii_alpha()]}")
+  print("{["a1B2".is_ascii_alphanumeric(), "".is_ascii_alphanumeric(), "a_1".is_ascii_alphanumeric()]}")
+  print("{[" \t\n\r\u{c}".is_ascii_whitespace(), "".is_ascii_whitespace(), " a".is_ascii_whitespace()]}")
+  print("{["AZ".is_ascii_upper(), "".is_ascii_upper(), "Ab".is_ascii_upper()]}")
+  print("{["az".is_ascii_lower(), "".is_ascii_lower(), "é".is_ascii_lower()]}")
+  print("{["Hello".eq_ignore_ascii_case("hELLO"), "é".eq_ignore_ascii_case("É"), "".eq_ignore_ascii_case("")]}")
+}

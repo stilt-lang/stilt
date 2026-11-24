@@ -1,0 +1,9 @@
+── LITERAL OUT OF RANGE ──────────── E0320_literal_out_of_range.lt:1:21  [E0320]
+
+300 doesn't fit in `u8`:
+
+  1 │ fn volume() -> u8 { 300 }
+    │                     ^^^
+
+The literal doesn't fit its type. Choose a wider type, as `u16` for 300, or a
+value that fits.

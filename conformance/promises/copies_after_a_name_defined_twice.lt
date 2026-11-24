@@ -1,0 +1,11 @@
+//~ rule: facts.copy, errors.declarations-with-errors
+// `Tag` is defined twice, so the pattern that names its variant has an error that `check`
+// reports at the second definition alone, and `h`, which reads what the pattern binds, is
+// looked through for copies like any other function.
+type Tag //~ ERROR E0100
+type Tag = | Tag(i64) //~ ERROR E0208
+
+fn h(x: Tag) -> i64 without copy {
+  let Tag(t) = x
+  t
+}

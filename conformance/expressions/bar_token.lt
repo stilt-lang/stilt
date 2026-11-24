@@ -1,0 +1,20 @@
+//~ rule: syntax.ambiguities, expressions.closures, expressions.bar-token, patterns.or-patterns
+//~ run-output: "3 7 true 5 two true"
+
+type Digit = | One | Two | Three
+
+fn name(d: Digit) -> str {
+  match d {
+    One | Three => "odd"
+    Two => "two"
+  }
+}
+
+fn main() / io {
+  let f = || 1 | 2
+  let g = |a: i64| a | 4
+  let either = false || true
+  let h = |o: Option<i64>| o else 5
+  let k = || false || true
+  print("{f()} {g(3)} {either} {h(None)} {name(Two)} {k()}")
+}

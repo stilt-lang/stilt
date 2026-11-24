@@ -1,0 +1,16 @@
+{
+  "grammars": [
+    {
+      "name": "stilt",
+      "camelcase": "Stilt",
+      "scope": "source.stilt",
+      "path": ".",
+      "file-types": ["lt"]
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT OR Apache-2.0",
+    "description": "The grammar of Stilt for tree-sitter, generated from its Reference"
+  }
+}

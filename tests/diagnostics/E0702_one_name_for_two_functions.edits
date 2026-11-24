@@ -1,0 +1,2 @@
+main.total#55a0
+fn total() -> i64 { 2 }

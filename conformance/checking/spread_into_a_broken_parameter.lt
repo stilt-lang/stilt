@@ -1,0 +1,12 @@
+//~ tier: advanced
+//~ rule: variadics.spread-expressions, errors.error-type
+
+// A function type's parameter whose type names nothing has the error type,
+// which meets every type, a spread's elements too: a call that spreads a pack
+// into it reports nothing more. A closure given for the function still takes
+// its one parameter.
+fn apply<..Ts, R>(f: fn(Tz) -> R, args: (..Ts)) -> R { f(..args) } //~ ERROR E0211
+
+fn main() / io {
+  print("{apply(|a, b| a + b, (2, 3))}") //~ ERROR E0315
+}

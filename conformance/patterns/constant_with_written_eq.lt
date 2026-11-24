@@ -1,0 +1,16 @@
+//~ rule: patterns.constants-with-written-eq
+
+type Name = { text: str }
+
+impl Eq for Name {
+  fn eq(self, other: Name) -> bool { self.text.ascii_lower() == other.text.ascii_lower() }
+}
+
+const ANA: Name = Name { text: "ana" }
+
+fn is_ana(n: Name) -> bool {
+  match n {
+    ANA => true //~ ERROR E0331
+    _ => false
+  }
+}

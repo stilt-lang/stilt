@@ -1,0 +1,57 @@
+//~ rule: numbers.no-implicit-conversions, numbers.shifts, numbers.comparisons
+
+fn scale(n: i64, f: f64) -> f64 { n.to_f64() * f }
+
+fn converted(a: i32, b: i64, c: u8) -> bool { a.to_i64() + b < c.to_i64() }
+
+fn shifted(a: i64, b: u8, c: u8) -> (i64, u8) { (a << b.to_i64(), c >> 3) }
+
+fn integer_times_float(n: i64, f: f64) {
+  let _ = n * f //~ ERROR E0311
+}
+
+fn float_plus_integer(f: f64, n: i64) {
+  let _ = f + n //~ ERROR E0311
+}
+
+fn two_widths(a: i32, b: i64) {
+  let _ = a + b //~ ERROR E0311
+}
+
+fn two_signs(a: u8, b: i8) {
+  let _ = a - b //~ ERROR E0311
+}
+
+fn two_floats(a: f32, b: f64) {
+  let _ = a / b //~ ERROR E0311
+}
+
+fn remainder(a: u16, b: u32) {
+  let _ = a % b //~ ERROR E0311
+}
+
+fn accumulate(xs: List<f64>) -> i64 {
+  var total: i64 = 0
+  for x in xs {
+    total += x //~ ERROR E0311
+  }
+  total
+}
+
+fn shift_amount(a: i64, b: u8) { let _ = a << b }
+
+fn less(a: i32, b: i64) -> bool {
+  a < b //~ ERROR E0311
+}
+
+fn at_least(a: u64, b: i64) -> bool {
+  a >= b //~ ERROR E0311
+}
+
+fn equal(a: u8, b: u16) -> bool {
+  a == b //~ ERROR E0311
+}
+
+fn float_unequal(a: f32, b: f64) -> bool {
+  a != b //~ ERROR E0311
+}

@@ -1,0 +1,9 @@
+── EFFECT THAT DOESN'T FIT THE ROW ── E0502_effect_in_a_procedural_macro.lt:4:3  [E0502]
+
+This performs `io`, which the row doesn't declare:
+
+  4 │   print("expanding")
+    │   ^^^^^^^^^^^^^^^^^^
+
+A macro runs while the program compiles, and performs nothing. Put what it would
+perform in the code it gives back, inside `quote { … }`.

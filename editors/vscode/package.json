@@ -1,0 +1,317 @@
+{
+  "name": "stilt",
+  "displayName": "Stilt",
+  "description": "Stilt for Visual Studio Code: highlighting, and a language server that shows each function's inferred facts with the lines that cause them, explains every keyword and diagnostic, and runs and debugs programs and their tests",
+  "version": "2027.1.0",
+  "publisher": "stilt-lang",
+  "license": "MIT OR Apache-2.0",
+  "icon": "icon.png",
+  "repository": { "type": "git", "url": "https://github.com/stilt-lang/stilt" },
+  "private": true,
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Programming Languages", "Formatters", "Debuggers", "Testing"],
+  "keywords": ["stilt", "language server", "effects", "inferred facts"],
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/stilt.toml",
+    "workspaceContains:**/main.lt",
+    "onDebugResolve:stilt",
+    "onDebugDynamicConfigurations:stilt"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In a workspace you don't trust, the language server runs the `stilt` that your user settings name, and the extension runs no program, test or build.",
+      "restrictedConfigurations": ["stilt.path"]
+    },
+    "virtualWorkspaces": { "supported": false, "description": "The language server reads a program's files from the disk." }
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "stilt",
+        "aliases": ["Stilt", "stilt"],
+        "extensions": [".lt"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      { "language": "stilt", "scopeName": "source.stilt", "path": "./syntaxes/stilt.tmLanguage.json" },
+      {
+        "scopeName": "markdown.stilt.codeblock",
+        "path": "./syntaxes/stilt.markdown.tmLanguage.json",
+        "injectTo": ["text.html.markdown"],
+        "embeddedLanguages": { "meta.embedded.block.stilt": "stilt" }
+      }
+    ],
+    "semanticTokenTypes": [
+      { "id": "boolean", "superType": "keyword", "description": "`true` or `false`" },
+      { "id": "selfKeyword", "superType": "keyword", "description": "`self` or `Self`" },
+      { "id": "effect", "superType": "type", "description": "An effect: one a program declares, and, with the modifier `defaultLibrary`, a built-in label or limit in a row or after `without`, as `io`, `raise` or `panic`" },
+      { "id": "rowVariable", "superType": "typeParameter", "description": "A row variable, which stands for effects" },
+      { "id": "fragment", "superType": "parameter", "description": "A macro's fragment, `$cond`, or a quote's splice, `$x`" },
+      { "id": "escapeSequence", "superType": "string", "description": "An escape of a string literal, as `\\n` or `\\u{1F600}`" },
+      { "id": "interpolation", "superType": "operator", "description": "The braces of a string's interpolation" },
+      { "id": "formatSpecifier", "superType": "operator", "description": "The format spec of an interpolation, from its `:`, as `:>8.2`" }
+    ],
+    "semanticTokenModifiers": [
+      { "id": "mutable", "description": "A binding that code may change: a `var`'s, or an `inout` parameter" },
+      { "id": "controlFlow", "description": "A keyword that directs control: a branch, a loop, a jump, a failure or a handler's, as `if`, `for`, `return`, `try` or `resume`" }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "stilt",
+        "scopes": {
+          "keyword": ["keyword.other.stilt"],
+          "keyword.controlFlow": ["keyword.control.stilt"],
+          "boolean": ["constant.language.boolean.stilt"],
+          "selfKeyword": ["variable.language.self.stilt"],
+          "effect": ["entity.name.type.effect.stilt"],
+          "effect.defaultLibrary": ["support.type.effect.stilt"],
+          "type": ["entity.name.type.stilt"],
+          "type.defaultLibrary": ["support.type.primitive.stilt"],
+          "interface": ["entity.name.type.trait.stilt"],
+          "typeParameter": ["entity.name.type.parameter.stilt"],
+          "rowVariable": ["entity.name.type.parameter.row.stilt"],
+          "function": ["entity.name.function.stilt"],
+          "method": ["entity.name.function.method.stilt"],
+          "macro": ["entity.name.function.macro.stilt"],
+          "fragment": ["variable.other.fragment.stilt"],
+          "parameter": ["variable.parameter.stilt"],
+          "variable": ["variable.other.stilt"],
+          "variable.readonly": ["variable.other.constant.stilt"],
+          "property": ["variable.other.property.stilt"],
+          "enumMember": ["variable.other.enummember.stilt"],
+          "namespace": ["entity.name.namespace.stilt"],
+          "comment": ["comment.line.double-slash.stilt"],
+          "comment.documentation": ["comment.line.documentation.stilt"],
+          "string": ["string.quoted.double.stilt"],
+          "escapeSequence": ["constant.character.escape.stilt"],
+          "interpolation": ["punctuation.section.embedded.stilt"],
+          "formatSpecifier": ["storage.type.format.stilt"],
+          "number": ["constant.numeric.stilt"],
+          "operator": ["keyword.operator.stilt"],
+          "*.mutable": ["markup.underline"]
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Stilt",
+      "properties": {
+        "stilt.path": {
+          "type": "string",
+          "default": "stilt",
+          "scope": "machine-overridable",
+          "markdownDescription": "The `stilt` binary that runs the language server, the commands, the tasks, the tests and the debugger's builds: a name found on the `PATH`, or a path, such as `target/release/stilt` of a build of Stilt's repository."
+        },
+        "stilt.inlayHints.types": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the inferred type of each `let`, `var` and closure parameter that writes none."
+        },
+        "stilt.inlayHints.facts": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show each function's inferred facts before its body, as `stilt show` writes them, such as `[consumes xs, panic, alloc]`. Hover over a fact for what it means and the lines that cause it, and Cmd- or Ctrl-click it to go to the first."
+        },
+        "stilt.inlayHints.causes": {
+          "type": "string",
+          "enum": ["cursorLine", "everyLine", "off"],
+          "enumDescriptions": [
+            "At the end of the line that holds the cursor",
+            "At the end of every line that causes a fact",
+            "Nowhere"
+          ],
+          "default": "cursorLine",
+          "markdownDescription": "Where to show what a line does that causes its function's facts, as `stilt show` writes it in a comment, such as `// an interpolated string allocates`."
+        },
+        "stilt.codeLens.enable": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show **Run** and **Debug** above each program's `main`."
+        },
+        "stilt.debug.engine": {
+          "type": "string",
+          "enum": ["auto", "lldb-dap", "codelldb"],
+          "enumDescriptions": [
+            "LLDB DAP if it is installed, and CodeLLDB otherwise",
+            "LLDB DAP, the LLVM project's extension (llvm-vs-code-extensions.lldb-dap)",
+            "CodeLLDB (vadimcn.vscode-lldb)"
+          ],
+          "default": "auto",
+          "markdownDescription": "The debugger extension that runs a Stilt program built with `stilt build`, whose executables carry DWARF debug information."
+        },
+        "stilt.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "markdownDescription": "Write the messages between the editor and the language server to the **Stilt** output, to report a bug."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[stilt]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.formatOnSave": true,
+        "editor.semanticHighlighting.enabled": true,
+        "editor.wordBasedSuggestions": "off",
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true
+      },
+      "explorer.fileNesting.patterns": {
+        "stilt.toml": "docs.lock, default.profile",
+        "*.lt": "${capture}.profile"
+      }
+    },
+    "commands": [
+      { "command": "stilt.run", "title": "Run Program", "category": "Stilt", "icon": "$(play)", "enablement": "isWorkspaceTrusted" },
+      { "command": "stilt.debug", "title": "Debug Program", "category": "Stilt", "icon": "$(debug-alt)", "enablement": "isWorkspaceTrusted" },
+      { "command": "stilt.showFacts", "title": "Show Function with Its Facts", "category": "Stilt", "icon": "$(symbol-event)" },
+      { "command": "stilt.showExpansion", "title": "Show Function with Its Macros Expanded", "category": "Stilt" },
+      { "command": "stilt.showRelease", "title": "Show Release Report of Function", "category": "Stilt" },
+      { "command": "stilt.showModule", "title": "Show Module's Skeleton", "category": "Stilt" },
+      { "command": "stilt.explain", "title": "Explain Diagnostic Code…", "category": "Stilt", "icon": "$(question)" },
+      { "command": "stilt.openManifest", "title": "Open Program's Manifest", "category": "Stilt" },
+      { "command": "stilt.restart", "title": "Restart Language Servers", "category": "Stilt", "icon": "$(debug-restart)" },
+      { "command": "stilt.showLogs", "title": "Show Logs", "category": "Stilt", "icon": "$(output)" }
+    ],
+    "submenus": [{ "id": "stilt.editor", "label": "Stilt" }],
+    "menus": {
+      "commandPalette": [
+        { "command": "stilt.run", "when": "stilt:inProgram" },
+        { "command": "stilt.debug", "when": "stilt:inProgram" },
+        { "command": "stilt.showFacts", "when": "editorLangId == stilt && stilt:inProgram" },
+        { "command": "stilt.showExpansion", "when": "editorLangId == stilt && stilt:inProgram" },
+        { "command": "stilt.showRelease", "when": "editorLangId == stilt && stilt:inProgram" },
+        { "command": "stilt.showModule", "when": "editorLangId == stilt && stilt:inProgram" },
+        { "command": "stilt.openManifest", "when": "stilt:inProgram" }
+      ],
+      "editor/context": [{ "submenu": "stilt.editor", "group": "navigation@100", "when": "editorLangId == stilt && stilt:inProgram" }],
+      "stilt.editor": [
+        { "command": "stilt.showFacts", "group": "1_show@1" },
+        { "command": "stilt.showExpansion", "group": "1_show@2" },
+        { "command": "stilt.showRelease", "group": "1_show@3" },
+        { "command": "stilt.showModule", "group": "1_show@4" },
+        { "command": "stilt.run", "group": "2_run@1" },
+        { "command": "stilt.debug", "group": "2_run@2" }
+      ],
+      "editor/title/run": [
+        { "command": "stilt.run", "group": "navigation@0", "when": "resourceLangId == stilt && stilt:inProgram" },
+        { "command": "stilt.debug", "group": "navigation@1", "when": "resourceLangId == stilt && stilt:inProgram" }
+      ]
+    },
+    "taskDefinitions": [
+      {
+        "type": "stilt",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": ["check", "build", "run", "test", "fmt"],
+            "description": "The `stilt` command the task runs."
+          },
+          "program": {
+            "type": "string",
+            "description": "The program's directory or file. Defaults to the task's workspace folder."
+          },
+          "args": { "type": "array", "items": { "type": "string" }, "description": "More arguments for the command, such as `--release`." }
+        }
+      }
+    ],
+    "problemPatterns": [
+      {
+        "name": "stilt-error",
+        "patterns": [
+          { "regexp": "^── .* ─+ (.+):(\\d+):(\\d+)\\s+\\[(E\\d{4})\\]$", "file": 1, "line": 2, "column": 3, "code": 4 },
+          { "regexp": "^\\s*$" },
+          { "regexp": "^(\\S.*?):?$", "message": 1 }
+        ]
+      },
+      {
+        "name": "stilt-warning",
+        "patterns": [
+          { "regexp": "^── .* ─+ (.+):(\\d+):(\\d+)\\s+\\[(W\\d{4})\\]$", "file": 1, "line": 2, "column": 3, "code": 4 },
+          { "regexp": "^\\s*$" },
+          { "regexp": "^(\\S.*?):?$", "message": 1 }
+        ]
+      },
+      { "name": "stilt-test", "regexp": "^(.+?\\.lt):(\\d+): (.+ failed)$", "file": 1, "line": 2, "message": 3 }
+    ],
+    "problemMatchers": [
+      {
+        "name": "stilt",
+        "label": "Stilt errors",
+        "owner": "stilt",
+        "source": "stilt",
+        "severity": "error",
+        "fileLocation": ["autoDetect", "${cwd}"],
+        "pattern": "$stilt-error"
+      },
+      {
+        "name": "stilt-warnings",
+        "label": "Stilt warnings",
+        "owner": "stilt",
+        "source": "stilt",
+        "severity": "warning",
+        "fileLocation": ["autoDetect", "${cwd}"],
+        "pattern": "$stilt-warning"
+      },
+      {
+        "name": "stilt-tests",
+        "label": "Stilt test failures",
+        "owner": "stilt-tests",
+        "source": "stilt test",
+        "severity": "error",
+        "fileLocation": ["autoDetect", "${cwd}"],
+        "pattern": "$stilt-test"
+      }
+    ],
+    "breakpoints": [{ "language": "stilt" }],
+    "debuggers": [
+      {
+        "type": "stilt",
+        "label": "Stilt",
+        "languages": ["stilt"],
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "program": {
+                "type": "string",
+                "default": "${workspaceFolder}",
+                "markdownDescription": "The program to build with `stilt build` and run under the debugger: its directory, or its file. Defaults to the active file's program."
+              },
+              "args": { "type": "array", "items": { "type": "string" }, "default": [], "description": "The program's arguments." },
+              "cwd": { "type": "string", "default": "${workspaceFolder}", "description": "The directory the program runs in. Defaults to the program's." }
+            }
+          }
+        },
+        "initialConfigurations": [
+          { "type": "stilt", "request": "launch", "name": "Debug the program", "program": "${workspaceFolder}" }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Stilt: Debug a program",
+            "description": "Build a program with `stilt build` and run it under the debugger.",
+            "body": { "type": "stilt", "request": "launch", "name": "Debug ${1:the program}", "program": "^\"\\${workspaceFolder}\"" }
+          }
+        ]
+      }
+    ],
+    "tomlValidation": [{ "fileMatch": "stilt.toml", "url": "./schemas/stilt.toml.json" }]
+  },
+  "scripts": {
+    "check": "tsc --project jsconfig.json",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.6.0"
+  }
+}

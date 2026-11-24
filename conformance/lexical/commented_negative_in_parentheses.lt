@@ -1,0 +1,8 @@
+//~ rule: lexical.commented-out-code.single-token
+//~ run-output: "done"
+
+fn main() / io {
+  // (-1)
+  // -(1)
+  print("done")
+}

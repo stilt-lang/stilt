@@ -1,0 +1,25 @@
+---
+// The page of each Markdown document of the repository but the front page and the guide's
+// index, which have pages of their own: the guide's chapters and the documents beside them, the
+// Reference and its rationale, the error index and the design documents.
+import type { GetStaticPaths } from "astro";
+import Doc from "../layouts/Doc.astro";
+import { docs, type Doc as Document } from "../lib/map";
+import { render } from "../lib/markdown";
+import { sidebar } from "../lib/nav";
+import { read } from "../lib/repo";
+
+export const getStaticPaths = (() =>
+  [...docs().values()]
+    .filter((d) => d.url !== "/" && d.url !== "/learn/")
+    .map((doc) => ({ params: { doc: doc.url.slice(1, -1) }, props: { doc } }))) satisfies GetStaticPaths;
+
+const { doc } = Astro.props as { doc: Document };
+const opens = doc.section === "learn" || doc.section === "errors";
+const { html, headings } = render(read(doc.source), { from: doc.source, opens });
+const blocks = sidebar(doc.section);
+---
+
+<Doc title={doc.title} section={doc.section} href={doc.url} blocks={blocks} headings={headings}>
+  <Fragment set:html={html} />
+</Doc>

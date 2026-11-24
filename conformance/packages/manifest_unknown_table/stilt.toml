@@ -1,0 +1,5 @@
+[package]
+name = "app"
+
+[build] # //~ ERROR E0600
+fast = true

@@ -1,0 +1,11 @@
+── TYPE WITHOUT A SHAPE GIVEN TO A FUNCTION THAT REFLECTS ── E0350_type_without_a_shape_given_to_a_function_that_reflects.lt:18:18  [E0350]
+
+`fn() -> i64` has no shape: it is the field `run` of `Job`, and `leaves`
+reflects on the parts of its `T`:
+
+  18 │   print("{leaves(job)}")
+     │                  ^^^
+
+A function that reflects reads the shape of each type it reaches, and function
+types, handlers and native types such as `Shared` have none. Leave such fields
+out, or give the type an impl of a trait the function checks first.

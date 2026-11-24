@@ -1,0 +1,5 @@
+//~ rule: program.main
+
+fn main() -> i64 { //~ ERROR E0310
+  0
+}

@@ -1,0 +1,13 @@
+//~ rule: types.no-type-arguments, std.lists, std.maps
+//~ run-output: "(true, false) 0 0"
+
+fn main() / io {
+  let a = 1
+  let b = 2
+  let c = 3
+  let d = 4
+  let pair = (a < b, c > d)
+  let m: Map<str, f64> = Map.new()
+  let xs: List<i64> = List.new()
+  print("{pair} {m.len()} {xs.len()}")
+}

@@ -1,0 +1,42 @@
+//~ rule: traits.structural-calls
+//~ stdout:
+//~ | false false false true
+//~ | true true true true
+//~ | false false false
+
+type Bomb = { id: i64 }
+
+impl Eq for Bomb {
+  fn eq(self, other: Bomb) -> bool { panic("eq was called") }
+}
+
+impl Ord for Bomb {
+  fn compare(self, other: Bomb) -> Ordering { unreachable() }
+}
+
+type Holder = | Vacant | Full(Bomb)
+
+type Pair = { first: i64, second: Bomb }
+
+fn main() / io {
+  let x = Bomb { id: 1 }
+  let none: List<Bomb> = []
+  print("{(1, x) == (2, x)} {[x] == [x, x]} {Vacant == Full(x)} {Full(x) != Vacant}")
+  let low = Pair { second: x, first: 1 }
+  let high = Pair { first: 2, second: x }
+  print("{(1, x) < (2, x)} {Vacant < Full(x)} {low < high} {none < [x]}")
+  var m1: Map<str, Bomb> = Map.new()
+  m1["a"] = x
+  var m2: Map<str, Bomb> = Map.new()
+  m2["b"] = x
+  var m3: Map<str, Bomb> = Map.new()
+  m3["a"] = x
+  m3["b"] = x
+  var m4: Map<str, Option<Bomb>> = Map.new()
+  m4["a"] = None
+  m4["b"] = Some(x)
+  var m5: Map<str, Option<Bomb>> = Map.new()
+  m5["b"] = Some(x)
+  m5["a"] = Some(x)
+  print("{m1 == m2} {m1 == m3} {m4 == m5}")
+}

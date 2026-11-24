@@ -1,0 +1,5 @@
+/// A number modulo `p`.
+pub type Mod<p: u64> = { value: u64 }
+
+/// The sum of two numbers modulo `p`.
+pub fn add<p: u64>(a: Mod<p>, b: Mod<p>) -> Mod<p> { Mod { value: (a.value + b.value) % p } }

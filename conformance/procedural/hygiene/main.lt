@@ -1,0 +1,23 @@
+//~ tier: meta
+//~ rule: macros.quote-hygiene, macros.linking, macros.tokens-and-code, macros.running
+//~ stdout:
+//~ | 21
+//~ | 10
+//~ | 101
+//~ | 42
+
+meta use hygienic
+
+fn main() / io {
+  // The quote's `x` is fresh: the user's `x` stays 10.
+  let x = 10
+  print("{hygienic.plus_one!(x * 2)}")
+  // The fresh `v` is bound by one quote and named by another, and hides
+  // nothing of the user's.
+  let v = 5
+  print("{hygienic.doubled!(v)}")
+  print("{hygienic.hidden!(1)}")
+  // The user's `k`, spliced as a binding, is the one the user's body names.
+  let answer = hygienic.bind!(6) { k => k * 7 }
+  print("{answer}")
+}

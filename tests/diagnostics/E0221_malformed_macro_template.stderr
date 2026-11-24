@@ -1,0 +1,15 @@
+── MALFORMED MACRO TEMPLATE ──── E0221_malformed_macro_template.lt:2:22  [E0221]
+
+`$numbr` isn't a fragment of this arm's pattern:
+
+  2 │   ($number: expr) => $numbr * 2
+    │                      ^^^^^^
+
+A template uses only the fragments that its arm's pattern binds, inside as many
+repetitions, and it parses as an expression or a pattern. Check the fragment's
+spelling.
+
+To fix it, write `$number`:
+
+  2 │   ($number: expr) => $number * 2
+    │                      ~~~~~~~

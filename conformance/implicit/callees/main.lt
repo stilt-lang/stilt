@@ -1,0 +1,9 @@
+//~ rule: effects.without-panic, facts.inferred-facts, facts.inference, facts.interfaces
+
+use lib
+use pure
+
+fn main() / io {
+  let f: fn(List<i64>) -> i64 = lib.first
+  print("{f([1])}")
+}

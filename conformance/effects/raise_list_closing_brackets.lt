@@ -1,0 +1,10 @@
+//~ rule: syntax.closing-angle-brackets
+//~ stdout:
+//~ | 0
+
+// The `<…>` of `raise` is a list of type arguments, so one `>>` closes it and the list's.
+fn how_many(fs: List<fn() / raise<str>>) -> i64 { fs.len() }
+
+fn main() / io {
+  print("{how_many([])}")
+}

@@ -1,0 +1,14 @@
+//~ rule: lexical.case
+//~ run-output: "1 Some(2)"
+
+type _1A = | _2B(i64) | _3C
+
+fn main() / io {
+  let _1a = 1
+  let v = _2B(2)
+  let shown = match v {
+    _2B(n) => Some(n)
+    _3C => None
+  }
+  print("{_1a} {shown}")
+}

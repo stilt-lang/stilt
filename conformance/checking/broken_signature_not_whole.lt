@@ -1,0 +1,15 @@
+//~ tier: advanced
+//~ rule: errors.broken-parts
+
+// The first `{` outside brackets begins the anonymous record type that `parse` raises, not its
+// body, so what is written before it isn't a whole signature: `parse` declares only its name,
+// and every use of it has the error type, from which nothing is reported.
+fn parse(n: i64) -> i64 / raise<{ code: i64, line: i64 }> {
+  if n < 0 { raise { code: -n, line: } } else { n } //~ ERROR E0100
+}
+
+fn as_text() -> str { parse(1) }
+
+fn twice() -> i64 { parse(1) + parse("2") }
+
+fn main() {}

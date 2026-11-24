@@ -1,0 +1,7 @@
+//~ rule: declarations.recursive-types, declarations.namespaces, declarations.constant-cycles, errors.several-places
+
+type Node = { next: Node } //~ ERROR E0309
+type Node = { value: i64 } //~ ERROR E0208
+
+const LIMIT: i64 = LIMIT //~ ERROR E0327
+const LIMIT: i64 = 10 //~ ERROR E0208

@@ -1,0 +1,31 @@
+//~ rule: patterns.empty-matches, patterns.types-without-values, patterns.unreachable-arms
+//~ run-output: "0 1"
+
+type Empty = | Gone(Never)
+
+fn none_only(o: Option<Never>) -> i64 {
+  match o {
+    None => 0
+  }
+}
+
+fn some_never(o: Option<Never>) -> i64 {
+  match o {
+    None => 0
+    Some(_) => 1 //~ WARN W0301
+  }
+}
+
+fn ok_only(r: Result<i64, Never>) -> i64 {
+  match r {
+    Ok(n) => n
+  }
+}
+
+fn empty(e: Empty) -> i64 { match e {} }
+
+fn main() / io {
+  let o: Option<Never> = None
+  let r: Result<i64, Never> = Ok(1)
+  print("{none_only(o) + some_never(o)} {ok_only(r)}")
+}

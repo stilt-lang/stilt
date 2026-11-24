@@ -1,0 +1,42 @@
+//~ tier: meta
+//~ rule: meta.leaving-arm, meta.fields
+
+use std.meta
+
+// A field's value has a fresh type of the loop's body. Against a type already known outside
+// it, an annotation's or a literal's number type, it is a mismatch, E0311; deciding a type
+// that inference left open outside the body is E0351.
+fn annotated<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var n: i64 = 1
+      for f in fields { n += f.get(value) } //~ ERROR E0311
+      n
+    }
+    _ => 1
+  }
+}
+
+fn literal<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var n = 1
+      for f in fields { n = f.get(value) } //~ ERROR E0311
+      n
+    }
+    _ => 1
+  }
+}
+
+fn open<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var acc = []
+      for f in fields { acc.push(f.get(value)) } //~ ERROR E0351
+      0
+    }
+    _ => 1
+  }
+}
+
+fn main() {}

@@ -1,0 +1,10 @@
+//~ rule: types.undecided-type-location
+
+type Cache<K, V> = { entries: Map<K, V> }
+
+fn make() -> i64 {
+  let c = Cache { //~ ERROR E0312
+    entries: Map.new(),
+  }
+  0
+}

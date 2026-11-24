@@ -1,0 +1,4 @@
+//~ rule: lexical.float-literals, expressions.key-paths
+fn half() -> f64 {
+  .5 //~ ERROR E0324
+}

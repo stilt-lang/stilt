@@ -1,0 +1,6 @@
+//~ rule: types.infinite-types
+
+fn main() {
+  var retry = || ()
+  retry = || raise retry //~ ERROR E0311
+}

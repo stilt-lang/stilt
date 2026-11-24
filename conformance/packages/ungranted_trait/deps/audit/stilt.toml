@@ -1,0 +1,5 @@
+[package]
+name = "audit"
+
+[dependencies]
+logger = { path = "../logger", may = ["console"] }

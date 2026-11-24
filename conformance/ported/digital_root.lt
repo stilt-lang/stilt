@@ -1,0 +1,28 @@
+//~ rule: std.str, numbers.parsing, std.clamp-and-sum, patterns.irrefutable-positions
+//~ stdout:
+//~ | 627615: persistence 2, digital root 9
+//~ | 39390: persistence 2, digital root 6
+//~ | 588225: persistence 2, digital root 3
+//~ | 393900588225: persistence 2, digital root 9
+
+// Rosetta Code, Digital root: summing a number's digits until one digit is left gives its digital
+// root, and the number of sums its additive persistence. The task's four numbers are shown.
+
+fn digit_sum(n: i64) -> i64 { i64.sum("{n}".chars().map(|c| c.to_i64() else 0)) }
+
+fn root(n: i64) -> (i64, i64) {
+  var x = n
+  var persistence = 0
+  while x >= 10 {
+    x = digit_sum(x)
+    persistence += 1
+  }
+  (persistence, x)
+}
+
+fn main() / io {
+  for n in [627615, 39390, 588225, 393900588225] {
+    let (persistence, r) = root(n)
+    print("{n}: persistence {persistence}, digital root {r}")
+  }
+}

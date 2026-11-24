@@ -1,0 +1,375 @@
+# The grammar of core Stilt, as GBNF for llama.cpp.
+# Generated from reference/03-syntax.md and 02-lexical.md by `just grammar-generate`. Do not edit.
+# Each token ends with the spaces and comments after it, and a newline is the separator
+# of statements and items where lexical.terminator-insertion inserts a terminator (see
+# syntax.published-grammars.loosening).
+
+blanks ::= (blank blanks)?
+blank ::= [ \t]+ | "//" [^\n]*
+nl ::= "\r"? "\n" blanks
+file ::= kw-module lower-path (sep? limits)* (sep item (sep item)*)? |
+    (item (sep item)*)?
+limits ::= kw-without limit (op-comma limit)*
+item ::= kw-meta? kw-use use-path |
+    kw-pub? (fn | type-decl | trait | const | syntax | macro | effect) |
+    kw-pub kw-extern fn |
+    kw-pub? kw-extern fn-head limits? |
+    test |
+    kw-impl impl-generics? type where? op-lbrace sep? (inherent-member (sep inherent-member)*)? sep? op-rbrace |
+    kw-impl impl-generics? bound kw-for type where? op-lbrace sep? (trait-impl-member (sep trait-impl-member)*)? sep? op-rbrace
+inherent-member ::= kw-pub? (fn | const)
+trait-impl-member ::= fn |
+    const
+fn ::= fn-head where? limits? fn-body
+fn-head ::= kw-fn lower generics? params (op-minus-gt result)? (op-slash row)?
+result ::= kw-inout? type
+fn-body ::= block |
+    op-eq op-question
+generics ::= op-lt list1-generic op-gt
+generic ::= type-param |
+    op-dot-dot type-param |
+    lower (op-colon type)?
+value-param ::= lower op-colon type
+type-param ::= upper (op-colon bounds)?
+bounds ::= bound (op-plus bound)*
+bound ::= upper-path (op-lt list1-type op-gt)? |
+    op-lbrace sep? list1-field (op-comma op-dot-dot)? sep? op-rbrace
+where ::= kw-where list1-where-bound
+where-bound ::= upper-path op-colon bounds
+impl-generics ::= op-lt list1-impl-generic op-gt
+impl-generic ::= type-param |
+    value-param
+params ::= op-lparen (list-param | self-param (op-comma list-param)?) op-rparen
+self-param ::= mode? kw-self (op-colon type)?
+param ::= mode? lower op-colon type |
+    kw-escaping lower op-colon fn-type
+mode ::= kw-inout
+type-decl ::= kw-type upper (op-lt list1-type-generic op-gt)? op-eq (type-def | op-question)
+type-generic ::= type-name |
+    value-param
+type-name ::= upper |
+    op-dot-dot upper
+type-def ::= op-lbrace sep? list-field sep? op-rbrace |
+    op-bar variant (op-bar variant)* |
+    variant op-bar variant (op-bar variant)*
+field ::= lower op-colon type
+variant ::= upper (op-lparen list1-payload op-rparen)?
+payload ::= (lower op-colon)? type
+trait ::= kw-trait upper (op-lt list1-type-name op-gt)? op-lbrace sep? (trait-member (sep trait-member)*)? sep? op-rbrace
+trait-member ::= fn-head where? (limits? fn-body)? |
+    kw-const upper op-colon type (op-eq expr)?
+const ::= kw-const upper op-colon type op-eq expr
+test ::= kw-test string block
+effect ::= kw-effect upper (op-lt list1-upper op-gt)? op-lbrace sep? (operation (sep operation)*)? sep? op-rbrace
+operation ::= kw-fn lower params (op-minus-gt type)? (op-slash row)?
+syntax ::= kw-syntax lower op-lbrace sep? (macro-arm (sep macro-arm)*)? sep? op-rbrace
+macro-arm ::= (op-lparen (matcher | sep)* op-rparen | op-lbracket (matcher | sep)* op-rbracket) (op-dollar lower op-colon lower)? op-eq-gt template
+matcher ::= op-dollar lower op-colon (lower | upper | kw-type) |
+    op-dollar op-lparen (matcher | sep)* op-rparen one-of-op-comma-or-op-semi? one-of-op-star-or-op-plus |
+    op-lparen (matcher | sep)* op-rparen |
+    op-lbracket (matcher | sep)* op-rbracket |
+    op-lbrace sep? (matcher | sep)* sep? op-rbrace |
+    token |
+    matcher-string
+template ::= t-item t-item*
+t-item ::= op-dollar lower |
+    op-dollar op-lparen (t-item | sep)* op-rparen one-of-op-comma-or-op-semi? one-of-op-star-or-op-plus |
+    op-lparen (t-item | sep)* op-rparen |
+    op-lbracket (t-item | sep)* op-rbracket |
+    op-lbrace sep? (t-item | sep)* sep? op-rbrace |
+    token |
+    t-item-string
+macro-use ::= lower-path op-bang (op-lparen tokens op-rparen | op-lbracket tokens op-rbracket)
+tokens ::= (token | tokens-string | sep | op-lparen tokens op-rparen | op-lbracket tokens op-rbracket | op-lbrace sep? tokens sep? op-rbrace)*
+macro ::= kw-macro lower generics? params op-minus-gt type (op-slash row)? limits? block
+lower-path ::= lower (op-dot lower)*
+use-path ::= lower (op-dot (lower | upper))*
+upper-path ::= (upper | kw-cap-self | lower-path op-dot upper) (op-dot upper)*
+type ::= lower |
+    upper-path (op-lt list1-type-arg op-gt)? |
+    op-lparen list-elem-type op-rparen |
+    op-lbrace sep? list1-field (op-comma op-dot-dot)? sep? op-rbrace |
+    fn-type |
+    kw-handler effect-ref (op-minus-gt type)? (op-slash row)? |
+    macro-use |
+    q-splice
+effect-ref ::= upper-path (op-lt list1-type op-gt)? |
+    kw-async
+type-arg ::= type |
+    op-minus? int |
+    kw-true |
+    kw-false
+fn-type ::= kw-fn (op-lt list1-fn-generic op-gt)? op-lparen list-param-type op-rparen (op-minus-gt type)? (op-slash row)?
+fn-generic ::= type-param |
+    op-dot-dot type-param
+param-type ::= mode? type |
+    op-dot-dot type
+elem-type ::= type |
+    op-dot-dot type
+row ::= row-elem |
+    op-lbrace sep? list-row-elem sep? op-rbrace
+row-elem ::= kw-io |
+    kw-async |
+    kw-raise op-lt type op-gt |
+    upper-path (op-lt list1-type op-gt)? |
+    lower
+pattern ::= alt (op-bar alt)*
+alt ::= op-underscore |
+    lower |
+    op-minus? int |
+    string |
+    kw-true |
+    kw-false |
+    upper-path (op-lparen list1-pattern op-rparen | op-lbrace sep? field-patterns sep? op-rbrace)? |
+    op-lparen list-pattern op-rparen |
+    op-lbrace sep? (field-pattern (op-comma field-patterns)? | op-dot-dot op-comma?) sep? op-rbrace |
+    op-lbracket list-patterns op-rbracket |
+    macro-use |
+    q-splice
+field-patterns ::= (field-pattern op-comma)* (field-pattern | op-dot-dot op-comma?)?
+field-pattern ::= (lower | q-splice) (op-colon pattern)?
+list-patterns ::= (pattern op-comma)* (pattern | op-dot-dot lower? op-comma?)?
+block ::= op-lbrace sep? (stmt (sep stmt)*)? sep? op-rbrace
+stmt ::= kw-let binding |
+    kw-var binding |
+    kw-assert expr |
+    kw-yield expr |
+    expr assign-op expr |
+    expr
+binding ::= pattern (op-colon type)? op-eq expr
+expr ::= (one-of-op-minus-or-op-bang expr | kw-try expr (kw-catch (catch-arm | op-lbrace sep? arms-catch-arm sep? op-rbrace))? | kw-raise expr | kw-return expr? | kw-break | kw-continue | op-bar list-closure-param op-bar expr | op-bar-bar expr | kw-resume op-lparen expr? op-rparen | postfix) (binary-op expr | kw-else expr)*
+postfix ::= path |
+    built
+path ::= (lower | upper) (op-dot (lower | upper))*
+built ::= (primary | path op-dot (int | kw-await) | path op-lparen list-arg op-rparen | path op-lbracket expr op-rbracket | path op-dot q-splice) (op-dot (lower | upper | int | kw-await) | op-lparen list-arg op-rparen | op-lbracket expr op-rbracket | op-dot q-splice)*
+arg ::= kw-inout? expr |
+    op-dot-dot expr |
+    q-spread
+primary ::= int |
+    float |
+    string |
+    interpolated |
+    kw-true |
+    kw-false |
+    kw-self |
+    kw-cap-self |
+    op-question |
+    op-dot (lower | int) |
+    op-lparen list-elem op-rparen |
+    op-lbracket list-elem op-rbracket |
+    op-lbrace sep? (lower | q-splice) op-colon expr (op-comma field-init)* op-comma? sep? op-rbrace |
+    op-lbrace sep? q-spread (op-comma field-init)* op-comma? sep? op-rbrace |
+    op-lbrace sep? op-dot-dot expr (op-comma field-init)* op-comma? sep? op-rbrace |
+    struct |
+    block |
+    if |
+    kw-match expr-h op-lbrace sep? arms-match-arm sep? op-rbrace |
+    kw-loop block |
+    kw-while expr-h block |
+    kw-for pattern kw-in iterable block |
+    kw-comptime (if | kw-match expr-h op-lbrace sep? arms-match-arm sep? op-rbrace | kw-for pattern kw-in iterable block) |
+    macro-use (op-lbrace sep? tokens sep? op-rbrace)? |
+    kw-handler effect-ref (op-minus-gt type)? op-lbrace sep? (fn (sep fn)*)? sep? op-rbrace |
+    kw-with list1-head block |
+    kw-when list1-lower block |
+    kw-unsafe kw-because string block |
+    quote |
+    q-splice
+struct ::= (path | kw-cap-self) op-lbrace sep? (op-dot-dot expr (op-comma field-init)* op-comma? | list-field-init) sep? op-rbrace
+elem ::= expr |
+    op-dot-dot expr |
+    q-spread
+field-init ::= lower (op-colon expr)? |
+    q-splice op-colon expr |
+    q-spread
+if ::= kw-if (kw-let pattern op-eq expr-h | upper op-colon bounds | expr-h) block (kw-else (block | if))?
+iterable ::= expr-h (one-of-op-dot-dot-or-op-dot-dot-eq expr-h)?
+match-arm ::= pattern (kw-if expr)? op-eq-gt expr
+catch-arm ::= pattern (kw-if expr | kw-because string)? op-eq-gt expr
+closure-param ::= kw-inout lower (op-colon type)? |
+    alt (op-colon type)?
+interpolated ::= string-head splice (string-mid splice)* string-tail
+splice ::= expr format?
+quote ::= kw-quote (block | kw-type op-lbrace sep? type sep? op-rbrace | kw-pattern op-lbrace sep? pattern sep? op-rbrace | kw-field op-lbrace sep? field-init sep? op-rbrace)
+q-splice ::= op-dollar (lower | op-lparen expr op-rparen)
+q-spread ::= op-dollar op-dot-dot (lower | op-lparen expr op-rparen)
+list1-generic ::= generic (op-comma generic)* op-comma?
+list1-type ::= type (op-comma type)* op-comma?
+list1-field ::= field (op-comma field)* op-comma?
+list1-where-bound ::= where-bound (op-comma where-bound)* op-comma?
+list1-impl-generic ::= impl-generic (op-comma impl-generic)* op-comma?
+list-param ::= list1-param?
+list1-param ::= param (op-comma param)* op-comma?
+list1-type-generic ::= type-generic (op-comma type-generic)* op-comma?
+list-field ::= list1-field?
+list1-payload ::= payload (op-comma payload)* op-comma?
+list1-type-name ::= type-name (op-comma type-name)* op-comma?
+list1-upper ::= upper (op-comma upper)* op-comma?
+list1-type-arg ::= type-arg (op-comma type-arg)* op-comma?
+list-elem-type ::= list1-elem-type?
+list1-elem-type ::= elem-type (op-comma elem-type)* op-comma?
+list1-fn-generic ::= fn-generic (op-comma fn-generic)* op-comma?
+list-param-type ::= list1-param-type?
+list1-param-type ::= param-type (op-comma param-type)* op-comma?
+list-row-elem ::= list1-row-elem?
+list1-row-elem ::= row-elem (op-comma row-elem)* op-comma?
+list1-pattern ::= pattern (op-comma pattern)* op-comma?
+list-pattern ::= list1-pattern?
+arms-catch-arm ::= (catch-arm ((sep | op-comma) catch-arm)* (sep | op-comma)?)?
+list-closure-param ::= list1-closure-param?
+list1-closure-param ::= closure-param (op-comma closure-param)* op-comma?
+list-arg ::= list1-arg?
+list1-arg ::= arg (op-comma arg)* op-comma?
+list-elem ::= list1-elem?
+list1-elem ::= elem (op-comma elem)* op-comma?
+arms-match-arm ::= (match-arm ((sep | op-comma) match-arm)* (sep | op-comma)?)?
+list1-head ::= expr-h (op-comma expr-h)* op-comma?
+list1-lower ::= lower (op-comma lower)* op-comma?
+list-field-init ::= list1-field-init?
+list1-field-init ::= field-init (op-comma field-init)* op-comma?
+expr-h ::= (one-of-op-minus-or-op-bang expr-h | kw-try expr-h (kw-catch catch-arm-h)? | kw-raise expr-h | kw-return expr-h? | kw-break | kw-continue | op-bar list-closure-param op-bar expr-h | op-bar-bar expr-h | kw-resume op-lparen expr? op-rparen | postfix-h) (binary-op expr-h | kw-else expr-h)*
+postfix-h ::= path |
+    built-h
+built-h ::= (primary-h | path op-dot (int | kw-await) | path op-lparen list-arg op-rparen | path op-lbracket expr op-rbracket | path op-dot q-splice) (op-dot (lower | upper | int | kw-await) | op-lparen list-arg op-rparen | op-lbracket expr op-rbracket | op-dot q-splice)*
+primary-h ::= int |
+    float |
+    string |
+    interpolated |
+    kw-true |
+    kw-false |
+    kw-self |
+    kw-cap-self |
+    op-question |
+    op-dot (lower | int) |
+    op-lparen list-elem op-rparen |
+    op-lbracket list-elem op-rbracket |
+    macro-use |
+    quote |
+    q-splice
+catch-arm-h ::= pattern (kw-if expr-h | kw-because string)? op-eq-gt expr-h
+sep ::= (op-semi | nl) (op-semi | nl)*
+float ::= float-exponent |
+    int op-dot fraction
+matcher-string ::= string-head (matcher | sep)* format? (string-mid (matcher | sep)* format?)* string-tail
+t-item-string ::= string-head (t-item | sep)* format? (string-mid (t-item | sep)* format?)* string-tail
+tokens-string ::= string-head tokens format? (string-mid tokens format?)* string-tail
+token ::= lower |
+    upper |
+    int |
+    float |
+    string |
+    punctuation
+root ::= blanks sep? file sep?
+op-bang ::= "!" blanks nl*
+op-dollar ::= "$" blanks nl*
+op-lparen ::= "(" blanks nl*
+op-rparen ::= nl* ")" blanks
+op-plus ::= nl* "+" blanks nl*
+op-comma ::= nl* "," blanks nl*
+op-minus ::= nl* "-" blanks nl*
+op-minus-gt ::= "->" blanks nl*
+op-dot ::= nl* "." blanks nl*
+op-dot-dot ::= ".." blanks nl*
+op-slash ::= nl* "/" blanks nl*
+op-colon ::= ":" blanks nl*
+op-semi ::= ";" blanks nl*
+op-lt ::= nl* "<" blanks nl*
+op-eq ::= "=" blanks nl*
+op-eq-gt ::= "=>" blanks nl*
+op-gt ::= nl* ">" blanks
+op-question ::= "?" blanks
+kw-cap-self ::= "Self" blanks
+op-lbracket ::= "[" blanks nl*
+op-rbracket ::= nl* "]" blanks
+op-underscore ::= "_" blanks nl*
+kw-assert ::= "assert" blanks nl*
+kw-async ::= "async" blanks nl*
+kw-await ::= "await" blanks nl*
+kw-because ::= "because" blanks
+kw-break ::= "break" blanks
+kw-catch ::= nl* "catch" blanks nl*
+kw-comptime ::= "comptime" blanks nl*
+kw-const ::= "const" blanks nl*
+kw-continue ::= "continue" blanks
+kw-effect ::= "effect" blanks nl*
+kw-else ::= nl* "else" blanks nl*
+kw-escaping ::= "escaping" blanks
+kw-extern ::= "extern" blanks nl*
+kw-false ::= "false" blanks
+kw-field ::= "field" blanks nl*
+kw-fn ::= "fn" blanks nl*
+kw-for ::= "for" blanks nl*
+kw-handler ::= "handler" blanks nl*
+kw-if ::= "if" blanks nl*
+kw-impl ::= "impl" blanks nl*
+kw-in ::= "in" blanks nl*
+kw-inout ::= "inout" blanks nl*
+kw-io ::= "io" blanks
+kw-let ::= "let" blanks nl*
+kw-loop ::= "loop" blanks nl*
+kw-macro ::= "macro" blanks nl*
+kw-match ::= "match" blanks nl*
+kw-meta ::= "meta" blanks nl*
+kw-module ::= "module" blanks nl*
+kw-pattern ::= "pattern" blanks nl*
+kw-pub ::= "pub" blanks nl*
+kw-quote ::= "quote" blanks nl*
+kw-raise ::= "raise" blanks nl*
+kw-resume ::= "resume" blanks nl*
+kw-return ::= "return" blanks
+kw-self ::= "self" blanks
+kw-syntax ::= "syntax" blanks nl*
+kw-test ::= "test" blanks nl*
+kw-trait ::= "trait" blanks nl*
+kw-true ::= "true" blanks
+kw-try ::= "try" blanks nl*
+kw-type ::= "type" blanks nl*
+kw-unsafe ::= "unsafe" blanks
+kw-use ::= "use" blanks nl*
+kw-var ::= "var" blanks nl*
+kw-when ::= "when" blanks nl*
+kw-where ::= "where" blanks nl*
+kw-while ::= "while" blanks nl*
+kw-with ::= "with" blanks nl*
+kw-without ::= nl* "without" blanks
+kw-yield ::= "yield" blanks nl*
+op-lbrace ::= "{" blanks nl*
+op-bar ::= nl* "|" blanks nl*
+op-bar-bar ::= nl* "||" blanks nl*
+op-rbrace ::= "}" blanks
+assign-op ::= assign-op-lexeme blanks nl*
+assign-op-lexeme ::= "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "+%=" | "-%=" | "*%=" | "&=" | "|=" | "^=" | "<<=" | ">>="
+binary-op ::= nl* binary-op-lexeme blanks nl*
+binary-op-lexeme ::= "*" | "/" | "%" | "*%" | "+" | "-" | "+%" | "-%" | "<<" | ">>" | "&" | "^" | "|" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||"
+limit ::= limit-lexeme blanks nl*
+limit-lexeme ::= "panic" | "overflow" | "alloc" | "div" | "copy" | "fs" | "net" | "clock" | "env" | "console" | "rand" | "spawn" | "exec" | "locks" | "unsafe"
+one-of-op-comma-or-op-semi ::= nl* one-of-op-comma-or-op-semi-lexeme blanks nl*
+one-of-op-comma-or-op-semi-lexeme ::= "," | ";"
+one-of-op-dot-dot-or-op-dot-dot-eq ::= one-of-op-dot-dot-or-op-dot-dot-eq-lexeme blanks nl*
+one-of-op-dot-dot-or-op-dot-dot-eq-lexeme ::= ".." | "..="
+one-of-op-minus-or-op-bang ::= nl* one-of-op-minus-or-op-bang-lexeme blanks nl*
+one-of-op-minus-or-op-bang-lexeme ::= "-" | "!"
+one-of-op-star-or-op-plus ::= nl* one-of-op-star-or-op-plus-lexeme blanks nl*
+one-of-op-star-or-op-plus-lexeme ::= "*" | "+"
+punctuation ::= nl* punctuation-lexeme blanks nl*
+punctuation-lexeme ::= "+" | "-" | "*" | "/" | "%" | "+%" | "-%" | "*%" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "!" | "&" | "|" | "^" | "<<" | ">>" | "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "+%=" | "-%=" | "*%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "->" | "=>" | "." | ".." | "..=" | "," | ":" | "?" | "_"
+lower ::= lower-lexeme blanks
+lower-lexeme ::= ("_" [0-9_]*)? [a-z] [A-Za-z0-9_]*
+upper ::= upper-lexeme blanks
+upper-lexeme ::= ("_" [0-9_]*)? [A-Z] [A-Za-z0-9_]*
+int ::= int-lexeme blanks
+int-lexeme ::= "0" | [1-9] ([0-9] | "_" [0-9])* | "0x" [0-9a-fA-F] ([0-9a-fA-F] | "_" [0-9a-fA-F])* | "0o" [0-7] ([0-7] | "_" [0-7])* | "0b" [01] ([01] | "_" [01])*
+float-exponent ::= float-exponent-lexeme blanks
+float-exponent-lexeme ::= ("0" | [1-9] ([0-9] | "_" [0-9])*) [eE] [+-]? [0-9]+
+fraction ::= fraction-lexeme blanks
+fraction-lexeme ::= [0-9] ([0-9] | "_" [0-9])* ([eE] [+-]? [0-9]+)?
+string ::= string-lexeme blanks
+string-lexeme ::= "\"" ([^"\\{\n] | "\\" [ntr0\\"{] | "\\u{" [0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] [0-9a-fA-F]?)?)?)?)? "}")* "\""
+string-head ::= string-head-lexeme blanks nl*
+string-head-lexeme ::= "\"" ([^"\\{\n] | "\\" [ntr0\\"{] | "\\u{" [0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] [0-9a-fA-F]?)?)?)?)? "}")* "{"
+string-mid ::= string-mid-lexeme blanks nl*
+string-mid-lexeme ::= "}" ([^"\\{\n] | "\\" [ntr0\\"{] | "\\u{" [0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] [0-9a-fA-F]?)?)?)?)? "}")* "{"
+string-tail ::= string-tail-lexeme blanks
+string-tail-lexeme ::= "}" ([^"\\{\n] | "\\" [ntr0\\"{] | "\\u{" [0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] ([0-9a-fA-F] [0-9a-fA-F]?)?)?)?)? "}")* "\""
+format ::= format-lexeme blanks nl*
+format-lexeme ::= ":" ([^{}\n]? [<>^])? [0-9]* ("." [0-9]+)? [xXobe]?

@@ -1,0 +1,4 @@
+//~ rule: program.no-cycles, errors.several-places
+
+use a
+use b //~ ERROR E0206

@@ -1,0 +1,38 @@
+//~ rule: facts.range-loops, facts.guards, facts.keys
+//~ run-output: "6 5 2 3"
+
+// `xs[i + 0]` adds nothing, so a loop up to `xs.len()` proves it.
+fn plus_zero(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() { s += xs[i + 0] }
+  s
+}
+
+// An index that names no range loop's variable is a guard's, inside a range loop too.
+fn guarded_inside(xs: List<i64>, j: i64) -> i64 without panic {
+  var s = 0
+  for _ in 0..2 {
+    if j >= 0 && j < xs.len() { s += xs[j] }
+  }
+  s
+}
+
+// A key type that is structural throughout its parts, generic or recursive, is proved.
+type Pair<T> = { a: T, b: T }
+type Path = | End | Step(i64, List<Path>)
+
+fn pair_key(k: Pair<i64>) -> i64 without panic {
+  var m: Map<Pair<i64>, i64> = Map.new()
+  m[k] = 2
+  m[k]
+}
+
+fn path_key(k: Path) -> i64 without panic {
+  var m: Map<Path, i64> = Map.new()
+  m[k] = 3
+  m[k]
+}
+
+fn main() / io {
+  print("{plus_zero([1, 2, 3])} {guarded_inside([5], 0) / 2} {pair_key(Pair { a: 1, b: 2 })} {path_key(Step(1, [End]))}")
+}

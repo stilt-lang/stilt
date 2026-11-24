@@ -1,0 +1,58 @@
+//~ tier: meta
+//~ rule: meta.fresh-types, meta.fields, meta.variant-cases, meta.reflects
+//~ stdout:
+//~ | 21
+//~ | 10
+//~ | i64 str List<u8> Option<i64>
+
+use std.meta
+
+type Inner = { a: u8, b: List<i16> }
+type Outer = { first: i64, inner: Inner, rest: (i32, Option<u64>), name: str }
+type Tree = | Leaf(i64) | Node(List<Tree>)
+
+// The sum of every integer that a value holds, at any depth: a field's,
+// an element's or a payload's value, of a fresh type, passed to a generic
+// function, which reflects on it in turn, with the type that each call
+// gives it at run time.
+fn total<T>(value: T) -> i64 {
+  match T.shape() {
+    Int(n) => n.text(value).to_i64() else 0
+    Option(c) => match c.get(value) { Some(x) => total(x), None => 0 }
+    List(c) => c.get(value).fold(0, |sum, x| sum + total(x))
+    Tuple(fields) | Record(fields) => {
+      var sum = 0
+      for f in fields { sum += total(f.get(value)) }
+      sum
+    }
+    Variants(cases) => {
+      var sum = 0
+      for c in cases {
+        if let Some(payload) = c.get(value) { sum += total(payload) }
+      }
+      sum
+    }
+    _ => 0
+  }
+}
+
+fn type_name<T>(value: T) -> str { T.name() }
+
+fn field_types<T>(value: T) -> str {
+  var names: List<str> = []
+  match T.shape() {
+    Tuple(fields) => {
+      for f in fields { names.push(type_name(f.get(value))) }
+    }
+    _ => {}
+  }
+  " ".join(names)
+}
+
+fn main() / io {
+  let o = Outer { first: 1, inner: Inner { a: 2, b: [3, 4] }, rest: (5, Some(6)), name: "x" }
+  print("{total(o)}")
+  print("{total(Node([Leaf(1), Node([Leaf(2), Leaf(3)]), Leaf(4)]))}")
+  let u: List<u8> = [1]
+  print(field_types((1, "a", u, Some(2))))
+}

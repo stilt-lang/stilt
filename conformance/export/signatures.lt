@@ -1,0 +1,74 @@
+//~ rule: c.exported-signatures
+
+// Each part of an exported function's signature that C can't take is an error of its own, at
+// the parameter's name for a mode, and at the type, the generic or the row's element otherwise.
+
+pub extern fn texts(
+  s: str, //~ ERROR E0352
+  xs: List<i64>, //~ ERROR E0352
+  pair: (i64, i64), //~ ERROR E0352
+  inout n: i64, //~ ERROR E0352
+  escaping f: fn() -> i64, //~ ERROR E0352
+) -> Never { //~ ERROR E0352
+  panic("never")
+}
+
+pub type Point = { x: i64, y: i64 }
+
+pub extern fn record(p: Point) -> i64 { //~ ERROR E0352
+  p.x
+}
+
+pub extern fn point() -> Point { //~ ERROR E0352
+  Point { x: 1, y: 2 }
+}
+
+pub extern fn unit_parameter(u: ()) -> i64 { //~ ERROR E0352
+  0
+}
+
+pub extern fn widen<
+  T, //~ ERROR E0352
+>(x: i64) -> i64 {
+  x
+}
+
+pub type Mod<n: i64> = { value: i64 }
+
+pub extern fn sized<
+  n: i64, //~ ERROR E0352
+>(x: Mod<n>) -> i64 { //~ ERROR E0352
+  x.value
+}
+
+pub extern fn rowed<
+  e, //~ ERROR E0352
+>(x: i64) -> i64 / e { //~ ERROR E0352
+  x
+}
+
+pub extern fn fails(x: i64) -> i64 / raise<str> { //~ ERROR E0352
+  if x < 0 {
+    raise "negative"
+  }
+  x
+}
+
+pub extern fn waits(x: i64) -> i64 / async { //~ ERROR E0352
+  x
+}
+
+pub effect Log {
+  fn log(line: str)
+}
+
+pub extern fn logs(x: i64) -> i64 / Log { //~ ERROR E0352
+  x
+}
+
+pub extern fn writes(x: i64) -> i64 / io {
+  print("{x}")
+  x
+}
+
+fn main() {}

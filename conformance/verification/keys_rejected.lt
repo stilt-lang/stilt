@@ -1,0 +1,100 @@
+//~ rule: effects.without-panic, facts.rules-of-acceptance, facts.keys, facts.closest-rule
+
+fn removed(k: i64, j: i64) -> i64 without panic {
+  var m: Map<i64, i64> = Map.new()
+  m[k] = 1
+  let _ = m.remove(j)
+  m[k] //~ ERROR E0204
+}
+
+fn cleared(k: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m[k] = 1
+  m.clear()
+  m[k] //~ ERROR E0204
+}
+
+fn assigned(k0: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  var k = k0
+  m[k] = 1
+  k = "b"
+  m[k] //~ ERROR E0204
+}
+
+// The stored value assigns the key after the store's key is evaluated.
+fn assigned_in_value() -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  var k = "a"
+  m[k] = { k = "b"; 1 }
+  m[k] //~ ERROR E0204
+}
+
+fn touch(inout m: Map<str, i64>) without panic { m["z"] = 0 }
+
+fn after_call(k: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m[k] = 1
+  touch(inout m)
+  m[k] //~ ERROR E0204
+}
+
+// The statement that holds the read clears the map.
+fn added(k: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m[k] = 1
+  m[k] += { m.clear(); 1 } //~ ERROR E0204
+  0
+}
+
+// `get_or_insert` is neither a store of facts.keys nor a test.
+fn got(k: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  let _ = m.get_or_insert(k, 6)
+  m[k] //~ ERROR E0204
+}
+
+fn name() -> str { "a" }
+
+// A call's result and an interpolating literal are no keys.
+fn called() -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m[name()] = 1
+  m[name()] //~ ERROR E0204
+}
+
+fn interpolated(k: str) -> i64 without panic {
+  var m: Map<str, i64> = Map.new()
+  m["{k}"] = 1
+  m["{k}"] //~ ERROR E0204
+}
+
+// A user's `eq` may answer `false`, so a key of such a type is never proved.
+type Id = { n: i64 }
+
+impl Eq for Id {
+  fn eq(self, other: Id) -> bool { self.n == other.n }
+}
+
+impl Hash for Id {
+  fn hash(self) -> u64 { self.n.hash() }
+}
+
+fn written(k: Id) -> i64 without panic {
+  var m: Map<Id, i64> = Map.new()
+  m[k] = 1
+  m[k] //~ ERROR E0204
+}
+
+fn generic<K: Eq + Hash>(k: K) -> i64 without panic {
+  var m: Map<K, i64> = Map.new()
+  m[k] = 1
+  m[k] //~ ERROR E0204
+}
+
+// A list of keys whose `Eq` the program writes isn't structural throughout its parts.
+fn listed(k: List<Id>) -> i64 without panic {
+  var m: Map<List<Id>, i64> = Map.new()
+  m[k] = 1
+  m[k] //~ ERROR E0204
+}

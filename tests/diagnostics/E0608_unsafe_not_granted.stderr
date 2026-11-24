@@ -1,0 +1,16 @@
+── EFFECT THAT THE MANIFEST DOESN'T GRANT ────────────── stilt.toml:5:1  [E0608]
+
+`zip.checksum` holds an `unsafe` block at deps/zip/src/main.lt:7:3, but this
+manifest doesn't grant `unsafe` to `zip`:
+
+  5 │ zip = { path = "deps/zip", may = ["io"] }
+    │ ^^^
+
+A dependency performs only the effects and capabilities that its entry grants
+with `may`, as `may = ["fs"]`, and `unsafe` code only with `unsafe`. Grant what
+it needs, if you trust it with that.
+
+To fix it, grant `unsafe` to `zip`:
+
+  5 │ zip = { path = "deps/zip", may = ["unsafe"] }
+    │                                  ~~~~~~~~~~

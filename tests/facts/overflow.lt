@@ -1,0 +1,45 @@
+//~ tier: core
+
+// Integer `+`, `-` and `*`, and their compound assignments, can overflow.
+fn add(x: i64, y: i64) -> i64 { x + y } //~ OVERFLOW
+
+fn step(inout x: i64) {
+  x += 1 //~ OVERFLOW
+  x *= 2 //~ OVERFLOW
+}
+
+// So can `-` on a value, but not a negative literal.
+fn negated(x: i64) -> i64 { -x } //~ OVERFLOW
+
+fn minus_five() -> i64 { -5 }
+
+// Signed `/` and `%` can, unless the divisor is a literal other than `-1`; unsigned ones can't.
+fn halved(x: i64) -> i64 { x / 2 + x % 3 } //~ OVERFLOW
+
+fn divided(x: i64, k: i64) -> i64 { x / k } //~ PANIC OVERFLOW
+
+fn by_minus_one(x: i64) -> i64 { x / -1 } //~ OVERFLOW
+
+fn unsigned(x: u64, k: u64) -> u64 { x / k } //~ PANIC
+
+// A shift can, unless its amount is a literal below the width.
+fn shifted(x: i64, k: i64) -> i64 { (x << 3) | (x >> k) } //~ OVERFLOW
+
+fn too_far(x: u8) -> u8 { x << 8 } //~ OVERFLOW
+
+// Wrapping operators and floats can't.
+fn wrapped(x: i64) -> i64 { x +% 1 -% 2 *% 3 }
+
+fn floats(x: f64) -> f64 { -x * 2.0 + 1.0 }
+
+// `abs` and `pow` can, and a call inherits it, of `sum`, which adds, among them, as a closure's
+// body counts where it is written. `sum` folds with a closure, which allocates.
+fn natives(xs: List<i64>) -> i64 { i64.sum(xs) } //~ OVERFLOW ALLOC
+
+fn power(x: i64) -> i64 { x.pow(3) } //~ OVERFLOW
+
+fn called(x: i64) -> i64 { add(x, 1) } //~ OVERFLOW
+
+fn closure(xs: List<i64>) -> List<i64> {
+  xs.map(|x| x * x) //~ OVERFLOW ALLOC
+}

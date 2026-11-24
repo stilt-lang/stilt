@@ -1,0 +1,15 @@
+── `if let` THAT ALWAYS MATCHES ── W0303_if_let_that_always_matches.lt:3:10  [W0303]
+
+This pattern matches every value, so the block always runs:
+
+  3 │   if let x = xs.first() { print("first: {x}") }
+    │          ^
+
+The pattern matches every value, so the first block always runs with the whole
+value bound. To match what an `Option` holds, write `if let Some(x) = …`; to
+bind the value, write `let`.
+
+To fix it, match what the `Option` holds:
+
+  3 │   if let Some(x) = xs.first() { print("first: {x}") }
+    │          +++++ +

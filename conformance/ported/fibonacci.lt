@@ -1,0 +1,45 @@
+//~ rule: std.integers, numbers.integer-panics, program.panic-report
+//~ stdout:
+//~ | 0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765
+//~ | F(20) = 6765 by recursion
+//~ | F(92) = 7540113804746346429 is the largest that fits an i64
+//~ panic: overflow
+//~ panic-at: fibonacci.lt:18:16
+
+// Rosetta Code, Fibonacci sequence: F(0) = 0, F(1) = 1 and F(n) = F(n - 1) + F(n - 2), shown
+// for n from 0 to 20 (OEIS A000045). F(92) is the last that fits in 64 signed bits: adding
+// the next one with `checked_add` gives `None`, and with `+` panics.
+
+fn fib(n: i64) -> i64 {
+  if n == 0 { return 0 }
+  var a = 0
+  var b = 1
+  for _ in 1..n {
+    let next = a + b
+    a = b
+    b = next
+  }
+  b
+}
+
+fn fib_rec(n: i64) -> i64 { if n < 2 { n } else { fib_rec(n - 1) + fib_rec(n - 2) } }
+
+fn largest_fitting() -> (i64, i64) {
+  var n = 0
+  var a = 0
+  var b = 1
+  loop {
+    let next = a.checked_add(b) else return (n + 1, b)
+    a = b
+    b = next
+    n += 1
+  }
+}
+
+fn main() / io {
+  print(" ".join(List.generate(21, |n| "{fib(n)}")))
+  print("F(20) = {fib_rec(20)} by recursion")
+  let (n, f) = largest_fitting()
+  print("F({n}) = {f} is the largest that fits an i64")
+  print("F({n + 1}) = {fib(n + 1)}")
+}

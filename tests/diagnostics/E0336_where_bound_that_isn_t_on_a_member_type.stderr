@@ -1,0 +1,15 @@
+── `where` BOUND THAT ISN'T ON A MEMBER TYPE ── E0336_where_bound_that_isn_t_on_a_member_type.lt:1:32  [E0336]
+
+`T` is a type parameter, so its bounds go beside it, not in a `where` clause,
+which bounds member types:
+
+  1 │ fn shown<T>(x: T) -> str where T: Show { "{x}" }
+    │                                ^
+
+A type parameter's bound goes beside it, as `<T: Show>`. A `where` clause bounds
+only member types, such as `C.Item`.
+
+To fix it, move the bound beside `T`:
+
+  1 │ fn shown<T: Show>(x: T) -> str { "{x}" }
+    │           ++++++

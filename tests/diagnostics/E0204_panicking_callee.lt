@@ -1,0 +1,3 @@
+fn ratio(part: i64, whole: i64) -> i64 { part * 100 / whole }
+
+pub fn share(part: i64, whole: i64) -> i64 without panic { ratio(part, whole) }

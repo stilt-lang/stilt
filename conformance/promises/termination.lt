@@ -1,0 +1,56 @@
+//~ rule: facts.div, facts.descending-self-calls, facts.without-div
+//~ run-output: "6 2 4 9 3 8"
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Chain = { next: Option<Chain>, n: i64 }
+
+// Each self-call passes a part of `t` that `match` binds inside a payload.
+fn sum(t: Tree) -> i64 without div {
+  match t {
+    Leaf => 0
+    Node(l, v, r) => sum(l) + v + sum(r)
+  }
+}
+
+// The parts are bound by `let … else`.
+fn depth(t: Tree) -> i64 without div {
+  let Node(l, _, r) = t else { return 0 }
+  let a = depth(l)
+  let b = depth(r)
+  if a > b { a + 1 } else { b + 1 }
+}
+
+// The part is reached through a field of `c`, then the payload of `Some`.
+fn total(c: Chain) -> i64 without div {
+  match c.next {
+    Some(rest) => c.n + total(rest)
+    None => c.n
+  }
+}
+
+// A `for` loop ends, and a call through a parameter that isn't escaping adds nothing.
+fn add_all(xs: List<i64>, f: fn(i64) -> i64) -> i64 without div {
+  var s = 0
+  for x in xs { s += f(x) }
+  s
+}
+
+// `spin` has `div`, and no limit covers it.
+fn spin(n: i64) -> i64 {
+  var i = n
+  while i > 0 { i -= 1 }
+  i
+}
+
+// A closure literal called where it is written is the caller's own code.
+fn doubled(x: i64) -> i64 without div { (|n: i64| n * 2)(x) }
+
+// `add_all` is limited by `without div`, so naming it adds nothing.
+fn ends(n: i64) -> i64 without div { add_all([n], |x| x) }
+
+fn main() / io {
+  let t = Node(Node(Leaf, 1, Leaf), 2, Node(Leaf, 3, Leaf))
+  let c = Chain { next: Some(Chain { next: None, n: 1 }), n: 3 }
+  print("{sum(t)} {depth(t)} {total(c)} {add_all([1, 2, 3], |x| x + 1)} {ends(spin(3) + 3)} {doubled(4)}")
+}

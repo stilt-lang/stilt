@@ -1,0 +1,60 @@
+module std.c
+
+// What C reads and writes (c.module-std-c): addresses and the strings C ends with a
+// NUL, which foreign functions take and give, and the operations on them.
+// Reading and writing through an address, and reading a string C gave, are
+// unsafe (c.unsafe-operations), so their examples stand in `unsafe` blocks; the lists and
+// strings that the prelude lends C give the addresses they read (c.lending-buffer).
+// Every item here is native (views.std-view).
+
+/// An address that C reads or writes, of values of type `T`, as C holds
+/// them: `T *`.
+pub type Ptr<T> = ?
+
+/// A string that C ends with a NUL: `const char *`.
+pub type Str = ?
+
+/// The address 0, which points at nothing: C's `NULL`.
+/// ex: { let p: Ptr<u8> = null(); p.is_null() }
+pub fn null<T>() -> Ptr<T> = ?
+
+impl<T> Ptr<T> {
+  /// Whether the address is 0.
+  /// ex: ![1].with_ptr(|p| p.is_null())
+  pub fn is_null(self) -> bool = ?
+
+  /// The address `n` values of `T` further on, or back for a negative `n`,
+  /// wrapping as a `u64` does.
+  /// ex: [1, 2].with_ptr(|p| p.offset(1).address() - p.address()) == 8
+  pub fn offset(self, n: i64) -> Ptr<T> = ?
+
+  /// The address, as a `u64`.
+  /// ex: { let p: Ptr<i32> = null(); p.address() == 0 }
+  pub fn address(self) -> u64 = ?
+
+  /// The value of `T` at the address. Unsafe: the address must hold one.
+  /// ex: [7, 8].with_ptr(|p| unsafe because "p holds two elements" { p.offset(1).read() }) == 8
+  pub fn read(self) -> T = ?
+
+  /// Writes `value` at the address. Unsafe: the address must have room for
+  /// it, which C lets the program write.
+  /// ex: { var xs: List<u8> = [0, 0]; xs.with_mut_ptr(|p| unsafe because "p holds two elements" { p.offset(1).write(5) }); xs == [0, 5] }
+  pub fn write(self, value: T) = ?
+
+  /// The `n` values of `T` from the address on, or `[]` when `n <= 0`.
+  /// Unsafe: the address must hold them.
+  /// ex: [1, 2, 3].with_ptr(|p| unsafe because "p holds three elements" { p.read_list(2) }) == [1, 2]
+  pub fn read_list(self, n: i64) -> List<T> = ?
+}
+
+impl Str {
+  /// Whether the address is 0, as C gives for no string.
+  /// ex: !"a".with_c_str(|s| s.is_null())
+  pub fn is_null(self) -> bool = ?
+
+  /// The bytes up to the NUL, as a `str`, each maximal subpart of an invalid
+  /// UTF-8 sequence replaced by one U+FFFD. Unsafe: the address must hold a
+  /// string that a NUL ends.
+  /// ex: "héllo".with_c_str(|s| unsafe because "with_c_str ends s with a NUL" { s.to_str() }) == "héllo"
+  pub fn to_str(self) -> str = ?
+}

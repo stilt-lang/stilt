@@ -1,0 +1,5 @@
+//~ rule: program.prelude-functions, numbers.integer-literals
+
+fn main() / io {
+  print(5) //~ ERROR E0311
+}

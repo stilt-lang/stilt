@@ -1,0 +1,6 @@
+meta use lines
+
+fn main() / io {
+  let n = lines.count!("Words.txt")
+  print("{n}")
+}

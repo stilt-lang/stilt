@@ -1,0 +1,3 @@
+[dependencies]
+logger = { path = "deps/logger", may = ["console"] }
+audit = { path = "deps/audit" } # //~ ERROR E0608

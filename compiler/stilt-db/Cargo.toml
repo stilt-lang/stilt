@@ -1,0 +1,17 @@
+[package]
+name = "stilt-db"
+description = "The query database of Stilt's compiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-diag = { path = "../stilt-diag" }
+stilt-pkg = { path = "../stilt-pkg" }
+stilt-syntax = { path = "../stilt-syntax" }
+salsa.workspace = true
+
+[lints]
+workspace = true

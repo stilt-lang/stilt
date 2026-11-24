@@ -1,0 +1,10 @@
+type Shape = | Circle(f64) | Square(f64)
+
+fn area(s: Shape) -> f64 {
+  match s {
+    Shape.Circle(r) => 3.14 * r * r
+    Square(a) => a * a
+  }
+}
+
+fn main() / io { print("{area(Circle(1.0))}") }

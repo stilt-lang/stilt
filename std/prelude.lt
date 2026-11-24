@@ -1,0 +1,2161 @@
+module std.prelude
+
+// The prelude (program.contents), and the methods of the built-in types
+// (std.method-names). The built-in types have no declarations: this module is their
+// home, so their impl blocks are here. A body or value written `?` is native
+// (see README.md).
+
+use std.c
+
+/// An optional value.
+pub type Option<T> = | None | Some(T)
+
+/// The result of an operation that can fail, kept as data.
+pub type Result<T, E> = | Ok(T) | Err(E)
+
+/// The result of a comparison.
+pub type Ordering = | Less | Equal | Greater
+
+/// Equality, behind `==` and `!=`.
+pub trait Eq {
+  fn eq(self, other: Self) -> bool
+}
+
+/// A total order, behind `<`, `<=`, `>` and `>=`.
+pub trait Ord {
+  fn compare(self, other: Self) -> Ordering
+}
+
+/// Hashing, for map keys.
+pub trait Hash {
+  fn hash(self) -> u64
+}
+
+/// Text for people to read, behind interpolation.
+pub trait Show {
+  /// The text of `self` on its own.
+  fn show(self) -> str
+  /// The text of `self` inside another value, such as a list.
+  fn show_nested(self) -> str { self.show() }
+}
+
+/// Writes `s` and a newline to stdout.
+pub fn print(s: str) / io = ?
+
+/// Writes `s` and a newline to stderr.
+pub fn eprint(s: str) / io = ?
+
+/// Panics with the kind `explicit`, with `msg` quoted and escaped as its detail.
+pub fn panic(msg: str) -> Never = ?
+
+/// Panics with the kind `unreachable`.
+pub fn unreachable() -> Never = ?
+
+// Panics with the kind `unwrap`, with `detail` as its detail, for `unwrap`.
+fn unwrap_failed(detail: str) -> Never = ?
+
+// Panics with the kind `unwrap`, with `msg` quoted and escaped as its detail,
+// for `expect`.
+fn expect_failed(msg: str) -> Never = ?
+
+/// Flushes both output streams and ends the process with status `code`.
+pub fn exit(code: u8) -> Never / io = ?
+
+impl i8 {
+  /// The smallest `i8`.
+  pub const MIN: i8 = -128
+  /// The largest `i8`.
+  pub const MAX: i8 = 127
+  /// The absolute value. Panics with `overflow` for `i8.MIN`.
+  pub fn abs(self) -> i8 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: i8) -> i8 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: i8) -> i8 = ?
+  /// `self` as an `i8`.
+  pub fn to_i8(self) -> i8 = ?
+  /// `self` as an `i16`.
+  pub fn to_i16(self) -> i16 = ?
+  /// `self` as an `i32`.
+  pub fn to_i32(self) -> i32 = ?
+  /// `self` as an `i64`.
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`, or `None` if it doesn't fit.
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` as a `u32`, or `None` if it doesn't fit.
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` as a `u64`, or `None` if it doesn't fit.
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `i8`.
+  pub fn checked_add(self, other: i8) -> Option<i8> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `i8`.
+  pub fn checked_sub(self, other: i8) -> Option<i8> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `i8`.
+  pub fn checked_mul(self, other: i8) -> Option<i8> = ?
+  /// `self + other`, clamped to `i8.MIN` and `i8.MAX`.
+  pub fn saturating_add(self, other: i8) -> i8 = ?
+  /// `self - other`, clamped to `i8.MIN` and `i8.MAX`.
+  pub fn saturating_sub(self, other: i8) -> i8 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> i8 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: i8) -> i8 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: i8) -> i8 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: i8) -> i8 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: i8) -> i8 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: i8, hi: i8) -> i8 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<i8>) -> i8 { xs.fold(0, |total, x| total + x) }
+}
+
+impl i16 {
+  /// The smallest `i16`.
+  pub const MIN: i16 = -32768
+  /// The largest `i16`.
+  pub const MAX: i16 = 32767
+  /// The absolute value. Panics with `overflow` for `i16.MIN`.
+  pub fn abs(self) -> i16 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: i16) -> i16 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: i16) -> i16 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`.
+  pub fn to_i16(self) -> i16 = ?
+  /// `self` as an `i32`.
+  pub fn to_i32(self) -> i32 = ?
+  /// `self` as an `i64`.
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`, or `None` if it doesn't fit.
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` as a `u32`, or `None` if it doesn't fit.
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` as a `u64`, or `None` if it doesn't fit.
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `i16`.
+  pub fn checked_add(self, other: i16) -> Option<i16> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `i16`.
+  pub fn checked_sub(self, other: i16) -> Option<i16> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `i16`.
+  pub fn checked_mul(self, other: i16) -> Option<i16> = ?
+  /// `self + other`, clamped to `i16.MIN` and `i16.MAX`.
+  pub fn saturating_add(self, other: i16) -> i16 = ?
+  /// `self - other`, clamped to `i16.MIN` and `i16.MAX`.
+  pub fn saturating_sub(self, other: i16) -> i16 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> i16 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: i16) -> i16 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: i16) -> i16 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: i16) -> i16 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: i16) -> i16 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: i16, hi: i16) -> i16 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<i16>) -> i16 { xs.fold(0, |total, x| total + x) }
+}
+
+impl i32 {
+  /// The smallest `i32`.
+  pub const MIN: i32 = -2147483648
+  /// The largest `i32`.
+  pub const MAX: i32 = 2147483647
+  /// The absolute value. Panics with `overflow` for `i32.MIN`.
+  pub fn abs(self) -> i32 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: i32) -> i32 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: i32) -> i32 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`, or `None` if it doesn't fit.
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` as an `i32`.
+  pub fn to_i32(self) -> i32 = ?
+  /// `self` as an `i64`.
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`, or `None` if it doesn't fit.
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` as a `u32`, or `None` if it doesn't fit.
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` as a `u64`, or `None` if it doesn't fit.
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `i32`.
+  pub fn checked_add(self, other: i32) -> Option<i32> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `i32`.
+  pub fn checked_sub(self, other: i32) -> Option<i32> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `i32`.
+  pub fn checked_mul(self, other: i32) -> Option<i32> = ?
+  /// `self + other`, clamped to `i32.MIN` and `i32.MAX`.
+  pub fn saturating_add(self, other: i32) -> i32 = ?
+  /// `self - other`, clamped to `i32.MIN` and `i32.MAX`.
+  pub fn saturating_sub(self, other: i32) -> i32 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> i32 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: i32) -> i32 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: i32) -> i32 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: i32) -> i32 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: i32) -> i32 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: i32, hi: i32) -> i32 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<i32>) -> i32 { xs.fold(0, |total, x| total + x) }
+}
+
+impl i64 {
+  /// The smallest `i64`.
+  pub const MIN: i64 = -9223372036854775808
+  /// The largest `i64`.
+  pub const MAX: i64 = 9223372036854775807
+  /// The absolute value. Panics with `overflow` for `i64.MIN`.
+  /// ex: (-5).abs() == 5
+  pub fn abs(self) -> i64 = ?
+  /// The smaller of `self` and `other`.
+  /// ex: 3.min(7) == 3
+  pub fn min(self, other: i64) -> i64 = ?
+  /// The larger of `self` and `other`.
+  /// ex: 3.max(7) == 7
+  pub fn max(self, other: i64) -> i64 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  /// ex: 100.to_i8() == Some(100)
+  /// ex: 300.to_i8() == None
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`, or `None` if it doesn't fit.
+  /// ex: 40000.to_i16() == None
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` as an `i32`, or `None` if it doesn't fit.
+  /// ex: (-7).to_i32() == Some(-7)
+  pub fn to_i32(self) -> Option<i32> = ?
+  /// `self` as an `i64`.
+  /// ex: 7.to_i64() == 7
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  /// ex: (-1).to_u8() == None
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`, or `None` if it doesn't fit.
+  /// ex: 65535.to_u16() == Some(65535)
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` as a `u32`, or `None` if it doesn't fit.
+  /// ex: (-1).to_u32() == None
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` as a `u64`, or `None` if it doesn't fit.
+  /// ex: 7.to_u64() == Some(7)
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  /// ex: 3.to_f32() == 3.0
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  /// ex: (-2).to_f64() == -2.0
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  /// ex: 300.wrap_to_i8() == 44
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  /// ex: 70000.wrap_to_i16() == 4464
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  /// ex: 4294967297.wrap_to_i32() == 1
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  /// ex: (-1).wrap_to_i64() == -1
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  /// ex: (-1).wrap_to_u8() == 255
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  /// ex: (-1).wrap_to_u16() == 65535
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  /// ex: (-1).wrap_to_u32() == 4294967295
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  /// ex: (-1).wrap_to_u64() == 18446744073709551615
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `i64`.
+  /// ex: 2.checked_add(3) == Some(5)
+  /// ex: i64.MAX.checked_add(1) == None
+  pub fn checked_add(self, other: i64) -> Option<i64> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `i64`.
+  /// ex: i64.MIN.checked_sub(1) == None
+  pub fn checked_sub(self, other: i64) -> Option<i64> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `i64`.
+  /// ex: i64.MAX.checked_mul(2) == None
+  pub fn checked_mul(self, other: i64) -> Option<i64> = ?
+  /// `self + other`, clamped to `i64.MIN` and `i64.MAX`.
+  /// ex: i64.MAX.saturating_add(1) == i64.MAX
+  pub fn saturating_add(self, other: i64) -> i64 = ?
+  /// `self - other`, clamped to `i64.MIN` and `i64.MAX`.
+  /// ex: i64.MIN.saturating_sub(1) == i64.MIN
+  pub fn saturating_sub(self, other: i64) -> i64 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  /// ex: 2.pow(10) == 1024
+  /// ex: (-3).pow(3) == -27
+  pub fn pow(self, exp: u32) -> i64 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  /// ex: (-7).div_euclid(2) == -4
+  pub fn div_euclid(self, other: i64) -> i64 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  /// ex: (-7).rem_euclid(2) == 1
+  pub fn rem_euclid(self, other: i64) -> i64 = ?
+  /// The number of 1 bits.
+  /// ex: 7.count_ones() == 3
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  /// ex: 1.leading_zeros() == 63
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  /// ex: 8.trailing_zeros() == 3
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  /// ex: 12.gcd(-18) == 6
+  pub fn gcd(self, other: i64) -> i64 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  /// ex: 4.lcm(6) == 12
+  pub fn lcm(self, other: i64) -> i64 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  /// ex: 15.clamp(0, 10) == 10
+  pub fn clamp(self, lo: i64, hi: i64) -> i64 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  /// ex: i64.sum([1, 2, 3]) == 6
+  pub fn sum(xs: List<i64>) -> i64 { xs.fold(0, |total, x| total + x) }
+}
+
+impl u8 {
+  /// The smallest `u8`.
+  pub const MIN: u8 = 0
+  /// The largest `u8`.
+  pub const MAX: u8 = 255
+  /// The absolute value, which is `self`.
+  pub fn abs(self) -> u8 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: u8) -> u8 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: u8) -> u8 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`.
+  pub fn to_i16(self) -> i16 = ?
+  /// `self` as an `i32`.
+  pub fn to_i32(self) -> i32 = ?
+  /// `self` as an `i64`.
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`.
+  pub fn to_u8(self) -> u8 = ?
+  /// `self` as a `u16`.
+  pub fn to_u16(self) -> u16 = ?
+  /// `self` as a `u32`.
+  pub fn to_u32(self) -> u32 = ?
+  /// `self` as a `u64`.
+  pub fn to_u64(self) -> u64 = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `u8`.
+  pub fn checked_add(self, other: u8) -> Option<u8> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `u8`.
+  pub fn checked_sub(self, other: u8) -> Option<u8> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `u8`.
+  pub fn checked_mul(self, other: u8) -> Option<u8> = ?
+  /// `self + other`, clamped to `u8.MIN` and `u8.MAX`.
+  pub fn saturating_add(self, other: u8) -> u8 = ?
+  /// `self - other`, clamped to `u8.MIN` and `u8.MAX`.
+  pub fn saturating_sub(self, other: u8) -> u8 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> u8 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: u8) -> u8 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: u8) -> u8 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: u8) -> u8 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: u8) -> u8 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: u8, hi: u8) -> u8 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<u8>) -> u8 { xs.fold(0, |total, x| total + x) }
+}
+
+impl u16 {
+  /// The smallest `u16`.
+  pub const MIN: u16 = 0
+  /// The largest `u16`.
+  pub const MAX: u16 = 65535
+  /// The absolute value, which is `self`.
+  pub fn abs(self) -> u16 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: u16) -> u16 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: u16) -> u16 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`, or `None` if it doesn't fit.
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` as an `i32`.
+  pub fn to_i32(self) -> i32 = ?
+  /// `self` as an `i64`.
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`.
+  pub fn to_u16(self) -> u16 = ?
+  /// `self` as a `u32`.
+  pub fn to_u32(self) -> u32 = ?
+  /// `self` as a `u64`.
+  pub fn to_u64(self) -> u64 = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `u16`.
+  pub fn checked_add(self, other: u16) -> Option<u16> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `u16`.
+  pub fn checked_sub(self, other: u16) -> Option<u16> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `u16`.
+  pub fn checked_mul(self, other: u16) -> Option<u16> = ?
+  /// `self + other`, clamped to `u16.MIN` and `u16.MAX`.
+  pub fn saturating_add(self, other: u16) -> u16 = ?
+  /// `self - other`, clamped to `u16.MIN` and `u16.MAX`.
+  pub fn saturating_sub(self, other: u16) -> u16 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> u16 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: u16) -> u16 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: u16) -> u16 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: u16) -> u16 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: u16) -> u16 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: u16, hi: u16) -> u16 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<u16>) -> u16 { xs.fold(0, |total, x| total + x) }
+}
+
+impl u32 {
+  /// The smallest `u32`.
+  pub const MIN: u32 = 0
+  /// The largest `u32`.
+  pub const MAX: u32 = 4294967295
+  /// The absolute value, which is `self`.
+  pub fn abs(self) -> u32 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: u32) -> u32 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: u32) -> u32 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`, or `None` if it doesn't fit.
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` as an `i32`, or `None` if it doesn't fit.
+  pub fn to_i32(self) -> Option<i32> = ?
+  /// `self` as an `i64`.
+  pub fn to_i64(self) -> i64 = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`, or `None` if it doesn't fit.
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` as a `u32`.
+  pub fn to_u32(self) -> u32 = ?
+  /// `self` as a `u64`.
+  pub fn to_u64(self) -> u64 = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `u32`.
+  pub fn checked_add(self, other: u32) -> Option<u32> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `u32`.
+  pub fn checked_sub(self, other: u32) -> Option<u32> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `u32`.
+  pub fn checked_mul(self, other: u32) -> Option<u32> = ?
+  /// `self + other`, clamped to `u32.MIN` and `u32.MAX`.
+  pub fn saturating_add(self, other: u32) -> u32 = ?
+  /// `self - other`, clamped to `u32.MIN` and `u32.MAX`.
+  pub fn saturating_sub(self, other: u32) -> u32 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> u32 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: u32) -> u32 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: u32) -> u32 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: u32) -> u32 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: u32) -> u32 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: u32, hi: u32) -> u32 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<u32>) -> u32 { xs.fold(0, |total, x| total + x) }
+}
+
+impl u64 {
+  /// The smallest `u64`.
+  pub const MIN: u64 = 0
+  /// The largest `u64`.
+  pub const MAX: u64 = 18446744073709551615
+  /// The absolute value, which is `self`.
+  pub fn abs(self) -> u64 = ?
+  /// The smaller of `self` and `other`.
+  pub fn min(self, other: u64) -> u64 = ?
+  /// The larger of `self` and `other`.
+  pub fn max(self, other: u64) -> u64 = ?
+  /// `self` as an `i8`, or `None` if it doesn't fit.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` as an `i16`, or `None` if it doesn't fit.
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` as an `i32`, or `None` if it doesn't fit.
+  pub fn to_i32(self) -> Option<i32> = ?
+  /// `self` as an `i64`, or `None` if it doesn't fit.
+  pub fn to_i64(self) -> Option<i64> = ?
+  /// `self` as a `u8`, or `None` if it doesn't fit.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` as a `u16`, or `None` if it doesn't fit.
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` as a `u32`, or `None` if it doesn't fit.
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` as a `u64`.
+  pub fn to_u64(self) -> u64 = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, rounded to nearest with ties to even.
+  pub fn to_f64(self) -> f64 = ?
+  /// The low bits of `self`, as an `i8`.
+  pub fn wrap_to_i8(self) -> i8 = ?
+  /// The low bits of `self`, as an `i16`.
+  pub fn wrap_to_i16(self) -> i16 = ?
+  /// The low bits of `self`, as an `i32`.
+  pub fn wrap_to_i32(self) -> i32 = ?
+  /// The low bits of `self`, as an `i64`.
+  pub fn wrap_to_i64(self) -> i64 = ?
+  /// The low bits of `self`, as a `u8`.
+  pub fn wrap_to_u8(self) -> u8 = ?
+  /// The low bits of `self`, as a `u16`.
+  pub fn wrap_to_u16(self) -> u16 = ?
+  /// The low bits of `self`, as a `u32`.
+  pub fn wrap_to_u32(self) -> u32 = ?
+  /// The low bits of `self`, as a `u64`.
+  pub fn wrap_to_u64(self) -> u64 = ?
+  /// `self + other`, or `None` if the sum doesn't fit in `u64`.
+  pub fn checked_add(self, other: u64) -> Option<u64> = ?
+  /// `self - other`, or `None` if the difference doesn't fit in `u64`.
+  pub fn checked_sub(self, other: u64) -> Option<u64> = ?
+  /// `self * other`, or `None` if the product doesn't fit in `u64`.
+  pub fn checked_mul(self, other: u64) -> Option<u64> = ?
+  /// `self + other`, clamped to `u64.MIN` and `u64.MAX`.
+  pub fn saturating_add(self, other: u64) -> u64 = ?
+  /// `self - other`, clamped to `u64.MIN` and `u64.MAX`.
+  pub fn saturating_sub(self, other: u64) -> u64 = ?
+  /// `self` raised to `exp`. Panics with `overflow` if the result doesn't fit.
+  pub fn pow(self, exp: u32) -> u64 = ?
+  /// The quotient of Euclidean division, whose remainder is never negative.
+  /// Panics with `divide-by-zero` when `other` is 0.
+  pub fn div_euclid(self, other: u64) -> u64 = ?
+  /// The remainder of Euclidean division, which is never negative. Panics
+  /// with `divide-by-zero` when `other` is 0.
+  pub fn rem_euclid(self, other: u64) -> u64 = ?
+  /// The number of 1 bits.
+  pub fn count_ones(self) -> i64 = ?
+  /// The number of 0 bits before the highest 1 bit.
+  pub fn leading_zeros(self) -> i64 = ?
+  /// The number of 0 bits after the lowest 1 bit.
+  pub fn trailing_zeros(self) -> i64 = ?
+  /// The greatest common divisor of the absolute values, never negative.
+  pub fn gcd(self, other: u64) -> u64 = ?
+  /// The least common multiple of the absolute values, or 0 if either is 0.
+  pub fn lcm(self, other: u64) -> u64 = ?
+  /// `self` raised to `lo`, then lowered to `hi`.
+  pub fn clamp(self, lo: u64, hi: u64) -> u64 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`. Panics with `overflow` as `+` does.
+  pub fn sum(xs: List<u64>) -> u64 { xs.fold(0, |total, x| total + x) }
+}
+
+impl f32 {
+  /// The `f32` closest to π.
+  pub const PI: f32 = 3.1415927
+  /// The `f32` closest to e.
+  pub const E: f32 = 2.7182817
+  /// A quiet NaN.
+  pub const NAN: f32 = ?
+  /// Positive infinity.
+  pub const INFINITY: f32 = ?
+  /// The square root.
+  pub fn sqrt(self) -> f32 = ?
+  /// The largest integer no greater than `self`.
+  pub fn floor(self) -> f32 = ?
+  /// The smallest integer no less than `self`.
+  pub fn ceil(self) -> f32 = ?
+  /// `self` rounded toward zero.
+  pub fn trunc(self) -> f32 = ?
+  /// `self` rounded to the nearest integer, with halves away from zero.
+  pub fn round(self) -> f32 = ?
+  /// The absolute value.
+  pub fn abs(self) -> f32 = ?
+  /// IEEE 754 `minimum`: NaN if either operand is NaN, and `-0.0` is less than `0.0`.
+  pub fn min(self, other: f32) -> f32 = ?
+  /// IEEE 754 `maximum`: NaN if either operand is NaN, and `-0.0` is less than `0.0`.
+  pub fn max(self, other: f32) -> f32 = ?
+  /// Whether `self` is NaN.
+  pub fn is_nan(self) -> bool = ?
+  /// `self` truncated toward zero, as an `i8`, or `None` for NaN, infinities and values out of range.
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` truncated toward zero, as an `i16`, or `None` for NaN, infinities and values out of range.
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` truncated toward zero, as an `i32`, or `None` for NaN, infinities and values out of range.
+  pub fn to_i32(self) -> Option<i32> = ?
+  /// `self` truncated toward zero, as an `i64`, or `None` for NaN, infinities and values out of range.
+  pub fn to_i64(self) -> Option<i64> = ?
+  /// `self` truncated toward zero, as a `u8`, or `None` for NaN, infinities and values out of range.
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` truncated toward zero, as a `u16`, or `None` for NaN, infinities and values out of range.
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` truncated toward zero, as a `u32`, or `None` for NaN, infinities and values out of range.
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` truncated toward zero, as a `u64`, or `None` for NaN, infinities and values out of range.
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self`.
+  pub fn to_f32(self) -> f32 = ?
+  /// `self` as an `f64`, exactly.
+  pub fn to_f64(self) -> f64 = ?
+  /// The largest finite `f32`.
+  pub const MAX: f32 = 3.4028235e38
+  /// The smallest finite `f32`.
+  pub const MIN: f32 = -3.4028235e38
+  /// The difference between 1.0 and the next larger `f32`.
+  pub const EPSILON: f32 = 1.1920929e-7
+  /// The smallest positive normal `f32`.
+  pub const MIN_POSITIVE: f32 = 1.1754944e-38
+  /// Whether `self` is neither infinite nor NaN.
+  pub fn is_finite(self) -> bool { !self.is_nan() && !self.is_infinite() }
+  /// Whether `self` is an infinity.
+  pub fn is_infinite(self) -> bool { self.abs() == f32.INFINITY }
+  /// `self` raised to `lo`, then lowered to `hi`, so NaN stays NaN.
+  pub fn clamp(self, lo: f32, hi: f32) -> f32 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`, added from the first to the last.
+  pub fn sum(xs: List<f32>) -> f32 { xs.fold(0.0, |total, x| total + x) }
+}
+
+impl f64 {
+  /// The `f64` closest to π.
+  pub const PI: f64 = 3.141592653589793
+  /// The `f64` closest to e.
+  pub const E: f64 = 2.718281828459045
+  /// A quiet NaN.
+  pub const NAN: f64 = ?
+  /// Positive infinity.
+  pub const INFINITY: f64 = ?
+  /// The square root.
+  /// ex: f64.sqrt(9.0) == 3.0
+  pub fn sqrt(self) -> f64 = ?
+  /// The largest integer no greater than `self`.
+  /// ex: f64.floor(-1.5) == -2.0
+  pub fn floor(self) -> f64 = ?
+  /// The smallest integer no less than `self`.
+  /// ex: f64.ceil(1.2) == 2.0
+  pub fn ceil(self) -> f64 = ?
+  /// `self` rounded toward zero.
+  /// ex: f64.trunc(-1.7) == -1.0
+  pub fn trunc(self) -> f64 = ?
+  /// `self` rounded to the nearest integer, with halves away from zero.
+  /// ex: f64.round(2.5) == 3.0
+  pub fn round(self) -> f64 = ?
+  /// The absolute value.
+  /// ex: f64.abs(-0.5) == 0.5
+  pub fn abs(self) -> f64 = ?
+  /// IEEE 754 `minimum`: NaN if either operand is NaN, and `-0.0` is less than `0.0`.
+  /// ex: f64.min(1.0, 2.0) == 1.0
+  pub fn min(self, other: f64) -> f64 = ?
+  /// IEEE 754 `maximum`: NaN if either operand is NaN, and `-0.0` is less than `0.0`.
+  /// ex: f64.max(1.0, 2.0) == 2.0
+  pub fn max(self, other: f64) -> f64 = ?
+  /// Whether `self` is NaN.
+  /// ex: f64.NAN.is_nan()
+  pub fn is_nan(self) -> bool = ?
+  /// `self` truncated toward zero, as an `i8`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_i8(200.0) == None
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` truncated toward zero, as an `i16`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_i16(-1.5) == Some(-1)
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` truncated toward zero, as an `i32`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_i32(f64.NAN) == None
+  pub fn to_i32(self) -> Option<i32> = ?
+  /// `self` truncated toward zero, as an `i64`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_i64(-2.9) == Some(-2)
+  pub fn to_i64(self) -> Option<i64> = ?
+  /// `self` truncated toward zero, as a `u8`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_u8(-0.5) == Some(0)
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` truncated toward zero, as a `u16`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_u16(65535.9) == Some(65535)
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` truncated toward zero, as a `u32`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_u32(-1.0) == None
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` truncated toward zero, as a `u64`, or `None` for NaN, infinities and values out of range.
+  /// ex: f64.to_u64(f64.INFINITY) == None
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self` as an `f32`, rounded to nearest with ties to even.
+  /// ex: f64.to_f32(0.5) == 0.5
+  pub fn to_f32(self) -> f32 = ?
+  /// `self`.
+  /// ex: f64.to_f64(0.5) == 0.5
+  pub fn to_f64(self) -> f64 = ?
+  /// The largest finite `f64`.
+  pub const MAX: f64 = 1.7976931348623157e308
+  /// The smallest finite `f64`.
+  pub const MIN: f64 = -1.7976931348623157e308
+  /// The difference between 1.0 and the next larger `f64`.
+  pub const EPSILON: f64 = 2.220446049250313e-16
+  /// The smallest positive normal `f64`.
+  pub const MIN_POSITIVE: f64 = 2.2250738585072014e-308
+  /// Whether `self` is neither infinite nor NaN.
+  /// ex: f64.is_finite(1.0)
+  /// ex: !f64.INFINITY.is_finite()
+  pub fn is_finite(self) -> bool { !self.is_nan() && !self.is_infinite() }
+  /// Whether `self` is an infinity.
+  /// ex: (-f64.INFINITY).is_infinite()
+  pub fn is_infinite(self) -> bool { self.abs() == f64.INFINITY }
+  /// `self` raised to `lo`, then lowered to `hi`, so NaN stays NaN.
+  /// ex: f64.clamp(1.5, 0.0, 1.0) == 1.0
+  pub fn clamp(self, lo: f64, hi: f64) -> f64 { self.max(lo).min(hi) }
+  /// The sum of the elements of `xs`, added from the first to the last.
+  /// ex: f64.sum([0.5, 0.25]) == 0.75
+  pub fn sum(xs: List<f64>) -> f64 { xs.fold(0.0, |total, x| total + x) }
+}
+
+impl str {
+  /// The length in bytes.
+  /// ex: "héllo".len() == 6
+  pub fn len(self) -> i64 = ?
+  /// Whether `self` is `""`.
+  /// ex: "".is_empty()
+  pub fn is_empty(self) -> bool = ?
+  /// Whether `sub` occurs in `self`. Every string contains `""`.
+  /// ex: "banana".contains("nan")
+  pub fn contains(self, sub: str) -> bool = ?
+  /// Whether `self` starts with `prefix`.
+  /// ex: "banana".starts_with("ba")
+  pub fn starts_with(self, prefix: str) -> bool = ?
+  /// Whether `self` ends with `suffix`.
+  /// ex: "banana".ends_with("na")
+  pub fn ends_with(self, suffix: str) -> bool = ?
+  /// The byte offset of the first occurrence of `sub`.
+  /// ex: "banana".find("an") == Some(1)
+  pub fn find(self, sub: str) -> Option<i64> = ?
+  /// The bytes from `start` up to `end`. Panics with `bounds` unless
+  /// `0 <= start <= end <= len`, and with `utf8-boundary` when an offset
+  /// falls inside a UTF-8 sequence.
+  /// ex: "banana".slice(1, 3) == "an"
+  pub fn slice(self, start: i64, end: i64) -> str = ?
+  /// The pieces between occurrences of `sep`. An empty `sep` splits into
+  /// Unicode scalar values.
+  /// ex: "a,,b".split(",") == ["a", "", "b"]
+  pub fn split(self, sep: str) -> List<str> = ?
+  /// The lines, split on `\n`, each without a trailing `\r`.
+  /// ex: "a\r\nb\n".lines() == ["a", "b"]
+  pub fn lines(self) -> List<str> = ?
+  /// `self` without ASCII whitespace at either end.
+  /// ex: " a b\n".trim() == "a b"
+  pub fn trim(self) -> str = ?
+  /// `self` with every occurrence of `from` replaced by `to`, from left to
+  /// right.
+  /// ex: "a-b-c".replace("-", "+") == "a+b+c"
+  pub fn replace(self, from: str, to: str) -> str = ?
+  /// The Unicode scalar values, one string each.
+  /// ex: "hé".chars() == ["h", "é"]
+  pub fn chars(self) -> List<str> = ?
+  /// The bytes.
+  /// ex: "hé".bytes() == [104, 195, 169]
+  pub fn bytes(self) -> List<u8> = ?
+  /// `self` with ASCII letters in uppercase.
+  /// ex: "abc1".ascii_upper() == "ABC1"
+  pub fn ascii_upper(self) -> str = ?
+  /// `self` with ASCII letters in lowercase.
+  /// ex: "AbC".ascii_lower() == "abc"
+  pub fn ascii_lower(self) -> str = ?
+  /// `parts` joined with `self` between them.
+  /// ex: ", ".join(["a", "b"]) == "a, b"
+  pub fn join(self, parts: List<str>) -> str = ?
+  /// `self` without the ASCII whitespace at its start.
+  /// ex: " \ta ".trim_start() == "a "
+  pub fn trim_start(self) -> str = ?
+  /// `self` without the ASCII whitespace at its end.
+  /// ex: " a \n".trim_end() == " a"
+  pub fn trim_end(self) -> str = ?
+  /// The rest of `self` after `prefix`, or `None` if it doesn't start with it.
+  /// ex: "v1.2".strip_prefix("v") == Some("1.2")
+  /// ex: "1.2".strip_prefix("v") == None
+  pub fn strip_prefix(self, prefix: str) -> Option<str> = ?
+  /// The rest of `self` before `suffix`, or `None` if it doesn't end with it.
+  /// ex: "main.lt".strip_suffix(".lt") == Some("main")
+  pub fn strip_suffix(self, suffix: str) -> Option<str> = ?
+  /// The text before and after the first occurrence of `sep`.
+  /// ex: "k=v=w".split_once("=") == Some(("k", "v=w"))
+  pub fn split_once(self, sep: str) -> Option<(str, str)> = ?
+  /// The text before and after the last occurrence of `sep`.
+  /// ex: "k=v=w".rsplit_once("=") == Some(("k=v", "w"))
+  pub fn rsplit_once(self, sep: str) -> Option<(str, str)> = ?
+  /// The byte offset of the last occurrence of `sub`. `rfind("")` is
+  /// `Some(len)`.
+  /// ex: "banana".rfind("an") == Some(3)
+  pub fn rfind(self, sub: str) -> Option<i64> = ?
+  /// The number of non-overlapping occurrences of `sub`, from left to right,
+  /// or the number of scalar values plus one for an empty `sub`.
+  /// ex: "banana".count("an") == 2
+  /// ex: "ab".count("") == 3
+  pub fn count(self, sub: str) -> i64 = ?
+  /// `self` with its first occurrence of `from` replaced by `to`.
+  /// ex: "a-b-c".replace_first("-", "+") == "a+b-c"
+  pub fn replace_first(self, from: str, to: str) -> str = ?
+  /// `n` copies of `self`, or `""` when `n <= 0`.
+  /// ex: "ab".repeat(3) == "ababab"
+  pub fn repeat(self, n: i64) -> str { "".join(List.repeat(self, n)) }
+  /// The pieces between runs of ASCII whitespace, none of them empty.
+  /// ex: " a  b\tc ".split_whitespace() == ["a", "b", "c"]
+  pub fn split_whitespace(self) -> List<str> = ?
+  /// `self` after copies of `fill`, the last cut short, so that it holds
+  /// `width` scalar values.
+  /// ex: "7".pad_start(3, "0") == "007"
+  pub fn pad_start(self, width: i64, fill: str) -> str = ?
+  /// `self` before copies of `fill`, the last cut short, so that it holds
+  /// `width` scalar values.
+  /// ex: "ab".pad_end(5, "-+") == "ab-+-"
+  pub fn pad_end(self, width: i64, fill: str) -> str = ?
+  /// The number of Unicode scalar values.
+  /// ex: "héllo".char_count() == 5
+  pub fn char_count(self) -> i64 = ?
+  /// The scalar values in reverse order.
+  /// ex: "abc".reversed() == "cba"
+  pub fn reversed(self) -> str = ?
+  /// Whether every byte is ASCII.
+  /// ex: "abc".is_ascii()
+  /// ex: !"é".is_ascii()
+  pub fn is_ascii(self) -> bool = ?
+  /// Whether `self` isn't empty and every byte is an ASCII digit.
+  /// ex: "42".is_ascii_digit()
+  /// ex: !"".is_ascii_digit()
+  pub fn is_ascii_digit(self) -> bool = ?
+  /// Whether `self` isn't empty and every byte is an ASCII letter.
+  /// ex: "Ab".is_ascii_alpha()
+  pub fn is_ascii_alpha(self) -> bool = ?
+  /// Whether `self` isn't empty and every byte is an ASCII letter or digit.
+  /// ex: "a1".is_ascii_alphanumeric()
+  pub fn is_ascii_alphanumeric(self) -> bool = ?
+  /// Whether `self` isn't empty and every byte is ASCII whitespace.
+  /// ex: " \t".is_ascii_whitespace()
+  pub fn is_ascii_whitespace(self) -> bool = ?
+  /// Whether `self` isn't empty and every byte is an uppercase ASCII letter.
+  /// ex: "AB".is_ascii_upper()
+  pub fn is_ascii_upper(self) -> bool = ?
+  /// Whether `self` isn't empty and every byte is a lowercase ASCII letter.
+  /// ex: "ab".is_ascii_lower()
+  pub fn is_ascii_lower(self) -> bool = ?
+  /// Whether `self` and `other` are equal once their ASCII letters are
+  /// lowered.
+  /// ex: "Hello".eq_ignore_ascii_case("hELLO")
+  pub fn eq_ignore_ascii_case(self, other: str) -> bool {
+    self.ascii_lower() == other.ascii_lower()
+  }
+  /// The Unicode scalar values, as numbers.
+  /// ex: "aé".code_points() == [97, 233]
+  pub fn code_points(self) -> List<u32> = ?
+  /// The string of the scalar value `point`, or `None` for a surrogate or a
+  /// value above `0x10FFFF`.
+  /// ex: str.from_code_point(233) == Some("é")
+  /// ex: str.from_code_point(55296) == None
+  pub fn from_code_point(point: u32) -> Option<str> = ?
+  /// The string of the scalar values `cs`, or `None` if one is invalid.
+  /// ex: str.from_code_points([104, 105]) == Some("hi")
+  pub fn from_code_points(cs: List<u32>) -> Option<str> {
+    let parts = Option.all(cs.map(str.from_code_point)) else return None
+    Some("".join(parts))
+  }
+  /// The string whose UTF-8 bytes are `bytes`, or `None` if they aren't valid
+  /// UTF-8.
+  /// ex: str.from_utf8([104, 105]) == Some("hi")
+  /// ex: str.from_utf8([255]) == None
+  pub fn from_utf8(bytes: List<u8>) -> Option<str> = ?
+  /// `bytes` as a string, each maximal subpart of an invalid sequence
+  /// replaced by U+FFFD.
+  /// ex: str.from_utf8_lossy([104, 255]) == "h\u{fffd}"
+  pub fn from_utf8_lossy(bytes: List<u8>) -> str = ?
+
+  /// `self` parsed as an `i8` (numbers.parsing).
+  /// ex: "128".to_i8() == None
+  pub fn to_i8(self) -> Option<i8> = ?
+  /// `self` parsed as an `i16` (numbers.parsing).
+  /// ex: "007".to_i16() == Some(7)
+  pub fn to_i16(self) -> Option<i16> = ?
+  /// `self` parsed as an `i32` (numbers.parsing).
+  /// ex: "+1".to_i32() == None
+  pub fn to_i32(self) -> Option<i32> = ?
+  /// `self` parsed as an `i64` (numbers.parsing).
+  /// ex: "-42".to_i64() == Some(-42)
+  pub fn to_i64(self) -> Option<i64> = ?
+  /// `self` parsed as a `u8` (numbers.parsing).
+  /// ex: "-0".to_u8() == None
+  pub fn to_u8(self) -> Option<u8> = ?
+  /// `self` parsed as a `u16` (numbers.parsing).
+  /// ex: "65535".to_u16() == Some(65535)
+  pub fn to_u16(self) -> Option<u16> = ?
+  /// `self` parsed as a `u32` (numbers.parsing).
+  /// ex: " 1".to_u32() == None
+  pub fn to_u32(self) -> Option<u32> = ?
+  /// `self` parsed as a `u64` (numbers.parsing).
+  /// ex: "18446744073709551615".to_u64() == Some(18446744073709551615)
+  pub fn to_u64(self) -> Option<u64> = ?
+  /// `self` parsed as an `f32` (numbers.parsing).
+  /// ex: "0.5".to_f32() == Some(0.5)
+  pub fn to_f32(self) -> Option<f32> = ?
+  /// `self` parsed as an `f64` (numbers.parsing).
+  /// ex: "1.5e3".to_f64() == Some(1500.0)
+  pub fn to_f64(self) -> Option<f64> = ?
+
+  /// `f(s)`, where `s` is a copy of `self` that C reads, ended with a NUL,
+  /// which lives until `f` returns (c.lending-methods). Panics with
+  /// `nul-in-string` when `self` holds a NUL.
+  /// ex: "abc".with_c_str(|s| unsafe because "s ends with a NUL" { s.to_str() }) == "abc"
+  pub fn with_c_str<R>(self, f: fn(c.Str) -> R) -> R = ?
+}
+
+impl<T> List<T> {
+  /// An empty list.
+  /// ex: List.new().concat([1]) == [1]
+  pub fn new() -> List<T> = ?
+  /// The number of elements.
+  /// ex: [5, 6].len() == 2
+  pub fn len(self) -> i64 = ?
+  /// Whether the list has no elements.
+  /// ex: ![5].is_empty()
+  pub fn is_empty(self) -> bool = ?
+  /// Element `i`, or `None` unless `0 <= i < len`.
+  /// ex: [5, 6].get(1) == Some(6)
+  /// ex: [5, 6].get(2) == None
+  pub fn get(self, i: i64) -> Option<T> = ?
+  /// Appends `x`.
+  /// ex: { var xs = [1]; xs.push(2); xs == [1, 2] }
+  pub fn push(inout self, x: T) = ?
+  /// Removes and returns the last element.
+  /// ex: { var xs = [1, 2]; xs.pop() == Some(2) && xs == [1] }
+  pub fn pop(inout self) -> Option<T> = ?
+  /// Inserts `x` at index `i`. Panics with `bounds` unless `0 <= i <= len`.
+  /// ex: { var xs = [1, 3]; xs.insert(1, 2); xs == [1, 2, 3] }
+  pub fn insert(inout self, i: i64, x: T) = ?
+  /// Removes and returns element `i`. Panics with `bounds` unless
+  /// `0 <= i < len`.
+  /// ex: { var xs = [1, 2, 3]; xs.remove(0) == 1 && xs == [2, 3] }
+  pub fn remove(inout self, i: i64) -> T = ?
+  /// The elements from `start` up to `end`. Panics with `bounds` unless
+  /// `0 <= start <= end <= len`.
+  /// ex: [1, 2, 3, 4].slice(1, 3) == [2, 3]
+  pub fn slice(self, start: i64, end: i64) -> List<T> = ?
+  /// The elements in ascending order of `key`, which is called once per
+  /// element, in order. Equal keys keep their order.
+  /// ex: ["bb", "a", "c"].sorted_by(.len()) == ["a", "c", "bb"]
+  pub fn sorted_by<K: Ord>(self, key: fn(T) -> K) -> List<T> = ?
+  /// The elements in descending order of `key`, which is called once per
+  /// element, in order. Equal keys keep their order.
+  /// ex: ["a", "bb", "c"].sorted_desc_by(.len()) == ["bb", "a", "c"]
+  pub fn sorted_desc_by<K: Ord>(self, key: fn(T) -> K) -> List<T> = ?
+
+  /// Sorts the elements in ascending order of `key`, as `sorted_by` orders
+  /// them.
+  /// ex: { var xs = ["bb", "a", "c"]; xs.sort_by(.len()); xs == ["a", "c", "bb"] }
+  pub fn sort_by<K: Ord>(inout self, key: fn(T) -> K) { self = self.sorted_by(key) }
+
+  /// Sorts the elements in descending order of `key`, as `sorted_desc_by`
+  /// orders them.
+  /// ex: { var xs = ["a", "bb", "c"]; xs.sort_desc_by(.len()); xs == ["bb", "a", "c"] }
+  pub fn sort_desc_by<K: Ord>(inout self, key: fn(T) -> K) { self = self.sorted_desc_by(key) }
+
+  /// The result of `f` on each element.
+  /// ex: [1, 2].map(|x| x * 10) == [10, 20]
+  pub fn map<U>(self, f: fn(T) -> U) -> List<U> {
+    var out = List.new()
+    for x in self { out.push(f(x)) }
+    out
+  }
+
+  /// The elements that satisfy `keep`.
+  /// ex: [1, 2, 3].filter(|x| x != 2) == [1, 3]
+  pub fn filter(self, keep: fn(T) -> bool) -> List<T> {
+    var out = List.new()
+    for x in self { if keep(x) { out.push(x) } }
+    out
+  }
+
+  /// The values of the `Some`s that `f` returns, in order.
+  /// ex: ["1", "x", "3"].filter_map(.to_i64()) == [1, 3]
+  pub fn filter_map<U>(self, f: fn(T) -> Option<U>) -> List<U> {
+    var out = List.new()
+    for x in self {
+      let Some(y) = f(x) else continue
+      out.push(y)
+    }
+    out
+  }
+
+  /// `f` applied to `init` and each element in turn.
+  /// ex: [1, 2, 3].fold(10, |total, x| total + x) == 16
+  pub fn fold<A>(self, init: A, f: fn(A, T) -> A) -> A {
+    var acc = init
+    for x in self { acc = f(acc, x) }
+    acc
+  }
+
+  /// Whether some element satisfies `p`. Stops at the first that does.
+  /// ex: [1, 2].any(|x| x > 1)
+  pub fn any(self, p: fn(T) -> bool) -> bool {
+    for x in self { if p(x) { return true } }
+    false
+  }
+
+  /// Whether every element satisfies `p`. Stops at the first that doesn't.
+  /// ex: [1, 2].all(|x| x > 0)
+  pub fn all(self, p: fn(T) -> bool) -> bool {
+    for x in self { if !p(x) { return false } }
+    true
+  }
+
+  /// The first element that satisfies `p`.
+  /// ex: [1, 2, 3].find(|x| x > 1) == Some(2)
+  pub fn find(self, p: fn(T) -> bool) -> Option<T> {
+    for x in self { if p(x) { return Some(x) } }
+    None
+  }
+
+  /// The first element.
+  /// ex: [7, 8].first() == Some(7)
+  pub fn first(self) -> Option<T> { self.get(0) }
+
+  /// The last element.
+  /// ex: [7, 8].last() == Some(8)
+  pub fn last(self) -> Option<T> { self.get(self.len() - 1) }
+
+  /// The elements in reverse order.
+  /// ex: [1, 2, 3].reversed() == [3, 2, 1]
+  pub fn reversed(self) -> List<T> {
+    var rest = self
+    var out = List.new()
+    loop {
+      let x = rest.pop() else break
+      out.push(x)
+    }
+    out
+  }
+
+  /// Puts the elements in reverse order.
+  /// ex: { var xs = [1, 2, 3]; xs.reverse(); xs == [3, 2, 1] }
+  pub fn reverse(inout self) { self = self.reversed() }
+
+  /// The elements of `self`, then those of `other`.
+  /// ex: [1].concat([2, 3]) == [1, 2, 3]
+  pub fn concat(self, other: List<T>) -> List<T> {
+    var out = self
+    for x in other { out.push(x) }
+    out
+  }
+
+  /// Pairs of elements at the same index, as many as the shorter list has.
+  /// ex: [1, 2, 3].zip(["a", "b"]) == [(1, "a"), (2, "b")]
+  pub fn zip<U>(self, other: List<U>) -> List<(T, U)> {
+    var out = List.new()
+    for x in self {
+      let y = other.get(out.len()) else return out
+      out.push((x, y))
+    }
+    out
+  }
+
+  /// Each element paired with its index plus `start`.
+  /// ex: ["a", "b"].enumerate(1) == [(1, "a"), (2, "b")]
+  pub fn enumerate(self, start: i64) -> List<(i64, T)> {
+    var out = List.new()
+    for x in self { out.push((start + out.len(), x)) }
+    out
+  }
+
+  /// The elements after the first `n`.
+  /// ex: [1, 2, 3].skip(2) == [3]
+  pub fn skip(self, n: i64) -> List<T> {
+    var out = List.new()
+    var seen = 0
+    for x in self {
+      if seen >= n { out.push(x) }
+      seen += 1
+    }
+    out
+  }
+
+  /// The first `n` elements.
+  /// ex: [1, 2, 3].take(2) == [1, 2]
+  pub fn take(self, n: i64) -> List<T> {
+    var out = List.new()
+    for x in self {
+      if out.len() >= n { break }
+      out.push(x)
+    }
+    out
+  }
+
+  /// Keeps the elements that satisfy `keep`, in order.
+  /// ex: { var xs = [1, 2, 3, 4]; xs.retain(|x| x % 2 == 0); xs == [2, 4] }
+  pub fn retain(inout self, keep: fn(T) -> bool) {
+    var kept = List.new()
+    for x in self { if keep(x) { kept.push(x) } }
+    self = kept
+  }
+
+  /// `n` copies of `x`, or `[]` when `n <= 0`.
+  /// ex: List.repeat("a", 3) == ["a", "a", "a"]
+  pub fn repeat(x: T, n: i64) -> List<T> {
+    var out = List.new()
+    for _ in 0..n { out.push(x) }
+    out
+  }
+
+  /// `[f(0), …, f(n - 1)]`, calling `f` in that order, or `[]` when
+  /// `n <= 0`.
+  /// ex: List.generate(4, |i| i * i) == [0, 1, 4, 9]
+  pub fn generate(n: i64, f: fn(i64) -> T) -> List<T> {
+    var out = List.new()
+    for i in 0..n { out.push(f(i)) }
+    out
+  }
+
+  /// The elements of each list in turn.
+  /// ex: List.flatten([[1, 2], [], [3]]) == [1, 2, 3]
+  pub fn flatten(lists: List<List<T>>) -> List<T> {
+    var out = List.new()
+    for list in lists { for x in list { out.push(x) } }
+    out
+  }
+
+  /// The first elements of the pairs, and their second elements.
+  /// ex: List.unzip([(1, "a"), (2, "b")]) == ([1, 2], ["a", "b"])
+  pub fn unzip<U>(pairs: List<(T, U)>) -> (List<T>, List<U>) {
+    var firsts = List.new()
+    var seconds = List.new()
+    for (x, y) in pairs {
+      firsts.push(x)
+      seconds.push(y)
+    }
+    (firsts, seconds)
+  }
+
+  /// The index of the first element that satisfies `p`. Stops there.
+  /// ex: [3, 8, 5].find_index(|x| x > 4) == Some(1)
+  pub fn find_index(self, p: fn(T) -> bool) -> Option<i64> {
+    var i = 0
+    for x in self {
+      if p(x) { return Some(i) }
+      i += 1
+    }
+    None
+  }
+
+  /// The number of elements that satisfy `p`.
+  /// ex: [1, 2, 3, 4].count(|x| x % 2 == 0) == 2
+  pub fn count(self, p: fn(T) -> bool) -> i64 {
+    var n = 0
+    for x in self { if p(x) { n += 1 } }
+    n
+  }
+
+  /// The elements of the lists that `f` returns, in order.
+  /// ex: [1, 2].flat_map(|x| [x, x * 10]) == [1, 10, 2, 20]
+  pub fn flat_map<U>(self, f: fn(T) -> List<U>) -> List<U> {
+    var out = List.new()
+    for x in self { for y in f(x) { out.push(y) } }
+    out
+  }
+
+  /// `init`, then the value of the accumulator after each element, as `fold`
+  /// computes it.
+  /// ex: [1, 2, 3].scan(0, |total, x| total + x) == [0, 1, 3, 6]
+  pub fn scan<A>(self, init: A, f: fn(A, T) -> A) -> List<A> {
+    var acc = init
+    var out = [init]
+    for x in self {
+      acc = f(acc, x)
+      out.push(acc)
+    }
+    out
+  }
+
+  /// `fold` of the other elements onto the first, or `None` for an empty
+  /// list.
+  /// ex: [3, 1, 2].reduce(|a, b| a.max(b)) == Some(3)
+  pub fn reduce(self, f: fn(T, T) -> T) -> Option<T> {
+    var acc: Option<T> = None
+    for x in self {
+      acc = match acc {
+        Some(a) => Some(f(a, x))
+        None => Some(x)
+      }
+    }
+    acc
+  }
+
+  /// The elements that satisfy `p`, and those that don't.
+  /// ex: [1, 2, 3, 4].partition(|x| x > 2) == ([3, 4], [1, 2])
+  pub fn partition(self, p: fn(T) -> bool) -> (List<T>, List<T>) {
+    var yes = List.new()
+    var no = List.new()
+    for x in self { if p(x) { yes.push(x) } else { no.push(x) } }
+    (yes, no)
+  }
+
+  /// The elements under their keys, the keys in order of first appearance
+  /// and each list in order.
+  /// ex: [1, 2, 3, 4].group_by(|x| x % 2).entries() == [(1, [1, 3]), (0, [2, 4])]
+  pub fn group_by<K: Eq + Hash>(self, key: fn(T) -> K) -> Map<K, List<T>> {
+    // Each group is taken out of the map while it grows, so that appending
+    // to it copies nothing, and the keys keep their order apart.
+    var groups: Map<K, List<T>> = Map.new()
+    var order = List.new()
+    for x in self {
+      let k = key(x)
+      if !groups.contains(k) { order.push(k) }
+      var group = groups.remove(k) else []
+      group.push(x)
+      groups.insert(k, group)
+    }
+    var out = Map.new()
+    for k in order { out.insert(k, groups.get(k) else []) }
+    out
+  }
+
+  /// How many elements have each key, the keys in order of first appearance.
+  /// ex: ["a", "bb", "c"].count_by(.len()).entries() == [(1, 2), (2, 1)]
+  pub fn count_by<K: Eq + Hash>(self, key: fn(T) -> K) -> Map<K, i64> {
+    var counts: Map<K, i64> = Map.new()
+    for x in self {
+      let k = key(x)
+      counts.insert(k, (counts.get(k) else 0) + 1)
+    }
+    counts
+  }
+
+  /// Consecutive pieces of `n` elements, the last one shorter when `n`
+  /// doesn't divide the length. Panics when `n < 1`.
+  /// ex: [1, 2, 3, 4, 5].chunks(2) == [[1, 2], [3, 4], [5]]
+  pub fn chunks(self, n: i64) -> List<List<T>> {
+    if n < 1 { panic("chunks needs a size of at least 1, not {n}") }
+    var out = List.new()
+    var chunk = List.new()
+    for x in self {
+      chunk.push(x)
+      if chunk.len() == n {
+        out.push(chunk)
+        chunk = List.new()
+      }
+    }
+    if !chunk.is_empty() { out.push(chunk) }
+    out
+  }
+
+  /// Every run of `n` consecutive elements, in order. Panics when `n < 1`.
+  /// ex: [1, 2, 3, 4].windows(3) == [[1, 2, 3], [2, 3, 4]]
+  pub fn windows(self, n: i64) -> List<List<T>> {
+    if n < 1 { panic("windows needs a size of at least 1, not {n}") }
+    var out = List.new()
+    var window = List.new()
+    for x in self {
+      window.push(x)
+      if window.len() > n { window = window.skip(1) }
+      if window.len() == n { out.push(window) }
+    }
+    out
+  }
+
+  /// The longest prefix whose elements satisfy `p`. Stops at the first
+  /// element that doesn't.
+  /// ex: [1, 2, 5, 1].take_while(|x| x < 3) == [1, 2]
+  pub fn take_while(self, p: fn(T) -> bool) -> List<T> {
+    var out = List.new()
+    for x in self {
+      if !p(x) { break }
+      out.push(x)
+    }
+    out
+  }
+
+  /// The elements after the longest prefix whose elements satisfy `p`.
+  /// Stops calling `p` at the first element that doesn't.
+  /// ex: [1, 2, 5, 1].skip_while(|x| x < 3) == [5, 1]
+  pub fn skip_while(self, p: fn(T) -> bool) -> List<T> {
+    var out = List.new()
+    var skipping = true
+    for x in self {
+      if skipping && p(x) { continue }
+      skipping = false
+      out.push(x)
+    }
+    out
+  }
+
+  /// `(take(i), skip(i))`.
+  /// ex: [1, 2, 3].split_at(1) == ([1], [2, 3])
+  pub fn split_at(self, i: i64) -> (List<T>, List<T>) { (self.take(i), self.skip(i)) }
+
+  /// The last `n` elements.
+  /// ex: [1, 2, 3].take_last(2) == [2, 3]
+  pub fn take_last(self, n: i64) -> List<T> { self.skip(self.len() - n.clamp(0, self.len())) }
+
+  /// The elements before the last `n`.
+  /// ex: [1, 2, 3].skip_last(2) == [1]
+  pub fn skip_last(self, n: i64) -> List<T> { self.take(self.len() - n.clamp(0, self.len())) }
+
+  /// The first element whose key is smallest, or `None` for an empty list.
+  /// ex: ["bb", "a", "c"].min_by(.len()) == Some("a")
+  pub fn min_by<K: Ord>(self, key: fn(T) -> K) -> Option<T> {
+    var best: Option<(K, T)> = None
+    for x in self {
+      let k = key(x)
+      best = match best {
+        Some((b, _)) if b <= k => best
+        _ => Some((k, x))
+      }
+    }
+    best.map(.1)
+  }
+
+  /// The first element whose key is largest, or `None` for an empty list.
+  /// ex: ["a", "bb", "cc"].max_by(.len()) == Some("bb")
+  pub fn max_by<K: Ord>(self, key: fn(T) -> K) -> Option<T> {
+    var best: Option<(K, T)> = None
+    for x in self {
+      let k = key(x)
+      best = match best {
+        Some((b, _)) if b >= k => best
+        _ => Some((k, x))
+      }
+    }
+    best.map(.1)
+  }
+
+  /// The elements in the order that `cmp` gives, by a stable merge sort:
+  /// elements that compare `Equal` keep their order.
+  /// ex: [3, 1, 2].sorted_with(|a, b| Ord.compare(b, a)) == [3, 2, 1]
+  pub fn sorted_with(self, cmp: fn(T, T) -> Ordering) -> List<T> {
+    if self.len() <= 1 { return self }
+    let half = self.len() / 2
+    merge_sorted(self.take(half).sorted_with(cmp), self.skip(half).sorted_with(cmp), cmp)
+  }
+
+  /// Sorts the elements in the order that `cmp` gives, as `sorted_with` orders
+  /// them.
+  /// ex: { var xs = [3, 1, 2]; xs.sort_with(|a, b| Ord.compare(b, a)); xs == [3, 2, 1] }
+  pub fn sort_with(inout self, cmp: fn(T, T) -> Ordering) { self = self.sorted_with(cmp) }
+
+  /// For a list whose elements that satisfy `p` all come before those that
+  /// don't, the index of the first that doesn't, by binary search.
+  /// ex: [1, 3, 5, 7].partition_point(|x| x < 4) == 2
+  pub fn partition_point(self, p: fn(T) -> bool) -> i64 {
+    var lo = 0
+    var hi = self.len()
+    while lo < hi {
+      let mid = lo + (hi - lo) / 2
+      let x = self.get(mid) else return lo
+      if p(x) { lo = mid + 1 } else { hi = mid }
+    }
+    lo
+  }
+
+  /// Swaps elements `i` and `j`. Panics with `bounds` unless both are valid
+  /// indexes.
+  /// ex: { var xs = [1, 2, 3]; xs.swap(0, 2); xs == [3, 2, 1] }
+  pub fn swap(inout self, i: i64, j: i64) {
+    let x = self[i]
+    self[i] = self[j]
+    self[j] = x
+  }
+
+  /// Appends the elements of `other`.
+  /// ex: { var xs = [1]; xs.extend([2, 3]); xs == [1, 2, 3] }
+  pub fn extend(inout self, other: List<T>) { for x in other { self.push(x) } }
+
+  /// `f(p)`, where `p` is the address of the first element, which C reads,
+  /// each element held as C holds its type; the list stays alive and unmoved
+  /// until `f` returns (c.lending-methods). The elements are integers, floats or
+  /// `bool`s.
+  /// ex: [5, 6].with_ptr(|p| unsafe because "p holds two elements" { p.read() }) == 5
+  pub fn with_ptr<R>(self, f: fn(c.Ptr<T>) -> R) -> R = ?
+
+  /// `f(p)`, where `p` is the address of the first element, through which C
+  /// may write the elements, which the list holds when `f` returns (c.lending-methods,
+  /// ).
+  /// ex: { var xs = [1, 2]; xs.with_mut_ptr(|p| unsafe because "p holds two elements" { p.write(9) }); xs == [9, 2] }
+  pub fn with_mut_ptr<R>(inout self, f: fn(c.Ptr<T>) -> R) -> R = ?
+
+  /// Removes every element.
+  /// ex: { var xs = [1, 2]; xs.clear(); xs.is_empty() }
+  pub fn clear(inout self) { self = List.new() }
+
+  /// Keeps the first `n` elements.
+  /// ex: { var xs = [1, 2, 3]; xs.truncate(1); xs == [1] }
+  pub fn truncate(inout self, n: i64) { self = self.take(n) }
+}
+
+// The elements of the sorted lists `left` and `right`, merged so that of two
+// elements that compare `Equal`, the one from `left` comes first.
+fn merge_sorted<T>(left: List<T>, right: List<T>, cmp: fn(T, T) -> Ordering) -> List<T> {
+  var out = List.new()
+  var i = 0
+  var j = 0
+  loop {
+    let x = left.get(i) else break
+    let y = right.get(j) else break
+    if cmp(y, x) == Less {
+      out.push(y)
+      j += 1
+    } else {
+      out.push(x)
+      i += 1
+    }
+  }
+  out.concat(left.skip(i)).concat(right.skip(j))
+}
+
+impl<T: Eq> List<T> {
+  /// Whether some element equals `x`.
+  /// ex: [1, 2].contains(2)
+  pub fn contains(self, x: T) -> bool { self.any(|y| y == x) }
+
+  /// The index of the first element equal to `x`.
+  /// ex: ["a", "b", "a"].index_of("a") == Some(0)
+  pub fn index_of(self, x: T) -> Option<i64> { self.find_index(|y| y == x) }
+
+  /// The list with each run of equal neighbours kept once.
+  /// ex: [1, 1, 2, 1, 1].deduped() == [1, 2, 1]
+  pub fn deduped(self) -> List<T> {
+    var out = List.new()
+    for x in self { if out.last() != Some(x) { out.push(x) } }
+    out
+  }
+
+  /// Keeps each run of equal neighbours once.
+  /// ex: { var xs = [1, 1, 2, 1, 1]; xs.dedup(); xs == [1, 2, 1] }
+  pub fn dedup(inout self) { self = self.deduped() }
+
+  /// Whether the list begins with the elements of `prefix`.
+  /// ex: [1, 2, 3].starts_with([1, 2])
+  pub fn starts_with(self, prefix: List<T>) -> bool { self.take(prefix.len()) == prefix }
+
+  /// Whether the list ends with the elements of `suffix`.
+  /// ex: [1, 2, 3].ends_with([3])
+  pub fn ends_with(self, suffix: List<T>) -> bool { self.take_last(suffix.len()) == suffix }
+}
+
+impl<T: Eq + Hash> List<T> {
+  /// The first occurrence of each element, in order.
+  /// ex: [3, 1, 3, 2, 1].distinct() == [3, 1, 2]
+  pub fn distinct(self) -> List<T> {
+    var seen: Map<T, ()> = Map.new()
+    var out = List.new()
+    for x in self {
+      if !seen.contains(x) {
+        seen.insert(x, ())
+        out.push(x)
+      }
+    }
+    out
+  }
+}
+
+impl<T: Ord> List<T> {
+  /// The elements in ascending order. Equal elements keep their order.
+  /// ex: [3, 1, 2].sorted() == [1, 2, 3]
+  pub fn sorted(self) -> List<T> { self.sorted_by(|x| x) }
+
+  /// The elements in descending order. Equal elements keep their order.
+  /// ex: [1, 3, 2].sorted_desc() == [3, 2, 1]
+  pub fn sorted_desc(self) -> List<T> { self.sorted_desc_by(|x| x) }
+
+  /// Sorts the elements in ascending order. Equal elements keep their order.
+  /// ex: { var xs = [3, 1, 2]; xs.sort(); xs == [1, 2, 3] }
+  pub fn sort(inout self) { self = self.sorted() }
+
+  /// Sorts the elements in descending order. Equal elements keep their order.
+  /// ex: { var xs = [1, 3, 2]; xs.sort_desc(); xs == [3, 2, 1] }
+  pub fn sort_desc(inout self) { self = self.sorted_desc() }
+
+  /// The first smallest element, or `None` for an empty list.
+  /// ex: [3, 1, 2].min() == Some(1)
+  pub fn min(self) -> Option<T> { self.min_by(|x| x) }
+
+  /// The first largest element, or `None` for an empty list.
+  /// ex: [3, 1, 2].max() == Some(3)
+  pub fn max(self) -> Option<T> { self.max_by(|x| x) }
+
+  /// Whether no element is greater than the one after it.
+  /// ex: [1, 2, 2, 3].is_sorted()
+  pub fn is_sorted(self) -> bool {
+    var previous: Option<T> = None
+    for x in self {
+      if previous.is_some_and(|p| p > x) { return false }
+      previous = Some(x)
+    }
+    true
+  }
+
+  /// In a sorted list, the index of the first element equal to `x`.
+  /// ex: [1, 3, 3, 5].binary_search(3) == Some(1)
+  /// ex: [1, 3, 5].binary_search(4) == None
+  pub fn binary_search(self, x: T) -> Option<i64> {
+    let i = self.partition_point(|y| y < x)
+    match self.get(i) {
+      Some(y) if Ord.compare(y, x) == Equal => Some(i)
+      _ => None
+    }
+  }
+}
+
+impl<K: Eq + Hash, V> Map<K, V> {
+  /// An empty map.
+  /// ex: { var m = Map.new(); m["a"] = 1; m.len() == 1 }
+  pub fn new() -> Map<K, V> = ?
+  /// An empty map whose index operator yields `d` for a missing key.
+  /// ex: { var m = Map.with_default(0); m["a"] += 2; m["a"] == 2 && m["b"] == 0 }
+  pub fn with_default(d: V) -> Map<K, V> = ?
+  /// The number of entries.
+  /// ex: Map.from_entries([("a", 1), ("b", 2)]).len() == 2
+  pub fn len(self) -> i64 = ?
+  /// Whether the map has no entries.
+  /// ex: !Map.from_entries([("a", 1)]).is_empty()
+  pub fn is_empty(self) -> bool = ?
+  /// Whether `k` has an entry.
+  /// ex: Map.from_entries([("a", 1)]).contains("a")
+  pub fn contains(self, k: K) -> bool = ?
+  /// The value of `k`, or `None` if it has no entry, even when the map has a
+  /// default.
+  /// ex: Map.from_entries([("a", 1)]).get("a") == Some(1)
+  /// ex: Map.from_entries([("a", 1)]).get("b") == None
+  pub fn get(self, k: K) -> Option<V> = ?
+  /// Sets the value of `k`. A key that already has an entry keeps its
+  /// position.
+  /// ex: { var m = Map.from_entries([("a", 1), ("b", 2)]); m.insert("a", 3); m.entries() == [("a", 3), ("b", 2)] }
+  pub fn insert(inout self, k: K, v: V) = ?
+  /// Removes the entry of `k`, and returns its value.
+  /// ex: { var m = Map.from_entries([("a", 1)]); m.remove("a") == Some(1) && m.is_empty() }
+  pub fn remove(inout self, k: K) -> Option<V> = ?
+
+  /// The entries, in insertion order.
+  /// ex: Map.from_entries([("b", 2), ("a", 1)]).entries() == [("b", 2), ("a", 1)]
+  pub fn entries(self) -> List<(K, V)> {
+    var out = List.new()
+    for entry in self { out.push(entry) }
+    out
+  }
+
+  /// The keys, in insertion order.
+  /// ex: Map.from_entries([("b", 2), ("a", 1)]).keys() == ["b", "a"]
+  pub fn keys(self) -> List<K> {
+    var out = List.new()
+    for (k, _) in self { out.push(k) }
+    out
+  }
+
+  /// The values, in insertion order.
+  /// ex: Map.from_entries([("b", 2), ("a", 1)]).values() == [2, 1]
+  pub fn values(self) -> List<V> {
+    var out = List.new()
+    for (_, v) in self { out.push(v) }
+    out
+  }
+
+  /// The map that inserting `entries` in order gives, so a later value of a
+  /// key replaces an earlier one, in its position.
+  /// ex: Map.from_entries([("a", 1), ("b", 2), ("a", 3)]).entries() == [("a", 3), ("b", 2)]
+  pub fn from_entries(entries: List<(K, V)>) -> Map<K, V> {
+    var out = Map.new()
+    for (k, v) in entries { out.insert(k, v) }
+    out
+  }
+
+  /// The value of `k`, or `d` if it has no entry.
+  /// ex: Map.from_entries([("a", 1)]).get_or("b", 0) == 0
+  pub fn get_or(self, k: K, d: V) -> V { self.get(k) else d }
+
+  /// The value of `k`, after inserting `d` for it if it had no entry.
+  /// ex: { var m = Map.from_entries([("a", 1)]); m.get_or_insert("b", 5) == 5 && m.get("b") == Some(5) }
+  pub fn get_or_insert(inout self, k: K, d: V) -> V {
+    if !self.contains(k) { self.insert(k, d) }
+    self.get(k) else d
+  }
+
+  /// Removes the entries that don't satisfy `keep`. The others keep their
+  /// order.
+  /// ex: { var m = Map.from_entries([("a", 1), ("b", 2)]); m.retain(|_, v| v > 1); m.keys() == ["b"] }
+  pub fn retain(inout self, keep: fn(K, V) -> bool) {
+    var kept = self
+    for (k, v) in self { if !keep(k, v) { let _ = kept.remove(k) } }
+    self = kept
+  }
+
+  /// The entries that satisfy `keep`, in order.
+  /// ex: Map.from_entries([("a", 1), ("b", 2)]).filter(|k, _| k != "a").keys() == ["b"]
+  pub fn filter(self, keep: fn(K, V) -> bool) -> Map<K, V> {
+    var out = self
+    out.retain(keep)
+    out
+  }
+
+  /// Each key with `f` of its value, in order, in a map without a default.
+  /// ex: Map.from_entries([("a", 1)]).map_values(|v| v * 10).get("a") == Some(10)
+  pub fn map_values<U>(self, f: fn(V) -> U) -> Map<K, U> {
+    var out = Map.new()
+    for (k, v) in self { out.insert(k, f(v)) }
+    out
+  }
+
+  /// `self` with each entry of `other` inserted in turn, so `other`'s values
+  /// win and its new keys come after.
+  /// ex: Map.from_entries([("a", 1), ("b", 2)]).merged(Map.from_entries([("c", 3), ("a", 4)])).entries() == [("a", 4), ("b", 2), ("c", 3)]
+  pub fn merged(self, other: Map<K, V>) -> Map<K, V> {
+    var out = self
+    out.extend(other)
+    out
+  }
+
+  /// Inserts each entry of `other` in turn.
+  /// ex: { var m = Map.from_entries([("a", 1)]); m.extend(Map.from_entries([("b", 2)])); m.len() == 2 }
+  pub fn extend(inout self, other: Map<K, V>) { for (k, v) in other { self.insert(k, v) } }
+
+  /// Removes every entry.
+  /// ex: { var m = Map.from_entries([("a", 1)]); m.clear(); m.is_empty() }
+  pub fn clear(inout self) { for k in self.keys() { let _ = self.remove(k) } }
+}
+
+/// A set of distinct elements, in insertion order: the keys of `elements`
+/// (std.sets).
+pub type Set<T> = { elements: Map<T, ()> }
+
+impl<T: Eq + Hash> Set<T> {
+  /// An empty set.
+  /// ex: Set.new().union(Set.from_list([1])) == Set.from_list([1])
+  pub fn new() -> Set<T> { Set { elements: Map.new() } }
+
+  /// The set of the elements of `xs`, in order of first appearance.
+  /// ex: Set.from_list([3, 1, 3]).to_list() == [3, 1]
+  pub fn from_list(xs: List<T>) -> Set<T> {
+    var out = Set.new()
+    for x in xs { out.insert(x) }
+    out
+  }
+
+  /// The number of elements.
+  /// ex: Set.from_list(["a", "b", "a"]).len() == 2
+  pub fn len(self) -> i64 { self.elements.len() }
+
+  /// Whether the set has no elements.
+  /// ex: !Set.from_list([1]).is_empty()
+  pub fn is_empty(self) -> bool { self.elements.is_empty() }
+
+  /// Whether `x` is an element.
+  /// ex: Set.from_list([1, 2]).contains(2)
+  pub fn contains(self, x: T) -> bool { self.elements.contains(x) }
+
+  /// Adds `x` at the end, if it isn't an element already.
+  /// ex: { var s = Set.from_list([1, 2]); s.insert(1); s.insert(3); s.to_list() == [1, 2, 3] }
+  pub fn insert(inout self, x: T) { self.elements.insert(x, ()) }
+
+  /// Removes `x`, if it is an element.
+  /// ex: { var s = Set.from_list([1, 2]); s.remove(1); s.to_list() == [2] }
+  pub fn remove(inout self, x: T) { let _ = self.elements.remove(x) }
+
+  /// The elements, in order.
+  /// ex: Set.from_list(["b", "a"]).to_list() == ["b", "a"]
+  pub fn to_list(self) -> List<T> { self.elements.keys() }
+
+  /// The elements of `self`, then those of `other` that it lacks.
+  /// ex: Set.from_list([1, 2]).union(Set.from_list([3, 1])).to_list() == [1, 2, 3]
+  pub fn union(self, other: Set<T>) -> Set<T> {
+    var out = self
+    for (x, _) in other.elements { out.insert(x) }
+    out
+  }
+
+  /// The elements of `self` that are in `other`, in order.
+  /// ex: Set.from_list([1, 2, 3]).intersection(Set.from_list([3, 2])).to_list() == [2, 3]
+  pub fn intersection(self, other: Set<T>) -> Set<T> { self.filter(|x| other.contains(x)) }
+
+  /// The elements of `self` that aren't in `other`, in order.
+  /// ex: Set.from_list([1, 2, 3]).difference(Set.from_list([2])).to_list() == [1, 3]
+  pub fn difference(self, other: Set<T>) -> Set<T> { self.filter(|x| !other.contains(x)) }
+
+  /// The elements of `self` that aren't in `other`, then those of `other`
+  /// that aren't in `self`.
+  /// ex: Set.from_list([1, 2]).symmetric_difference(Set.from_list([2, 3])).to_list() == [1, 3]
+  pub fn symmetric_difference(self, other: Set<T>) -> Set<T> {
+    self.difference(other).union(other.difference(self))
+  }
+
+  /// Whether every element of `self` is in `other`.
+  /// ex: Set.from_list([1]).is_subset(Set.from_list([1, 2]))
+  pub fn is_subset(self, other: Set<T>) -> bool { self.to_list().all(|x| other.contains(x)) }
+
+  /// Whether every element of `other` is in `self`.
+  /// ex: Set.from_list([1, 2]).is_superset(Set.from_list([2]))
+  pub fn is_superset(self, other: Set<T>) -> bool { other.is_subset(self) }
+
+  /// Whether `self` and `other` have no element in common.
+  /// ex: Set.from_list([1]).is_disjoint(Set.from_list([2]))
+  pub fn is_disjoint(self, other: Set<T>) -> bool { !self.to_list().any(|x| other.contains(x)) }
+
+  /// The elements that satisfy `keep`, in order.
+  /// ex: Set.from_list([1, 2, 3]).filter(|x| x != 2).to_list() == [1, 3]
+  pub fn filter(self, keep: fn(T) -> bool) -> Set<T> { Set.from_list(self.to_list().filter(keep)) }
+
+  /// The set of the results of `f`, in order of first appearance.
+  /// ex: Set.from_list([1, 2, 3]).map(|x| x % 2).to_list() == [1, 0]
+  pub fn map<U: Eq + Hash>(self, f: fn(T) -> U) -> Set<U> { Set.from_list(self.to_list().map(f)) }
+}
+
+// A set's hash is the sum of its elements', so that sets equal in any order
+// hash equally.
+impl<T: Eq + Hash> Hash for Set<T> {
+  fn hash(self) -> u64 {
+    var h: u64 = 0
+    for (x, _) in self.elements { h = h +% x.hash() }
+    h
+  }
+}
+
+// A set shows as `Set` around the list of its elements, as a deque and a heap
+// show, which keeps an empty set apart from an empty map.
+impl<T: Show> Show for Set<T> {
+  fn show(self) -> str {
+    var elements = List.new()
+    for (x, _) in self.elements { elements.push(x) }
+    "Set({elements})"
+  }
+}
+
+impl<T> Option<T> {
+  /// Whether `self` is a `Some`.
+  /// ex: Some(1).is_some()
+  pub fn is_some(self) -> bool {
+    match self {
+      Some(_) => true
+      None => false
+    }
+  }
+
+  /// Whether `self` is `None`.
+  /// ex: "x".to_i64().is_none()
+  pub fn is_none(self) -> bool { !self.is_some() }
+
+  /// The result of `f` on the value of a `Some`.
+  /// ex: Some(2).map(|x| x * 3) == Some(6)
+  pub fn map<U>(self, f: fn(T) -> U) -> Option<U> {
+    match self {
+      Some(x) => Some(f(x))
+      None => None
+    }
+  }
+
+  /// `self` if it is a `Some` whose value satisfies `keep`, and `None`
+  /// otherwise.
+  /// ex: Some(3).filter(|x| x > 5) == None
+  pub fn filter(self, keep: fn(T) -> bool) -> Option<T> {
+    match self {
+      Some(x) if keep(x) => Some(x)
+      _ => None
+    }
+  }
+
+  /// The value of a `Some`, or `d`.
+  /// ex: "x".to_i64().unwrap_or(0) == 0
+  pub fn unwrap_or(self, d: T) -> T { self else d }
+
+  /// The value of a `Some`. Panics with `unwrap` on `None`.
+  /// ex: "7".to_i64().unwrap() == 7
+  pub fn unwrap(self) -> T { self else unwrap_failed("called `unwrap` on `None`") }
+
+  /// The value of a `Some`. Panics with `unwrap` on `None`, with `msg` as its
+  /// detail.
+  /// ex: "7".to_i64().expect("a number") == 7
+  pub fn expect(self, msg: str) -> T { self else expect_failed(msg) }
+
+  /// The value of a `Some` as an `Ok`, or `Err(err)`.
+  /// ex: Some(1).ok_or("none") == Ok(1)
+  pub fn ok_or<E>(self, err: E) -> Result<T, E> {
+    match self {
+      Some(x) => Ok(x)
+      None => Err(err)
+    }
+  }
+
+  /// `self` if it is a `Some`, and otherwise `other`.
+  /// ex: "x".to_i64().or(Some(0)) == Some(0)
+  pub fn or(self, other: Option<T>) -> Option<T> {
+    match self {
+      Some(x) => Some(x)
+      None => other
+    }
+  }
+
+  /// Both values, when both are `Some`s.
+  /// ex: Some(1).zip(Some("a")) == Some((1, "a"))
+  pub fn zip<U>(self, other: Option<U>) -> Option<(T, U)> {
+    match (self, other) {
+      (Some(x), Some(y)) => Some((x, y))
+      _ => None
+    }
+  }
+
+  /// Whether `self` is a `Some` whose value satisfies `p`, which is called
+  /// only on a `Some`.
+  /// ex: Some(3).is_some_and(|x| x > 2)
+  pub fn is_some_and(self, p: fn(T) -> bool) -> bool {
+    match self {
+      Some(x) => p(x)
+      None => false
+    }
+  }
+
+  /// `[x]` for `Some(x)`, and `[]` for `None`.
+  /// ex: Some(1).to_list() == [1]
+  pub fn to_list(self) -> List<T> {
+    match self {
+      Some(x) => [x]
+      None => []
+    }
+  }
+
+  /// The values of `options`, when every one is a `Some`.
+  /// ex: Option.all([Some(1), Some(2)]) == Some([1, 2])
+  /// ex: Option.all(["1", "x"].map(.to_i64())) == None
+  pub fn all(options: List<Option<T>>) -> Option<List<T>> {
+    var out = List.new()
+    for o in options {
+      let x = o else return None
+      out.push(x)
+    }
+    Some(out)
+  }
+}
+
+impl<T, E> Result<T, E> {
+  /// Whether `self` is an `Ok`.
+  /// ex: "1".to_i64().ok_or("bad").is_ok()
+  pub fn is_ok(self) -> bool {
+    match self {
+      Ok(_) => true
+      Err(_) => false
+    }
+  }
+
+  /// Whether `self` is an `Err`.
+  /// ex: "x".to_i64().ok_or("bad").is_err()
+  pub fn is_err(self) -> bool { !self.is_ok() }
+
+  /// The value of an `Ok`.
+  /// ex: "7".to_i64().ok_or("bad").ok() == Some(7)
+  pub fn ok(self) -> Option<T> {
+    match self {
+      Ok(x) => Some(x)
+      Err(_) => None
+    }
+  }
+
+  /// The error of an `Err`.
+  /// ex: "x".to_i64().ok_or("bad").err() == Some("bad")
+  pub fn err(self) -> Option<E> {
+    match self {
+      Ok(_) => None
+      Err(error) => Some(error)
+    }
+  }
+
+  /// The result of `f` on the value of an `Ok`.
+  /// ex: "7".to_i64().ok_or("bad").map(|x| x + 1) == Ok(8)
+  pub fn map<U>(self, f: fn(T) -> U) -> Result<U, E> {
+    match self {
+      Ok(x) => Ok(f(x))
+      Err(error) => Err(error)
+    }
+  }
+
+  /// The result of `f` on the error of an `Err`.
+  /// ex: "x".to_i64().ok_or("bad").map_err(.len()) == Err(3)
+  pub fn map_err<F>(self, f: fn(E) -> F) -> Result<T, F> {
+    match self {
+      Ok(x) => Ok(x)
+      Err(error) => Err(f(error))
+    }
+  }
+
+  /// The value of an `Ok`. Raises the error of an `Err` (effects.result).
+  /// ex: try "7".to_i64().ok_or("bad").get() == 7
+  pub fn get(self) -> T / raise<E> {
+    match self {
+      Ok(x) => x
+      Err(error) => raise error
+    }
+  }
+
+  /// The value `f` returns as an `Ok`, or the error it raises as an `Err`.
+  /// ex: Result.of(|| try "x".to_i64().ok_or("bad").get()) == Err("bad")
+  pub fn of(f: fn() -> T / raise<E>) -> Result<T, E> { try Ok(f()) catch error => Err(error) }
+
+  /// The value of an `Ok`, or `d`.
+  /// ex: "x".to_i64().ok_or("bad").unwrap_or(0) == 0
+  pub fn unwrap_or(self, d: T) -> T {
+    match self {
+      Ok(x) => x
+      Err(_) => d
+    }
+  }
+
+  /// The value of an `Ok`. Panics with `unwrap` on an `Err`.
+  /// ex: "7".to_i64().ok_or("bad").unwrap() == 7
+  pub fn unwrap(self) -> T {
+    match self {
+      Ok(x) => x
+      Err(_) => unwrap_failed("called `unwrap` on an `Err`")
+    }
+  }
+
+  /// The value of an `Ok`. Panics with `unwrap` on an `Err`, with `msg` as its
+  /// detail.
+  /// ex: "7".to_i64().ok_or("bad").expect("a number") == 7
+  pub fn expect(self, msg: str) -> T {
+    match self {
+      Ok(x) => x
+      Err(_) => expect_failed(msg)
+    }
+  }
+
+  /// The values of `results`, when every one is an `Ok`, and otherwise the
+  /// first `Err`.
+  /// ex: Result.all(["1", "x", "y"].map(|s| s.to_i64().ok_or(s))) == Err("x")
+  pub fn all(results: List<Result<T, E>>) -> Result<List<T>, E> {
+    var out = List.new()
+    for r in results {
+      match r {
+        Ok(x) => out.push(x)
+        Err(error) => return Err(error)
+      }
+    }
+    Ok(out)
+  }
+
+  /// The values of the `Ok`s, and the errors of the `Err`s, in order.
+  /// ex: Result.partition(["1", "x", "2"].map(|s| s.to_i64().ok_or(s))) == ([1, 2], ["x"])
+  pub fn partition(results: List<Result<T, E>>) -> (List<T>, List<E>) {
+    var oks = List.new()
+    var errs = List.new()
+    for r in results {
+      match r {
+        Ok(x) => oks.push(x)
+        Err(error) => errs.push(error)
+      }
+    }
+    (oks, errs)
+  }
+}
+
+impl Ordering {
+  /// `Less` and `Greater` swapped.
+  /// ex: Less.reversed() == Greater
+  pub fn reversed(self) -> Ordering {
+    match self {
+      Less => Greater
+      Equal => Equal
+      Greater => Less
+    }
+  }
+
+  /// `self`, unless it is `Equal`, and then `other`, which orders by a second
+  /// key.
+  /// ex: Equal.then(Less) == Less
+  /// ex: Greater.then(Less) == Greater
+  pub fn then(self, other: Ordering) -> Ordering {
+    match self {
+      Equal => other
+      _ => self
+    }
+  }
+}

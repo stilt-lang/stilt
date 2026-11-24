@@ -1,0 +1,51 @@
+//~ rule: values.passing-values, expressions.consumed-arguments
+//~ stdout:
+//~ | [1, 9] [1]
+//~ | [1, 9] [2]
+//~ | [1, 9] 1
+//~ | [1] 2
+//~ | [1, 9] [2]
+//~ | [1, 9]
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn both(xs: List<i64>, n: i64) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn kept(xs: List<i64>) {
+  var ys = xs
+  ys.push(9)
+}
+
+fn main() / io {
+  var a = [1]
+  let r1 = grown(a)
+  print("{r1} {a}")
+  var b = [1]
+  let r2 = grown(b)
+  b = [2]
+  print("{r2} {b}")
+  var c = [1]
+  let r3 = both(c, c.len())
+  print("{r3} {c.len()}")
+  var d = [1]
+  var i = 0
+  while i < 2 {
+    i += 1
+    kept(d)
+  }
+  print("{d} {i}")
+  var e = [1]
+  let r5 = grown(e)
+  e[0] = 2
+  print("{r5} {e}")
+  var f = [1]
+  print("{grown(f)}")
+}

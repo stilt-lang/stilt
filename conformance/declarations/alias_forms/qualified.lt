@@ -1,0 +1,3 @@
+use std.io
+
+type Failure = io.IoError //~ ERROR E0100

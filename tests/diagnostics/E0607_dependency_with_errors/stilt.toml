@@ -1,0 +1,7 @@
+[package]
+name = "app"
+
+[dependencies.csv]
+from = "file:///repos/csv"
+version = "2.1.0"
+hash = "b3:d5c01759f1b236eb1d5974fe1aa30d3358f814b7d4447885ab23844bf1414702"

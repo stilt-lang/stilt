@@ -1,0 +1,12 @@
+//~ rule: expressions.loop-types, declarations.never
+
+fn values(c: bool) {
+  let a: i64 = while c {} //~ ERROR E0311
+  let b: i64 = for x in [1] {} //~ ERROR E0311
+  let d: i64 = loop { //~ ERROR E0311
+    break
+  }
+  let e: () = loop { break }
+}
+
+fn forever() -> i64 { loop {} }

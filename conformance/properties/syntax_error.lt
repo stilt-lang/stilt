@@ -1,0 +1,5 @@
+//~ rule: syntax.doc-examples, tests.prop-lines
+
+/// prop: |x: i64| x == x
+/// prop: |x: i64| x + //~ ERROR E0100
+fn f() {}

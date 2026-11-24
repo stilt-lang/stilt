@@ -1,0 +1,10 @@
+//~ rule: std.show-names-and-escapes, std.cli
+//~ args: a "b c" --flag
+//~ run-output: "3 [\"a\", \"b c\", \"--flag\"] Some(\"b c\") None"
+
+use std.cli
+
+fn main() / io {
+  let args = cli.args()
+  print("{args.len()} {args} {cli.arg(1)} {cli.arg(3)}")
+}

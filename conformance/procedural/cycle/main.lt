@@ -1,0 +1,8 @@
+//~ tier: meta
+//~ rule: macros.meta-use
+
+// `alpha` imports `beta`, which names `alpha` with `meta use`: one cycle,
+// reported in the file that sorts last.
+meta use alpha
+
+fn main() / io { print("{alpha.two!()}") }

@@ -1,0 +1,4 @@
+use geo
+use shapes
+
+pub fn area(s: shapes.Square) -> i64 { s.area() }

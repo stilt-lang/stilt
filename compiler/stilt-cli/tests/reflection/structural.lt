@@ -1,0 +1,124 @@
+use std.array
+use std.json
+use std.meta
+
+type Point = { x: i64, y: i64 }
+
+type Named = { name: str, tags: List<str>, at: Point, ok: bool, unit: () }
+
+type Empty = {}
+
+type Pair<T> = { first: T, second: T }
+
+type Shape = | Dot | Circle(Point, i64) | Label(str) | Many(List<Shape>)
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Level = | Low | Mid | High
+
+type Small = { a: array.Array<i64, 3>, b: (i64, str), c: (str,) }
+
+type Big = { cells: array.Array<i64, 40> }
+
+type Float = { v: f64 }
+
+// What the impls of a descriptor's table give, by bound tests on a type parameter.
+fn tabled<T>(a: T, b: T) -> str {
+  let shown = if T: Show { "{a} {b}" } else { "no Show" }
+  let eq = if T: Eq { "{a == b} {a != b}" } else { "no Eq" }
+  let ord = if T: Ord { "{a.compare(b)} {a < b}" } else { "no Ord" }
+  let hash = if T: Hash { "{a.hash()} {b.hash()}" } else { "no Hash" }
+  "{shown} | {eq} | {ord} | {hash}"
+}
+
+// What the impls a bound gives the same values give.
+fn direct<T: Show + Eq + Ord + Hash>(a: T, b: T) -> str {
+  "{a} {b} | {a == b} {a != b} | {a.compare(b)} {a < b} | {a.hash()} {b.hash()}"
+}
+
+fn unhashed<T: Show + Eq + Ord>(a: T, b: T) -> str {
+  "{a} {b} | {a == b} {a != b} | {a.compare(b)} {a < b} | no Hash"
+}
+
+fn unordered<T: Show + Eq>(a: T, b: T) -> str {
+  "{a} {b} | {a == b} {a != b} | no Ord | no Hash"
+}
+
+fn hashed<T: Show + Eq + Hash>(a: T, b: T) -> str {
+  "{a} {b} | {a == b} {a != b} | no Ord | {a.hash()} {b.hash()}"
+}
+
+// The same, for each field of a record, through the descriptors of the fields' types.
+fn fields<T>(a: T, b: T) -> List<str> {
+  var out: List<str> = []
+  match T.shape() {
+    Record(fs) => {
+      for f in fs { out.push(tabled(f.get(a), f.get(b))) }
+    }
+    _ => {}
+  }
+  out
+}
+
+fn main() / io {
+  let p = Point { x: 1, y: -2 }
+  let q = Point { x: 1, y: 3 }
+  print("record {tabled(p, q) == direct(p, q)} {tabled(p, p) == direct(p, p)}")
+  let n1 = Named { name: "a\"b", tags: ["x", "y"], at: p, ok: true, unit: () }
+  let n2 = Named { name: "a\"b", tags: ["x"], at: q, ok: false, unit: () }
+  print("nested {tabled(n1, n2) == direct(n1, n2)}")
+  print("empty {tabled(Empty {}, Empty {}) == direct(Empty {}, Empty {})}")
+  let (u, v) = (Pair { first: "u", second: "v" }, Pair { first: "u", second: "w" })
+  print("generic {tabled(u, v) == direct(u, v)}")
+  let shapes = [Dot, Circle(p, 4), Label("hi"), Many([Dot, Label("z")]), Circle(q, 4), Many([])]
+  var variants = true
+  for s in shapes {
+    for r in shapes { variants = variants && tabled(s, r) == direct(s, r) }
+  }
+  print("variants {variants}")
+  let t1 = Node(Node(Leaf, 1, Leaf), 2, Leaf)
+  let t2 = Node(Node(Leaf, 1, Leaf), 2, Node(Leaf, 3, Leaf))
+  print("recursive {tabled(t1, t2) == direct(t1, t2)} {tabled(t2, t2) == direct(t2, t2)}")
+  var levels = true
+  for a in [Low, Mid, High] {
+    for b in [Low, Mid, High] { levels = levels && tabled(a, b) == direct(a, b) }
+  }
+  print("without payloads {levels}")
+  print("tuples {tabled(("x",), ("y",)) == direct(("x",), ("y",))} {tabled((1, "a", p), (1, "a", q)) == direct((1, "a", p), (1, "a", q))}")
+  let (r, s) = ({ zed: 1, alpha: "a" }, { zed: 2, alpha: "a" })
+  print("anonymous {tabled(r, s) == direct(r, s)}")
+  let s1 = Small { a: array.from_list([1, 2, 3]) else panic("size"), b: (4, "q"), c: ("r",) }
+  let s2 = Small { a: array.from_list([1, 5, 3]) else panic("size"), b: (4, "q"), c: ("r",) }
+  print("arrays {tabled(s1, s2) == direct(s1, s2)}")
+  let b1 = Big { cells: array.from_list(List.generate(40, |i| i)) else panic("size") }
+  let b2 = Big { cells: array.from_list(List.generate(40, |i| if i == 39 { 0 } else { i })) else panic("size") }
+  print("in memory {tabled(b1, b2) == direct(b1, b2)}")
+  let (nan, zero, minus) = (Float { v: f64.NAN }, Float { v: 0.0 }, Float { v: -0.0 })
+  print("floats {tabled(nan, nan) == unhashed(nan, nan)} {tabled(minus, zero) == unhashed(minus, zero)}")
+  let r1: Result<Point, str> = Ok(p)
+  let r2: Result<Point, str> = Err("e")
+  print("options {tabled(Some(p), None) == direct(Some(p), None)} {tabled(Some(n1), Some(n2)) == direct(Some(n1), Some(n2))} {tabled(r1, r2) == direct(r1, r2)}")
+  print("lists {tabled([p, q], [p]) == direct([p, q], [p])} {tabled(shapes, [Dot]) == direct(shapes, [Dot])}")
+  var m1 = Map.new()
+  m1[p] = "one"
+  m1[q] = "two"
+  var m2 = Map.new()
+  m2[q] = "two"
+  m2[p] = "one"
+  print("maps {tabled(m1, m2) == unordered(m1, m2)}")
+  let set = Set.from_list([p, q, p])
+  let other = Set.from_list([q, p])
+  print("sets {tabled(set, other) == hashed(set, other)}")
+  let arr: array.Array<Point, 2> = array.from_list([p, q]) else panic("size")
+  let arr2: array.Array<Point, 2> = array.fill(p)
+  print("array of records {tabled(arr, arr2) == direct(arr, arr2)}")
+  let parts = [direct(n1.name, n2.name), direct(n1.tags, n2.tags), direct(n1.at, n2.at), direct(n1.ok, n2.ok), direct(n1.unit, n2.unit)]
+  print("fields {fields(n1, n2) == parts}")
+  // A map and a set made through the tables of their keys' types, which compiled impls read.
+  let text = "[[\{\"x\": 1, \"y\": -2}, 5], [\{\"x\": 1, \"y\": 3}, 6], [\{\"x\": 1, \"y\": -2}, 7]]"
+  let keyed: Map<Point, i64> = try json.from_text(text) catch { e => panic("{e}") }
+  print("map keys {keyed.len() == 2} {keyed.get(p) == Some(7)} {keyed.get(q) == Some(6)}")
+  let found: Set<Shape> = try json.from_text("[\"Dot\", \{\"Label\": [\"hi\"]}, \"Dot\"]") catch { e => panic("{e}") }
+  let hi = Label("hi")
+  print("set elements {found.len() == 2} {found.contains(Dot)} {found.contains(hi)}")
+}

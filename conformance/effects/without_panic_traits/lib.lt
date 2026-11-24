@@ -1,0 +1,13 @@
+module lib
+
+pub type Odd = { n: i64 }
+
+impl Eq for Odd {
+  fn eq(self, other: Odd) -> bool { self.n / other.n == 1 }
+}
+
+impl Ord for Odd {
+  fn compare(self, other: Odd) -> Ordering { unreachable() }
+}
+
+pub type Fine = { n: i64 }

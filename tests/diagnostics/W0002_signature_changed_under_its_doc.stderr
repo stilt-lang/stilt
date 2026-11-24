@@ -1,0 +1,15 @@
+── STALE DOC ────────────────────────────────────────── src/main.lt:5:1  [W0002]
+
+The signature of `main.weight` changed after this doc was written:
+
+  5 │ /// The weight of an order, in kilograms.
+    │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The doc was written for the old signature. Update it, or, if it still holds,
+send the declaration back as it is, which pins it again.
+
+To fix it, if the doc still holds, send the declaration back as it is, which
+pins the doc again:
+
+  5 │ /// The weight of an order, in kilograms.
+    │ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

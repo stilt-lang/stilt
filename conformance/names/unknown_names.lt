@@ -1,0 +1,16 @@
+//~ rule: program.what-use-binds, program.qualified-names, effects.row-variables
+
+use std.fs
+
+fn f() {
+  missing() //~ ERROR E0211
+  let _ = fs.reed //~ ERROR E0211
+}
+
+fn g(x: Missing) {} //~ ERROR E0211
+
+fn h() / e {} //~ ERROR E0211
+
+fn k(path: str) -> str / {io, raise<io.IoError>} { //~ ERROR E0211
+  try fs.read(path)
+}

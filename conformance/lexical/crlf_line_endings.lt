@@ -1,0 +1,12 @@
+//~ rule: lexical.source-text, lexical.line-comments, lexical.commented-out-code
+//~ stdout:
+//~ | one
+//~ | 2
+
+fn main() / io {
+  print("one")
+  // print("two") //~ WARN W0001
+  let n = 1 +
+    1
+  print("{n}")
+}

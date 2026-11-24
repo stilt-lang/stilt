@@ -1,0 +1,97 @@
+// What the operators of the service see: jobs, disks, deploys, settings, panics and retries.
+
+/// A job of the scheduler: started, finished in some milliseconds, or failed for a reason.
+pub type Job = | Started(str) | Finished(str, i64) | Failed(str, str)
+
+/// How full a disk is, in percent of its size.
+pub type Disk = { mount: str, percent: i64 }
+
+/// A version of the service, as three numbers.
+pub type Version = { major: i64, minor: i64, patch: i64 }
+
+/// A version deployed by someone to some hosts.
+pub type Deploy = { version: Version, by: str, hosts: List<str> }
+
+/// A setting changed from one value to another.
+pub type Setting = { key: str, before: str, after: str }
+
+/// A thread that panicked, and its message.
+pub type Crash = { thread: str, message: str }
+
+/// An operation tried again: which attempt this is, how many it may make, and the time it
+/// waited before this one.
+pub type Retry = { op: str, attempt: i64, limit: i64, wait: i64 }
+
+impl Job {
+  /// The job's name.
+  /// ex: Failed("backup", "disk full").name() == "backup"
+  pub fn name(self) -> str {
+    match self {
+      Started(n) | Finished(n, _) | Failed(n, _) => n
+    }
+  }
+
+  /// What happened to the job, in a word.
+  /// ex: Finished("a", 3).state() == "finished"
+  pub fn state(self) -> str {
+    match self {
+      Started(_) => "started"
+      Finished(_, _) => "finished"
+      Failed(_, _) => "failed"
+    }
+  }
+}
+
+impl Disk {
+  /// Whether the disk is full enough that someone should free some of it.
+  /// ex: Disk { mount: "/var", percent: 90 }.critical()
+  /// ex: !Disk { mount: "/var", percent: 89 }.critical()
+  pub fn critical(self) -> bool { self.percent >= 90 }
+}
+
+impl Version {
+  /// The version as a line writes it.
+  /// ex: Version { major: 1, minor: 4, patch: 2 }.text() == "1.4.2"
+  pub fn text(self) -> str { "{self.major}.{self.minor}.{self.patch}" }
+
+  /// Whether this version comes after `other`.
+  /// ex: Version { major: 1, minor: 10, patch: 0 }.after(Version { major: 1, minor: 9, patch: 7 })
+  pub fn after(self, other: Version) -> bool {
+    (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+  }
+}
+
+impl Deploy {
+  /// The deploy as the report says it.
+  /// ex: Deploy { version: Version { major: 1, minor: 0, patch: 0 }, by: "ana", hosts: ["web-1"] }.text() == "1.0.0 by ana to 1 host"
+  pub fn text(self) -> str {
+    let n = self.hosts.len()
+    "{self.version.text()} by {self.by} to {n} host{if n == 1 { "" } else { "s" }}"
+  }
+}
+
+impl Setting {
+  /// Whether the setting's value went up, both values being numbers with the same unit.
+  /// ex: Setting { key: "k", before: "30s", after: "45s" }.raised() == Some(true)
+  /// ex: Setting { key: "k", before: "on", after: "off" }.raised() == None
+  pub fn raised(self) -> Option<bool> {
+    let (a, unit_a) = number(self.before) else return None
+    let (b, unit_b) = number(self.after) else return None
+    if unit_a != unit_b { return None }
+    Some(b > a)
+  }
+}
+
+// The number a value starts with, and the unit after it.
+fn number(value: str) -> Option<(i64, str)> {
+  let digits = value.chars().take_while(|c| c.is_ascii_digit())
+  if digits.is_empty() { return None }
+  let n = "".join(digits).to_i64() else return None
+  Some((n, value.slice(digits.len(), value.len())))
+}
+
+impl Retry {
+  /// Whether this attempt was the last the operation may make.
+  /// ex: Retry { op: "fetch", attempt: 5, limit: 5, wait: 100 }.last()
+  pub fn last(self) -> bool { self.attempt >= self.limit }
+}

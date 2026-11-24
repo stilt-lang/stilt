@@ -1,0 +1,54 @@
+//~ rule: std.net, std.net-listeners, std.net-streams
+//~ stdout:
+//~ | true
+//~ | Some("ping") Some("second line") [114, 101]
+//~ | Some("hi") ["�x"]
+//~ | None [] [""]
+//~ | ["st"]
+//~ | None
+//~ | true None []
+//~ | true true 0
+
+use std.io
+use std.net
+
+fn main() / {io, raise<io.IoError>} {
+  var listener = try net.listen("127.0.0.1", 0)
+  let port = listener.port()
+  print("{port > 0 && port < 65536}")
+  var client = try net.connect("127.0.0.1", port)
+  try client.write("ping\nsecond line\r\nrest")
+  var server = try listener.accept()
+  print("{server.read_line()} {server.read_line()} {server.read_bytes(2)}")
+  try server.write_bytes([104, 105, 10, 255, 120])
+  server.close_write()
+  print("{client.read_line()} {[client.read_all()]}")
+  print("{client.read_line()} {client.read_bytes(4)} {[client.read_all()]}")
+  client.close_write()
+  print("{[server.read_all()]}")
+  var quiet = try net.connect("127.0.0.1", port)
+  quiet.set_timeout(50)
+  print("{quiet.read_line()}")
+  quiet.close()
+  server.close()
+  client.close()
+  let expected = "Other(\"127.0.0.1:{port}\")"
+  let wrote = try {
+    client.write("x")
+    "wrote"
+  }
+    catch e because "the test compares the error" => "{e}"
+  print("{wrote == expected} {client.read_line()} {client.read_bytes(1)}")
+  listener.close()
+  let accepted = try {
+    let _ = listener.accept()
+    "accepted"
+  }
+    catch e because "the test compares the error" => "{e}"
+  let refused = try {
+    let _ = net.connect("127.0.0.1", port)
+    "connected"
+  }
+    catch e because "the test compares the error" => "{e}"
+  print("{accepted == "Other(\"127.0.0.1:0\")"} {refused == expected} {listener.port()}")
+}

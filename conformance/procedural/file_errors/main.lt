@@ -1,0 +1,26 @@
+//~ tier: meta
+//~ rule: macros.named-files, macros.raised-errors
+
+// A path is names separated by `/`, each matching an entry of its directory
+// byte for byte, that names a regular file of UTF-8 inside the directory.
+meta use reader
+
+fn up() -> str { reader.text!("../file_errors/data/note.txt") } //~ ERROR E0229
+
+fn here() -> str { reader.text!("./data/note.txt") } //~ ERROR E0229
+
+fn empty() -> str { reader.text!("data//note.txt") } //~ ERROR E0229
+
+fn hidden() -> str { reader.text!("data/.note.txt") } //~ ERROR E0229
+
+fn absolute() -> str { reader.text!("/data/note.txt") } //~ ERROR E0229
+
+fn case() -> str { reader.text!("data/Note.txt") } //~ ERROR E0229
+
+fn missing() -> str { reader.text!("data/none.txt") } //~ ERROR E0229
+
+fn directory() -> str { reader.text!("data") } //~ ERROR E0229
+
+fn latin() -> str { reader.text!("data/latin1.txt") } //~ ERROR E0229
+
+fn main() {}

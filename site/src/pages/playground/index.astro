@@ -1,0 +1,58 @@
+---
+// The playground (playground/README.md): an editor whose program the compiler, built for
+// WebAssembly, checks as one types, with the facts it infers at the ends of the lines they come
+// from, beside it what `stilt show` prints of the function at the cursor, under it what
+// `stilt check` reports, and a Run button for the reference interpreter, built for JavaScript.
+// The page's link holds the program, in its fragment.
+import Base from "../../layouts/Base.astro";
+import { read } from "../../lib/repo";
+import "../../styles/playground.css";
+
+const program = read("playground/page/example.lt");
+---
+
+<Base title="Playground" section="playground" wide description="Write, check and run Stilt in your browser, with nothing to install.">
+  <div class="playground shell shell-wide">
+    <div class="bar">
+      <h1>Playground</h1>
+      <div class="toolbar">
+        <span class="note" id="shared" aria-live="polite"></span>
+        <button id="share" type="button" class="button button-quiet button-small">Share</button>
+        <button id="stop" type="button" class="button button-quiet button-small" hidden>Stop</button>
+        <button id="run" type="button" class="button button-small">Run</button>
+      </div>
+    </div>
+    <div class="panes">
+      <div class="panel editor-panel">
+        <div class="panel-head"><span>main.lt</span><span><span class="kbd">⌘</span> <span class="kbd">↵</span> runs it</span></div>
+        <div class="editor">
+          <div class="code-area">
+            <pre id="layer" aria-hidden="true"></pre>
+            <textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="The program, main.lt">{program}</textarea>
+          </div>
+        </div>
+      </div>
+      <div class="side">
+        <section class="panel">
+          <div class="panel-head"><span>The function at the cursor</span></div>
+          <div class="pane-body">
+            <p class="command" id="shown-command">stilt show main</p>
+            <pre id="shown"></pre>
+            <dl id="meanings"></dl>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><span>stilt check</span></div>
+          <div class="pane-body"><pre id="diagnostics">Checking…</pre></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><span>Output</span></div>
+          <div class="pane-body"><pre id="output">Press Run to run the program. It runs in your browser, on the reference interpreter.</pre></div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <script is:inline src="/playground/grammar.js"></script>
+  <script is:inline src="/playground/highlight.js"></script>
+  <script is:inline src="/playground/playground.js"></script>
+</Base>

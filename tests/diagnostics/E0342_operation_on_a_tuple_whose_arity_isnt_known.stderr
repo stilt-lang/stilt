@@ -1,0 +1,10 @@
+── OPERATION ON A TUPLE WHOSE ARITY ISN'T KNOWN ── E0342_operation_on_a_tuple_whose_arity_isnt_known.lt:1:37  [E0342]
+
+This tuple's type spreads a pack, so its arity isn't known and no element of it
+can be named; map it with a spread instead:
+
+  1 │ fn first<..Ts>(xs: (..Ts)) -> i64 { xs.0 }
+    │                                     ^^^^
+
+A tuple whose type spreads a pack has a number of elements that the body doesn't
+know, so it is passed whole or mapped with a spread, never indexed or matched.

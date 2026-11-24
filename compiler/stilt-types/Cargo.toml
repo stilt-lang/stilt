@@ -1,0 +1,20 @@
+[package]
+name = "stilt-types"
+description = "Type checking and the later analyses of Stilt's compiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-db = { path = "../stilt-db" }
+stilt-diag = { path = "../stilt-diag" }
+stilt-hir = { path = "../stilt-hir" }
+stilt-pkg = { path = "../stilt-pkg" }
+stilt-syntax = { path = "../stilt-syntax" }
+salsa.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

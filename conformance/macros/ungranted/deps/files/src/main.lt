@@ -1,0 +1,6 @@
+use std.fs
+
+// The template names `fs.exists`, which `console` doesn't grant.
+pub syntax present {
+  ($p: expr) => fs.exists($p)
+}

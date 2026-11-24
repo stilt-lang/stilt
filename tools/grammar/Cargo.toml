@@ -1,0 +1,17 @@
+[package]
+name = "stilt-grammar"
+description = "Publishes the grammar of Stilt as GBNF and as llguidance's Lark format, and checks both against programs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap.workspace = true
+# The implementation that reads the published grammars; no other crate depends on it.
+llguidance = { version = "1.9.1", default-features = false, features = ["lark"] }
+toktrie = "1.9.1"
+
+[lints]
+workspace = true

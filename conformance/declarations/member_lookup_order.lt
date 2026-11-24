@@ -1,0 +1,17 @@
+//~ rule: declarations.name-lookup
+
+type Origin = { x: i64 }
+
+impl Origin {
+  pub fn make() -> Origin { Origin { x: 0 } }
+}
+
+const Origin: Origin = Origin { x: 1 }
+
+fn made() -> Origin { Origin.make() }
+
+fn value() -> Origin { Origin }
+
+fn field() -> i64 {
+  Origin.x //~ ERROR E0314
+}

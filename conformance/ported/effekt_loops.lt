@@ -1,0 +1,52 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.with, expressions.loops
+//~ stdout:
+//~ | 0
+//~ | 1
+//~ | 2
+//~ | 3
+//~ | 4
+//~ | 5
+//~ | 45
+
+// Effekt, examples/pos/loops.effekt: `stop` is an operation whose handler doesn't resume. Around
+// a whole loop, it ends the loop: the running total passes 15 at 6, which is never printed.
+// Inside each iteration, it ends only that iteration, as a `continue` would: the negative
+// numbers of -10 to 9 add nothing, and the others add up to 45. Effekt's `each` takes a closure
+// that assigns the total; a Stilt closure can't assign what it captures, so the loops are
+// `for` loops in the `with`'s block.
+
+effect Stop {
+  fn stop() -> Never
+}
+
+fn boundary() -> handler Stop -> () {
+  handler Stop -> () { fn stop() -> Never { () } }
+}
+
+fn greater_fifteen() / io {
+  var total = 0
+  with boundary() {
+    for i in 0..100 {
+      total += i
+      if total > 15 { Stop.stop() }
+      print("{i}")
+    }
+  }
+}
+
+fn sum_positive() / io {
+  var total = 0
+  for i in -10..10 {
+    with boundary() {
+      if i < 0 { Stop.stop() }
+      total += i
+    }
+  }
+  print("{total}")
+}
+
+fn main() / io {
+  greater_fifteen()
+  sum_positive()
+}

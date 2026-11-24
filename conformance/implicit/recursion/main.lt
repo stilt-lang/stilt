@@ -1,0 +1,4 @@
+//~ rule: effects.without-panic, facts.inference
+
+use lib
+use pure

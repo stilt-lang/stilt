@@ -1,0 +1,13 @@
+// A signature that doesn't fit in 100 columns breaks its parameter list first, and its return
+// type stays whole on the line of the `)` when `) -> T {` fits there. A function type breaks its
+// parameter list before its return type too, and so does a method of a trait without a body.
+pub fn make(inout b: context.Body, sc: context.Scope, depth: i64, t: Targets, choice: i64) -> List<(i64, str)> {
+  let x = 1
+  x
+}
+
+fn apply(on_request: fn(Request, Response, Options, Environment, Configuration) -> (Status, List<(str, str)>)) {}
+
+trait Handler {
+  fn handle(self, request: Request, response: Response, options: Options) -> (Status, List<(str, str)>)
+}

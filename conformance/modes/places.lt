@@ -1,0 +1,16 @@
+//~ rule: expressions.inout-arguments, expressions.places, modes.places
+
+fn bump(inout n: i64) { n += 1 }
+
+fn width() -> i64 { 10 }
+
+fn main() {
+  var pair = (1, 2)
+  bump(inout pair.0)
+  pair.1 = 3
+  bump(inout 5) //~ ERROR E0401
+  var xs = [3, 1, 2]
+  xs.push(4)
+  [3, 1, 2].push(4) //~ ERROR E0401
+  width() = 3 //~ ERROR E0401
+}

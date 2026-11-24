@@ -1,0 +1,4 @@
+pub fn broken(xs: List<i64>) -> i64 {
+  let s: str = 1 //~ ERROR E0311
+  xs[0]
+}

@@ -1,0 +1,7 @@
+use csv
+
+fn main() / io {
+  print("{csv.rows()} rows to report")
+  csv.report(csv.rows())
+  print("never")
+}

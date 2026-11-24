@@ -1,0 +1,81 @@
+// The rows of the report's tables, whose fields are the tables' columns, and the shares they
+// show.
+
+/// The share of `part` in `whole`, in whole percent, rounded down.
+/// ex: percent(1, 3) == 33
+/// ex: percent(5, 0) == 0
+pub fn percent(part: i64, whole: i64) -> i64 { if whole == 0 { 0 } else { part * 100 / whole } }
+
+/// A topic: its entries, and their share of all the entries, in percent.
+pub type TopicRow = { topic: str, entries: i64, share: i64 }
+
+/// A level: its entries, and their share of all the entries, in percent.
+pub type LevelRow = { level: str, entries: i64, share: i64 }
+
+/// A host: its entries, the notable ones among them, and the time of its last.
+pub type HostRow = { host: str, entries: i64, notable: i64, last: str }
+
+/// A service: its requests, the time they took on average and at most, and those that failed.
+pub type ServiceRow = { service: str, requests: i64, mean: i64, slowest: i64, failed: i64 }
+
+/// A service against its objectives: its requests, those answered in time and without a server
+/// error, in percent, and the objectives it missed.
+pub type ObjectiveRow = {
+  service: str,
+  requests: i64,
+  in_time: i64,
+  served: i64,
+  missed: List<str>,
+}
+
+/// A user: the logins that succeeded and failed, the attempts they took, and the addresses
+/// they came from.
+pub type UserRow = { user: str, ok: i64, failed: i64, attempts: i64, addresses: List<str> }
+
+/// A space of the cache: its hits, misses and evictions, and the bytes the evictions freed.
+pub type SpaceRow = { space: str, hits: i64, misses: i64, evictions: i64, freed: i64 }
+
+/// A job: its starts, finishes and failures, the time its finishes took on average, and the
+/// reason of its last failure.
+pub type JobRow = {
+  job: str,
+  started: i64,
+  finished: i64,
+  failed: i64,
+  mean: Option<i64>,
+  reason: Option<str>,
+}
+
+/// An operation retried: its attempts, the runs of attempts that started over from the first,
+/// those that gave up, and the time it waited in all.
+pub type RetryRow = { op: str, attempts: i64, runs: i64, gave_up: i64, waited: i64 }
+
+/// A deploy: its version and time, and the requests in the ten minutes before and after it,
+/// with the time they took on average.
+pub type DeployRow = {
+  version: str,
+  at: str,
+  before: i64,
+  mean_before: i64,
+  after: i64,
+  mean_after: i64,
+}
+
+/// A route, its numbers written `:id`: its requests, the bytes they answered, the time they took
+/// on average, and those that failed.
+pub type RouteRow = { route: str, requests: i64, bytes: i64, mean: i64, failed: i64 }
+
+/// A status: its requests, and their share of all the requests, in percent.
+pub type StatusRow = { status: i64, requests: i64, share: i64 }
+
+/// An address: its logins, those that failed, the users who logged in from it, and whether it
+/// is outside the private networks.
+pub type AddressRow = { address: str, logins: i64, failed: i64, users: List<str>, outside: bool }
+
+/// A kind of error, its numbers written `#`: how many times it happened, and the times of its
+/// first and last.
+pub type ErrorRow = { error: str, count: i64, first: str, last: str }
+
+/// Five minutes: their entries, their requests and the time those took on average and at most,
+/// and their errors.
+pub type PaceRow = { at: str, entries: i64, requests: i64, mean: i64, slowest: i64, errors: i64 }

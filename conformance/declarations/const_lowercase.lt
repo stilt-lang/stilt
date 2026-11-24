@@ -1,0 +1,3 @@
+//~ rule: lexical.case.wrong-case, declarations.constant-declarations, declarations.constants-in-patterns
+
+const limit: i64 = 10 //~ ERROR E0100

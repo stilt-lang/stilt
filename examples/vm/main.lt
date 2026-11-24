@@ -1,0 +1,23 @@
+// vm: assembles a program for a small stack machine and runs it, printing what it prints.
+
+use std.cli
+use std.fs
+use assembler
+use machine
+
+const USAGE: str = "usage: vm FILE [ARGUMENT]..."
+
+fn main() / {io, raise<str>} {
+  let [path, ..rest] = cli.args() else raise USAGE
+  let text = try fs.read(path) catch _ => raise "cannot read {path}"
+  let program = try assembler.assemble(text) catch e => raise "{path}:{e.line}: {e.message}"
+  var args = []
+  for a in rest { args.push(a.to_i64() else raise "{a} isn't an integer") }
+  if args.len() != program.params {
+    raise "main takes {program.params} arguments, and {args.len()} were given"
+  }
+  let ran = try machine.run(program, args) catch f => {
+    raise "{path}:{program.lines.get(f.at) else 0}: {f.message}"
+  }
+  for v in ran.printed { print("{v}") }
+}

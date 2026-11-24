@@ -1,0 +1,91 @@
+//~ tier: meta
+//~ rule: meta.shapes, meta.variant-cases
+//~ stdout:
+//~ | 3 cases: Off#0 Dim#1 Mix#2
+//~ | (3,) is Dim, not Off
+//~ | () is Off, not Mix
+//~ | (2, true) is Mix, not Dim
+//~ | made Dim(4) and Off
+//~ | 2 cases: Ok(5,) Err
+//~ | 3 cases: Less() Equal Greater
+
+use std.meta
+
+type Light = | Off | Dim(i64) | Mix(i64, bool)
+
+fn shown<X>(x: X) -> str {
+  if X: Show { "{x}" } else { "?" }
+}
+
+// The cases of a variant type, in the order of their declaration: `get` of
+// the value's case gives its payload as a tuple, and of another case `None`.
+fn cases_of<T>(value: T) -> str {
+  var parts: List<str> = []
+  match T.shape() {
+    Variants(cases) => {
+      parts.push("{cases.len()} cases:")
+      for c in cases {
+        match c.get(value) {
+          Some(payload) => parts.push("{c.name()}{shown(payload)}")
+          None => parts.push(c.name())
+        }
+      }
+    }
+    _ => {}
+  }
+  " ".join(parts)
+}
+
+fn names<T>(value: T) -> str {
+  var parts: List<str> = []
+  match T.shape() {
+    Variants(cases) => {
+      parts.push("{cases.len()} cases:")
+      for c in cases { parts.push("{c.name()}#{c.index()}") }
+    }
+    _ => {}
+  }
+  " ".join(parts)
+}
+
+// The value's case, and a case it isn't, whose `get` is `None`.
+fn which<T>(value: T, other: str) -> str {
+  var found = ""
+  var missed = false
+  match T.shape() {
+    Variants(cases) => {
+      for c in cases {
+        if let Some(payload) = c.get(value) { found = "{shown(payload)} is {c.name()}" }
+        if c.name() == other { missed = c.get(value).is_none() }
+      }
+    }
+    _ => {}
+  }
+  if missed { "{found}, not {other}" } else { "wrong" }
+}
+
+// `make` of a case gives the value of that variant: a one-field variant's
+// payload is a one-element tuple, and a variant without one takes `()`.
+fn remade<T>(value: T, empty: T) -> T {
+  var out = empty
+  match T.shape() {
+    Variants(cases) => {
+      for c in cases {
+        if let Some(payload) = c.get(value) { out = c.make(payload) }
+      }
+    }
+    _ => {}
+  }
+  out
+}
+
+fn main() / io {
+  print(names(Off))
+  print(which(Dim(3), "Off"))
+  print(which(Off, "Mix"))
+  print(which(Mix(2, true), "Dim"))
+  print("made {remade(Dim(4), Off)} and {remade(Off, Dim(1))}")
+  let r: Result<i64, str> = Ok(5)
+  print(cases_of(r))
+  print(cases_of(Less))
+}

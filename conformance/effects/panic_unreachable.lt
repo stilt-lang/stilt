@@ -1,0 +1,18 @@
+//~ rule: program.prelude-functions, effects.panic-kinds
+//~ run-output: "10"
+//~ panic: unreachable
+//~ panic-at: panic_unreachable.lt:11:13
+
+type Mode = | Fast | Slow
+
+fn speed(m: Mode) -> i64 {
+  match m {
+    Fast => 10
+    Slow => unreachable()
+  }
+}
+
+fn main() / io {
+  print("{speed(Fast)}")
+  print("{speed(Slow)}")
+}

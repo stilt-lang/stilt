@@ -1,0 +1,28 @@
+//~ rule: facts.known-signs, facts.guards, facts.divisors
+//~ run-output: "7 7 0 3 2"
+
+// `len()`, a sum and a product of known non-negative expressions, and a binding that
+// holds one, are known non-negative; so a test of the upper bound alone guards them.
+
+fn by_length(xs: List<i64>, ys: List<i64>) -> i64 without panic {
+  let i = xs.len()
+  if i < ys.len() { ys[i] } else { 0 }
+}
+
+fn by_sum(xs: List<i64>, ys: List<i64>) -> i64 without panic {
+  let i = xs.len() + 1
+  let j = 2 * xs.len()
+  if i < ys.len() && j < ys.len() { ys[i] + ys[j] - ys[j] } else { 0 }
+}
+
+// A range from a positive literal gives a known positive divisor.
+fn over_range(n: i64) -> i64 without panic {
+  var s = 0
+  for d in 2..4 { s += n / d }
+  s
+}
+
+fn main() / io {
+  let ys = [5, 7, 7, 7]
+  print("{by_length([1], ys)} {by_sum([1], ys)} {by_sum([1, 2], ys)} {over_range(4)} {over_range(3)}")
+}

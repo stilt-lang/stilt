@@ -1,0 +1,8 @@
+//~ rule: program.visibility, program.what-use-binds, traits.traits-in-scope
+
+use shapes
+
+fn main() {
+  let s = shapes.unit()
+  let a = s.area() //~ ERROR E0314
+}

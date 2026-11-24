@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: variadics.packs, variadics.pack-inference
+
+// A type takes at most one pack, as its last parameter.
+type Two<..Ts, ..Us> = { a: (..Ts), b: (..Us) } //~ ERROR E0344
+
+type Early<..Ts, U> = { a: (..Ts), b: U } //~ ERROR E0344
+
+trait Packed<..Ts> { //~ ERROR E0344
+  fn get(self) -> i64
+}
+
+fn poly(f: fn<..Ts>((..Ts)) -> i64) -> i64 { 0 } //~ ERROR E0344
+
+// Nothing determines `Ts`.
+fn count<..Ts>() -> i64 { 0 }
+
+fn call() -> i64 { count() } //~ ERROR E0312
+
+fn shown<..Ts: Show>(xs: (..Ts)) -> str { "{xs}" }
+
+fn f() {}
+
+fn unshowable() -> str { shown((1, f)) } //~ ERROR E0318

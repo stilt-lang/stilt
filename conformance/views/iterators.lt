@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: views.making-iterator, views.adapters, views.consumers
+//~ stdout:
+//~ | [10, 20, 30] [0, 2, 4] [0, 1, 2] [3, 4]
+//~ | [1, 2] [5, 1] [(1, "a"), (2, "b")] [(1, "a"), (2, "b")] [1, 2, 3]
+//~ | 6 2 true false Some(2) Some(2) Some(4) Some(3) None
+//~ | Some(3) Some(1) [("a", 1), ("b", 2)] [2, 3]
+
+use std.view
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  print("{view.Iter.of(xs).map(|x| x * 10).collect()} {view.range(0, 6).filter(|x| x % 2 == 0).collect()} {view.range(0, 10).take(3).collect()} {view.range(0, 5).skip(3).collect()}")
+  let ys = [1, 2, 5, 1]
+  print("{view.Iter.of(ys).take_while(|x| x < 3).collect()} {view.Iter.of(ys).skip_while(|x| x < 3).collect()} {view.Iter.of(["a", "b"]).enumerate(1).collect()} {view.Iter.of(xs).zip(view.Iter.of(["a", "b"])).collect()} {view.Iter.of([1]).chain(view.Iter.of([2, 3])).collect()}")
+  print("{view.Iter.of(xs).fold(0, |s, x| s + x)} {view.Iter.of([4, 5]).count()} {view.Iter.of(xs).any(|x| x == 2)} {view.Iter.of(xs).all(|x| x == 2)} {view.Iter.of(xs).find(|x| x > 1)} {view.range(2, 5).first()} {view.range(2, 5).last()} {view.range(2, 5).nth(1)} {view.range(2, 2).first()}")
+  var m: Map<str, i64> = Map.new()
+  m["a"] = 1
+  m["b"] = 2
+  print("{view.Iter.of([1, 3, 2]).max()} {view.Iter.of([2, 1, 3]).min()} {view.of_map(m).collect()} {view.Iter.of_view(view.View.of(xs, 1, 3)).collect()}")
+}

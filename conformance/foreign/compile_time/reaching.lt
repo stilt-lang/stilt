@@ -1,0 +1,15 @@
+use std.meta
+
+extern fn abs(n: i32) -> i32
+
+/// Calls C while it runs.
+pub macro magnitude() -> meta.Expr {
+  let n = unsafe because "abs takes every i32 but the least" { abs(-3) }
+  quote { $n }
+}
+
+/// Lends C a list while it runs.
+pub macro address() -> meta.Expr {
+  let n = [1, 2].with_ptr(|p| p.address())
+  quote { $n }
+}

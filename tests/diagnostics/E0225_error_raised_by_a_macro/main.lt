@@ -1,0 +1,6 @@
+meta use units
+
+fn main() / io {
+  let timeout = units.seconds!(90, sec)
+  print("{timeout}")
+}

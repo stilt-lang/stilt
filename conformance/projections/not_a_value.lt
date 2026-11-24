@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: projections.not-a-value
+
+fn at(inout xs: List<i64>, i: i64) -> inout i64 {
+  yield xs[i]
+}
+
+fn apply(f: fn(inout List<i64>, i64) -> i64, inout xs: List<i64>) -> i64 {
+  f(inout xs, 0)
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  // A projection can only be called: it has no function type.
+  let f = at //~ ERROR E0426
+  let n = apply(at, inout xs) //~ ERROR E0426
+  let fs = [at] //~ ERROR E0426
+  print("{n} {fs.len()}")
+}

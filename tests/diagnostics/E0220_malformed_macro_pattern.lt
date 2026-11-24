@@ -1,0 +1,7 @@
+syntax total {
+  ($first: expr $($rest: expr),*) => $first $(+ $rest)*
+}
+
+fn main() / io {
+  print("{total!(1, 2, 3)}")
+}

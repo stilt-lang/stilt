@@ -1,0 +1,9 @@
+── KEY PATH WHERE NO FUNCTION IS EXPECTED ── E0324_key_path_where_no_function_is_expected.lt:4:13  [E0324]
+
+A key path is allowed only where a function type is expected:
+
+  4 │   let get = .total
+    │             ^^^^^^
+
+A key path such as `.total` is short for `|x| x.total`, and stands only where a
+function is expected, as in `orders.map(.total)`.

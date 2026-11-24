@@ -1,0 +1,1 @@
+fn continue() {} //~ ERROR E0100

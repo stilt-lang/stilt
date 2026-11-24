@@ -1,0 +1,30 @@
+//~ rule: numbers.literal-defaults, numbers.wrapping, numbers.ieee-754, types.inferred-per-body
+//~ stdout:
+//~ | 4.0 2.5
+//~ | -2147483648 2147483648 3000000000
+//~ | 0.3 0.30000000000000004
+//~ | 5 9223372036854775807
+
+fn total(prices: List<f64>) -> f64 {
+  var sum = 0
+  for p in prices { sum += p }
+  sum
+}
+
+fn main() / io {
+  var extra = 0
+  extra += 2.5
+  print("{total([1.5, 2.5])} {extra}")
+  let narrow = 2147483647
+  let wide = 2147483647
+  let big = 3000000000
+  print("{narrow +% 1} {wide + 1} {big}")
+  let tenth = 0.1
+  let other = 0.1
+  print("{tenth + 0.2} {other + 0.2}")
+  let x = -5
+  let max = 9223372036854775807
+  print("{x.abs()} {max}")
+  let single: f32 = tenth
+  let small: i32 = narrow
+}

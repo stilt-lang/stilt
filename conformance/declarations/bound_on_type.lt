@@ -1,0 +1,3 @@
+//~ rule: syntax.bounds-placement, declarations.type-parameters, traits.bounds
+
+type Sorted<T: Ord> = { items: List<T> } //~ ERROR E0100

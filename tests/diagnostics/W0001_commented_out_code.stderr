@@ -1,0 +1,14 @@
+── COMMENTED-OUT CODE ───────────────── W0001_commented_out_code.lt:2:3  [W0001]
+
+This comment holds code:
+
+  2 │   // let discount = 10
+    │   ^^^^^^^^^^^^^^^^^^^^
+
+Commented-out code goes stale while readers take it as true. Delete it; version
+control keeps it.
+
+To fix it, delete the comment:
+
+  2 │   // let discount = 10
+    │   --------------------

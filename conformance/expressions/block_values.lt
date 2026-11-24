@@ -1,0 +1,13 @@
+//~ rule: syntax.blocks, syntax.record-literal-braces, expressions.block-value
+//~ run-output: "3 () () 1"
+
+fn main() / io {
+  let a = {
+    let x = 1
+    x + 2
+  }
+  let b = { let y = 1 }
+  var z = 0
+  let c = { z = 1 }
+  print("{a} {b} {c} {z}")
+}

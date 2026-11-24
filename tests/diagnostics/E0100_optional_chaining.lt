@@ -1,0 +1,5 @@
+type User = { name: str, boss: Option<User> }
+
+fn boss_name(u: User) -> str { u.boss?.name ?? "none" }
+
+fn main() / io { print(boss_name(User { name: "a", boss: None })) }

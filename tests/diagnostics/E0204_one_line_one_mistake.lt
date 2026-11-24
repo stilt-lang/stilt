@@ -1,0 +1,5 @@
+pub type Price = { cents: i64 }
+
+pub fn labels(prices: List<Price>) -> List<str> without alloc {
+  prices.map(|p| "{p.cents}")
+}

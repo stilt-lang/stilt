@@ -1,0 +1,13 @@
+//~ rule: syntax.range-precedence, expressions.ranges, expressions.range-iteration
+//~ run-output: "[0, 1, 2] 10 [2, 3]"
+
+fn main() / io {
+  let n = 2
+  var seen = []
+  for i in 0..n + 1 { seen.push(i) }
+  var total = 0
+  for i in 1..=4 { total += i }
+  var tail = []
+  for i in n..n * 2 { tail.push(i) }
+  print("{seen} {total} {tail}")
+}

@@ -1,0 +1,8 @@
+use std.meta
+
+// A grant covers what the package's code does when the program runs, never a
+// macro's run, which performs nothing whatever the manifest grants.
+pub macro loud(e: meta.Expr) -> meta.Expr {
+  print("expanding") //~ ERROR E0502
+  e
+}

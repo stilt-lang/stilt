@@ -1,0 +1,6 @@
+fn bump(inout count: i64) { count += 1 }
+
+fn next(count: i64) -> i64 {
+  bump(inout count + 1)
+  count
+}

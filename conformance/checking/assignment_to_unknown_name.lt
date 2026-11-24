@@ -1,0 +1,10 @@
+//~ rule: errors.error-type, errors.unknown-names, expressions.places
+
+// An unknown name has the error type, which may be a place: assigning to it, or to a field of
+// it, reports nothing more.
+fn assigned() {
+  missing = 1 //~ ERROR E0211
+  missing.x = 2
+}
+
+fn main() {}

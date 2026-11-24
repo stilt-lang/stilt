@@ -1,0 +1,9 @@
+── UNTERMINATED STRING LITERAL ── E0005_comment_in_an_interpolation.lt:3:9  [E0005]
+
+`//` begins a comment, even inside a string's `{…}`:
+
+  3 │   print("{a // 2}")
+    │         ^^^^^^^^^^^
+
+Stilt divides with `/`, which rounds an integer quotient toward zero, and
+`div_euclid` rounds it down.

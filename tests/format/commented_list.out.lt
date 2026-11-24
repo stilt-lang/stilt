@@ -1,0 +1,18 @@
+// A list of literals that holds a comment has one element per line, as any other list that a
+// comment breaks, the comment kept on its line.
+fn main() / io {
+  let squares = [
+    1,
+    4,
+    9, // the first three
+    16,
+    25,
+  ]
+  let cubes = [
+    // the first three
+    1,
+    8,
+    27,
+  ]
+  print("{squares} {cubes}")
+}

@@ -1,0 +1,12 @@
+use std.meta
+
+/// One.
+pub macro one() -> meta.Expr { quote { 1 } }
+
+/// A pattern of one.
+pub macro one_pattern() -> meta.Pattern { quote pattern { 1 } }
+
+/// The type `i64`.
+pub macro int() -> meta.Type { quote type { i64 } }
+
+fn wrong() -> i64 { "one" } //~ ERROR E0311

@@ -1,0 +1,14 @@
+── PROPERTY THAT PERFORMS `io` ── E0510_property_that_performs_io.lt:1:30  [E0510]
+
+This performs `io`, which a property can't:
+
+  1 │ /// prop: |a: i64, b: i64| { print("{a} {b}"); add(a, b) == add(b, a) }
+    │                              ^^^^^^^^^^^^^^^^
+
+A property runs on generated cases and gives the same verdict on every run, so
+it can't read or write the world. Remove the `print`.
+
+To fix it, remove the `print`:
+
+  1 │ /// prop: |a: i64, b: i64| { print("{a} {b}"); add(a, b) == add(b, a) }
+    │                              ------------------

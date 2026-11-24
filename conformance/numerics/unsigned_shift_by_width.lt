@@ -1,0 +1,12 @@
+//~ rule: numbers.shift-amounts, effects.panic-kinds
+//~ run-output: "1"
+//~ panic: overflow
+//~ panic-at: unsigned_shift_by_width.lt:11:11
+
+fn main() / io {
+  let x: u8 = 128
+  let seven: u8 = 7
+  let eight: u8 = 8
+  print("{x >> seven}")
+  print("{x >> eight}")
+}

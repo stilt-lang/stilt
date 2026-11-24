@@ -1,0 +1,95 @@
+//~ rule: facts.div, facts.without-div, facts.rules-of-acceptance, facts.counting-loops, facts.closest-rule
+
+fn step(i: i64) -> bool { i % 3 == 0 }
+
+// The step is inside an `if`, so an iteration may leave `i` as it was.
+fn stalls(n: i64) -> i64 without div {
+  var i = 0
+  while i < n { //~ ERROR E0204
+    if step(i) { i += 1 }
+  }
+  i
+}
+
+// The bound grows as fast as the counter.
+fn chases(n: i64) -> i64 without div {
+  var i = 0
+  var m = n
+  while i < m { //~ ERROR E0204
+    i += 1
+    m += 1
+  }
+  i
+}
+
+// A parameter is never known positive.
+fn strides(n: i64, s: i64) -> i64 without div {
+  var i = 0
+  if s > 0 {
+    while i < n { i += s } //~ ERROR E0204
+  }
+  i
+}
+
+fn unequal(n: i64) -> i64 without div {
+  var i = 0
+  while i != n { i += 1 } //~ ERROR E0204
+  i
+}
+
+// The comparison is the second conjunct of the `&&` chain.
+fn second(n: i64) -> i64 without div {
+  var i = 0
+  while step(i) && i < n { i += 1 } //~ ERROR E0204
+  i
+}
+
+fn skips(n: i64) -> i64 without div {
+  var i = 0
+  var count = 0
+  while i < n { //~ ERROR E0204
+    if step(i) { continue }
+    i += 1
+    count += 1
+  }
+  count
+}
+
+fn twice(n: i64) -> i64 without div {
+  var i = 0
+  while i < n { //~ ERROR E0204
+    i += 1
+    i = i * 2
+  }
+  i
+}
+
+// Neither side is a `var`.
+fn fixed(n: i64) -> i64 without div {
+  let i = 0
+  while i < n {} //~ ERROR E0204
+  i
+}
+
+// A binary search moves `lo` and `hi` by assignments, each a bound of the
+// other side.
+fn search(xs: List<i64>, x: i64) -> bool without div {
+  var lo = 0
+  var hi = xs.len()
+  while lo < hi { //~ ERROR E0204
+    let mid = lo + (hi - lo) / 2
+    if xs[mid] == x { return true }
+    if xs[mid] < x { lo = mid + 1 } else { hi = mid }
+  }
+  false
+}
+
+// Every `loop` adds `div`.
+fn every_loop(n: i64) -> i64 without div {
+  var i = 0
+  loop { //~ ERROR E0204
+    if i >= n { break }
+    i += 1
+  }
+  i
+}

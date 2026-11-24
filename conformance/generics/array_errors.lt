@@ -1,0 +1,53 @@
+//~ tier: meta
+//~ rule: generics.array-sizes, generics.array-literals, generics.array-elements, generics.array-patterns, generics.array-exhaustiveness
+
+use std.array
+
+const BELOW: i64 = -2
+
+fn literals() {
+  let short: array.Array<i64, 3> = [1, 2] //~ ERROR E0311
+  let long: array.Array<i64, 3> = [1, 2, 3, 4] //~ ERROR E0311
+  let xs = [1, 2]
+  let spread: array.Array<i64, 3> = [1, ..xs] //~ ERROR E0311
+}
+
+// A size is never negative where it is written.
+fn sizes() {
+  let a: array.Array<i64, -1> = array.fill(0) //~ ERROR E0347
+  let b: array.Array<i64, BELOW> = array.fill(0) //~ ERROR E0347
+}
+
+// A size that a value parameter gives is equal only to itself.
+fn sized<n: i64>(v: array.Array<i64, n>) {
+  let [x, y] = v //~ ERROR E0311
+  let w: array.Array<i64, n> = [1, 2] //~ ERROR E0311
+  let [..] = v
+  let [z, ..] = v //~ ERROR E0311
+}
+
+fn patterns(v: array.Array<i64, 3>) {
+  let [x, y] = v //~ ERROR E0311
+  let [first, ..rest] = v //~ ERROR E0311
+  let [a, b, c, ..] = v
+  let [d, e, f, g, ..] = v //~ ERROR E0311
+}
+
+// The literal on the left, which nothing expects to be an array, is a
+// `List`.
+fn compare(v: array.Array<i64, 3>) -> bool {
+  [1, 2, 3] == v //~ ERROR E0311
+}
+
+// An array has only the members of `std.array` and its structural impls.
+fn members(v: array.Array<i64, 3>) {
+  let x = v.get(0) //~ ERROR E0314
+}
+
+fn missing(v: array.Array<i64, 3>) -> str {
+  match v { //~ ERROR E0329
+    [0, ..] => "zero",
+  }
+}
+
+fn main() {}

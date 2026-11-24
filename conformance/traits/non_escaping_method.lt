@@ -1,0 +1,36 @@
+//~ rule: traits.impl-signatures, effects.non-escaping-parameters
+//~ stdout:
+//~ | visiting 1
+//~ | visiting 2
+//~ | 3
+//~ | not a number: x
+//~ | 0
+
+trait Walk {
+  fn walk(self, f: fn(i64) -> i64) -> i64
+}
+
+type Pair = { a: i64, b: i64 }
+
+impl Walk for Pair {
+  fn walk(self, f: fn(i64) -> i64) -> i64 { f(self.a) + f(self.b) }
+}
+
+fn total<T: Walk>(t: T, f: fn(i64) -> i64) -> i64 { t.walk(f) }
+
+fn parse(s: str) -> i64 / raise<str> { s.to_i64() else raise "not a number: {s}" }
+
+fn main() / io {
+  let p = Pair { a: 1, b: 2 }
+  let n = p.walk(|x| {
+    print("visiting {x}")
+    x
+  })
+  print("{n}")
+  let m = try total(p, |x| parse("x"))
+    catch e because "the message says enough" => {
+    print(e)
+    0
+  }
+  print("{m}")
+}

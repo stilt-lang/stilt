@@ -1,0 +1,10 @@
+type Order = { qty: i64, grams: i64, box: i64 }
+
+fn mass(o: Order) -> i64 { o.qty * o.grams + o.box * 2 + o.qty - 1 }
+
+fn heft(p: Order) -> i64 { p.qty * p.grams + p.box * 2 + p.qty - 1 }
+
+fn main() / io {
+  let o = Order { qty: 2, grams: 300, box: 50 }
+  print("{mass(o)} {heft(o)}")
+}

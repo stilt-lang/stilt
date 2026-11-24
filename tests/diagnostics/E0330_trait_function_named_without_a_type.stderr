@@ -1,0 +1,15 @@
+── TRAIT FUNCTION OR CONSTANT NAMED WITHOUT A TYPE ── E0330_trait_function_named_without_a_type.lt:11:23  [E0330]
+
+`empty` is a function without `self` of `Empty`, so it is named on a type, as
+`Count.empty`:
+
+  11 │ fn fresh() -> Count { Empty.empty() }
+     │                       ^^^^^
+
+A trait's function without `self` is named on a type, as `Count.empty()`, since
+the trait alone doesn't say which impl to call.
+
+To fix it, name `Count`:
+
+  11 │ fn fresh() -> Count { Count.empty() }
+     │                       ~~~~~

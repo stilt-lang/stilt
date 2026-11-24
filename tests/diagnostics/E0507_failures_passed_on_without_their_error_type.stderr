@@ -1,0 +1,14 @@
+── FAILURES PASSED ON WITHOUT THEIR ERROR TYPE ── E0507_failures_passed_on_without_their_error_type.lt:3:47  [E0507]
+
+This takes `g`'s failures for a `Box`, but they belong to the caller:
+
+  3 │ fn wrap(g: fn() -> i64) -> Result<i64, Box> { Result.of(g) }
+    │                                               ^^^^^^^^^
+
+This would take your caller's failures for an error of its own type. Write
+`raise<E>` in the parameter's row, so that callers pass only those.
+
+To fix it, say that `g` raises `Box`: write `raise<Box>` in its row:
+
+  3 │ fn wrap(g: fn() -> i64 / raise<Box>) -> Result<i64, Box> { Result.of(g) }
+    │                       +++++++++++++

@@ -1,0 +1,24 @@
+//~ rule: effects.catch-around-row-variables, effects.passing-to-paired-variables
+//~ run-output: "1 2 3"
+
+type Box = { v: i64 }
+
+fn guarded(g: fn() -> i64 / raise<Box>) -> i64 {
+  try g() catch b because "a Box gives its value" => b.v
+}
+
+fn called(g: fn() -> i64 / raise<Box>) -> i64 { guarded(g) }
+
+fn in_closure(g: fn() -> i64 / raise<Box>) -> i64 { [0].map(|x| guarded(g) + x)[0] }
+
+fn as_value<r>(escaping g: fn() -> i64 / {raise<Box>, r}) -> i64 / r {
+  let h: fn(fn() -> i64 / {raise<Box>, r}) -> i64 / r = guarded
+  h(g)
+}
+
+fn main() / io {
+  let a = called(|| raise Box { v: 1 })
+  let b = in_closure(|| raise Box { v: 2 })
+  let c = as_value(|| raise Box { v: 3 })
+  print("{a} {b} {c}")
+}

@@ -1,0 +1,5 @@
+//~ rule: traits.map-equality, std.map-key-bounds
+
+fn same(a: Map<f64, str>, b: Map<f64, str>) -> bool {
+  a == b //~ ERROR E0318
+}

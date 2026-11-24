@@ -1,0 +1,39 @@
+use std.meta
+
+// Private, named by a quote below, and linked into the program that uses it.
+fn secret(n: i64) -> i64 { n + 100 }
+
+/// The expression plus one, through a binding of the quote's own.
+pub macro plus_one(e: meta.Expr) -> meta.Expr {
+  quote {
+    let x = 1
+    $e + x
+  }
+}
+
+/// The expression, bound to a fresh name in one quote and doubled in another.
+pub macro doubled(e: meta.Expr) -> meta.Expr {
+  let v = meta.fresh("v")
+  let twice = quote { $v + $v }
+  quote {
+    let $v = $e
+    $twice
+  }
+}
+
+/// The expression, passed to the module's private function.
+pub macro hidden(e: meta.Expr) -> meta.Expr { quote { secret($e) } }
+
+/// `bind!(value) { name => body }`: the body, where the user's name is bound
+/// to the value.
+pub macro bind(value: meta.Expr, body: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(body)
+  let n = try c.name()
+  let _ = try c.punct("=>")
+  let e = try c.expr()
+  try c.end()
+  quote {
+    let $n = $value
+    $e
+  }
+}

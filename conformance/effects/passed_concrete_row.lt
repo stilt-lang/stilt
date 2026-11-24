@@ -1,0 +1,24 @@
+//~ rule: effects.passing-to-paired-variables
+//~ stdout:
+//~ | noisy
+//~ | 7
+
+type Box = { v: i64 }
+
+fn guarded(g: fn() -> i64 / raise<Box>) -> i64 {
+  try g() catch b because "a Box gives its value" => b.v
+}
+
+fn noisy() -> i64 / {io, raise<Box>} {
+  print("noisy")
+  raise Box { v: 6 }
+}
+
+// The implicit row variable of `g` is unpaired, but the use of `guarded`
+// gives its parameter's variable the row `io`, which holds no row variable.
+fn sum(g: fn() -> i64) -> i64 / io { guarded(noisy) + g() }
+
+fn main() / io {
+  let n = sum(|| 1)
+  print("{n}")
+}

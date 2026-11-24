@@ -1,0 +1,24 @@
+// An `if` with an `else` goes on one line when the whole line fits in 100 columns. Otherwise
+// every branch is a block of its own lines, though a branch alone would fit on one, an empty
+// branch too, and `else` follows the brace that closes the branch before it.
+fn kind(c: str, n: i64) -> i64 {
+  let k = if c.is_ascii_digit() {
+    number_of(c, n)
+  } else if c.is_ascii_alpha() {
+    word_of(c, n) + 1
+  } else {
+    symbol_of(c, n)
+  }
+  let small = if n > 0 { 1 } else { 2 }
+  if n > 9 {
+    print("big")
+  } else {
+    print("small")
+    print("again")
+  }
+  if n > 99 {
+    print("a number with three places or more, which this function reports on now")
+  } else {
+  }
+  k + small
+}

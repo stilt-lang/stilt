@@ -1,0 +1,19 @@
+//~ rule: effects.what-paired-variable-may-raise
+
+type Box = { v: i64 }
+
+fn apply(k: fn() / raise<Box>) / raise<Box> { try k() }
+
+// The row of `g` pairs its implicit row variable with `Box`.
+fn passed(g: fn() / raise<Box>) -> i64 {
+  try {
+    apply(g)
+    7
+  }
+    catch x because "a Box is the only error" => x.v
+}
+
+fn main() / io {
+  let d = passed(|| raise true) //~ ERROR E0503
+  print("{d}")
+}

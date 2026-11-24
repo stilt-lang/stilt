@@ -1,0 +1,9 @@
+use std.task
+use std.view
+
+fn counted(xs: List<i64>) -> i64 / async {
+  let v = view.View.all(xs)
+  task.spawn(|| v.len()).await()
+}
+
+fn main() {}

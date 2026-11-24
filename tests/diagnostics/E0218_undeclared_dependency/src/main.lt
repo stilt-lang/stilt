@@ -1,0 +1,4 @@
+use http
+use json
+
+fn main() / io { print("{http.get()} {json.parse("1")}") }

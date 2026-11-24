@@ -1,0 +1,5 @@
+//~ rule: program.contents, values.independent-copies
+
+fn twice<T: Copy>(x: T) -> (T, T) { //~ ERROR E0211
+  (x, x)
+}

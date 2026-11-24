@@ -1,0 +1,56 @@
+//~ tier: advanced
+//~ rule: views.reads-that-last, views.change-while-viewed
+
+use std.view
+
+fn bump(inout xs: List<i64>) -> i64 {
+  xs[0] = 9
+  0
+}
+
+fn take(v: view.View<List<i64>>, n: i64) -> i64 { v.len() + n }
+
+fn first(xs: List<i64>, n: i64) -> view.View<List<i64>> { view.View.of(xs, n, 1) }
+
+// The view reads `xs` from where `xs` is evaluated, before the offsets.
+fn start() / io {
+  var xs = [1, 2, 3]
+  let v = view.View.of(xs, bump(inout xs), 2) //~ ERROR E0423
+  print("{v.copy()[0]}")
+}
+
+fn end() / io {
+  var xs = [1, 2, 3]
+  print("{view.View.of(xs, 0, bump(inout xs) + 2)}") //~ ERROR E0423
+}
+
+// A view argument reads its sources for the call, from where it is made.
+fn argument() / io {
+  var xs = [1, 2, 3]
+  print("{take(view.View.all(xs), bump(inout xs))}") //~ ERROR E0423
+}
+
+// A call's result views its argument from where the argument is evaluated.
+fn result() / io {
+  var xs = [1, 2, 3]
+  print("{first(xs, bump(inout xs))}") //~ ERROR E0423
+}
+
+fn receiver() / io {
+  var xs = [1, 2, 3]
+  print("{view.View.all(xs).view(0, bump(inout xs) + 1)}") //~ ERROR E0423
+}
+
+fn nested() / io {
+  var xs = [1, 2, 3]
+  print("{take(view.View.of(xs, bump(inout xs), 1), 0)}") //~ ERROR E0423
+}
+
+fn main() / io {
+  start()
+  end()
+  argument()
+  result()
+  receiver()
+  nested()
+}

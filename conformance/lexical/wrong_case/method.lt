@@ -1,0 +1,5 @@
+type Counter = { n: i64 }
+
+impl Counter {
+  fn Get(self) -> i64 { self.n } //~ ERROR E0100
+}

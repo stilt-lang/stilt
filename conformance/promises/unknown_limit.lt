@@ -1,0 +1,5 @@
+//~ rule: facts.spelling
+
+fn twice(n: i64) -> i64 without total { //~ ERROR E0100
+  n * 2
+}

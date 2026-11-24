@@ -1,0 +1,47 @@
+//~ rule: effects.panic-kinds, effects.overflow-effect, effects.without-overflow
+
+// Under `without overflow`, each operation that can overflow is an error, and so is a call of
+// a function that can.
+
+fn sum(x: i64, y: i64) -> i64 { x + y }
+
+fn added(x: i64, y: i64) -> i64 without overflow { x + y } //~ ERROR E0204
+fn negated(x: i64) -> i64 without overflow { -x } //~ ERROR E0204
+fn stepped(inout x: i64) without overflow {
+  x += 1 //~ ERROR E0204
+  x -= 1 //~ ERROR E0204
+  x *= 2 //~ ERROR E0204
+  x /= 3
+  x %= 2
+  x <<= 1
+}
+fn divided(x: i64, k: i64) -> i64 without overflow { x / k } //~ ERROR E0204
+fn by_minus_one(x: i64) -> i64 without overflow { x / -1 } //~ ERROR E0204
+// Operations on one line beyond one limit are one error, at the first of them (facts.without).
+fn shifted(x: i64, k: i64) -> i64 without overflow { (x << 63) + (x >> k) } //~ ERROR E0204
+fn too_far(x: i64) -> i64 without overflow { x << 64 } //~ ERROR E0204
+fn right_too_far(x: i64) -> i64 without overflow { x >> 64 } //~ ERROR E0204
+fn negative_amount(x: i64) -> i64 without overflow { x << -1 } //~ ERROR E0204
+fn rem_by_minus_one(x: i64) -> i64 without overflow { x % -1 } //~ ERROR E0204
+fn euclid_by_minus_one(x: i64) -> i64 without overflow { x.rem_euclid(-1) } //~ ERROR E0204
+fn natives(x: i64, k: i64) -> i64 without overflow { x.abs() + k.pow(2) } //~ ERROR E0204
+fn euclid(x: i64, k: i64) -> i64 without overflow { x.div_euclid(-1) + x.rem_euclid(k) } //~ ERROR E0204
+fn called(x: i64) -> i64 without overflow { sum(x, 1) } //~ ERROR E0204
+fn closure(xs: List<i64>) -> List<i64> without overflow { xs.map(|x| x * x) } //~ ERROR E0204
+
+// None of these can overflow.
+fn halved(x: i64) -> i64 without overflow { x / 2 }
+fn unsigned(x: u64, k: u64) -> u64 without overflow { x / k }
+fn literal() -> i64 without overflow { -5 }
+fn wrapped(x: i64) -> i64 without overflow { x +% 1 -% 2 *% 3 }
+fn floats(x: f64) -> f64 without overflow { -x * 2.0 + 1.0 }
+fn euclid_by_three(x: i64) -> i64 without overflow { x.div_euclid(3) }
+// A literal amount from 0 to one below the width can't overflow.
+fn shift_edges(x: i64) -> i64 without overflow { (x << 0) ^ (x >> 63) }
+fn byte_shift(x: u8) -> u8 without overflow { x << 7 }
+fn right_edges(x: i64) -> i64 without overflow { (x >> 0) ^ (x << 63) }
+
+// `without panic` doesn't rule overflow out.
+fn panicless(x: i64) -> i64 without panic { x + 1 }
+
+fn main() {}

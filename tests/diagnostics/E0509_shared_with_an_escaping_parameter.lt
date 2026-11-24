@@ -1,0 +1,3 @@
+fn compose<e>(f: fn(i64) -> i64 / e, escaping g: fn(i64) -> i64 / e) -> fn(i64) -> i64 / e {
+  |x| g(f(x))
+}

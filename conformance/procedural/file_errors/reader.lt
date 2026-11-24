@@ -1,0 +1,7 @@
+use std.meta
+
+/// The file's text.
+pub macro text(f: meta.File) -> meta.Expr {
+  let s = f.text.value()
+  quote { $s }
+}

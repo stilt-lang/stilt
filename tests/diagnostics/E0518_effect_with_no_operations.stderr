@@ -1,0 +1,9 @@
+── EFFECT WITH NO OPERATIONS ─── E0518_effect_with_no_operations.lt:1:8  [E0518]
+
+The effect `Audited` declares no operation, so nothing can perform it:
+
+  1 │ effect Audited {
+    │        ^^^^^^^
+
+An effect is its operations, so one with none can never be performed. Declare
+its operations.

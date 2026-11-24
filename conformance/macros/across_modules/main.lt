@@ -1,0 +1,15 @@
+//~ tier: advanced
+//~ rule: macros.syntax-declarations, macros.uses, macros.hygiene
+//~ stdout:
+//~ | hello Ada
+//~ | mine x
+
+use tools
+
+// The template's `helper` is the one of `tools`, not this one.
+fn helper(name: str) -> str { "mine {name}" }
+
+fn main() / io {
+  tools.greet!("Ada")
+  print(helper("x"))
+}

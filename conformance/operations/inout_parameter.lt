@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: handlers.no-inout-parameter
+
+effect Bump {
+  fn bump(inout n: i64) //~ ERROR E0517
+}
+
+effect Count {
+  fn count(n: i64) -> i64
+}
+
+fn main() / io {
+  let h = handler Count {
+    fn count(inout n: i64) -> i64 { //~ ERROR E0517
+      n
+    }
+  }
+  with h { print("{Count.count(1)}") }
+}

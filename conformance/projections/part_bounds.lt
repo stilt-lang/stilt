@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: projections.writable-views
+//~ run-output: "[2]"
+//~ panic: bounds
+//~ panic-at: part_bounds.lt:16:11
+
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var v = view.into(inout xs, 1, 3)
+  {
+    var p = view.part(inout v, 0, 1)
+    print("{p}")
+  }
+  var q = view.part(inout v, 2, 1)
+  print("{q}")
+}

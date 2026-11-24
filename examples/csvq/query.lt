@@ -1,0 +1,120 @@
+// The query that the command line asks for.
+
+/// How a filter compares a field with its value.
+pub type Op = | Equals | Differs | Below | AtMost | Above | AtLeast
+
+/// Keeps the rows whose field in `column` compares with `value` as `op` says.
+pub type Filter = { column: str, op: Op, value: str }
+
+/// A column of a grouped table: the number of rows in each group, or the sum, the mean, the
+/// least or the greatest of a column's fields in it.
+pub type Aggregate = | Count | Sum(str) | Mean(str) | Min(str) | Max(str)
+
+/// What to do with a table, in this order: filter its rows, group them, sort them, keep the
+/// first few, and keep some columns.
+pub type Query = {
+  file: str,
+  filters: List<Filter>,
+  group: Option<str>,
+  aggregates: List<Aggregate>,
+  sort: Option<str>,
+  descending: bool,
+  limit: Option<i64>,
+  columns: List<str>,
+}
+
+pub const USAGE: str = "usage: csvq FILE [--where COLUMN=VALUE]... [--group COLUMN [--count] [--sum COLUMN]... [--mean COLUMN]... [--min COLUMN]... [--max COLUMN]...] [--sort COLUMN [--desc]] [--limit N] [--columns A,B,...]"
+
+/// The query that the arguments give. With `--group` and no aggregate, the groups are
+/// counted. A filter's operator is one of `=`, `!=`, `<`, `<=`, `>` and `>=`.
+/// ex: try parse(["a.csv"]).file == "a.csv"
+/// ex: try parse(["a.csv", "--where", "qty>=2"]).filters == [Filter { column: "qty", op: AtLeast, value: "2" }]
+/// ex: try parse(["a.csv", "--group", "city"]).aggregates == [Count]
+/// ex: try parse(["a.csv", "--columns", "a,b"]).columns == ["a", "b"]
+pub fn parse(args: List<str>) -> Query / raise<str> {
+  var q = Query {
+    file: "",
+    filters: [],
+    group: None,
+    aggregates: [],
+    sort: None,
+    descending: false,
+    limit: None,
+    columns: [],
+  }
+  var i = 0
+  while i < args.len() {
+    let arg = args[i]
+    i += 1
+    match arg {
+      "--where" => q.filters.push(try filter(try value(args, inout i, arg)))
+      "--group" => { q.group = Some(try value(args, inout i, arg)) }
+      "--count" => q.aggregates.push(Count)
+      "--sum" => q.aggregates.push(Sum(try value(args, inout i, arg)))
+      "--mean" => q.aggregates.push(Mean(try value(args, inout i, arg)))
+      "--min" => q.aggregates.push(Min(try value(args, inout i, arg)))
+      "--max" => q.aggregates.push(Max(try value(args, inout i, arg)))
+      "--sort" => { q.sort = Some(try value(args, inout i, arg)) }
+      "--desc" => { q.descending = true }
+      "--limit" => { q.limit = Some(try limit(try value(args, inout i, arg))) }
+      "--columns" => { q.columns = try value(args, inout i, arg).split(",") }
+      _ if arg.starts_with("-") => raise "unknown option {arg}\n{USAGE}"
+      _ if q.file != "" => raise "one file only, but {q.file} and {arg} were given\n{USAGE}"
+      _ => { q.file = arg }
+    }
+  }
+  try check(q)
+  if q.group != None && q.aggregates.is_empty() { q.aggregates = [Count] }
+  q
+}
+
+/// The value after option `arg`, at `i`, which moves past it.
+fn value(args: List<str>, inout i: i64, arg: str) -> str / raise<str> {
+  let v = args.get(i) else raise "{arg} needs a value\n{USAGE}"
+  i += 1
+  v
+}
+
+/// The arguments that make sense only together.
+fn check(q: Query) / raise<str> {
+  if q.file == "" { raise USAGE }
+  if q.group == None && !q.aggregates.is_empty() { raise "an aggregate needs --group\n{USAGE}" }
+  if q.sort == None && q.descending { raise "--desc needs --sort\n{USAGE}" }
+}
+
+/// The filter that `COLUMN OP VALUE` writes, with no spaces.
+/// ex: try filter("city=Lyon") == Filter { column: "city", op: Equals, value: "Lyon" }
+/// ex: try filter("price!=") == Filter { column: "price", op: Differs, value: "" }
+/// ex: Result.of(|| try filter("city")).is_err()
+fn filter(text: str) -> Filter / raise<str> {
+  let at = text.bytes().find_index(|b| b == 33 || b == 60 || b == 61 || b == 62)
+    else raise "--where needs COLUMN=VALUE or another comparison, not {text}"
+  let column = text.slice(0, at)
+  let rest = text.slice(at, text.len())
+  let ops = [
+    ("!=", Differs),
+    ("<=", AtMost),
+    (">=", AtLeast),
+    ("=", Equals),
+    ("<", Below),
+    (">", Above),
+  ]
+  let (sign, op) = ops.find(|(s, _)| rest.starts_with(s))
+    else raise "--where has no operator in {text}"
+  if column == "" { raise "--where needs a column before {sign}" }
+  Filter { column, op, value: rest.slice(sign.len(), rest.len()) }
+}
+
+fn limit(text: str) -> i64 / raise<str> {
+  let n = text.to_i64() else raise "--limit needs a number, not {text}"
+  if n < 0 { raise "--limit needs a number that isn't negative, not {n}" }
+  n
+}
+
+test "a value can't be left out" {
+  assert Result.of(|| try parse(["a.csv", "--sort"])) == Err("--sort needs a value\n{USAGE}")
+}
+
+test "an aggregate needs a group" {
+  assert Result.of(|| try parse(["a.csv", "--sum", "qty"])).is_err()
+}

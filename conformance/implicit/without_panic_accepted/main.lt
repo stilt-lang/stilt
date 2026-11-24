@@ -1,0 +1,21 @@
+//~ rule: effects.without-panic, facts.inference, facts.calls-through-function-values
+//~ stdout:
+//~ | 6
+//~ | [2, 3, 4]
+//~ | [Sturdy { n: 1 }, Sturdy { n: 2 }]
+//~ | true
+//~ | 4
+//~ | 8
+
+use lib
+use pure
+
+fn main() / io {
+  print("{pure.sum_lengths([1, 2], [3, 4, 5, 6])}")
+  print("{pure.shifted([1, 2, 3])}")
+  let sorted = pure.ordered([lib.Sturdy { n: 2 }, lib.Sturdy { n: 1 }])
+  print("{sorted}")
+  print("{pure.parity(10)}")
+  print("{pure.apply(lib.divider(), 4)}")
+  print("{pure.halve(16)}")
+}

@@ -1,0 +1,25 @@
+//~ rule: program.visibility, program.what-use-binds
+//~ stdout:
+//~ | Circle(2.0)
+//~ | 4.0
+//~ | 2.0
+//~ | 1.5
+//~ | 0.0
+//~ | 1.0
+
+use shapes
+
+fn main() / io {
+  let c = shapes.Circle(2.0)
+  print("{c}")
+  print("{c.area()}")
+  let r = match c {
+    shapes.Circle(r) => r
+    shapes.Square(s) => s
+  }
+  print("{r}")
+  let p = shapes.Point { x: 1.5, y: 0.0 }
+  print("{p.x}")
+  print("{shapes.Shape.ZERO}")
+  print("{shapes.Shape.unit().area()}")
+}

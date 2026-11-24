@@ -1,0 +1,11 @@
+//~ rule: effects.panic-kinds, std.lists
+//~ run-output: "2 [1]"
+//~ panic: bounds
+//~ panic-at: list_remove_out_of_bounds.lt:10:11
+
+fn main() / io {
+  var xs = [1, 2]
+  let last = xs.remove(1)
+  print("{last} {xs}")
+  let _ = xs.remove(1)
+}

@@ -1,0 +1,23 @@
+//~ tier: meta
+//~ rule: macros.parts, macros.part-forms, macros.cursor
+//~ stdout:
+//~ | [3, 2, 5]
+//~ | [1, 2, 3]
+//~ | 15
+//~ | 704
+
+meta use parts
+
+fn add(a: i64, b: i64) -> i64 { a + b }
+
+fn main() / io {
+  // Parts split at the commas outside groups.
+  print("{parts.three!(add(1, 2), [1, 2].len(), 5)}")
+  // One trailing comma is ignored.
+  print("{parts.three!(1, 2, 3,)}")
+  // The last parameter takes `a , (b, c) , d`: five tokens.
+  print("{parts.rest!(10, a, (b, c), d)}")
+  // The last parameter takes the trailing block's `x , y z`: four tokens.
+  let n = parts.block!(7) { x, y z }
+  print("{n}")
+}

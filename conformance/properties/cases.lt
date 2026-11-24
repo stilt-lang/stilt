@@ -1,0 +1,6 @@
+//~ rule: tests.property-cases, tests.seeds, tests.draws, tests.generated-scalars, tests.boundary-values, tests.minimal-values
+
+/// prop: |xs: List<i64>| xs.len() > 0 //~ FAIL
+/// prop: |x: i64| x + 1 > x //~ FAIL
+/// prop: |n: u8| n < 255 //~ FAIL
+fn f() {}

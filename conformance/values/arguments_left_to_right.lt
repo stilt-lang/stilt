@@ -1,0 +1,36 @@
+//~ rule: values.left-to-right
+//~ stdout:
+//~ | a
+//~ | b
+//~ | c
+//~ | receiver
+//~ | argument
+//~ | first
+//~ | second
+//~ | inner a
+//~ | inner b
+//~ | last
+//~ | left
+//~ | right
+//~ | 6 [1, 2] [1, 2] 6 -1
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn listed(s: str, v: List<i64>) -> List<i64> / io {
+  print(s)
+  v
+}
+
+fn add3(a: i64, b: i64, c: i64) -> i64 { a + b + c }
+
+fn main() / io {
+  let s = add3(note("a", 1), note("b", 2), note("c", 3))
+  let joined = listed("receiver", [1]).concat(listed("argument", [2]))
+  let xs = [note("first", 1), note("second", 2)]
+  let n = add3(add3(note("inner a", 1), note("inner b", 2), 0), 0, note("last", 3))
+  let d = note("left", 1) - note("right", 2)
+  print("{s} {joined} {xs} {n} {d}")
+}

@@ -1,0 +1,22 @@
+//~ rule: expressions.range-iteration, expressions.break-and-continue
+//~ run-output: "[0, 1, 2] 6 [250, 251, 252, 253, 254, 255] [9223372036854775806, 9223372036854775807]"
+
+// A `break` ends a range loop at once, and a range that includes its type's largest value
+// ends there.
+fn main() / io {
+  var seen = []
+  for i in 0..10 {
+    if i == 3 { break }
+    seen.push(i)
+  }
+  var turns = 0
+  for i in 0..=5 { turns += 1 }
+  let lo: u8 = 250
+  let hi: u8 = 255
+  var bytes = []
+  for b in lo..=hi { bytes.push(b) }
+  let top = 9223372036854775807
+  var last = []
+  for x in top - 1..=top { last.push(x) }
+  print("{seen} {turns} {bytes} {last}")
+}

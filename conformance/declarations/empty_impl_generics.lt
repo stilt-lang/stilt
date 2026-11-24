@@ -1,0 +1,9 @@
+//~ rule: syntax.generic-lists, declarations.generic-lists
+
+type P = { x: i64 }
+
+impl<> P { //~ ERROR E0100
+  fn get(self) -> i64 {
+    self.x
+  }
+}

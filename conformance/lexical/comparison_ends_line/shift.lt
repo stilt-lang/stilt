@@ -1,0 +1,4 @@
+fn halve(a: i64) -> i64 {
+  a >> //~ ERROR E0100
+    1
+}

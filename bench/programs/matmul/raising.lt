@@ -1,0 +1,40 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+
+use std.cli
+
+type Fail = | Fail
+
+fn matrix(n: i64, seed: i64) -> List<List<f64>> / raise<Fail> {
+  var rows = []
+  for i in 0..n {
+    var row = []
+    for j in 0..n { row.push(((i * j + seed) % 17).to_f64() / 17.0) }
+    rows.push(row)
+  }
+  rows
+}
+
+fn multiply(a: List<List<f64>>, b: List<List<f64>>) -> List<List<f64>> / raise<Fail> {
+  let n = a.len()
+  var c = []
+  for i in 0..n {
+    let ai = a[i]
+    var row = []
+    for j in 0..n {
+      var sum = 0.0
+      for k in 0..n { sum += ai[k] * b[k][j] }
+      row.push(sum)
+    }
+    c.push(row)
+  }
+  c
+}
+
+fn main() / {io, raise<Fail>} {
+  let n = (cli.arg(0) else "").to_i64() else 250
+  let c = try multiply(try matrix(n, 1), try matrix(n, 2))
+  var trace = 0.0
+  for i in 0..n { trace += c[i][i] }
+  print("{c[n / 2][n / 3]:.6} {trace:.6}")
+}

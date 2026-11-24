@@ -1,0 +1,10 @@
+//~ tier: meta
+//~ rule: macros.step-limits
+
+// Every value a run holds counts toward its memory, not only its lists and
+// texts: a chain of variants runs out of it and stops.
+meta use hoard
+
+fn chain() -> i64 { hoard.chain!() } //~ ERROR E0226
+
+fn main() {}

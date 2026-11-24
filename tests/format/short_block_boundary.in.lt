@@ -1,0 +1,15 @@
+// A block on one line may reach the 100th column, counting its indentation, and no further.
+fn add_up_to_the_hundredth_column_aaaaaaaaaaaaaaa(first: i64, second: i64) -> i64 {
+  first + second
+}
+
+fn add_up_past_the_hundredth_column_bbbbbbbbbbbbbb(first: i64, second: i64) -> i64 {
+  first + second
+}
+
+fn report(total: i64) / io {
+  if total > 0 {
+    print("positive ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp")
+  }
+  if total < 0 { print("negative nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn") }
+}

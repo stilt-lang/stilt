@@ -1,0 +1,9 @@
+fn first(inout xs: List<i64>) {
+  yield xs[0]
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  first(inout xs)
+  print("{xs}")
+}

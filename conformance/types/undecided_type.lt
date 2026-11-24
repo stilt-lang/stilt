@@ -1,0 +1,17 @@
+//~ rule: numbers.literal-defaults, types.undecided-types
+
+fn count() -> i64 {
+  let empty = [] //~ ERROR E0312
+  0
+}
+
+fn count_words() -> i64 {
+  let words = []
+  "zero" //~ ERROR E0311
+}
+
+fn count_numbers() -> i64 {
+  var numbers = []
+  numbers.push(1)
+  numbers.len()
+}

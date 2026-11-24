@@ -1,0 +1,20 @@
+//~ tier: meta
+//~ rule: macros.meta-use, macros.expansion-order, errors.broken-parts
+
+use std.meta
+
+// A procedural macro whose declaration breaks is still a procedural macro: it expands no
+// use, but a use that no procedural macro may have, in its own module or as a value, is still
+// an error.
+macro one() -> meta.Expr { quote { 1 } >} //~ ERROR E0100
+
+fn used() -> i64 {
+  one!() //~ ERROR E0212
+}
+
+fn named() -> i64 {
+  let f = one //~ ERROR E0212
+  0
+}
+
+fn main() {}

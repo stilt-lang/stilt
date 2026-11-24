@@ -1,0 +1,37 @@
+//~ tier: advanced
+//~ rule: macros.expansion-size, macros.errors-in-expansions
+
+// Each of these macros uses the one below it twice, so `d16!()` would expand
+// 65,536 times, in expansions nested only 16 deep; its expansions pass
+// 100,000 tokens, and the use stops there, at the use the user wrote. Nothing
+// more of that use's expansions is resolved or reported: not the unknown name
+// that `beside!` would place after `d16!()`.
+syntax d0 { () => 1 }
+syntax d1 { () => d0!() + d0!() }
+syntax d2 { () => d1!() + d1!() }
+syntax d3 { () => d2!() + d2!() }
+syntax d4 { () => d3!() + d3!() }
+syntax d5 { () => d4!() + d4!() }
+syntax d6 { () => d5!() + d5!() }
+syntax d7 { () => d6!() + d6!() }
+syntax d8 { () => d7!() + d7!() }
+syntax d9 { () => d8!() + d8!() }
+syntax d10 { () => d9!() + d9!() }
+syntax d11 { () => d10!() + d10!() }
+syntax d12 { () => d11!() + d11!() }
+syntax d13 { () => d12!() + d12!() }
+syntax d14 { () => d13!() + d13!() }
+syntax d15 { () => d14!() + d14!() }
+syntax d16 { () => d15!() + d15!() }
+
+syntax beside {
+  ($x: expr) => d16!() + $x
+}
+
+fn large() -> i64 { d16!() } //~ ERROR E0231
+
+fn after() -> i64 { beside!(nowhere) } //~ ERROR E0231
+
+fn small() -> i64 { d4!() }
+
+fn main() {}

@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: tasks.continuations-stay-in-task
+
+use std.task
+
+// A task's function performs no user-defined effect, so no performance in a task reaches a
+// handler outside it.
+effect Ask {
+  fn ask() -> i64
+}
+
+fn main() / {io, async} {
+  let h = handler Ask -> i64 { fn ask() -> i64 { resume(1) } }
+  let r = with h {
+    task.spawn(|| Ask.ask()).await() //~ ERROR E0502
+  }
+  print("{r}")
+}

@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────────── E0100_java_public.lt:1:1  [E0100]
+
+Stilt marks an item public with `pub`, not `public`:
+
+  1 │ public fn add(a: i64, b: i64) -> i64 { a + b }
+    │ ^^^^^^
+
+An item is private to its module unless it is `pub`.
+
+To fix it, write `pub`:
+
+  1 │ pub fn add(a: i64, b: i64) -> i64 { a + b }
+    │ ~~~

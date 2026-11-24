@@ -1,0 +1,19 @@
+//~ rule: effects.passing-to-paired-variables, std.option-result-and-ordering
+//~ run-output: "ok 5 box 3"
+
+type Box = { v: i64 }
+
+fn wrap(g: fn() -> i64 / raise<Box>) -> Result<i64, Box> { Result.of(g) }
+
+fn describe(res: Result<i64, Box>) -> str {
+  match res {
+    Ok(n) => "ok {n}"
+    Err(b) => "box {b.v}"
+  }
+}
+
+fn main() / io {
+  let a = wrap(|| 5)
+  let b = wrap(|| raise Box { v: 3 })
+  print("{describe(a)} {describe(b)}")
+}

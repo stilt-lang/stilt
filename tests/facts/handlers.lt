@@ -1,0 +1,43 @@
+//~ tier: advanced
+
+// Effects and handlers (handlers.implicit-effects-and-capabilities): a handler literal's bodies are
+// code of the function that writes it, as a closure literal's are, a performance is a call through
+// a stored function value, which may not end and adds nothing else of its own, and a `with` adds
+// nothing of its own.
+
+effect Ask {
+  fn ask() -> i64
+}
+
+effect Log {
+  fn log(msg: str) / io
+}
+
+// A performance may not end, since its handler's body runs, and adds no `panic`, `alloc` or
+// capability, however its handler is written.
+fn asked() -> i64 / Ask {
+  Ask.ask() //~ DIV ALLOC
+}
+
+fn logged() / {io, Log} {
+  Log.log("done") //~ DIV ALLOC
+}
+
+// A body's sites are its writer's: the index can panic here, and `print` gives `console`. A
+// handler literal allocates, as the closure literals of its bodies do (facts.inference), and
+// stores what they capture, as theirs do (handlers.handler-literals).
+fn printed(xs: List<i64>) / io {
+  let h = handler Log { fn log(msg: str) / io { print(msg) } } //~ CONSOLE ALLOC
+  let ask = handler Ask { fn ask() -> i64 { xs[0] } } //~ PANIC CONSUMES xs ALLOC
+  with h, ask { //~ ALLOC
+    Log.log("{Ask.ask()}") //~ DIV ALLOC
+  }
+}
+
+// A `with` adds nothing of its own, and neither does calling a function that performs, past
+// what that function has.
+fn plain() -> i64 {
+  with (handler Ask { fn ask() -> i64 { 1 } }) { //~ ALLOC
+    asked() //~ DIV ALLOC
+  }
+}

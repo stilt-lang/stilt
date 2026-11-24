@@ -1,0 +1,50 @@
+//~ rule: traits.impl-signatures
+
+trait Pick {
+  fn pick<T: Ord>(self, a: T, b: T) -> T
+  fn tally(self, inout n: i64)
+  fn run(self, f: fn() / io) / io
+  fn same(self, other: Self) -> bool
+}
+
+type A = {}
+
+impl Pick for A {
+  fn pick<U: Ord>(self, a: U, b: U) -> U { a }
+
+  fn tally(self, inout n: i64) { n += 1 }
+
+  fn run(self, f: fn() / io) / io { f() }
+
+  fn same(self, other: A) -> bool { true }
+}
+
+type B = {}
+
+impl Pick for B {
+  fn pick<U>(self, a: U, b: U) -> U { //~ ERROR E0307
+    a
+  }
+
+  fn tally(self, n: i64) {} //~ ERROR E0307
+
+  fn run(self, f: fn() / io) {} //~ ERROR E0307
+
+  fn same(self, other: Self) -> bool { false }
+}
+
+type C = {}
+
+impl Pick for C {
+  fn pick<U: Ord>(self, a: U, b: U) -> i64 { //~ ERROR E0307
+    0
+  }
+
+  fn tally(inout self, inout n: i64) {} //~ ERROR E0307
+
+  fn run(self, f: fn() / io) / io { f() }
+
+  fn same(self, other: A) -> bool { //~ ERROR E0307
+    false
+  }
+}

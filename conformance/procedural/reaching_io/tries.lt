@@ -1,0 +1,36 @@
+use std.fs
+use std.meta
+
+trait Speak {
+  fn speak(self) -> i64 / io
+}
+
+type Cat = { lives: i64 }
+
+impl Speak for Cat {
+  fn speak(self) -> i64 / io {
+    print("meow")
+    self.lives
+  }
+}
+
+/// Prints through a callback that it gives `map`.
+pub macro callback() -> meta.Expr {
+  let _ = [1, 2].map(|n| { //~ ERROR E0502
+    print("{n}")
+    n
+  })
+  quote { 1 }
+}
+
+/// Prints through a trait's method.
+pub macro speaks() -> meta.Expr {
+  let n = Cat { lives: 9 }.speak() //~ ERROR E0502
+  quote { $n }
+}
+
+/// Looks at the file system.
+pub macro looks() -> meta.Expr {
+  let found = fs.exists("secret") //~ ERROR E0502
+  quote { $found }
+}

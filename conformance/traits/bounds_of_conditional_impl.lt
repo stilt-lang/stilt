@@ -1,0 +1,6 @@
+//~ rule: traits.bound-reported-once, std.map-key-bounds
+
+fn same(a: Map<f64, str>, b: Map<f64, str>) -> bool {
+  let x = a[1.0] //~ ERROR E0318
+  a == b //~ ERROR E0318
+}

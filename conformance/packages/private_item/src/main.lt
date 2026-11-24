@@ -1,0 +1,6 @@
+use json
+
+fn main() / io {
+  print("{json.parse()}")
+  print("{json.helper()}") //~ ERROR E0213
+}

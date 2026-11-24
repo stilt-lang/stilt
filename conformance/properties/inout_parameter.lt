@@ -1,0 +1,7 @@
+//~ rule: expressions.inout-closure-parameters, tests.property-form
+
+/// prop: |inout n: i64| twice(n) == n + n //~ ERROR E0332
+/// prop: |m: i64, inout n: i64| twice(m) == m + m //~ ERROR E0332
+/// prop: |inout m: i64, inout n| twice(m) == n //~ ERROR E0332 ERROR E0332
+/// prop: |n: i64| twice(n) == n + n
+fn twice(n: i64) -> i64 { n * 2 }

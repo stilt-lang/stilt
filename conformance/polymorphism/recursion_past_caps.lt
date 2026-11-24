@@ -1,0 +1,72 @@
+//~ rule: polymorphism.recursion
+//~ stdout:
+//~ | 24 12288
+//~ | 7 2
+//~ | 7
+//~ | 70 1 70
+
+type P = { x: i64, y: i64 }
+
+// A function named as a value at the type arguments of its own recursive call, which grow with
+// each call: a tuple of two of the last.
+fn depth<T>(x: T, n: i64, escaping get: fn(T) -> i64) -> i64 {
+  if n == 0 { return get(x) }
+  let next: fn((T, T), i64, fn((T, T)) -> i64) -> i64 = depth
+  next((x, x), n - 1, |t: (T, T)| get(t.0) + get(t.1))
+}
+
+// An error of the type argument that grows with each call.
+fn fail<T>(x: T, n: i64) -> i64 / raise<T> {
+  if n == 0 { raise x }
+  try fail((x, x), n - 1) catch e => raise e.0
+}
+
+// A function named as a value, and an error of the type argument that grows with each call.
+fn fail_value<T>(x: T, n: i64) -> i64 / raise<T> {
+  if n == 0 { raise x }
+  let next: fn((T, T), i64) -> i64 / raise<(T, T)> = fail_value
+  try next((x, x), n - 1) catch e => raise e.0
+}
+
+trait Chooser {
+  fn choose<T>(self, a: T, b: T) -> T
+  fn mixed<T>(self, other: Self, a: T) -> Self
+}
+
+type W = { first: bool }
+
+impl Chooser for W {
+  fn choose<T>(self, a: T, b: T) -> T { if self.first { a } else { b } }
+  fn mixed<T>(self, other: W, a: T) -> W { if self.first { other } else { self } }
+}
+
+// A type that nests one constructor deeper with each call.
+type Flip<C> = { inner: C }
+
+impl<C: Chooser> Chooser for Flip<C> {
+  fn choose<T>(self, a: T, b: T) -> T { self.inner.choose(b, a) }
+  fn mixed<T>(self, other: Flip<C>, a: T) -> Flip<C> {
+    Flip { inner: self.inner.mixed(other.inner, a) }
+  }
+}
+
+fn deep<C: Chooser>(c: C, n: i64) -> i64 {
+  if n == 0 {
+    let pick: fn(C, P, P) -> P = Chooser.choose
+    let m = c.mixed(c, P { x: 3, y: 4 })
+    let a = m.choose(P { x: 1, y: 2 }, P { x: 10, y: 20 })
+    let b = if a.x > 5 { c.choose(P { x: 7, y: 8 }, P { x: 70, y: 80 }) } else { c.choose(P { x: 7, y: 8 }, P { x: 70, y: 80 }) }
+    return pick(c, a, b).x
+  }
+  deep(Flip { inner: c }, n - 1)
+}
+
+fn main() / io {
+  print("{depth(P { x: 1, y: 2 }, 3, |p: P| p.x + p.y)} {depth(P { x: 1, y: 2 }, 12, |p: P| p.x + p.y)}")
+  let e = try fail(P { x: 1, y: 2 }, 12) catch p => p.x * 3 + p.y * 2
+  print("{e} {try fail(P { x: 1, y: 2 }, 0) catch p => p.y}")
+  let v = try fail_value(P { x: 1, y: 2 }, 9) catch p => p.x * 3 + p.y * 2
+  print("{v}")
+  let w = W { first: true }
+  print("{deep(w, 3)} {deep(w, 40)} {deep(w, 41)}")
+}

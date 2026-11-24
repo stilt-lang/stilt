@@ -1,0 +1,14 @@
+── SYNTAX ERROR ────────────────────── E0100_list_comprehension.lt:3:19  [E0100]
+
+Stilt makes a list from another with `map` and `filter`, as `xs.map(|x| x * 2)`:
+
+  3 │   let ys = [x * 2 for x in xs if x > 1]
+    │                   ^^^
+
+`map` gives a new list of each element's result, and `filter` keeps the elements
+a test holds of.
+
+To fix it, write `map`:
+
+  3 │   let ys = xs.filter(|x| x > 1).map(|x| x * 2)
+    │            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

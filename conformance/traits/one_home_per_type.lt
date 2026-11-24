@@ -1,0 +1,44 @@
+//~ rule: traits.qualified-calls, traits.no-overloading
+//~ stdout:
+//~ | number 1
+//~ | text x
+//~ | number 2 text y
+
+trait Store {
+  fn put(self, x: i64) -> str
+}
+
+trait Label {
+  fn put(self, x: str) -> str
+}
+
+type Shelf = {}
+
+type Sticker = {}
+
+type Both = {}
+
+impl Store for Shelf {
+  fn put(self, x: i64) -> str { "number {x}" }
+}
+
+impl Label for Sticker {
+  fn put(self, x: str) -> str { "text {x}" }
+}
+
+impl Store for Both {
+  fn put(self, x: i64) -> str { "number {x}" }
+}
+
+impl Label for Both {
+  fn put(self, x: str) -> str { "text {x}" }
+}
+
+fn main() / io {
+  let shelf = Shelf {}
+  let sticker = Sticker {}
+  let both = Both {}
+  print(shelf.put(1))
+  print(sticker.put("x"))
+  print("{Store.put(both, 2)} {Label.put(both, "y")}")
+}

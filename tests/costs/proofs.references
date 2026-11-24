@@ -1,0 +1,12 @@
+main.index_of: none
+main.sorted: none
+main.largest: none
+main.smallest_divisor: none
+main.share: none
+main.midpoint: none
+main.rotated: line 56: 1 operation, 0 copies
+main.ends_swapped: line 65: 1 operation, 0 copies
+main.appended: none
+main.inner: none
+main.tally: line 83: 1 operation, 0 copies
+main.main: line 94: 2 operations, 0 copies; line 95: 8 operations, 2 copies; line 96: 8 operations, 1 copy

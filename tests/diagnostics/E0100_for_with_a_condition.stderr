@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────────────── E0100_for_with_a_condition.lt:3:9  [E0100]
+
+Stilt loops while a condition holds with `while`:
+
+  3 │   for i < 3 { i += 1 }
+    │         ^
+
+`while c { … }` runs as long as `c` holds, `loop { … }` until a `break`, and
+`for x in xs` takes each value of `xs`.
+
+To fix it, write `while`:
+
+  3 │   while i < 3 { i += 1 }
+    │   ~~~~~

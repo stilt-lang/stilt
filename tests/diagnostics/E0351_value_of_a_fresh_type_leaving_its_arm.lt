@@ -1,0 +1,14 @@
+use std.meta
+
+fn elements<T>(value: T) -> i64 {
+  var acc = []
+  match T.shape() {
+    List(c) => { for x in c.get(value) { acc.push(x) } }
+    _ => {}
+  }
+  acc.len()
+}
+
+fn main() / io {
+  print("{elements([1, 2])}")
+}

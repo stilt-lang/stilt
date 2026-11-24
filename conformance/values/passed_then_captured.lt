@@ -1,0 +1,20 @@
+//~ rule: values.passing-values, expressions.capture
+//~ run-output: "1 [1, 9] [1, 9] 1"
+
+type Cart = { name: str, items: List<i64> }
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn main() / io {
+  var p = Cart { name: "a", items: [1] }
+  let early = || p.items.len()
+  let r1 = grown(p.items)
+  var q = Cart { name: "b", items: [1] }
+  let r2 = grown(q.items)
+  let late = || q.items.len()
+  print("{early()} {r1} {r2} {late()}")
+}

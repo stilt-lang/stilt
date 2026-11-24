@@ -1,0 +1,4 @@
+//~ rule: program.missing-main, program.programs-with-errors
+//~ exit: 2
+
+fn helper() / io { print("never runs") }

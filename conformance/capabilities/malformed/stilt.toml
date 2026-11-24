@@ -1,0 +1,4 @@
+[dependencies]
+a = { path = "deps/a", may = ["files"] } # //~ ERROR E0600
+b = { path = "deps/b", may = ["fs", "fs"] } # //~ ERROR E0600
+c = { path = "deps/c", may = ["io", "fs"] } # //~ ERROR E0600

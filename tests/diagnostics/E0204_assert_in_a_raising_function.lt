@@ -1,0 +1,4 @@
+pub fn withdraw(balance: i64, amount: i64) -> i64 / raise<str> without panic {
+  assert amount <= balance
+  balance - amount
+}

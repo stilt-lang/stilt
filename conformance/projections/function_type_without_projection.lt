@@ -1,0 +1,7 @@
+//~ tier: advanced
+//~ rule: syntax.projection-results
+
+// A function type has no `inout` result, so the `inout` below is a syntax error.
+fn call(f: fn() -> inout i64) {} //~ ERROR E0100
+
+fn main() {}

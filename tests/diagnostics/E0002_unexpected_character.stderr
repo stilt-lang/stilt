@@ -1,0 +1,9 @@
+── UNEXPECTED CHARACTER ───────────── E0002_unexpected_character.lt:2:9  [E0002]
+
+Unexpected character U+201C:
+
+  2 │   print(“hello”)
+    │         ^
+
+Outside strings and comments, Stilt reads only ASCII, so a curly quote or a
+symbol pasted from a document isn't code. Retype it, or put it inside a string.

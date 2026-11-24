@@ -1,0 +1,14 @@
+── WRONG KIND OF NAME ──────────────────────── E0212_python_str.lt:3:20  [E0212]
+
+Stilt has no `str` function: a value is written as text in a string, as `"{x}"`:
+
+  3 │   let label: str = str(n)
+    │                    ^^^
+
+A string shows the value of an expression inside braces, as `"{count}"`, for any
+type that implements `Show`.
+
+To fix it, write it in a string:
+
+  3 │   let label: str = "{n}"
+    │                    ~~~~~

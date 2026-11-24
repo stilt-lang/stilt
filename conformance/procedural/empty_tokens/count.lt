@@ -1,0 +1,7 @@
+use std.meta
+
+/// The number of tokens of the use, which may be none.
+pub macro count(ts: meta.Tokens) -> meta.Expr {
+  let n = ts.items.len()
+  quote { $n }
+}

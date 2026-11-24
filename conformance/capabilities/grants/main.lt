@@ -1,0 +1,5 @@
+//~ rule: facts.capability-grants, facts.own-capabilities
+//~ stdout:
+//~ | warning: odd row
+//~ | false
+//~ | true

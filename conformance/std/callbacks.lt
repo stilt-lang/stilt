@@ -1,0 +1,29 @@
+//~ rule: std.callbacks
+//~ stdout:
+//~ | key 3
+//~ | key 1
+//~ | key 2
+//~ | [3, 2, 1]
+//~ | test 1
+//~ | test 2
+//~ | Some(2)
+//~ | all 1
+//~ | false
+
+fn main() / io {
+  let sorted = [3, 1, 2].sorted_by(|x| {
+    print("key {x}")
+    -x
+  })
+  print("{sorted}")
+  let found = [1, 2, 3].find(|x| {
+    print("test {x}")
+    x > 1
+  })
+  print("{found}")
+  let every = [1, 2].all(|x| {
+    print("all {x}")
+    x > 1
+  })
+  print("{every}")
+}

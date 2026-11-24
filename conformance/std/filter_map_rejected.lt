@@ -1,0 +1,11 @@
+//~ rule: types.mismatch, expressions.key-paths, std.list-functions
+
+fn not_options(xs: List<i64>) -> List<i64> {
+  xs.filter_map(|n| n + 1) //~ ERROR E0311
+}
+
+fn key_path(words: List<str>) -> List<i64> {
+  words.filter_map(.len()) //~ ERROR E0311
+}
+
+fn options(words: List<str>) -> List<i64> { words.filter_map(.to_i64()) }

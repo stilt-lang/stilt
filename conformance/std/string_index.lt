@@ -1,0 +1,5 @@
+//~ rule: expressions.indexing, std.str, std.lists, std.maps
+
+fn initial(name: str) -> str {
+  name[0] //~ ERROR E0317
+}

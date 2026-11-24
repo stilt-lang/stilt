@@ -1,0 +1,12 @@
+//~ tier: advanced
+//~ rule: traits.member-types, traits.where, errors.unknown-names
+
+trait Box {
+  fn get(self) -> i64
+}
+
+// No bound of `C` has a parameter `Item`, and the trait that would bound it names
+// nothing: each mistake is reported.
+fn f<C: Box>(c: C) -> i64 where C.Item: Missing<i64> { 0 } //~ ERROR E0334 ERROR E0211
+
+fn main() {}

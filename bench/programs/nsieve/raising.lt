@@ -1,0 +1,31 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+
+use std.cli
+
+type Fail = | Fail
+
+fn primes(m: i64) -> i64 / raise<Fail> {
+  var flags = []
+  for _ in 0..m + 1 { flags.push(true) }
+  var count = 0
+  for i in 2..m + 1 {
+    if flags[i] {
+      count += 1
+      var k = i + i
+      while k <= m {
+        flags[k] = false
+        k += i
+      }
+    }
+  }
+  count
+}
+
+fn main() / {io, raise<Fail>} {
+  let size = (cli.arg(0) else "").to_i64() else 22
+  for shift in 0..3 {
+    let m = (1 << (size - shift)) * 10000 / 4096
+    print("Primes up to {m:>8} {try primes(m):>8}")
+  }
+}

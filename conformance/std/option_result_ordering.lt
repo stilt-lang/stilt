@@ -1,0 +1,31 @@
+//~ rule: std.option-result-functions
+//~ stdout:
+//~ | Some(1) Some(2) None
+//~ | Some((1, "a")) None None
+//~ | true false false
+//~ | [1] []
+//~ | Some([1, 2]) None Some([])
+//~ | 7 0
+//~ | Ok([1, 2]) Err("x") Ok([])
+//~ | ([1, 2], ["x", "y"]) ([], [])
+//~ | Greater Equal Less
+//~ | Less Less Greater Equal
+
+fn main() / io {
+  let none: Option<i64> = None
+  print("{Some(1).or(Some(2))} {none.or(Some(2))} {none.or(None)}")
+  print("{Some(1).zip(Some("a"))} {Some(1).zip("x".to_i64())} {none.zip(Some("a"))}")
+  print("{Some(3).is_some_and(|x| x > 2)} {Some(1).is_some_and(|x| x > 2)} {none.is_some_and(|x| x > 2)}")
+  print("{Some(1).to_list()} {none.to_list()}")
+  let empty: List<Option<i64>> = []
+  print("{Option.all([Some(1), Some(2)])} {Option.all([Some(1), None])} {Option.all(empty)}")
+  let good: Result<i64, str> = Ok(7)
+  let bad: Result<i64, str> = Err("bad")
+  print("{good.unwrap_or(0)} {bad.unwrap_or(0)}")
+  let parse = |s: str| s.to_i64().ok_or(s)
+  let no: List<Result<i64, str>> = []
+  print("{Result.all(["1", "2"].map(parse))} {Result.all(["1", "x", "y"].map(parse))} {Result.all(no)}")
+  print("{Result.partition(["1", "x", "2", "y"].map(parse))} {Result.partition(no)}")
+  print("{Less.reversed()} {Equal.reversed()} {Greater.reversed()}")
+  print("{Equal.then(Less)} {Less.then(Greater)} {Greater.then(Less)} {Equal.then(Equal)}")
+}

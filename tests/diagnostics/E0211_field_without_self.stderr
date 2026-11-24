@@ -1,0 +1,13 @@
+── UNKNOWN NAME ────────────────────── E0211_field_without_self.lt:4:29  [E0211]
+
+`name` is a field, which a method reads as `self.name`:
+
+  4 │   fn speak(self) -> str { "{name} barks" }
+    │                             ^^^^
+
+A method reaches its receiver's fields through `self`, as `self.x`.
+
+To fix it, write `self.name`:
+
+  4 │   fn speak(self) -> str { "{self.name} barks" }
+    │                             +++++

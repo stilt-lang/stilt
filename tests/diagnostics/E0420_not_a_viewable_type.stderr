@@ -1,0 +1,8 @@
+── NOT A VIEWABLE TYPE ────────────── E0420_not_a_viewable_type.lt:3:23  [E0420]
+
+`i64` can't be viewed: only a `str` or a `List` can:
+
+  3 │ fn count(v: view.View<i64>) -> i64 { v.len() }
+    │                       ^^^
+
+Only a `str` or a `List` can be viewed. Take the value itself.

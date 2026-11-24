@@ -1,0 +1,12 @@
+//~ rule: traits.impl-members
+
+type Point = { x: i64 }
+
+// `Show` has no constant `NAME`.
+impl Show for Point {
+  const NAME: str = "point" //~ ERROR E0306
+
+  fn show(self) -> str {
+    "point"
+  }
+}

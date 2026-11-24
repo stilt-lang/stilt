@@ -1,0 +1,8 @@
+pub fn count() -> i64 {
+  let n: i64 = "three" //~ ERROR E0311
+  n
+}
+
+pub fn load() -> Table { //~ ERROR E0211
+  3
+}

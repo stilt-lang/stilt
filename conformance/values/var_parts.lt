@@ -1,0 +1,22 @@
+//~ rule: values.let-and-var, expressions.mutable-places, modes.places
+//~ stdout:
+//~ | Line { from: Point { x: 3, y: 2 }, to: Point { x: 0, y: 6 } }
+//~ | (5, [6, 2]) [7, 2, 3]
+
+type Point = { x: i64, y: i64 }
+type Line = { from: Point, to: Point }
+
+fn main() / io {
+  var p = Point { x: 1, y: 2 }
+  p.x = 3
+  var line = Line { from: p, to: Point { x: 0, y: 0 } }
+  line.to.y += 6
+  print("{line}")
+  var t = (1, [2, 2])
+  t.0 = 5
+  t.1[0] = 6
+  var xs = [1, 2]
+  xs[0] = 7
+  xs.push(3)
+  print("{t} {xs}")
+}

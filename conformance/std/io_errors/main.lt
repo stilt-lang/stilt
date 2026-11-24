@@ -1,0 +1,42 @@
+//~ rule: effects.catch, std.show-names-and-escapes, std.io-errors, std.fs
+//~ stdout:
+//~ | NotFound("absent.txt")
+//~ | NotFound("absent.txt")
+//~ | InvalidUtf8("bad.txt")
+//~ | InvalidUtf8("bad.txt")
+//~ | Other(".")
+//~ | Other(".")
+//~ | ["first"]
+//~ | ["second\n"] ["second"]
+
+use std.fs
+use std.io
+
+fn read(path: str) -> str / io {
+  try fs.read(path) catch error because "the test prints every error" => "{error}"
+}
+
+fn read_lines(path: str) -> str / io {
+  try "{fs.read_lines(path)}" catch error because "the test prints every error" => "{error}"
+}
+
+fn write(path: str, text: str) -> str / io {
+  try {
+    fs.write(path, text)
+    "written"
+  }
+    catch error because "the test prints every error" => "{error}"
+}
+
+fn main() / {io, raise<io.IoError>} {
+  print(read("absent.txt"))
+  print(read_lines("absent.txt"))
+  print(read("bad.txt"))
+  print(read_lines("bad.txt"))
+  print(read("."))
+  print(write(".", "text"))
+  try fs.write("written.txt", "first")
+  print("{[try fs.read("written.txt")]}")
+  try fs.write("written.txt", "second\n")
+  print("{[try fs.read("written.txt")]} {try fs.read_lines("written.txt")}")
+}

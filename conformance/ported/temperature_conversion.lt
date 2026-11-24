@@ -1,0 +1,44 @@
+//~ rule: traits.impl-blocks, traits.methods, std.precision
+//~ stdout:
+//~ | K   21.00
+//~ | C -252.15
+//~ | F -421.87
+//~ | R   37.80
+//~ | K    0.00
+//~ | C -273.15
+//~ | F -459.67
+//~ | R    0.00
+
+// Rosetta Code, Temperature conversion: a temperature in kelvin shown in kelvin, Celsius,
+// Fahrenheit and Rankine, as C = K - 273.15, F = K x 1.8 - 459.67 and R = K x 1.8. The task's
+// example is 21 kelvin; absolute zero follows from the same formulas.
+
+type Scale = | Kelvin | Celsius | Fahrenheit | Rankine
+
+impl Scale {
+  fn letter(self) -> str {
+    match self {
+      Kelvin => "K"
+      Celsius => "C"
+      Fahrenheit => "F"
+      Rankine => "R"
+    }
+  }
+
+  fn from_kelvin(self, k: f64) -> f64 {
+    match self {
+      Kelvin => k
+      Celsius => k - 273.15
+      Fahrenheit => k * 1.8 - 459.67
+      Rankine => k * 1.8
+    }
+  }
+}
+
+fn main() / io {
+  for k in [21.0, 0.0] {
+    for s in [Kelvin, Celsius, Fahrenheit, Rankine] {
+      print("{s.letter()} {s.from_kelvin(k):>7.2}")
+    }
+  }
+}

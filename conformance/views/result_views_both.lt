@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: views.across-calls, views.change-while-viewed
+
+use std.view
+
+// The result views both parameters, since the callee could view either.
+fn pick(a: str, b: str, first: bool) -> view.View<str> {
+  if first { view.View.all(a) } else { view.View.all(b) }
+}
+
+fn main() / io {
+  var x = "ab"
+  var y = "cd"
+  let v = pick(x, y, true)
+  x = "e" //~ ERROR E0423
+  y = "f" //~ ERROR E0423
+  print("{v}")
+}

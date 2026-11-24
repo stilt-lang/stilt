@@ -1,0 +1,20 @@
+//~ tier: meta
+//~ rule: macros.procedural-bodies, effects.inference, macros.step-limits, program.bodies-with-errors
+
+// Compile-time code performs nothing, however it reaches `io`: through a
+// callback, through a trait's method, or by the file system, each E0502 in
+// the macro's body, whose module then expands no use. A method whose impl
+// performs `io` its row doesn't declare has an error, so a run that reaches it
+// panics with `check-error` and stops, without performing it.
+meta use barks
+meta use tries
+
+fn barks() -> i64 { barks.barks!() } //~ ERROR E0226
+
+fn callback() -> i64 { tries.callback!() }
+
+fn speaks() -> i64 { tries.speaks!() }
+
+fn looks() -> bool { tries.looks!() }
+
+fn main() {}

@@ -1,0 +1,4 @@
+meta use alpha //~ ERROR E0206
+
+/// Two.
+pub fn two() -> i64 { 2 }

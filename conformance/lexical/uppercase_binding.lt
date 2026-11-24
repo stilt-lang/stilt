@@ -1,0 +1,5 @@
+//~ rule: lexical.case, lexical.case.wrong-case, patterns.pattern-forms
+fn total() -> i64 {
+  let Total = 1 //~ ERROR E0211
+  0
+}

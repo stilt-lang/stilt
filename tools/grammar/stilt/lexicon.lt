@@ -1,0 +1,178 @@
+// The lexical structure of lexical.tokens as regular expressions: the classes of tokens that
+// `reference/03-syntax.md` names, the whitespace and comments between tokens, and the newlines that
+// the grammar reads as separators.
+
+/// A regular expression over characters.
+pub type Rx =
+  | Lit(str)
+  | Class(bool, List<(str, str)>)
+  | Seq(List<Rx>)
+  | Alt(List<Rx>)
+  | Star(Rx)
+  | Plus(Rx)
+  | Opt(Rx)
+
+/// The names `reference/03-syntax.md` gives to classes of tokens. `SEP`, `TOKEN` and `DOC` are not
+/// lexemes: the grammar reads a separator as a semicolon or a newline (lexical.separators), a `TOKEN` as
+/// one of the tokens it stands for, and a doc comment as a comment.
+const CLASSES: List<str> = [
+  "lower", "Upper", "INT", "FLOAT", "STRING", "STRING_HEAD", "STRING_MID", "STRING_TAIL", "FORMAT",
+]
+
+pub fn is_class(name: str) -> bool { CLASSES.contains(name) || name == "SEP" || name == "TOKEN" }
+
+/// The groups of lexical.tokens whose tokens a `TOKEN` of macros.patterns may not be: the brackets,
+/// which group matchers, `$`, which starts a fragment, and the reserved tokens.
+const LEFT_OUT: List<str> = ["Brackets", "Macros and quotes", "Reserved"]
+
+/// The tokens that a `TOKEN` of macros.patterns may be, from the table of lexical.tokens in the
+/// lexical chapter's text, `markdown`: those of its other groups but `;`, a separator, with the `_`
+/// of a pattern, which is no identifier (lexical.wildcard).
+pub fn punctuation(markdown: str) -> List<str> / raise<str> {
+  let lines = markdown.lines().skip_while(|line| line.trim() != "<a id=\"lexical.tokens\"></a>")
+  if lines.is_empty() { raise "reference/02-lexical.md has no paragraph lexical.tokens" }
+  let rows = lines.skip(1).take_while(|line| !line.starts_with("Tests:"))
+  var out = []
+  for row in rows {
+    let cells = cells(row)
+    if cells.len() == 2 && !LEFT_OUT.contains(cells[0]) {
+      for token in spans(cells[1]) { if token != ";" { out.push(token) } }
+    }
+  }
+  out.push("_")
+  out
+}
+
+/// The cells of a row of a table, without the bars around them, a `\|` read as `|`.
+/// ex: cells("| Logic | `&&` `\\|\\|` |") == ["Logic", "`&&` `||`"]
+fn cells(row: str) -> List<str> {
+  let Some(inner) = row.trim().strip_prefix("|") else return []
+  let parts = inner.replace("\\|", "\0").split("|")
+  parts.take(parts.len() - 1).map(|cell| cell.replace("\0", "|").trim())
+}
+
+/// The text of each code span of `text`, in order.
+/// ex: spans("`+` and `-`") == ["+", "-"]
+fn spans(text: str) -> List<str> {
+  let parts = text.split("`")
+  var out = []
+  var i = 1
+  while i < parts.len() {
+    out.push(parts[i])
+    i += 2
+  }
+  out
+}
+
+pub fn lit(text: str) -> Rx { Lit(text) }
+
+/// The ranges of `spec`, where `a-z` is a range and every other character stands for itself.
+/// ex: ranges("a-c_") == [("a", "c"), ("_", "_")]
+/// ex: ranges("+-") == [("+", "+"), ("-", "-")]
+fn ranges(spec: str) -> List<(str, str)> {
+  let chars = spec.chars()
+  var out = []
+  var i = 0
+  while i < chars.len() {
+    if chars.get(i + 1) == Some("-") && i + 2 < chars.len() {
+      out.push((chars[i], chars[i + 2]))
+      i += 3
+    } else {
+      out.push((chars[i], chars[i]))
+      i += 1
+    }
+  }
+  out
+}
+
+/// The characters listed in `spec`.
+pub fn set(spec: str) -> Rx { Class(false, ranges(spec)) }
+
+/// Every character but those listed in `spec`.
+pub fn none_of(spec: str) -> Rx { Class(true, ranges(spec)) }
+
+fn seq(items: List<Rx>) -> Rx { Seq(items) }
+
+fn alt(items: List<Rx>) -> Rx { Alt(items) }
+
+fn star(item: Rx) -> Rx { Star(item) }
+
+fn plus(item: Rx) -> Rx { Plus(item) }
+
+fn opt(item: Rx) -> Rx { Opt(item) }
+
+/// Digits with a `_` only between two of them (lexical.integer-literals).
+fn run(digit: fn() -> Rx) -> Rx { seq([digit(), star(alt([digit(), seq([lit("_"), digit()])]))]) }
+
+/// One to six hexadecimal digits.
+fn hex_digits() -> Rx {
+  let hex = || set("0-9a-fA-F")
+  var rest = opt(hex())
+  for _ in 0..4 { rest = opt(seq([hex(), rest])) }
+  seq([hex(), rest])
+}
+
+/// A name whose first letter, after any underscores and digits, is in `first` (lexical.identifiers and lexical.case).
+fn ident(first: str) -> Rx {
+  seq([opt(seq([lit("_"), star(set("0-9_"))])), set(first), star(set("A-Za-z0-9_"))])
+}
+
+/// The lexemes of the classes that lexical.tokens defines, named in lowercase.
+pub fn lexemes() -> List<(str, Rx)> {
+  let digit = || set("0-9")
+  let hex = || set("0-9a-fA-F")
+  // No leading zero (lexical.integer-literals and lexical.float-literals).
+  let decimal = alt([lit("0"), seq([set("1-9"), star(alt([digit(), seq([lit("_"), digit()])]))])])
+  let exponent = seq([set("eE"), opt(set("+-")), plus(digit())])
+  let int = alt(
+    [
+      decimal,
+      seq([lit("0x"), run(hex)]),
+      seq([lit("0o"), run(|| set("0-7"))]),
+      seq([lit("0b"), run(|| set("01"))]),
+    ],
+  )
+  // `DeE` (lexical.float-literals); the forms with a fraction are made of tokens (see `shape.publish`).
+  let float_exponent = seq([decimal, exponent])
+  let fraction = seq([run(digit), opt(exponent)])
+  // lexical.escapes: the escapes, and no raw newline.
+  let unicode = seq([lit("\\u\{"), hex_digits(), lit("}")])
+  let escape = alt([seq([lit("\\"), set("ntr0\\\"\{")]), unicode])
+  let text = star(alt([none_of("\"\\\{\n"), escape]))
+  let part = |open: str, close: str| seq([lit(open), text, lit(close)])
+  // lexical.format-specs: `[[fill]align][width][.precision][kind]`, with the numbers unbounded.
+  let format = seq(
+    [
+      lit(":"),
+      opt(seq([opt(none_of("\{}\n")), set("<^>")])),
+      star(digit()),
+      opt(seq([lit("."), plus(digit())])),
+      opt(set("xXobe")),
+    ],
+  )
+  [
+    ("lower", ident("a-z")),
+    ("upper", ident("A-Z")),
+    ("int", int),
+    ("float_exponent", float_exponent),
+    ("fraction", fraction),
+    ("string", part("\"", "\"")),
+    ("string_head", part("\"", "\{")),
+    ("string_mid", part("}", "\{")),
+    ("string_tail", part("}", "\"")),
+    ("format", format),
+  ]
+}
+
+/// A comment, which runs to the end of the line.
+pub fn comment() -> Rx { seq([lit("//"), star(none_of("\n"))]) }
+
+/// Spaces, tabs and the comments that run to the end of the line (lexical.whitespace and
+/// lexical.line-comments). A doc comment is a comment here.
+pub fn blank() -> Rx { alt([plus(set(" \t")), comment()]) }
+
+/// The blanks before the first token, which one lexeme of the Lark form matches.
+pub fn leading_blanks() -> Rx { plus(alt([set(" \t"), comment()])) }
+
+/// A newline, which may be written `\r\n` (lexical.source-text).
+pub fn newline() -> Rx { seq([opt(lit("\r")), lit("\n")]) }

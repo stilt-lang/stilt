@@ -1,0 +1,9 @@
+//~ rule: docs.same-body, docs.duplicate-bodies
+//~ run-output: "16 8 30 30"
+
+use a
+use b
+
+fn main() / io {
+  print("{a.scaled(3)} {b.scaled(3)} {a.shared(3)} {b.shared(3)}")
+}

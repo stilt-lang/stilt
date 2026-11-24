@@ -1,0 +1,42 @@
+//~ tier: advanced
+//~ rule: traits.constructor-traits, traits.receiver-types, traits.constructor-impls, traits.constructor-parameters
+
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+}
+
+// `Self` takes one argument everywhere in a constructor trait.
+trait Wrapping {
+  fn wrap<A>(self: Self<A>) -> Self //~ ERROR E0337
+}
+
+// A constructor trait's receiver writes its type.
+trait Peeking {
+  fn peek<A>(self: Self<A>) -> Option<A>
+  fn size(self) -> i64 //~ ERROR E0338
+}
+
+// A plain trait's receiver doesn't.
+trait Named {
+  fn name(self: Self) -> str //~ ERROR E0338
+}
+
+// `Map` takes two arguments.
+impl Mappable for Map {} //~ ERROR E0337
+
+// The impl names a constructor, not a type.
+impl Mappable for List<i64> {} //~ ERROR E0337
+
+fn doubled<F: Mappable>(xs: F<i64>) -> F<i64> { xs.transform(|x| x * 2) }
+
+// The receiver's type gives the method's `A`.
+fn mismatched<F: Mappable>(xs: F<str>) -> F<i64> { xs.transform(|x: i64| x * 2) } //~ ERROR E0311
+
+fn bare<F: Mappable>(x: F) -> i64 { 0 } //~ ERROR E0337
+
+fn two<F: Mappable>(x: F<i64, i64>) -> i64 { 0 } //~ ERROR E0337
+
+fn mixed<F: Mappable + Show>(x: F<i64>) -> i64 { 0 } //~ ERROR E0337
+
+// A tuple's type has no constructor that implements `Mappable`.
+fn pairs() -> (i64, i64) { doubled((1, 2)) } //~ ERROR E0318

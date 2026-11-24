@@ -1,0 +1,1 @@
+fn average(count: i64, sum: i64) -> i64 { sum / cuont }

@@ -1,0 +1,39 @@
+//~ rule: expressions.closures, patterns.irrefutable-positions
+
+type UserId = | UserId(i64)
+
+type Shape = | Circle(f64) | Square(f64)
+
+fn id_of(u: UserId) -> i64 {
+  let UserId(n) = u
+  n
+}
+
+fn radius(s: Shape) -> f64 {
+  let Circle(r) = s //~ ERROR E0321
+  r
+}
+
+fn radius_or_zero(s: Shape) -> f64 {
+  let Circle(r) = s else return 0.0
+  r
+}
+
+fn size(s: Shape) -> f64 {
+  let (Circle(r) | Square(r)) = s //~ ERROR E0321
+  r
+}
+
+fn sides(shapes: List<Shape>) -> f64 {
+  var total = 0.0
+  for Square(side) in shapes { //~ ERROR E0321
+    total += side
+  }
+  total
+}
+
+fn radii(shapes: List<Shape>) -> List<f64> {
+  shapes.map(|Circle(r)| r) //~ ERROR E0321
+}
+
+fn ids(pairs: List<(str, UserId)>) -> List<i64> { pairs.map(|(_, UserId(n))| n) }

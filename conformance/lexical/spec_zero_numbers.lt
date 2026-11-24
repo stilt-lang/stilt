@@ -1,0 +1,8 @@
+//~ rule: lexical.format-specs, std.width-fill-and-alignment, std.precision
+//~ run-output: "[42] [2] [00042]"
+
+fn main() / io {
+  let x: i64 = 42
+  let f = 2.5
+  print("[{x:0}] [{f:.0}] [{x:0>5}]")
+}

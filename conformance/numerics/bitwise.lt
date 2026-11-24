@@ -1,0 +1,23 @@
+//~ rule: numbers.bitwise-operators, numbers.printing-integers
+//~ stdout:
+//~ | 1 7 6 -6 -1 255
+//~ | 240 65535 65280 18446744073709551614 0
+//~ | false true true false true false
+//~ | 10 -128 0 127
+
+fn main() / io {
+  let a = 5
+  let b = 3
+  let z: u8 = 0
+  print("{a & b} {a | b} {a ^ b} {!a} {!0} {!z}")
+  let c: u16 = 0xf0f0
+  let d: u16 = 0x0ff0
+  let e = u64.MAX
+  print("{c & d} {c | 0x0f0f} {c ^ d} {e ^ 1} {e & 0}")
+  let t = true
+  let f = false
+  print("{!t} {!f} {t && !f} {t && f} {t || f} {t != t}")
+  let g: i8 = 127
+  let h: i8 = -128
+  print("{!a & 0x0f} {!g} {h & g} {h ^ -1}")
+}

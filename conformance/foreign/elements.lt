@@ -1,0 +1,21 @@
+//~ tier: systems
+//~ rule: c.element-types, c.lending-buffer
+
+// Reading, writing and lending need a type that C holds as Stilt does: an integer, a float,
+// `bool` or a `c.Ptr`, which a type parameter isn't known to be.
+
+use std.c
+
+fn read_text(p: c.Ptr<str>) -> str {
+  unsafe because "p holds a str" { p.read() } //~ ERROR E0353
+}
+
+fn lend(xs: List<str>) -> bool {
+  xs.with_ptr(|p| p.is_null()) //~ ERROR E0353
+}
+
+fn first<T>(xs: List<T>) -> T {
+  xs.with_ptr(|p| unsafe because "xs isn't empty" { p.read() }) //~ ERROR E0353 ERROR E0353
+}
+
+fn main() {}

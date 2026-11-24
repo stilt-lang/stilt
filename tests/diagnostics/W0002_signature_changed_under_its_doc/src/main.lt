@@ -1,0 +1,13 @@
+type Order = { qty: i64, grams: i64 }
+
+type Unit = | Grams | Kilograms
+
+/// The weight of an order, in kilograms.
+fn weight(o: Order, unit: Unit) -> i64 {
+  match unit {
+    Grams => o.qty * o.grams
+    Kilograms => o.qty * o.grams / 1000
+  }
+}
+
+fn main() / io { print("{weight(Order { qty: 2, grams: 600 }, Kilograms)}") }

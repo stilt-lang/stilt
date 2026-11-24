@@ -1,0 +1,6 @@
+fn label(n: i64) -> str {
+  match n {
+    _ => "any"
+    0 => "zero"
+  }
+}

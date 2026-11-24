@@ -1,0 +1,8 @@
+; Only the OCaml parts of the repository are dune projects: the reference
+; interpreter, the program generator, the playground's interpreter, and the
+; standard library, whose sources are built into the interpreter. The specification's data, the names
+; an exported function may not take among it, is read and never built.
+
+(dirs interpreter std tools reference playground)
+
+(data_only_dirs reference)

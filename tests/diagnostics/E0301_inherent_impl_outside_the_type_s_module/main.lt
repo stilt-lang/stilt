@@ -1,0 +1,5 @@
+use shapes
+
+impl shapes.Shape {
+  pub fn unit() -> shapes.Shape { shapes.Dot }
+}

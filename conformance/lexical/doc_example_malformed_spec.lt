@@ -1,0 +1,7 @@
+//~ rule: lexical.format-specs, program.doc-examples, tests.prop-lines
+
+/// Wraps text that holds a brace.
+/// ex: head("A { x: 1 } == a") == "(A { x: 1 } == a)" //~ ERROR E0007
+pub fn head(text: str) -> str { if text.contains("\{") { "({text})" } else { text } }
+
+fn main() {}

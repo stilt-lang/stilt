@@ -1,0 +1,44 @@
+//~ tier: advanced
+//~ rule: tasks.scopes, tasks.scope-failure
+//~ stdout:
+//~ | 3
+//~ | first
+//~ | caught 2
+//~ | first
+//~ | caught 2
+
+use std.task
+
+type Bad = { n: i64 }
+
+fn check(n: i64) -> i64 / raise<Bad> {
+  if n == 2 { raise Bad { n } } else { n }
+}
+
+fn total() -> i64 / {io, async, raise<Bad>} {
+  try task.scope(|s| {
+    let a = try s.spawn(|| check(1))
+    let b = try s.spawn(|| check(0))
+    a.await() + b.await() + 2
+  })
+}
+
+// The second task raises: the third is cancelled, and nothing of it appears.
+fn failing() -> i64 / {io, async, raise<Bad>} {
+  try task.scope(|s| {
+    try s.spawn(|| print("first"))
+    try s.spawn(|| check(2))
+    try s.spawn(|| print("third"))
+    0
+  })
+}
+
+fn main() / io {
+  with task.threads() {
+    print("{try total() catch e => e.n}")
+    print("caught {try failing() catch e => e.n}")
+  }
+  with task.sequential() {
+    print("caught {try failing() catch e => e.n}")
+  }
+}

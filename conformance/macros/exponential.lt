@@ -1,0 +1,13 @@
+//~ tier: advanced
+//~ rule: macros.nested-expansions, macros.expansion-size
+
+// A macro that uses itself twice nests 128 deep at its first chain of
+// expansions, which is too deep; the use then expands no further, so its
+// 2^128 other expansions are never made.
+syntax boom {
+  () => boom!() + boom!()
+}
+
+fn f() -> i64 { boom!() } //~ ERROR E0224
+
+fn main() {}

@@ -1,0 +1,5 @@
+fn bumped(n: i64) -> i64 {
+  when n { n + 1 }
+}
+
+fn main() {}

@@ -1,0 +1,75 @@
+//~ rule: effects.no-escape
+
+type Button = { label: str, on_click: fn() / io }
+type Slot = | Slot(fn())
+
+fn stored(label: str, on_click: fn() / io) -> Button {
+  Button { label, on_click } //~ ERROR E0508
+}
+
+fn variant(f: fn()) -> Slot {
+  Slot(f) //~ ERROR E0508
+}
+
+fn listed(f: fn()) -> List<fn()> {
+  [f] //~ ERROR E0508
+}
+
+fn mapped(f: fn()) -> Map<str, fn()> {
+  var m = Map.new()
+  m["f"] = f //~ ERROR E0508
+  m
+}
+
+fn tupled(f: fn()) -> (fn(), i64) {
+  (f, 1) //~ ERROR E0508
+}
+
+fn returned(f: fn()) -> fn() {
+  f //~ ERROR E0508
+}
+
+fn bound(f: fn()) {
+  let g = f //~ ERROR E0508
+  g()
+}
+
+fn assigned(f: fn()) {
+  var g = || {}
+  g = f //~ ERROR E0508
+  g()
+}
+
+fn keep(escaping k: fn()) {}
+
+fn given(f: fn()) {
+  keep(f) //~ ERROR E0508
+}
+
+fn identity<T>(x: T) -> T { x }
+
+fn generic(f: fn()) {
+  identity(f)() //~ ERROR E0508
+}
+
+fn through_value(f: fn(), h: fn(fn())) {
+  h(f) //~ ERROR E0508
+}
+
+fn closure_bound(f: fn()) {
+  let g = || f() //~ ERROR E0508
+  g()
+}
+
+fn closure_returned(f: fn()) -> fn() {
+  || f() //~ ERROR E0508
+}
+
+// One error for each parameter, at its first escape.
+fn twice(f: fn(), g: fn()) -> (fn(), fn(), fn()) {
+  (
+    || g(), //~ ERROR E0508
+    f, //~ ERROR E0508
+    f,
+  )
+}

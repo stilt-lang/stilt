@@ -1,0 +1,139 @@
+//~ rule: syntax.patterns, patterns.pattern-forms, patterns.constants, patterns.algorithm, declarations.constants-in-patterns
+//~ stdout:
+//~ | minus one
+//~ | zero
+//~ | limit
+//~ | max
+//~ | other
+//~ | empty
+//~ | greeting
+//~ | word yo
+//~ | no
+//~ | unit
+//~ | the pair
+//~ | some pair
+//~ | two deux
+//~ | rect 2.0x3.5
+//~ | dot
+//~ | origin
+//~ | on the y axis at 7
+//~ | x is 3
+//~ | empty
+//~ | one 4
+//~ | two 4 5
+//~ | 4 then [5, 6]
+//~ | on an axis at 3
+//~ | on an axis at 3
+//~ | on an axis at 0
+//~ | off the axes
+
+type Shape = | Circle(f64) | Rect(f64, f64) | Dot
+
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  const ORIGIN: Point = Point { x: 0, y: 0 }
+}
+
+const LIMIT: i64 = 10
+const PAIR: (i64, str) = (1, "one")
+
+fn number(n: i64) -> str {
+  match n {
+    -1 => "minus one"
+    0 => "zero"
+    LIMIT => "limit"
+    i64.MAX => "max"
+    _ => "other"
+  }
+}
+
+fn word(s: str) -> str {
+  match s {
+    "" => "empty"
+    "hi" => "greeting"
+    other => "word {other}"
+  }
+}
+
+fn flag(b: bool) -> str {
+  match b {
+    true => "yes"
+    false => "no"
+  }
+}
+
+fn unit(u: ()) -> str {
+  match u {
+    () => "unit"
+  }
+}
+
+fn pair(p: (i64, str)) -> str {
+  match p {
+    PAIR => "the pair"
+    (2, s) => "two {s}"
+    (_, _) => "some pair"
+  }
+}
+
+fn shape(s: Shape) -> str {
+  match s {
+    Circle(r) => "circle {r}"
+    Rect(w, h) => "rect {w}x{h}"
+    Dot => "dot"
+  }
+}
+
+fn point(p: Point) -> str {
+  match p {
+    Point.ORIGIN => "origin"
+    Point { x: 0, y } => "on the y axis at {y}"
+    Point { x, .. } => "x is {x}"
+  }
+}
+
+fn items(xs: List<i64>) -> str {
+  match xs {
+    [] => "empty"
+    [a] => "one {a}"
+    [a, b] => "two {a} {b}"
+    [a, ..rest] => "{a} then {rest}"
+  }
+}
+
+fn axis(p: (i64, i64)) -> str {
+  match p {
+    (n, 0) | (0, n) => "on an axis at {n}"
+    _ => "off the axes"
+  }
+}
+
+fn main() / io {
+  print(number(-1))
+  print(number(0))
+  print(number(10))
+  print(number(i64.MAX))
+  print(number(5))
+  print(word(""))
+  print(word("hi"))
+  print(word("yo"))
+  print(flag(false))
+  print(unit(()))
+  print(pair((1, "one")))
+  print(pair((1, "uno")))
+  print(pair((2, "deux")))
+  print(shape(Rect(2.0, 3.5)))
+  print(shape(Dot))
+  print(point(Point { x: 0, y: 0 }))
+  print(point(Point { x: 0, y: 7 }))
+  print(point(Point { x: 3, y: 7 }))
+  print(items([]))
+  print(items([4]))
+  print(items([4, 5]))
+  print(items([4, 5, 6]))
+  print(axis((0, 3)))
+  print(axis((3, 0)))
+  print(axis((0, 0)))
+  print(axis((1, 2)))
+}

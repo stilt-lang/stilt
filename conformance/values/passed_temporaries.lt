@@ -1,0 +1,18 @@
+//~ rule: values.passing-values, modes.places
+//~ run-output: "[1, 2, 3, 9] [2, 1, 9] [7, 9] [1, 2]"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn make() -> List<i64> { [7] }
+
+fn main() / io {
+  let xs = [1, 2]
+  let a = grown([1, 2, 3])
+  let b = grown(xs.reversed())
+  let c = grown(make())
+  print("{a} {b} {c} {xs}")
+}

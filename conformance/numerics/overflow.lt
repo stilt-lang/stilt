@@ -1,0 +1,8 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ panic: overflow
+//~ panic-at: overflow.lt:7:11
+
+fn main() / io {
+  let x: i8 = 100
+  print("{x + x}")
+}

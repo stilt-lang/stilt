@@ -1,0 +1,17 @@
+//~ rule: values.left-to-right, facts.linear-forms, facts.intervals, facts.relative-bounds, facts.bindings-and-assignments
+//~ panic: bounds
+//~ panic-at: order_shifted.lt:11:5
+
+// The sum adds the old `i`, 2, to the block's 1.
+fn shifted(n: i64) -> i64 {
+  let xs = [1, 2, 3]
+  var i = n
+  if i >= 0 && i < 3 {
+    i = i + { i = 0; 1 }
+    xs[i]
+  } else {
+    0
+  }
+}
+
+fn main() / io { print("{shifted(2)}") }

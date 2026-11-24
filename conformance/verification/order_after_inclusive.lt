@@ -1,0 +1,13 @@
+//~ rule: facts.loop-heads, facts.widening, facts.for-loops
+//~ panic: bounds
+//~ panic-at: order_after_inclusive.lt:10:3
+
+// The loop runs 256 times, then the read panics.
+fn after_inclusive() -> i64 {
+  let xs = [1]
+  let hi: u8 = 255
+  for _ in 0..=hi {}
+  xs[1]
+}
+
+fn main() / io { print("{after_inclusive()}") }

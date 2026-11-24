@@ -1,0 +1,12 @@
+//~ rule: values.inout-arguments, values.inout-argument-order, std.finding-keys
+//~ run-output: "{\"j\": 7, \"k\": 1}"
+
+fn bump(inout n: i64) { n += 1 }
+
+fn main() / io {
+  var m = Map.with_default(0)
+  m["j"] = 6
+  bump(inout m["k"])
+  bump(inout m["j"])
+  print("{m}")
+}

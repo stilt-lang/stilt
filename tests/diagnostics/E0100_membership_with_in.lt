@@ -1,0 +1,4 @@
+fn main() / io {
+  let xs = [1, 2, 3]
+  if 2 in xs { print("yes") }
+}

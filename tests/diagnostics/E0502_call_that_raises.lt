@@ -1,0 +1,5 @@
+type E = | Bad
+
+fn f(x: i64) -> i64 / raise<E> { if x < 0 { raise Bad } else { x } }
+
+fn main() / io { print("{f(1)}") }

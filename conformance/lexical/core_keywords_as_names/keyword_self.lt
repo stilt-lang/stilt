@@ -1,0 +1,1 @@
+fn self() {} //~ ERROR E0100

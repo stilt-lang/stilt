@@ -1,0 +1,22 @@
+//~ rule: values.inout-argument-order, modes.durations
+//~ stdout:
+//~ | a
+//~ | i
+//~ | b
+//~ | [[5, 1, 2]]
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn combine(x: i64, inout xs: List<i64>, y: i64) {
+  xs.push(x)
+  xs.push(y)
+}
+
+fn main() / io {
+  var lists = [[5]]
+  combine(note("a", 1), inout lists[note("i", 0)], note("b", 2))
+  print("{lists}")
+}

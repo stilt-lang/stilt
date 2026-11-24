@@ -1,0 +1,33 @@
+//~ rule: program.panic-report, std.finding-keys
+//~ stdout:
+//~ | true
+//~ stderr:
+//~ | panic: explicit: "probe vs c"
+//~ |   at map_compares_in_insertion_order.lt:14:7
+//~ panic: explicit
+
+type Key = { id: i64, name: str }
+
+impl Eq for Key {
+  fn eq(self, other: Self) -> bool {
+    if (self.name == "probe" && other.name == "c") || (self.name == "c" && other.name == "probe") {
+      panic("{self.name} vs {other.name}")
+    }
+    self.id == other.id
+  }
+}
+
+impl Hash for Key {
+  fn hash(self) -> u64 { 0 }
+}
+
+fn main() / io {
+  var m = Map.new()
+  m.insert(Key { id: 1, name: "a" }, 1)
+  m.insert(Key { id: 2, name: "b" }, 2)
+  m.insert(Key { id: 3, name: "c" }, 3)
+  let found = Key { id: 2, name: "probe" }
+  let missing = Key { id: 9, name: "probe" }
+  print("{m.contains(found)}")
+  print("{m.contains(missing)}")
+}

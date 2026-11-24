@@ -1,0 +1,15 @@
+── `catch` AROUND A FAILURE THAT BELONGS TO THE CALLER ── E0506_catch_around_a_failure_that_belongs_to_the_caller.lt:8:9  [E0506]
+
+`fallback`'s failures belong to the caller, but this `catch` catches them:
+
+  8 │     n + fallback()
+    │         ^^^^^^^^^^
+
+The failures of a function parameter belong to your caller, unless its type
+names their error. Write `raise<E>` in the parameter's row to handle them here.
+
+To fix it, handle `fallback`'s failures of type `ParseError`: write
+`raise<ParseError>` in its row:
+
+  5 │ fn safe(text: str, fallback: fn() -> i64 / raise<ParseError>) -> i64 {
+    │                                         ++++++++++++++++++++

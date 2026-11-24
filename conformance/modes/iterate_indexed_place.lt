@@ -1,0 +1,12 @@
+//~ rule: modes.overlap, modes.durations, modes.change-while-iterating
+
+fn rows(inout grid: List<List<i64>>) {
+  for y in grid[0] {
+    grid[1].push(y) //~ ERROR E0404
+  }
+}
+
+fn copied(inout grid: List<List<i64>>) {
+  let first = grid[0]
+  for y in first { grid[1].push(y) }
+}

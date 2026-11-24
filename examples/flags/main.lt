@@ -1,0 +1,38 @@
+// A demonstration of `flags`: the options of a made-up image tool, read from the type below
+// alone, and printed as the record they give.
+
+use std.cli
+use flags
+
+type Fit = | Contain | Cover | Stretch
+
+/// What the tool can be asked: each field is an option, and `rest` takes the files.
+type Options = {
+  width: i64,
+  height: Option<i64>,
+  quality: u8,
+  scale: f64,
+  fit: Fit,
+  keep_metadata: bool,
+  tags: List<str>,
+  rest: List<str>,
+}
+
+const DEFAULTS: Options = Options {
+  width: 640,
+  height: None,
+  quality: 85,
+  scale: 1.0,
+  fit: Contain,
+  keep_metadata: true,
+  tags: [],
+  rest: [],
+}
+
+fn main() / {io, raise<str>} {
+  match Result.of(|| try flags.parse(cli.args(), DEFAULTS)) {
+    Ok(o) => print("{o}")
+    Err(Help) => print(flags.usage("thumbs", DEFAULTS))
+    Err(Wrong(message)) => raise "{message}\nrun with --help for the options"
+  }
+}

@@ -1,0 +1,12 @@
+use std.meta
+
+/// `value!(text, "user")`: the value after `user=` in the text, up to the next space, or `None`
+/// when no word of the text starts with `user=`.
+pub macro value(text: meta.Expr, key: meta.Text) -> meta.Expr {
+  let head = "{key.value()}="
+  let n = head.len()
+  quote {
+    let line: str = $text
+    line.split_whitespace().find(|w| w.starts_with($head)).map(|w| w.slice($n, w.len()))
+  }
+}

@@ -1,0 +1,44 @@
+//~ tier: meta
+//~ rule: meta.shape-and-name, meta.unseen-instantiations
+//~ stdout:
+//~ | Holder of i64: int 3
+//~ | Holder of str: str hi
+//~ | Holder of Holder<i64>: record of 1
+//~ | Holder of bool: other
+
+use std.meta
+
+trait Describe {
+  fn describe(self) -> str
+}
+
+type Holder<X> = { inner: X }
+
+// Reflects on `T`.
+fn kind<T>(value: T) -> str {
+  match T.shape() {
+    Int(n) => "int {n.text(value)}"
+    Str(s) => "str {s.get(value)}"
+    Record(fields) => "record of {fields.len()}"
+    _ => "other"
+  }
+}
+
+// An impl whose method reflects on the impl's own type parameter, and names
+// it, so each place where a `Holder<X>` meets `Describe` gives it its `X`.
+impl<X> Describe for Holder<X> {
+  fn describe(self) -> str { "Holder of {X.name()}: {kind(self.inner)}" }
+}
+
+// A generic function that reaches the impl through its bound.
+fn told<T: Describe>(value: T) -> str { value.describe() }
+
+// One that meets the bound with its own parameter, so it gives `X` on.
+fn passed<Y>(value: Y) -> str { told(Holder { inner: value }) }
+
+fn main() / io {
+  print(Holder { inner: 3 }.describe())
+  print(told(Holder { inner: "hi" }))
+  print(told(Holder { inner: Holder { inner: 1 } }))
+  print(passed(true))
+}

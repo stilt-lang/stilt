@@ -1,0 +1,9 @@
+//~ rule: traits.operators, traits.floats
+//~ run-output: "nan 0.0 (nan,) false false true"
+
+fn larger<T: Ord>(a: T, b: T) -> T { if a < b { b } else { a } }
+
+fn main() / io {
+  let nan = f64.NAN
+  print("{larger(1.0, nan)} {larger(-0.0, 0.0)} {larger((1.0,), (nan,))} {1.0 < nan} {-0.0 < 0.0} {(-0.0,) < (0.0,)}")
+}

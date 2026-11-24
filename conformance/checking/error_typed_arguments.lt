@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: facts.writes-in-place, facts.copy-at-call, errors.error-type
+
+// An argument of the error type, given to a parameter that its callee updates in
+// place or to a view that writes into it, causes no fact that a limit reports.
+use std.view
+
+fn bump_all(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs
+  ys[0] += 1
+  ys
+}
+
+fn total(xs: Lst<i64>) -> i64 without alloc { //~ ERROR E0211
+  let ys = bump_all(xs)
+  xs.len() + ys.len()
+}
+
+fn seventh(inout xs: Lst<i64>) without alloc { //~ ERROR E0211
+  var v = view.into(inout xs, 0, 1)
+  v[0] = 7
+}
+
+fn main() {}

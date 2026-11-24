@@ -1,0 +1,4 @@
+//~ tier: systems
+//~ rule: c.granting-unsafe, c.both-implementations
+//~ stdout:
+//~ | 5

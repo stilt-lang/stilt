@@ -1,0 +1,25 @@
+//~ tier: meta
+//~ rule: generics.value-parameters-in-body
+
+use std.array
+
+// No binding in a value parameter's scope takes its name.
+fn shadow<n: i64>(a: array.Array<i64, n>) {
+  let n = 3 //~ ERROR E0348
+}
+
+fn mutable<n: i64>(a: array.Array<i64, n>) {
+  var n = 3 //~ ERROR E0348
+}
+
+fn parameter<n: i64>(a: array.Array<i64, n>, n: i64) {} //~ ERROR E0348
+
+fn pattern<n: i64>(a: array.Array<i64, n>, o: Option<i64>) {
+  if let Some(n) = o {} //~ ERROR E0348
+}
+
+fn closure<n: i64>(a: array.Array<i64, n>) {
+  let f = |n: i64| n + 1 //~ ERROR E0348
+}
+
+fn main() {}

@@ -1,0 +1,35 @@
+//~ tier: advanced
+//~ rule: tasks.scope-failure
+//~ stdout:
+//~ | first
+//~ | caught 2
+
+use std.task
+
+type Bad = { n: i64 }
+
+// Spends a while before it raises, so that the task after it may start first under threads.
+fn slow_raise(n: i64) -> i64 / raise<Bad> {
+  var i = 0
+  var sum = 0
+  while i < 200000 {
+    sum += i % 7
+    i += 1
+  }
+  if sum >= 0 { raise Bad { n } } else { sum }
+}
+
+fn holds(xs: List<i64>) -> i64 { xs[5] }
+
+// The second task raises, so the sequential run never starts the third: under threads it may
+// have started, and its panic, which the sequential run never reaches, ends nothing.
+fn failing() -> i64 / {io, async, raise<Bad>} {
+  try task.scope(|s| {
+    try s.spawn(|| print("first"))
+    try s.spawn(|| slow_raise(2))
+    try s.spawn(|| holds([1, 2, 3]))
+    0
+  })
+}
+
+fn main() / io { with task.threads() { print("caught {try failing() catch e => e.n}") } }

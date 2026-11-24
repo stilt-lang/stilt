@@ -1,0 +1,15 @@
+use std.meta
+
+/// The names of the file, in a list.
+pub macro words(f: meta.File) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(try f.text.lex())
+  var ws: List<str> = []
+  while !c.at_end() { ws.push((try c.name()).text()) }
+  quote { [$..ws] }
+}
+
+/// The file's text.
+pub macro text(f: meta.File) -> meta.Expr {
+  let s = f.text.value()
+  quote { $s }
+}

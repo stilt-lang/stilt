@@ -1,0 +1,295 @@
+module std.http
+
+// HTTP/1.1 over `std.net` (std.http, std.http-messages, std.http-client and
+// std.http-server), written in Stilt: a client that fetches `http://` URLs,
+// and a server that answers one connection at a time. Neither speaks TLS, and
+// each connection carries one request.
+
+use std.io
+use std.net
+
+/// A request: its method, its target, the path and query that it asks for, its
+/// headers in order, and its body.
+pub type Request = { method: str, target: str, headers: List<(str, str)>, body: str }
+
+/// A response: its status code, its headers in order, and its body.
+pub type Response = { status: i64, headers: List<(str, str)>, body: str }
+
+/// Why a request or a response failed: the connection's error, a URL that the
+/// client can't fetch, or a message that isn't HTTP/1.1, with the part of it
+/// that isn't.
+pub type Error = | Io(error: io.IoError) | Url(url: str) | Message(part: str)
+
+impl Request {
+  /// The request of `method` for `target`, with no headers and no body.
+  /// ex: Request.new("GET", "/").target == "/"
+  pub fn new(method: str, target: str) -> Request { Request { method: method, target: target, headers: [], body: "" } }
+
+  /// The request with the header `name: value` after its own.
+  /// ex: Request.new("GET", "/").with_header("Accept", "text/plain").headers == [("Accept", "text/plain")]
+  pub fn with_header(self, name: str, value: str) -> Request { Request { ..self, headers: self.headers.concat([(name, value)]) } }
+
+  /// The request with `body` as its body.
+  /// ex: Request.new("POST", "/").with_body("x").body == "x"
+  pub fn with_body(self, body: str) -> Request { Request { ..self, body: body } }
+
+  /// The value of the request's first header named `name`, in any case.
+  /// ex: Request.new("GET", "/").with_header("Host", "a").header("host") == Some("a")
+  pub fn header(self, name: str) -> Option<str> { header_of(self.headers, name) }
+}
+
+impl Response {
+  /// The response of `status` with `body`, and no headers.
+  /// ex: Response.new(404, "gone").status == 404
+  pub fn new(status: i64, body: str) -> Response { Response { status: status, headers: [], body: body } }
+
+  /// The response with the header `name: value` after its own.
+  /// ex: Response.new(200, "").with_header("Content-Type", "text/plain").header("content-type") == Some("text/plain")
+  pub fn with_header(self, name: str, value: str) -> Response { Response { ..self, headers: self.headers.concat([(name, value)]) } }
+
+  /// The value of the response's first header named `name`, in any case.
+  /// ex: Response.new(200, "").header("Location") == None
+  pub fn header(self, name: str) -> Option<str> { header_of(self.headers, name) }
+}
+
+/// The reason phrase of a status code: `OK` for 200, `Not Found` for 404 and
+/// the like, and `""` for a code without one.
+/// ex: reason(200) == "OK" && reason(404) == "Not Found" && reason(299) == ""
+pub fn reason(status: i64) -> str {
+  match status {
+    100 => "Continue"
+    200 => "OK"
+    201 => "Created"
+    202 => "Accepted"
+    204 => "No Content"
+    301 => "Moved Permanently"
+    302 => "Found"
+    303 => "See Other"
+    304 => "Not Modified"
+    307 => "Temporary Redirect"
+    308 => "Permanent Redirect"
+    400 => "Bad Request"
+    401 => "Unauthorized"
+    403 => "Forbidden"
+    404 => "Not Found"
+    405 => "Method Not Allowed"
+    409 => "Conflict"
+    413 => "Content Too Large"
+    415 => "Unsupported Media Type"
+    422 => "Unprocessable Content"
+    429 => "Too Many Requests"
+    500 => "Internal Server Error"
+    501 => "Not Implemented"
+    502 => "Bad Gateway"
+    503 => "Service Unavailable"
+    504 => "Gateway Timeout"
+    _ => ""
+  }
+}
+
+// The client (std.http-client)
+
+/// Fetches `url` with `GET`.
+pub fn get(url: str) -> Response / {io, raise<Error>} { try send(Request.new("GET", ""), url) }
+
+/// Sends `body` to `url` with `POST`, as content of the type `content_type`.
+pub fn post(url: str, content_type: str, body: str) -> Response / {io, raise<Error>} {
+  try send(Request.new("POST", "").with_header("Content-Type", content_type).with_body(body), url)
+}
+
+/// Sends `request` to the host and port of `url`, with the path and query of
+/// `url` as its target, and gives the response.
+pub fn send(request: Request, url: str) -> Response / {io, raise<Error>} {
+  let (host, port, authority, target) = try parse_url(url)
+  var conn = try net.connect(host, port) catch e => raise Io(e)
+  let full = Request { ..request, target: target, headers: [("Host", authority), ("Connection", "close")].concat(request.headers) }
+  try write_request(inout conn, full)
+  let response = try read_response(inout conn, request.method)
+  conn.close()
+  response
+}
+
+/// Writes `request` to `conn`: its request line, its headers, a
+/// `Content-Length` of its body when it has one or its method is `POST`, `PUT`
+/// or `PATCH`, unless its headers hold one, and its body.
+pub fn write_request(inout conn: net.Stream, request: Request) / {io, raise<Error>} {
+  let length = !request.body.is_empty() || ["POST", "PUT", "PATCH"].contains(request.method)
+  try write_message(inout conn, "{request.method} {request.target} HTTP/1.1", request.headers, (request.body, length))
+}
+
+/// Reads a response to a request of `method` from `conn`.
+pub fn read_response(inout conn: net.Stream, method: str) -> Response / {io, raise<Error>} {
+  let status_line = conn.read_line() else raise Message("status line")
+  let (version, rest) = status_line.split_once(" ") else raise Message("status line")
+  let code = rest.split_once(" ").map(|p| p.0) else rest
+  if !version.starts_with("HTTP/1.") || code.len() != 3 || !code.is_ascii_digit() { raise Message("status line") }
+  let status = code.to_i64() else raise Message("status line")
+  let headers = try read_headers(inout conn)
+  let none = method == "HEAD" || status / 100 == 1 || status == 204 || status == 304
+  let body = if none { "" } else { try read_body(inout conn, headers, true) }
+  Response { status: status, headers: headers, body: body }
+}
+
+// The server (std.http-server)
+
+/// Reads a request from `conn`.
+pub fn read_request(inout conn: net.Stream) -> Request / {io, raise<Error>} {
+  let line = conn.read_line() else raise Message("request line")
+  let parts = line.split(" ")
+  if parts.len() != 3 || !(parts.get(2) else "").starts_with("HTTP/1.") { raise Message("request line") }
+  let headers = try read_headers(inout conn)
+  let body = try read_body(inout conn, headers, false)
+  Request { method: parts.get(0) else "", target: parts.get(1) else "", headers: headers, body: body }
+}
+
+/// Writes `response` to `conn`: its status line with its reason, its headers,
+/// a `Content-Length` of its body unless its headers hold one, and its body.
+pub fn write_response(inout conn: net.Stream, response: Response) / {io, raise<Error>} {
+  let line = "HTTP/1.1 {response.status} {reason(response.status)}"
+  try write_message(inout conn, line, response.headers, (response.body, true))
+}
+
+/// Accepts one connection on `listener`, reads its request, writes the response
+/// that `handle` gives it, or 400 for a request that isn't HTTP/1.1, and closes
+/// the connection.
+pub fn serve_one(inout listener: net.Listener, handle: fn(Request) -> Response) / {io, raise<Error>} {
+  let (accepted, request) = try next_request(inout listener)
+  var conn = accepted
+  let read = request else return
+  try answer(inout conn, handle(read))
+}
+
+/// Serves the connections to `listener`, one at a time, as `serve_one` serves
+/// each, for as long as the program runs; a connection that fails is given up.
+pub fn serve(inout listener: net.Listener, handle: fn(Request) -> Response) -> Never / io {
+  loop {
+    let (accepted, request) = try next_request(inout listener) catch _ because "a connection that fails is given up" => continue
+    var conn = accepted
+    let read = request else continue
+    let response = handle(read)
+    try answer(inout conn, response) catch _ because "a connection that fails is given up" => ()
+  }
+}
+
+// The next connection to `listener`, and the request it reads, or `None` once
+// it has answered one that isn't HTTP/1.1 with 400.
+fn next_request(inout listener: net.Listener) -> (net.Stream, Option<Request>) / {io, raise<Error>} {
+  var conn = try listener.accept() catch e => raise Io(e)
+  let request = try read_request(inout conn) catch {
+    Message(_) => {
+      try answer(inout conn, Response.new(400, ""))
+      return (conn, None)
+    }
+    error => raise error
+  }
+  (conn, Some(request))
+}
+
+// Writes `response` to `conn`, saying that the connection closes, and closes
+// it.
+fn answer(inout conn: net.Stream, response: Response) / {io, raise<Error>} {
+  try write_response(inout conn, response.with_header("Connection", "close"))
+  conn.close()
+}
+
+// Messages (std.http-messages)
+
+fn header_of(headers: List<(str, str)>, name: str) -> Option<str> {
+  for (n, v) in headers {
+    if n.eq_ignore_ascii_case(name) { return Some(v) }
+  }
+  None
+}
+
+// Writes a message: its start line, its headers, a `Content-Length` of its
+// body when `length` holds and its headers hold none, and its body.
+fn write_message(inout conn: net.Stream, start: str, headers: List<(str, str)>, content: (str, bool)) / {io, raise<Error>} {
+  let (body, length) = content
+  var text = "{start}\r\n"
+  for (name, value) in headers { text = "{text}{name}: {value}\r\n" }
+  if length && header_of(headers, "Content-Length").is_none() { text = "{text}Content-Length: {body.len()}\r\n" }
+  let message = "{text}\r\n{body}"
+  try conn.write(message) catch e => raise Io(e)
+}
+
+fn read_headers(inout conn: net.Stream) -> List<(str, str)> / {io, raise<Error>} {
+  var headers: List<(str, str)> = []
+  loop {
+    let line = conn.read_line() else raise Message("header")
+    if line.is_empty() { return headers }
+    let (name, value) = line.split_once(":") else raise Message("header")
+    if name.is_empty() || name.trim() != name { raise Message("header") }
+    headers.push((name, value.trim()))
+  }
+}
+
+// The body that `headers` announce: chunks, `Content-Length` bytes, or, in a
+// response, everything until the connection's end.
+fn read_body(inout conn: net.Stream, headers: List<(str, str)>, response: bool) -> str / {io, raise<Error>} {
+  let coding = header_of(headers, "Transfer-Encoding") else ""
+  if coding.eq_ignore_ascii_case("chunked") { return try read_chunks(inout conn) }
+  match header_of(headers, "Content-Length") {
+    Some(text) => {
+      let n = text.to_i64() else raise Message("Content-Length")
+      if n < 0 { raise Message("Content-Length") }
+      let bytes = conn.read_bytes(n)
+      if bytes.len() != n { raise Message("body") }
+      str.from_utf8_lossy(bytes)
+    }
+    None => if response { conn.read_all() } else { "" }
+  }
+}
+
+fn read_chunks(inout conn: net.Stream) -> str / {io, raise<Error>} {
+  var bytes: List<u8> = []
+  loop {
+    let line = conn.read_line() else raise Message("chunk")
+    let size_text = (line.split_once(";").map(|p| p.0) else line).trim()
+    let size = hex_number(size_text) else raise Message("chunk")
+    if size == 0 { break }
+    let chunk = conn.read_bytes(size)
+    if chunk.len() != size || conn.read_line() != Some("") { raise Message("chunk") }
+    bytes.extend(chunk)
+  }
+  let _ = try read_headers(inout conn)
+  str.from_utf8_lossy(bytes)
+}
+
+fn hex_number(text: str) -> Option<i64> {
+  if text.is_empty() || text.len() > 15 { return None }
+  var n = 0
+  for b in text.bytes() {
+    let digit = if b >= 48 && b <= 57 { b - 48 } else if b >= 97 && b <= 102 { b - 87 } else if b >= 65 && b <= 70 { b - 55 } else { return None }
+    n = n * 16 + digit.to_i64()
+  }
+  Some(n)
+}
+
+// The host, the port, the authority and the target of an `http://` URL: the
+// authority is a host, in brackets for an IPv6 address, and an optional port,
+// and the target the path and the query, `/` when there are none, without the
+// fragment.
+fn parse_url(url: str) -> (str, i64, str, str) / raise<Error> {
+  let (scheme, rest) = url.split_once("://") else raise Url(url)
+  if !scheme.eq_ignore_ascii_case("http") { raise Url(url) }
+  let (whole, _) = rest.split_once("#") else (rest, "")
+  let (authority, target) = match (whole.split_once("/"), whole.split_once("?")) {
+    (Some((a, p)), Some((b, _))) if a.len() <= b.len() => (a, "/{p}")
+    (_, Some((b, q))) => (b, "/?{q}")
+    (Some((a, p)), None) => (a, "/{p}")
+    (None, None) => (whole, "/")
+  }
+  if authority.contains("@") { raise Url(url) }
+  let (host, port_text) = if authority.starts_with("[") {
+    let inner = authority.strip_prefix("[") else ""
+    let (h, after) = inner.split_once("]") else raise Url(url)
+    if !after.is_empty() && !after.starts_with(":") { raise Url(url) }
+    (h, after.strip_prefix(":") else "")
+  } else {
+    if authority.count(":") > 1 { raise Url(url) }
+    authority.split_once(":") else (authority, "")
+  }
+  if host.is_empty() { raise Url(url) }
+  let port = if port_text.is_empty() { 80 } else { (port_text.to_u16() else raise Url(url)).to_i64() }
+  (host, port, authority, target)
+}

@@ -1,0 +1,1 @@
+fn name_of<P: { name: str }>(p: P) -> str { p.name }

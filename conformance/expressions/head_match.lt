@@ -1,0 +1,8 @@
+//~ rule: expressions.head-contents
+
+fn zero(n: i64) -> bool {
+  if match n { 0 => true, _ => false } { //~ ERROR E0100
+    return true
+  }
+  false
+}

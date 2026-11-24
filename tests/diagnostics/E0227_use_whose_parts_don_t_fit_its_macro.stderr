@@ -1,0 +1,15 @@
+── USE WHOSE PARTS DON'T FIT ITS MACRO ─────────────────── main.lt:4:29  [E0227]
+
+`twice.double!` can't take this use: this part is one too many:
+
+  4 │   let n = twice.double!(21, 2)
+    │                             ^
+
+A use gives one part per parameter of the macro, separated by commas, and each
+part has the form its parameter's type asks for: an expression, a pattern, a
+type or a plain string.
+
+To fix it, delete the extra part:
+
+  4 │   let n = twice.double!(21, 2)
+    │                           ---

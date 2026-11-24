@@ -1,0 +1,51 @@
+// Writes a scale project: a directory program of many modules that import one
+// another, whose modules are csmith programs without `main`.
+//
+// Usage: main --seed N --lines N --out DIR
+
+use std.cli
+use std.fs
+use scale
+
+/// The options: the seed, the least number of lines to write, and the
+/// directory to write the project to.
+type Options = { seed: i64, lines: i64, out: str }
+
+fn main() / {io, raise<str>} {
+  let options = try parse(cli.args())
+  for (path, text) in scale.project(options.seed, options.lines) {
+    let full = fs.join(options.out, path)
+    try fs.create_dir(fs.parent(full)) catch e => raise "cannot create the directory of {full}: {e}"
+    try fs.write(full, text) catch e => raise "cannot write {full}: {e}"
+  }
+}
+
+/// The options that `args` give, each as `--name value` or `--name=value`.
+/// ex: try parse(["--out", "d", "--seed=3"]) == Options { seed: 3, lines: 50000, out: "d" }
+/// ex: Result.of(|| try parse(["--seed", "1"])) == Err("usage: main --seed N --lines N --out DIR")
+fn parse(args: List<str>) -> Options / raise<str> {
+  var options = Options { seed: 0, lines: 50000, out: "" }
+  var rest = args
+  loop {
+    let [arg, ..more] = rest else break
+    rest = more
+    let (name, value) = match arg.split_once("=") {
+      Some((name, value)) => (name, value)
+      None => {
+        let [value, ..after] = rest else raise "{arg} needs a value"
+        rest = after
+        (arg, value)
+      }
+    }
+    match name {
+      "--seed" => { options.seed = value.to_i64() else raise "--seed needs a number, not {value}" }
+      "--lines" => {
+        options.lines = value.to_i64() else raise "--lines needs a number, not {value}"
+      }
+      "--out" => { options.out = value }
+      _ => raise "unknown option {name}"
+    }
+  }
+  if options.out.is_empty() { raise "usage: main --seed N --lines N --out DIR" }
+  options
+}

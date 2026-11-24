@@ -1,0 +1,25 @@
+//~ tier: advanced
+//~ rule: program.output-flushing, program.exit-statuses, effects.panic-kinds, handlers.handler-literals
+//~ stdout:
+//~ | before
+//~ | asked
+//~ panic: explicit
+//~ panic-at: body_panics_after_printing.lt:21:7
+
+// An operation's body prints, then panics: the program ends with what the body printed
+// before the panic.
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn main() / io {
+  print("before")
+  let h = handler Ask {
+    fn ask() -> i64 {
+      print("asked")
+      panic("refused")
+    }
+  }
+  print("{with h { Ask.ask() }}")
+}

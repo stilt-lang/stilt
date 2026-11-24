@@ -1,0 +1,10 @@
+//~ rule: modes.change-while-iterating
+
+fn grow() {
+  var xs = [1, 2]
+  for a in xs {
+    for b in xs {
+      xs.push(a + b) //~ ERROR E0404
+    }
+  }
+}

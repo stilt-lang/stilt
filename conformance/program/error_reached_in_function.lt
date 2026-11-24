@@ -1,0 +1,16 @@
+//~ rule: program.panic-location, program.bodies-with-errors, program.errors-in-bodies, effects.panic-kinds
+//~ run-output: "42"
+//~ panic: check-error
+//~ panic-at: error_reached_in_function.lt:6:4
+
+fn broken(x: i64) -> i64 {
+  x + missing //~ ERROR E0211
+}
+
+fn twice(x: i64) -> i64 { x * 2 }
+
+fn main() / io {
+  print("{twice(21)}")
+  print("{broken(1)}")
+  print("never")
+}

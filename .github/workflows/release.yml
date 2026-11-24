@@ -1,0 +1,235 @@
+# A release is a version tag pushed to main (RELEASING.md). The workflow checks what it can of the
+# checklist, builds each host's toolchain with `just dist`, signs the checksums, writes the
+# Homebrew formula and the Nix expression, publishes the archives and the extension, and deploys
+# the website, with its proof map and playground, to GitHub Pages. Nothing here runs until the
+# repository is public.
+
+name: Release
+
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: Check the checklist
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+      - name: The tag is the version
+        run: |
+          [ "$(cat VERSION)" = "$GITHUB_REF_NAME" ] || { echo "::error::VERSION is $(cat VERSION), not $GITHUB_REF_NAME"; exit 1; }
+          extension=$(sed -n 's/^  "version": "\(.*\)",/\1/p' editors/vscode/package.json)
+          [ "$extension" = "$GITHUB_REF_NAME" ] || { echo "::error::The extension's version is $extension, not $GITHUB_REF_NAME"; exit 1; }
+      - name: The tag is on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+      - name: CI passed on the tagged commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          result=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs" \
+            --jq '[.check_runs[] | select(.name == "CI passed")] | last | .conclusion')
+          [ "$result" = success ] || { echo "::error::The check CI passed is '$result' on $GITHUB_SHA"; exit 1; }
+      - name: Collect the release notes
+        run: uv run tools/release/notes.py > release-notes.md
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  dist:
+    name: Toolchain for ${{ matrix.host }}
+    needs: verify
+    if: ${{ !github.event.repository.private }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: macos-14
+            host: aarch64-macos
+          - os: ubuntu-24.04
+            host: x86_64-linux
+          - os: ubuntu-24.04-arm
+            host: aarch64-linux
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: release-${{ matrix.host }}
+      - name: Build, pack and try the archive
+        run: just dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: toolchain-${{ matrix.host }}
+          path: |
+            target/dist/stilt-${{ matrix.host }}.tar.gz
+            target/dist/stilt-${{ matrix.host }}.tar.gz.sha256
+
+  extension:
+    name: Editor extension
+    needs: verify
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: editors/vscode/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run package
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: extension
+          path: editors/vscode/*.vsix
+
+  publish:
+    name: Publish the release
+    needs: [verify, dist, extension]
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Write the checksums
+        working-directory: artifacts
+        run: |
+          cat stilt-*.tar.gz.sha256 > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+      - name: Write the Homebrew formula
+        run: uv run tools/release/homebrew.py artifacts/SHA256SUMS > artifacts/stilt.rb
+      - name: Write the Nix expression
+        run: uv run tools/release/nix.py artifacts/SHA256SUMS > artifacts/stilt.nix
+      - name: Write the software bill of materials
+        run: uv run tools/release/sbom.py "$GITHUB_REF_NAME" artifacts/stilt.sbom.spdx.json
+      - name: Sign the checksums
+        env:
+          SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        working-directory: artifacts
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::The secret RELEASE_SIGNING_KEY is not set"
+            exit 1
+          fi
+          key=$(mktemp -d)/key
+          printf '%s\n' "$SIGNING_KEY" > "$key"
+          chmod 600 "$key"
+          # The installer holds the public key, so a release it would refuse isn't published.
+          written=$(sed -n 's/^release_key=.*:-"\(.*\)"}$/\1/p' ../install.sh)
+          if [ "$written" != "$(ssh-keygen -y -f "$key" | cut -d ' ' -f 1,2)" ]; then
+            echo "::error::install.sh's release_key isn't the public key of RELEASE_SIGNING_KEY"
+            exit 1
+          fi
+          ssh-keygen -Y sign -q -f "$key" -n stilt-release SHA256SUMS
+          rm -f "$key"
+          printf 'stilt-release %s\n' "$written" > "$RUNNER_TEMP/allowed_signers"
+          ssh-keygen -Y verify -f "$RUNNER_TEMP/allowed_signers" -I stilt-release \
+            -n stilt-release -s SHA256SUMS.sig < SHA256SUMS
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "Stilt $GITHUB_REF_NAME" \
+            --notes-file artifacts/release-notes.md \
+            artifacts/stilt-*.tar.gz artifacts/*.tar.gz.sha256 artifacts/SHA256SUMS \
+            artifacts/SHA256SUMS.sig artifacts/stilt.sbom.spdx.json artifacts/stilt.rb \
+            artifacts/stilt.nix artifacts/*.vsix install.sh
+
+  extension-registries:
+    name: Publish the extension
+    needs: publish
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: release
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: extension
+          path: extension
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+      - name: Visual Studio Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then echo "::error::The secret VSCE_PAT is not set"; exit 1; fi
+          npx --yes @vscode/vsce@3.9.2 publish --packagePath extension/*.vsix --pat "$VSCE_PAT"
+      - name: Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -z "$OVSX_PAT" ]; then echo "::error::The secret OVSX_PAT is not set"; exit 1; fi
+          npx --yes ovsx@0.10.12 publish extension/*.vsix --pat "$OVSX_PAT"
+
+  site:
+    name: Deploy the website
+    needs: publish
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup
+        with:
+          lean: 'true'
+          cache-key: site
+      # The website builds with Astro, which needs a newer Node than the runners hold.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Build the model, its proof map, and the website
+        run: |
+          just build
+          (cd formal && lake build Stilt)
+          just proof-map
+          just site
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: target/site
+      - id: deploy
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

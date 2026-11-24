@@ -1,0 +1,16 @@
+//~ rule: expressions.key-paths
+
+type Order = { id: i64 }
+
+fn sum(orders: List<Order>) -> i64 {
+  orders.fold(0, .id) //~ ERROR E0324
+}
+
+fn loose() -> i64 {
+  let get = .id //~ ERROR E0324
+  0
+}
+
+fn as_value(o: Order) -> i64 {
+  .id //~ ERROR E0324
+}

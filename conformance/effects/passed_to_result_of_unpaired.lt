@@ -1,0 +1,7 @@
+//~ rule: effects.passing-to-paired-variables, std.option-result-and-ordering
+
+type Box = { v: i64 }
+
+fn wrap(g: fn() -> i64) -> Result<i64, Box> {
+  Result.of(g) //~ ERROR E0507
+}

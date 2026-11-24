@@ -1,0 +1,235 @@
+//~ rule: program.test-results, numbers.shifts
+
+test "i8 shifts by 0 and by 7" { //~ PASS
+  let one: i8 = 1
+  let zero: i8 = 0
+  let last: i8 = 7
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == i8.MIN
+  assert i8.MAX >> last == 0
+}
+
+test "i8 << by 8" { //~ FAIL
+  let one: i8 = 1
+  let width: i8 = 8
+  let _ = one << width
+}
+
+test "i8 >> by 8" { //~ FAIL
+  let one: i8 = 1
+  let width: i8 = 8
+  let _ = one >> width
+}
+
+test "i8 << by -1" { //~ FAIL
+  let one: i8 = 1
+  let minus_one: i8 = -1
+  let _ = one << minus_one
+}
+
+test "i8 >> by -1" { //~ FAIL
+  let one: i8 = 1
+  let minus_one: i8 = -1
+  let _ = one >> minus_one
+}
+
+test "i16 shifts by 0 and by 15" { //~ PASS
+  let one: i16 = 1
+  let zero: i16 = 0
+  let last: i16 = 15
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == i16.MIN
+  assert i16.MAX >> last == 0
+}
+
+test "i16 << by 16" { //~ FAIL
+  let one: i16 = 1
+  let width: i16 = 16
+  let _ = one << width
+}
+
+test "i16 >> by 16" { //~ FAIL
+  let one: i16 = 1
+  let width: i16 = 16
+  let _ = one >> width
+}
+
+test "i16 << by -1" { //~ FAIL
+  let one: i16 = 1
+  let minus_one: i16 = -1
+  let _ = one << minus_one
+}
+
+test "i16 >> by -1" { //~ FAIL
+  let one: i16 = 1
+  let minus_one: i16 = -1
+  let _ = one >> minus_one
+}
+
+test "i32 shifts by 0 and by 31" { //~ PASS
+  let one: i32 = 1
+  let zero: i32 = 0
+  let last: i32 = 31
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == i32.MIN
+  assert i32.MAX >> last == 0
+}
+
+test "i32 << by 32" { //~ FAIL
+  let one: i32 = 1
+  let width: i32 = 32
+  let _ = one << width
+}
+
+test "i32 >> by 32" { //~ FAIL
+  let one: i32 = 1
+  let width: i32 = 32
+  let _ = one >> width
+}
+
+test "i32 << by -1" { //~ FAIL
+  let one: i32 = 1
+  let minus_one: i32 = -1
+  let _ = one << minus_one
+}
+
+test "i32 >> by -1" { //~ FAIL
+  let one: i32 = 1
+  let minus_one: i32 = -1
+  let _ = one >> minus_one
+}
+
+test "i64 shifts by 0 and by 63" { //~ PASS
+  let one: i64 = 1
+  let zero: i64 = 0
+  let last: i64 = 63
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == i64.MIN
+  assert i64.MAX >> last == 0
+}
+
+test "i64 << by 64" { //~ FAIL
+  let one: i64 = 1
+  let width: i64 = 64
+  let _ = one << width
+}
+
+test "i64 >> by 64" { //~ FAIL
+  let one: i64 = 1
+  let width: i64 = 64
+  let _ = one >> width
+}
+
+test "i64 << by -1" { //~ FAIL
+  let one: i64 = 1
+  let minus_one: i64 = -1
+  let _ = one << minus_one
+}
+
+test "i64 >> by -1" { //~ FAIL
+  let one: i64 = 1
+  let minus_one: i64 = -1
+  let _ = one >> minus_one
+}
+
+test "u8 shifts by 0 and by 7" { //~ PASS
+  let one: u8 = 1
+  let zero: u8 = 0
+  let last: u8 = 7
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == 128
+  assert u8.MAX >> last == 1
+}
+
+test "u8 << by 8" { //~ FAIL
+  let one: u8 = 1
+  let width: u8 = 8
+  let _ = one << width
+}
+
+test "u8 >> by 8" { //~ FAIL
+  let one: u8 = 1
+  let width: u8 = 8
+  let _ = one >> width
+}
+
+test "u16 shifts by 0 and by 15" { //~ PASS
+  let one: u16 = 1
+  let zero: u16 = 0
+  let last: u16 = 15
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == 32768
+  assert u16.MAX >> last == 1
+}
+
+test "u16 << by 16" { //~ FAIL
+  let one: u16 = 1
+  let width: u16 = 16
+  let _ = one << width
+}
+
+test "u16 >> by 16" { //~ FAIL
+  let one: u16 = 1
+  let width: u16 = 16
+  let _ = one >> width
+}
+
+test "u32 shifts by 0 and by 31" { //~ PASS
+  let one: u32 = 1
+  let zero: u32 = 0
+  let last: u32 = 31
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == 2147483648
+  assert u32.MAX >> last == 1
+}
+
+test "u32 << by 32" { //~ FAIL
+  let one: u32 = 1
+  let width: u32 = 32
+  let _ = one << width
+}
+
+test "u32 >> by 32" { //~ FAIL
+  let one: u32 = 1
+  let width: u32 = 32
+  let _ = one >> width
+}
+
+test "u64 shifts by 0 and by 63" { //~ PASS
+  let one: u64 = 1
+  let zero: u64 = 0
+  let last: u64 = 63
+  assert one << zero == 1
+  assert one >> zero == 1
+  assert one << last == 9223372036854775808
+  assert u64.MAX >> last == 1
+}
+
+test "u64 << by 64" { //~ FAIL
+  let one: u64 = 1
+  let width: u64 = 64
+  let _ = one << width
+}
+
+test "u64 >> by 64" { //~ FAIL
+  let one: u64 = 1
+  let width: u64 = 64
+  let _ = one >> width
+}
+
+test "i64 >> by MAX" { //~ FAIL
+  let one: i64 = 1
+  let _ = one >> i64.MAX
+}
+
+test "i64 << by MIN" { //~ FAIL
+  let one: i64 = 1
+  let _ = one << i64.MIN
+}

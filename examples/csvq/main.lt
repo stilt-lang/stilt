@@ -1,0 +1,32 @@
+// csvq: filters, groups, sorts and prints the rows of a CSV file.
+
+use std.cli
+use std.fs
+use std.io
+use csv
+use query
+use render
+use table
+
+fn main() / {io, raise<str>} {
+  let args = cli.args()
+  if args == ["--help"] {
+    print(query.USAGE)
+    return
+  }
+  let q = try query.parse(args)
+  let text = try fs.read(q.file) catch e => raise "cannot read {q.file}: {reason(e)}"
+  let result = try table.run(try csv.parse(text), q)
+  for line in render.lines(result) { print(line) }
+}
+
+/// Why a file couldn't be read.
+/// ex: reason(io.NotFound("a.csv")) == "no such file"
+fn reason(e: io.IoError) -> str {
+  match e {
+    NotFound(_) => "no such file"
+    PermissionDenied(_) => "permission denied"
+    InvalidUtf8(_) => "it isn't UTF-8 text"
+    Other(_) => "it can't be read"
+  }
+}

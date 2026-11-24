@@ -1,0 +1,22 @@
+//~ tier: advanced
+//~ rule: tasks.same-output-under-every-handler
+//~ stdout:
+//~ | before
+//~ | in task
+//~ panic: bounds
+//~ panic-at: panic.lt:17:7
+
+use std.task
+
+fn main() / io {
+  with task.threads() {
+    print("before")
+    let t = task.spawn(|| {
+      print("in task")
+      let xs: List<i64> = []
+      xs[0]
+    })
+    print("after")
+    print("{t.await()}")
+  }
+}

@@ -1,0 +1,31 @@
+// The arms of a `match`, and of a `catch` in block form, go one per line, even when they would
+// fit on one, with no `;` or comma between them, since each ends its line.
+type Color = | Red | Green | Blue
+
+fn name(c: Color) -> str {
+  match c { Red => "red", Green => "green", Blue => "blue" }
+}
+
+fn code(c: Color) -> i64 { match c { Red => 1; _ => 0 } }
+
+fn parse(text: str) -> i64 / raise<str> { text.to_i64() else raise "not a number" }
+
+fn or_zero(text: str) -> i64 {
+  let n = try parse(text) catch { _ if text == "" => -1, _ => 0 }
+  let m = try parse(text) catch _ => 0
+  n + m
+}
+
+fn number(n: i64) -> str {
+  match n { 1 => "one"; 2 => "two", 3 => "three";
+    _ => "other"; }
+}
+
+fn warm(c: Color) -> bool {
+  match c {
+    Red => true, // the warmest
+    Green => false,
+
+    Blue => false,
+  }
+}

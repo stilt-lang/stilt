@@ -1,0 +1,23 @@
+[package]
+name = "stilt-mir"
+description = "The MIR of Stilt's compiler: each function as a control-flow graph over words, lowered from typed bodies"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-db = { path = "../stilt-db" }
+stilt-diag = { path = "../stilt-diag" }
+stilt-hir = { path = "../stilt-hir" }
+stilt-syntax = { path = "../stilt-syntax" }
+stilt-types = { path = "../stilt-types" }
+# What each function of a build names, kept by the function's address (goal
+# compile-time-code-rebuilds).
+rustc-hash.workspace = true
+salsa.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

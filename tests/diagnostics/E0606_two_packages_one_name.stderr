@@ -1,0 +1,10 @@
+── TWO PACKAGES WITH ONE NAME ────────────────────────── stilt.toml:6:1  [E0606]
+
+This entry brings a second package `json`, in deps/http/vendor/json, beside the
+one in deps/json:
+
+  6 │ http = { path = "deps/http" }
+    │ ^^^^
+
+A package's modules are named after it, so a program can't hold two packages of
+one name. Remove one of them.

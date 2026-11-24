@@ -1,0 +1,4 @@
+fn main() / io {
+  let xs = ["a", "b"]
+  for i, x := range xs { print("{i} {x}") }
+}

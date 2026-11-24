@@ -1,0 +1,9 @@
+── ORPHAN IMPL ──────────────────────────────────────────── main.lt:4:1  [E0303]
+
+An impl of `Named` for `Thing` must be in module `names` or `things`:
+
+  4 │ impl names.Named for things.Thing {
+    │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An impl of a trait lives in the trait's module or the type's module, so that a
+type never gets two impls of one trait from two places. Move it to one of them.

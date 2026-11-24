@@ -1,0 +1,7 @@
+fn total(xs: [i64]) -> i64 {
+  var s = 0
+  for x in xs { s += x }
+  s
+}
+
+fn main() / io { print("{total([1, 2])}") }

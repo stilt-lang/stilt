@@ -1,0 +1,24 @@
+//~ rule: patterns.constants-with-written-eq
+
+type Name = { text: str, id: i64 }
+
+impl Eq for Name {
+  fn eq(self, other: Name) -> bool { self.text == other.text }
+}
+
+const NOBODY: Option<Name> = None
+const NONE: List<Name> = []
+
+fn nobody(n: Option<Name>) -> bool {
+  match n {
+    NOBODY => true //~ ERROR E0331
+    _ => false
+  }
+}
+
+fn none(ns: List<Name>) -> bool {
+  match ns {
+    NONE => true //~ ERROR E0331
+    _ => false
+  }
+}

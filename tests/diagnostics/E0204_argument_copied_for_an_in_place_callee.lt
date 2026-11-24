@@ -1,0 +1,10 @@
+fn bump_all(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs
+  for i in 0..ys.len() { ys[i] += 1 }
+  ys
+}
+
+fn total(xs: List<i64>) -> i64 without alloc {
+  let ys = bump_all(xs)
+  xs.len() + ys.len()
+}

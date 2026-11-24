@@ -1,0 +1,30 @@
+//~ rule: numbers.integer-literals, numbers.literal-defaults, types.inferred-per-body
+
+fn after_a_method() -> i32 {
+  let x = 5
+  let y = x.abs()
+  x //~ ERROR E0311
+}
+
+fn float_after_a_method() -> f32 {
+  let x = 2.0
+  let root = x.sqrt()
+  x //~ ERROR E0311
+}
+
+fn before_a_method() -> i32 {
+  let x = 5
+  let y: i32 = x
+  x.abs()
+}
+
+fn decided_later() -> i32 {
+  let big = 3000000000 //~ ERROR E0320
+  let copy = big
+  copy
+}
+
+fn float_decided_later() -> f32 {
+  let huge = 1e39 //~ ERROR E0320
+  huge
+}

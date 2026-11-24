@@ -1,0 +1,3 @@
+fn f() {
+  let handler = 1 //~ ERROR E0100
+}

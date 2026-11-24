@@ -1,0 +1,11 @@
+//~ rule: types.undecided-types, expressions.if-let-matching, declarations.typed-holes
+
+fn main() / io {
+  if let Some(x) = ? { print("{x}") } //~ ERROR E0312
+}
+
+fn known() -> i64 {
+  var total = 0
+  if let Some(x) = ? { total += x } //~ WARN W0300
+  total
+}

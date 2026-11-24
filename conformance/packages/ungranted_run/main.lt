@@ -1,0 +1,4 @@
+//~ rule: program.meeting-the-error-type, packages.running-with-ungranted-effect
+//~ run-output: "3 rows to report"
+//~ panic: check-error
+//~ panic-at: deps/csv/src/main.lt:3:8

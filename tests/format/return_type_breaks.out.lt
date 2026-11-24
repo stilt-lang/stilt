@@ -1,0 +1,12 @@
+// A signature whose `) -> T {` still doesn't fit in 100 columns once its parameter list breaks
+// breaks its return type too, at the tuple in it, whose elements go a level in.
+fn split(
+  text: str,
+) -> (
+  List<SomeVeryLongTypeNameForTheFirstPart>,
+  List<AnotherVeryLongTypeNameForTheSecondPart>,
+  i64,
+) {
+  let x = 1
+  x
+}

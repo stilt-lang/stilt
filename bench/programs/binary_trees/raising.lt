@@ -1,0 +1,36 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+
+use std.cli
+
+type Fail = | Fail
+
+type Tree = | Leaf | Node(Tree, Tree)
+
+fn make(depth: i64) -> Tree / raise<Fail> {
+  if depth == 0 { Node(Leaf, Leaf) } else { Node(try make(depth - 1), try make(depth - 1)) }
+}
+
+fn check(tree: Tree) -> i64 / raise<Fail> {
+  match tree {
+    Leaf => 0
+    Node(left, right) => 1 + try check(left) + try check(right)
+  }
+}
+
+fn main() / {io, raise<Fail>} {
+  let min_depth = 4
+  let max_depth = (cli.arg(0) else "").to_i64() else 16
+  let stretch = max_depth + 1
+  print("stretch tree of depth {stretch}\t check: {try check(try make(stretch))}")
+  let long_lived = try make(max_depth)
+  var depth = min_depth
+  while depth <= max_depth {
+    let iterations = 1 << (max_depth - depth + min_depth)
+    var total = 0
+    for _ in 0..iterations { total += try check(try make(depth)) }
+    print("{iterations}\t trees of depth {depth}\t check: {total}")
+    depth += 2
+  }
+  print("long lived tree of depth {max_depth}\t check: {try check(long_lived)}")
+}

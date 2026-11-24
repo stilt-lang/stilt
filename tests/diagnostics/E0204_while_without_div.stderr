@@ -1,0 +1,12 @@
+── FACT BEYOND A `without` LIMIT ─────── E0204_while_without_div.lt:3:3  [E0204]
+
+This `while` loop may not end, but `count_down` says `without div`:
+
+  1 │ fn count_down(n: i64, step: i64) -> i64 without div {
+    │                                                 ─── the limit
+  2 │   var i = n
+  3 │   while i > 0 { i -= step }
+    │   ^^^^^
+
+A counting loop needs a statement `i -= s` of the loop's own block, with `s`
+known positive.

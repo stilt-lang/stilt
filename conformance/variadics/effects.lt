@@ -1,0 +1,32 @@
+//~ tier: advanced
+//~ rule: variadics.spread-checks
+//~ stdout:
+//~ | 1
+//~ | 2
+//~ | 3
+//~ | (1, 2, 3)
+//~ | 1
+//~ | 2
+//~ | empty at 2
+
+type Empty = | Empty(i64)
+
+fn first<T>(xs: List<T>, at: i64) -> T / {io, raise<Empty>} {
+  print("{at}")
+  xs.first() else raise Empty(at)
+}
+
+// Each element is evaluated in order, and `first`'s raise passes through.
+fn heads<..Ts>(lists: (..List<Ts>)) -> (..Ts) / {io, raise<Empty>} {
+  var at = 0
+  (..{ at += 1; try first(lists, at) })
+}
+
+fn main() / io {
+  let h = try heads(([1], [2], [3])) catch Empty(n) => (0, 0, 0)
+  print("{h}")
+  let e: (i64, i64, i64) = try heads(([1], [], [3])) catch Empty(n) => {
+    print("empty at {n}")
+    (0, 0, 0)
+  }
+}

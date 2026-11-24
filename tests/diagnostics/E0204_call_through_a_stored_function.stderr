@@ -1,0 +1,11 @@
+── FACT BEYOND A `without` LIMIT ── E0204_call_through_a_stored_function.lt:3:49  [E0204]
+
+This call through the field `run` may not end, but `apply` says `without div`:
+
+  3 │ fn apply(ops: Ops, x: i64) -> i64 without div { ops.run(x) }
+    │                                           ─── the limit
+    │                                                 ^^^^^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

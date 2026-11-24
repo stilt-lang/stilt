@@ -1,0 +1,90 @@
+//~ rule: numbers.integer-literals, numbers.float-literals, numbers.negative-literals
+
+fn signed_edges() -> (i8, i8, i16, i16, i32, i32, i64, i64) {
+  (-128, 127, -32768, 32767, -2147483648, 2147483647, -9223372036854775808, 9223372036854775807)
+}
+
+fn unsigned_edges() -> (u8, u8, u16, u16, u32, u32, u64, u64) {
+  (0, 255, 0, 65535, 0, 4294967295, 0, 18446744073709551615)
+}
+
+fn other_bases() -> (u8, i8, i64, u64) {
+  (
+    0xff,
+    -0x80,
+    -0x8000_0000_0000_0000,
+    0b1111111111111111111111111111111111111111111111111111111111111111,
+  )
+}
+
+fn float_edges() -> (f32, f32, f32, f64, f64, f64) {
+  (16777216, 16777218, 3.4028235e38, 9007199254740992, 18014398509481988, 1.7976931348623158e308)
+}
+
+fn i8_beyond() -> (i8, i8) {
+  (-129, 128) //~ ERROR E0320 ERROR E0320
+}
+
+fn i16_beyond() -> (i16, i16) {
+  (-32769, 32768) //~ ERROR E0320 ERROR E0320
+}
+
+fn i32_beyond() -> (i32, i32) {
+  (-2147483649, 2147483648) //~ ERROR E0320 ERROR E0320
+}
+
+fn i64_beyond() -> (i64, i64) {
+  (-9223372036854775809, 9223372036854775808) //~ ERROR E0320 ERROR E0320
+}
+
+fn u8_beyond() -> (u8, u8) {
+  (-1, 256) //~ ERROR E0320 ERROR E0320
+}
+
+fn u16_beyond() -> (u16, u16) {
+  (-1, 65536) //~ ERROR E0320 ERROR E0320
+}
+
+fn u32_beyond() -> (u32, u32) {
+  (-1, 4294967296) //~ ERROR E0320 ERROR E0320
+}
+
+fn u64_beyond() -> (u64, u64) {
+  (-1, 18446744073709551616) //~ ERROR E0320 ERROR E0320
+}
+
+fn hex_beyond() -> (u8, i64) {
+  (0x100, 0x8000_0000_0000_0000) //~ ERROR E0320 ERROR E0320
+}
+
+fn f32_inexact() -> f32 {
+  16777217 //~ ERROR E0320
+}
+
+fn f64_inexact() -> f64 {
+  9007199254740993 //~ ERROR E0320
+}
+
+fn f32_too_large() -> (f32, f32) {
+  (3.4028236e38, -1e39) //~ ERROR E0320 ERROR E0320
+}
+
+fn f64_too_large() -> (f64, f64) {
+  (1.7976931348623159e308, -1e309) //~ ERROR E0320 ERROR E0320
+}
+
+fn float_as_integer() -> i64 {
+  1.0 //~ ERROR E0311
+}
+
+fn float_as_byte() -> u8 {
+  2e2 //~ ERROR E0311
+}
+
+// A literal in a pattern fits its type as any literal does.
+fn pattern_beyond(b: u8) -> i64 {
+  match b {
+    300 => 1 //~ ERROR E0320
+    _ => 0
+  }
+}

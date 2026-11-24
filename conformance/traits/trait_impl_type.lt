@@ -1,0 +1,35 @@
+//~ rule: traits.implementing-trait
+
+trait Swap {
+  fn swap(self) -> str
+}
+
+trait First {
+  fn first(self) -> str
+}
+
+trait Second {
+  fn second(self) -> str
+}
+
+trait Third {
+  fn third(self) -> str
+}
+
+type Pair<A, B> = { a: A, b: B }
+
+impl<B, A> Swap for Pair<A, B> {
+  fn swap(self) -> str { "swapped" }
+}
+
+impl First for Pair<i64, i64> { //~ ERROR E0302
+  fn first(self) -> str { "first" }
+}
+
+impl<A> Second for Pair<A, A> { //~ ERROR E0302
+  fn second(self) -> str { "second" }
+}
+
+impl<A, B, C> Third for Pair<A, B> { //~ ERROR E0302
+  fn third(self) -> str { "third" }
+}

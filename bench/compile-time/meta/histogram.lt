@@ -1,0 +1,92 @@
+// Histograms whose bucket count is a value parameter of their type (generics.value-parameters),
+// which loops read at compile time, so that a release build unrolls them (meta.staged-loops).
+
+use std.array
+
+/// The most buckets that a histogram shows all of.
+pub const LONG: i64 = 10
+
+/// Counts of values in `n` buckets of `width` each, the first ending at `low + width`, and a
+/// count of the values past the last.
+pub type Histogram<n: i64> = { low: i64, width: i64, counts: array.Array<i64, n>, over: i64 }
+
+/// An empty histogram of buckets of `width` from `low`.
+/// ex: { let h: Histogram<3> = new(0, 10); h.total() == 0 }
+pub fn new<n: i64>(low: i64, width: i64) -> Histogram<n> {
+  Histogram { low, width, counts: array.fill(0), over: 0 }
+}
+
+impl<n: i64> Histogram<n> {
+  /// Counts `x` in the first bucket that ends after it, or past the last.
+  /// ex: { var h: Histogram<2> = new(0, 10); h.add(5); h.add(15); h.add(25); h.counts == [1, 1] && h.over == 1 }
+  pub fn add(inout self, x: i64) {
+    var placed = false
+    comptime for i in 0..n {
+      if !placed && x < self.low + (i + 1) * self.width {
+        self.counts[i] += 1
+        placed = true
+      }
+    }
+    if !placed { self.over += 1 }
+  }
+
+  /// How many values it counts.
+  /// ex: { var h: Histogram<2> = new(0, 10); h.add(1); h.add(99); h.total() == 2 }
+  pub fn total(self) -> i64 {
+    var sum = self.over
+    comptime for i in 0..n { sum += self.counts[i] }
+    sum
+  }
+
+  /// The most that a bucket counts, the values past the last counted as one.
+  /// ex: { var h: Histogram<2> = new(0, 10); h.add(1); h.add(2); h.add(99); h.peak() == 2 }
+  pub fn peak(self) -> i64 {
+    var most = self.over
+    comptime for i in 0..n { most = most.max(self.counts[i]) }
+    most
+  }
+
+  /// The range of the bucket that holds the middle value, or `-` when there is none.
+  /// ex: { var h: Histogram<3> = new(0, 10); h.add(1); h.add(12); h.add(13); h.median() == "10-19" }
+  pub fn median(self) -> str {
+    let half = (self.total() + 1) / 2
+    var seen = 0
+    comptime for i in 0..n {
+      seen += self.counts[i]
+      if half > 0 && seen >= half { return self.range(i) }
+    }
+    if half > 0 { "{self.low + n * self.width}+" } else { "-" }
+  }
+
+  /// A line for each bucket and one for the values past the last: the bucket's range, a bar as
+  /// long next to the others as its count is, and its count. A histogram of more than `LONG`
+  /// buckets leaves out those that count nothing.
+  pub fn lines(self) -> List<str> {
+    let peak = self.peak()
+    var out: List<str> = []
+    comptime for i in 0..n {
+      comptime if n > LONG {
+        if self.counts[i] > 0 { out.push(row(self.range(i), self.counts[i], peak)) }
+      } else {
+        out.push(row(self.range(i), self.counts[i], peak))
+      }
+    }
+    out.push(row("{self.low + n * self.width}+", self.over, peak))
+    out
+  }
+
+  // The range of values that bucket `i` counts.
+  fn range(self, i: i64) -> str {
+    let from = self.low + i * self.width
+    "{from}-{from + self.width - 1}"
+  }
+}
+
+/// A line of a histogram: its label, a bar of up to 40 characters, as long next to `peak` as
+/// `count` is, rounded up, and the count.
+/// ex: row("0-9", 2, 4) == "        0-9 |####################                    | 2"
+/// ex: row("0-9", 0, 0) == "        0-9 |                                        | 0"
+pub fn row(label: str, count: i64, peak: i64) -> str {
+  let bar = if peak == 0 { 0 } else { (count * 40 + peak - 1) / peak }
+  "{label:>11} |{"#".repeat(bar):<40}| {count}"
+}

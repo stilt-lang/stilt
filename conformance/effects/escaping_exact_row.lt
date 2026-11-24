@@ -1,0 +1,13 @@
+//~ rule: effects.function-values, effects.escaping-parameters
+//~ stdout:
+//~ | clicked ok
+//~ | clicked cancel
+
+type Button = { label: str, on_click: fn() / io }
+
+fn button(label: str, escaping on_click: fn() / io) -> Button { Button { label, on_click } }
+
+fn main() / io {
+  let buttons = [button("ok", || print("clicked ok")), button("cancel", || print("clicked cancel"))]
+  for b in buttons { b.on_click() }
+}

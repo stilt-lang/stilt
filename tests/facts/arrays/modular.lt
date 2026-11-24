@@ -1,0 +1,19 @@
+//~ tier: meta
+
+// Declaring a value parameter puts a module in the meta tier (generics.meta-tier), and so does
+// writing `comptime` (meta.staging-tier).
+
+use std.array
+
+/// A residue modulo `p`.
+pub type Mod<p: u64> = { value: u64 }
+
+/// The sum of two residues.
+pub fn add<p: u64>(a: Mod<p>, b: Mod<p>) -> Mod<p> { Mod { value: (a.value + b.value) % p } } //~ PANIC OVERFLOW
+
+/// The sum of an array's elements.
+pub fn sum<n: i64>(a: array.Array<i64, n>) -> i64 {
+  var total = 0
+  comptime for i in 0..n { total += a[i] } //~ OVERFLOW PROVED bounds
+  total
+}

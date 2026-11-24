@@ -1,0 +1,9 @@
+── INVALID VALUE ARGUMENT ─────────── E0347_negative_array_size.lt:3:30  [E0347]
+
+An array's size is never negative: give a size of 0 or more:
+
+  3 │ fn empty(a: array.Array<i64, -1>) -> i64 { a.len() }
+    │                              ^^
+
+A value argument is a literal, a constant or a value parameter, never a type, a
+local or a computation, and an array's size is 0 or more.

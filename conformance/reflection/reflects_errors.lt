@@ -1,0 +1,88 @@
+//~ tier: meta
+//~ rule: meta.reflects, meta.types-without-shape, meta.unseen-instantiations
+
+use std.meta
+use std.lazy
+use std.view
+
+type Handler = { name: str, run: fn() -> i64 }
+
+// A tree whose nodes hold a function at any depth.
+type Menu = { title: str, items: List<Menu>, act: fn() }
+
+// Reflects on `T`.
+fn kind<T>(value: T) -> str {
+  match T.shape() {
+    Record(_) => "record"
+    _ => "other"
+  }
+}
+
+// Reflects on `T` and on its parts, through itself.
+fn count<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => {
+      var n = 1
+      for f in fields { n += count(f.get(value)) }
+      n
+    }
+    List(c) => c.get(value).fold(0, |sum, x| sum + count(x))
+    _ => 1
+  }
+}
+
+// Reflects on `U` through a call, so a type without a shape that a call of
+// it gives is reported there.
+fn passed<U>(u: U) -> str { kind(u) }
+
+fn apply(f: fn<X>(X) -> str) -> str { f(1) }
+
+trait Describe {
+  fn describe<U>(self, u: U) -> str
+}
+
+// A trait's method that reflects on its own type parameter, which callers
+// reach through a bound without seeing what it reflects on.
+trait Measure {
+  fn measure<U>(self, u: U) -> str {
+    match U.shape() { //~ ERROR E0350
+      Int(_) => "int"
+      _ => "other"
+    }
+  }
+}
+
+// A trait's default method that reflects on `Self`, which callers reach
+// through a bound without seeing the type.
+trait Label {
+  fn label(self) -> str { kind(self) } //~ ERROR E0350
+}
+
+type Tag = { name: str }
+
+// In an impl for a type, `Self` is that type, which is seen.
+impl Label for Tag {
+  fn label(self) -> str { kind(self) }
+}
+
+type Point = { x: i64 }
+
+// A method of a trait impl that reflects on its own type parameter, which
+// callers through a bound give unseen.
+impl Describe for Point {
+  fn describe<U>(self, u: U) -> str { kind(u) } //~ ERROR E0350
+}
+
+fn main() / io {
+  print(kind(|| 1)) //~ ERROR E0350
+  let xs = [1, 2]
+  print(kind(view.View.all(xs))) //~ ERROR E0350
+  print(kind(lazy.Lazy.new(|| 2))) //~ ERROR E0350
+  let h = Handler { name: "h", run: || 3 }
+  print(kind(h))
+  print("{count(h)}") //~ ERROR E0350
+  print(passed(|| 4)) //~ ERROR E0350
+  print(apply(kind)) //~ ERROR E0350
+  let m = Menu { title: "top", items: [], act: || {} }
+  print("{count(m.items)}") //~ ERROR E0350
+}

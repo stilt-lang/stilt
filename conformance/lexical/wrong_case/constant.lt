@@ -1,0 +1,1 @@
+const limit: i64 = 10 //~ ERROR E0100

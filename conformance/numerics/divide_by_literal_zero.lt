@@ -1,0 +1,8 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds, effects.panicking-operations
+//~ panic: divide-by-zero
+//~ panic-at: divide_by_literal_zero.lt:7:11
+
+fn main() / io {
+  let n: i8 = 1
+  print("{n / 0}")
+}

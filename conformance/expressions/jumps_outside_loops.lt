@@ -1,0 +1,20 @@
+//~ rule: expressions.break-and-continue
+
+fn head_of_while() {
+  while (break) {} //~ ERROR E0216
+}
+
+fn iterable_of_for(c: bool) {
+  for x in (if c { continue } else { [1] }) {} //~ ERROR E0216
+}
+
+fn bare() {
+  continue //~ ERROR E0216
+}
+
+fn inside(xs: List<i64>) {
+  for x in xs {
+    while true { break }
+    continue
+  }
+}

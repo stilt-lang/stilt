@@ -1,0 +1,22 @@
+//~ rule: docs.same-body
+//~ run-output: "12 12 12 9 9"
+
+fn wide(x: i64, y: i64) -> i64 { x * x + y * y - x * y + x * 2 - y + 1 }
+
+fn narrow(x: i32, y: i32) -> i32 { x * x + y * y - x * y + x * 2 - y + 1 }
+
+fn wide_again(a: i64, b: i64) -> i64 { a * a + b * b - a * b + a * 2 - b + 1 } //~ WARN W0302
+
+type A = { qty: i64, extra: i64 }
+
+type B = { qty: i64, extra: i64 }
+
+fn of_a(o: A) -> i64 { o.qty * 2 + o.extra * 3 + o.qty * o.extra }
+
+fn of_b(o: B) -> i64 { o.qty * 2 + o.extra * 3 + o.qty * o.extra }
+
+fn main() / io {
+  let a = A { qty: 2, extra: 1 }
+  let b = B { qty: 2, extra: 1 }
+  print("{wide(3, 2)} {narrow(3, 2)} {wide_again(3, 2)} {of_a(a)} {of_b(b)}")
+}

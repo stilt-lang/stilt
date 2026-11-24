@@ -1,0 +1,17 @@
+//~ rule: std.text
+//~ stdout:
+//~ | STRASSE ǄEMAL FIX ʼN ΣΣ
+//~ | οδοσ ünï i̇ ǆ
+//~ | abc 123 []
+//~ | 17.0.0
+
+// Unicode 17.0.0's full case mappings without context: ß and ﬁ become two scalar values, ŉ two,
+// and İ lowercases to i with a combining dot above; a final Σ lowercases to σ like any other.
+use std.text
+
+fn main() / io {
+  print("{text.upper("straße ǆemal ﬁx ŉ")} {text.upper("σς")}")
+  print("{text.lower("ΟΔΟΣ ÜNÏ İ")} {text.lower("Ǆ")}")
+  print("{text.lower("ABC")} {text.upper("123")} [{text.upper("")}]")
+  print(text.unicode_version())
+}

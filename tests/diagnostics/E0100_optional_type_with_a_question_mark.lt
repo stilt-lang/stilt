@@ -1,0 +1,3 @@
+fn first(xs: List<i64>) -> i64? { xs.first() }
+
+fn main() / io { print("{first([1])}") }

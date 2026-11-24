@@ -1,0 +1,11 @@
+── FACT BEYOND A `without` LIMIT ─── E0204_inherited_capability.lt:5:47  [E0204]
+
+`logged` uses `fs`, through `fs.exists`, but `report` says `without fs`:
+
+  5 │ pub fn report(path: str) / io without fs { if logged(path) { print("logged") } }
+    │                                       ── the limit
+    │                                               ^^^^^^^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

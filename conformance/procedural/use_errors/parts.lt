@@ -1,0 +1,19 @@
+use std.meta
+
+/// The expression.
+pub macro one(e: meta.Expr) -> meta.Expr { e }
+
+/// A list of three expressions.
+pub macro three(a: meta.Expr, b: meta.Expr, c: meta.Expr) -> meta.Expr { quote { [$a, $b, $c] } }
+
+/// The length of the file's path.
+pub macro size(f: meta.File) -> meta.Expr {
+  let n = f.path.len()
+  quote { $n }
+}
+
+/// The type `i64`.
+pub macro int() -> meta.Type { quote type { i64 } }
+
+/// A pattern that matches every value.
+pub macro any() -> meta.Pattern { quote pattern { _ } }

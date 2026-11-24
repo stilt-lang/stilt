@@ -1,0 +1,10 @@
+//~ rule: traits.operators, effects.without-panic, facts.inference, facts.calls-through-function-values
+
+use lib
+use pure
+
+fn main() / io {
+  let a = lib.Fragile { n: 1 }
+  let b = lib.Fragile { n: 2 }
+  print("{pure.smaller(a, b)}")
+}

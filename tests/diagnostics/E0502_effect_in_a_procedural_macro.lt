@@ -1,0 +1,8 @@
+use std.meta
+
+macro traced(e: meta.Expr) -> meta.Expr {
+  print("expanding")
+  e
+}
+
+fn main() {}

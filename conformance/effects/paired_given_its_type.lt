@@ -1,0 +1,18 @@
+//~ rule: effects.one-error-type, effects.what-paired-variable-may-raise
+//~ stdout:
+//~ | 4
+//~ | 2
+
+// The function's own row pairs the implicit row variable of `g` with `str`.
+fn f(g: fn() -> i64) -> i64 / raise<str> {
+  let n = g()
+  if n > 0 { raise "positive" }
+  n
+}
+
+fn main() / io {
+  let a = try f(|| raise "four") catch s because "a str" => s.len()
+  let b = try f(|| 3) catch s because "a str" => s.len() - 6
+  print("{a}")
+  print("{b}")
+}

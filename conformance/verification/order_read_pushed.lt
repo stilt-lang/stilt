@@ -1,0 +1,12 @@
+//~ rule: values.index-reads, facts.analysis-order
+//~ panic: bounds
+//~ panic-at: order_read_pushed.lt:9:3
+
+// The list is read before the index, which pushes after the read: the read
+// holds three elements.
+fn read_pushed() -> i64 {
+  var xs = [1, 2, 3]
+  xs[{ xs.push(0); 3 }]
+}
+
+fn main() / io { print("{read_pushed()}") }

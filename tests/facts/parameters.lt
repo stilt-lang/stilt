@@ -1,0 +1,65 @@
+//~ tier: advanced
+
+// Trait parameters and constructor traits (traits.advanced-tier): a module that declares
+// one is in the advanced tier, and a call through a bound names the impl's methods, as for
+// any other trait.
+
+trait Convert<T> {
+  fn convert(self) -> T
+}
+
+type Celsius = { degrees: i64 }
+
+impl Convert<i64> for Celsius {
+  fn convert(self) -> i64 { 100 / self.degrees } //~ PANIC OVERFLOW
+}
+
+// Inside generic code, a call through a bound adds nothing.
+fn converted<C: Convert<i64>>(c: C) -> i64 { c.convert() }
+
+// Instantiating it names the impl's `convert`.
+fn warm(c: Celsius) -> i64 {
+  converted(c) //~ PANIC OVERFLOW
+}
+
+trait Scale {
+  const UNIT: i64
+  fn unit() -> Self
+}
+
+impl Scale for Celsius {
+  const UNIT: i64 = 10
+  fn unit() -> Celsius { Celsius { degrees: 100 / Celsius.UNIT } } //~ PANIC OVERFLOW
+}
+
+// A trait's function without `self`, named on a bound type parameter.
+fn one<T: Scale>() -> T { T.unit() }
+
+fn base() -> Celsius {
+  one() //~ PANIC OVERFLOW
+}
+
+trait Sized {
+  fn count<A>(self: Self<A>) -> i64
+}
+
+impl Sized for Option {
+  fn count<A>(self: Option<A>) -> i64 {
+    match self {
+      Some(_) => 1
+      None => 0
+    }
+  }
+}
+
+impl Sized for List {
+  fn count<A>(self: List<A>) -> i64 { self.len() }
+}
+
+// A constructor parameter is compiled for each constructor its calls give it.
+fn total<F: Sized>(xs: F<i64>) -> i64 { xs.count() }
+
+fn main() / io {
+  let xs = [1, 2] //~ ALLOC
+  print("{total(xs)} {total(Some(3))} {warm(base())}") //~ PANIC OVERFLOW ALLOC CONSOLE
+}

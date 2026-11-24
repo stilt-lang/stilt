@@ -1,0 +1,15 @@
+//~ rule: numbers.integer-panics
+//~ run-output: "0"
+//~ panic: overflow
+//~ panic-at: subtracting_a_large_unsigned_constant.lt:9:3
+
+// A constant above 2^63 subtracted from a `u64` gives the difference when it fits, and panics
+// with `overflow` when it doesn't.
+fn less(x: u64) -> u64 {
+  x - 18446744073709551615
+}
+
+fn main() / io {
+  print("{less(18446744073709551615)}")
+  print("{less(5)}")
+}

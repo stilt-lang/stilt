@@ -1,0 +1,34 @@
+//~ tier: advanced
+
+// A record and a variant type that hold handles on themselves can form a cycle.
+
+use std.sync
+use std.task
+
+type Node = { name: str, next: Option<sync.Shared<Node>> } //~ CYCLE next
+
+type Tree = //~ CYCLE Branch
+  | Leaf
+  | Branch(sync.Shared<Tree>, sync.Shared<Tree>)
+
+// A handle on values that hold a function type, whose closures may capture any handle.
+
+type Observer = { notify: fn(i64) -> () }
+
+type Hub = { observers: sync.Shared<List<Observer>> } //~ CYCLE observers
+
+// A handle on a type parameter, which may be any type.
+
+type Cell<T> = { value: sync.Shared<T> } //~ CYCLE value
+
+// A task whose value is a handle on the type that holds the task.
+
+type Job = { n: i64, done: Option<task.Task<sync.Shared<Job>>> } //~ CYCLE done
+
+// A handle on numbers, a list of such handles and a generic record can't form one.
+
+type Account = { balance: i64 }
+
+type Bank = { accounts: List<sync.Shared<Account>> }
+
+type Pair<A, B> = { a: A, b: B }

@@ -1,0 +1,9 @@
+//~ tier: meta
+//~ rule: syntax.bound-tests, meta.bound-tests
+
+// A bound test is the whole condition of an `if` or an `else if`.
+fn both<T>(flag: bool) -> bool {
+  if flag && T: Show { true } else { false } //~ ERROR E0100
+}
+
+fn main() {}

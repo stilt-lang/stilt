@@ -1,0 +1,47 @@
+//~ rule: facts.verification, facts.what-proofs-change, facts.rules-of-acceptance, facts.known-signs, facts.divisors
+//~ run-output: "5 1 5 0 5 0 5 0 5 0 -5 0 11 1 1 2 3 10"
+
+// Each divisor is a non-zero literal or constant, a name known positive, or
+// a name that tests show non-zero, with nothing between that writes it.
+
+const TEN: i64 = 10
+
+fn half(n: i64) -> i64 without panic { n / 2 }
+
+fn tenth(n: i64) -> i64 without panic { n % TEN }
+
+fn ratio(n: i64, d: i64) -> i64 without panic {
+  if d != 0 { n / d } else { 0 }
+}
+
+fn positive(n: i64, d: i64) -> i64 without panic {
+  if d > 0 { n / d } else { 0 }
+}
+
+// The negation of `d == 0` gives `d != 0`.
+fn zero_first(n: i64, d: i64) -> i64 without panic {
+  if d == 0 { 0 } else { n / d }
+}
+
+fn early(n: i64, d: i64) -> i64 without panic {
+  if d == 0 { return 0 }
+  n / d
+}
+
+// The mirror of `d < 0`, and a compound assignment.
+fn negative(n: i64, d: i64) -> i64 without panic {
+  var q = n
+  if 0 > d { q /= d }
+  q
+}
+
+// The variable of a `for` over a range from 1 is known positive.
+fn digits(n: i64) -> i64 without panic {
+  var s = 0
+  for d in 1..4 { s += n / d % 10 }
+  s
+}
+
+fn main() / io {
+  print("{half(10)} {tenth(11)} {ratio(10, 2)} {ratio(10, 0)} {positive(10, 2)} {positive(10, -2)} {zero_first(10, 2)} {zero_first(10, 0)} {early(10, 2)} {early(10, 0)} {negative(10, -2)} {negative(0, 5)} {digits(6)} {half(3)} {tenth(1)} {ratio(7, 3)} {positive(7, 2)} {TEN}")
+}

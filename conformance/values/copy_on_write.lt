@@ -1,0 +1,16 @@
+//~ rule: values.independent-copies
+//~ stdout:
+//~ | [1, 2, 3] [9, 2, 3, 4]
+//~ | [[1]] [1, 2]
+
+fn main() / io {
+  var a = [1, 2, 3]
+  var b = a
+  b[0] = 9
+  b.push(4)
+  print("{a} {b}")
+  var outer = [[1]]
+  var inner = outer[0]
+  inner.push(2)
+  print("{outer} {inner}")
+}

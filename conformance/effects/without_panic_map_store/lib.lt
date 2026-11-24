@@ -1,0 +1,9 @@
+module lib
+
+pub type Key = { id: i64 }
+
+impl Hash for Key {
+  fn hash(self) -> u64 { panic("keys can't be hashed") }
+}
+
+pub type Name = { text: str }

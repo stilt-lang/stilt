@@ -1,0 +1,13 @@
+//~ rule: program.panic-detail, effects.panic-kinds, std.option-result-and-ordering
+//~ run-output: "1"
+//~ panic: unwrap
+//~ panic-at: panic_unwrap_err.lt:12:11
+
+fn parse(s: str) -> Result<i64, str> { s.to_i64().ok_or(s) }
+
+fn main() / io {
+  let one = parse("1")
+  print("{one.unwrap()}")
+  let two = parse("two")
+  let _ = two.unwrap()
+}

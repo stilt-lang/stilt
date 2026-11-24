@@ -1,0 +1,13 @@
+//~ tier: advanced
+//~ rule: records.bound-fields, errors.root-causes
+
+// A record bound without its `..` is read as if it had it: the field it names is reached
+// through it with no other diagnostic, and a type without that field doesn't meet it.
+
+fn name_of<P: { name: str }>(p: P) -> str { p.name } //~ ERROR E0341
+
+type User = { name: str, age: i64 }
+
+fn user() -> str { name_of(User { name: "ana", age: 30 }) }
+
+fn number() -> str { name_of(3) } //~ ERROR E0318

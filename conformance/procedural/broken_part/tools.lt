@@ -1,0 +1,4 @@
+use std.meta
+
+fn broken() -> i64 { 1 + } //~ ERROR E0100
+pub macro one() -> meta.Expr { quote { 1 } }

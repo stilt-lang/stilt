@@ -1,0 +1,8 @@
+# Tombi, the TOML language server that editors run. These manifests aren't TOML on purpose: each
+# is a test of E0600 (packages.manifest), so they are left out of its checks.
+[files]
+exclude = [
+  "tests/diagnostics/E0600_manifest_not_toml/stilt.toml",
+  "conformance/packages/manifest_not_toml_with_use/stilt.toml",
+  "conformance/program/package_manifest_not_toml/stilt.toml",
+]

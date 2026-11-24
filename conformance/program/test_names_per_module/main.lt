@@ -1,0 +1,5 @@
+//~ rule: program.test-declarations, declarations.tests
+
+test "adds" { //~ PASS
+  assert 1 + 1 == 2
+}

@@ -1,0 +1,13 @@
+── SYNTAX ERROR ──────────────────────────── E0100_force_unwrap.lt:3:21  [E0100]
+
+Stilt unwraps an `Option` with `.unwrap()`, not `!`:
+
+  3 │   let x = xs.first()!
+    │                     ^
+
+`unwrap()` panics on `None`; `else` gives a fallback instead, as `x else 0`.
+
+To fix it, write `.unwrap()`:
+
+  3 │   let x = xs.first().unwrap()
+    │                     ~~~~~~~~~

@@ -1,0 +1,13 @@
+── `try` WITH NOTHING TO MARK ── W0500_try_with_nothing_to_mark.lt:1:28  [W0500]
+
+Nothing in this `try` can raise:
+
+  1 │ fn double(n: i64) -> i64 { try n * 2 }
+    │                            ^^^^^^^^^
+
+`try` marks calls that can raise, and nothing here can. Delete it.
+
+To fix it, delete the `try`:
+
+  1 │ fn double(n: i64) -> i64 { try n * 2 }
+    │                            ----

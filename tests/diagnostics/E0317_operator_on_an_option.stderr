@@ -1,0 +1,11 @@
+── OPERATOR NOT DEFINED ON A TYPE ── E0317_operator_on_an_option.lt:1:26  [E0317]
+
+This operator isn't defined on `Option<i64>`; it may be `None`: give that case a
+value first, as in `(x else 0)`:
+
+  1 │ fn next(n: str) -> i64 { n.to_i64() + 1 }
+    │                          ^^^^^^^^^^^^^^
+
+Arithmetic works on numbers, bitwise operators on integers, and `!`, `&&` and
+`||` on `bool`. A string is built with interpolation, as `"Hello, {name}"`, not
+with `+`.

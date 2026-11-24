@@ -1,0 +1,11 @@
+//~ rule: effects.panic-kinds, std.lists
+//~ run-output: "[0, 2]"
+//~ panic: bounds
+//~ panic-at: list_store_out_of_bounds.lt:10:3
+
+fn main() / io {
+  var xs = [1, 2]
+  xs[0] = 0
+  print("{xs}")
+  xs[-1] = 0
+}

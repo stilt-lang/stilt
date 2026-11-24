@@ -1,0 +1,87 @@
+//~ rule: std.fs, std.directories
+//~ stdout:
+//~ | false false
+//~ | true false true
+//~ | xyz
+//~ | ["a", "new.txt"] ["b", "x.txt"]
+//~ | Other Other NotFound
+//~ | Other NotFound NotFound NotFound
+//~ | [0, 255, 10] InvalidUtf8 NotFound
+//~ | ["a", "moved", "new.txt"]
+//~ | false
+
+use std.fs
+use std.io
+use std.random
+
+// The kind of an error, without its path, which holds a name that each run
+// picks, so that two runs at once never meet.
+fn kind(e: io.IoError) -> str {
+  match e {
+    io.NotFound(_) => "NotFound"
+    io.PermissionDenied(_) => "PermissionDenied"
+    io.InvalidUtf8(_) => "InvalidUtf8"
+    io.Other(_) => "Other"
+  }
+}
+
+fn main() / {io, raise<io.IoError>} {
+  let dir = "/tmp/stilt-fs-{random.entropy()}"
+  let at = |name: str| fs.join(dir, name)
+  print("{fs.exists(dir)} {fs.is_dir(dir)}")
+  try fs.create_dir(at("a/b"))
+  try fs.create_dir(at("a"))
+  try fs.write(at("a/x.txt"), "x")
+  try fs.append(at("a/x.txt"), "y")
+  try fs.append(at("new.txt"), "z")
+  print("{fs.is_dir(at("a/b"))} {fs.is_file(at("a"))} {fs.is_file(at("new.txt"))}")
+  print("{try fs.read(at("a/x.txt"))}{try fs.read(at("new.txt"))}")
+  print("{try fs.list_dir(dir)} {try fs.list_dir(at("a"))}")
+  let made = try {
+    fs.create_dir(at("new.txt"))
+    "made"
+  }
+    catch e because "the test prints each kind" => kind(e)
+  let listed_file = try "{fs.list_dir(at("new.txt"))}"
+    catch e because "the test prints each kind" => kind(e)
+  let listed_none = try "{fs.list_dir(at("none"))}"
+    catch e because "the test prints each kind" => kind(e)
+  print("{made} {listed_file} {listed_none}")
+  let removed = try {
+    fs.remove(at("a"))
+    "removed"
+  }
+    catch e because "the test prints each kind" => kind(e)
+  let removed_none = try {
+    fs.remove_all(at("none"))
+    "removed"
+  }
+    catch e because "the test prints each kind" => kind(e)
+  let renamed_none = try {
+    fs.rename(at("none"), at("b"))
+    "renamed"
+  }
+    catch e because "the test prints each kind" => kind(e)
+  let renamed_into = try {
+    fs.rename(at("new.txt"), at("none/c.txt"))
+    "renamed"
+  }
+    catch e because "the test prints each kind" => kind(e)
+  print("{removed} {removed_none} {renamed_none} {renamed_into}")
+  try fs.write_bytes(at("bytes"), [0, 255, 10])
+  try fs.copy(at("bytes"), at("copy"))
+  let text = try fs.read(at("copy")) catch e because "the test prints each kind" => kind(e)
+  let copied = try {
+    fs.copy(at("none"), at("c"))
+    "copied"
+  }
+    catch e because "the test prints each kind" => kind(e)
+  print("{try fs.read_bytes(at("copy"))} {text} {copied}")
+  try fs.rename(at("copy"), at("moved"))
+  try fs.rename(at("bytes"), at("moved"))
+  print("{try fs.list_dir(dir)}")
+  try fs.remove(at("new.txt"))
+  try fs.remove(at("a/b"))
+  try fs.remove_all(dir)
+  print("{fs.exists(dir)}")
+}

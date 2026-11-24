@@ -1,0 +1,12 @@
+//~ rule: declarations.records
+
+type Celsius = { degrees: f64 }
+
+type Fahrenheit = { degrees: f64 }
+
+fn warm(c: Celsius) -> bool { c.degrees > 20.0 }
+
+fn check() -> bool {
+  let f = Fahrenheit { degrees: 70.0 }
+  warm(f) //~ ERROR E0311
+}

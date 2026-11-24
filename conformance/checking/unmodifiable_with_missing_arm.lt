@@ -1,0 +1,11 @@
+//~ rule: patterns.non-exhaustive-matches, modes.what-can-be-modified, errors.phase-by-form
+
+type Color = | Red | Green
+
+fn paint(c: Color) -> i64 {
+  let n = 1
+  n = 2 //~ ERROR E0403
+  match c { //~ ERROR E0329
+    Red => n
+  }
+}

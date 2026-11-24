@@ -1,0 +1,18 @@
+//~ rule: std.bytes-and-scalars, std.width-fill-and-alignment, std.invalid-specs
+//~ stdout:
+//~ | |    7|   -7|  2.5|  255|true |ab   |[1]  |None |()   |
+//~ | |7    |  ab| ab  | ab |*-7**|**é**|ééé7|::5|00042|00-42|
+//~ | |abcdef|abc|  é|😀  |x| é|é  |
+//~ | |    3.14|ff    |  [1, 2]|Some(1)  |    1.5|
+
+fn main() / io {
+  let none: Option<i64> = None
+  let byte: u8 = 255
+  print("|{7:5}|{-7:5}|{2.5:5}|{byte:5}|{true:5}|{"ab":5}|{[1]:5}|{none:5}|{():5}|")
+  print("|{7:<5}|{"ab":>4}|{"ab":^5}|{"ab":^4}|{-7:*^5}|{"é":*^5}|{7:é>4}|{5::>3}|{42:0>5}|{-42:0>5}|")
+  print("|{"abcdef":3}|{"abc":3}|{"é":>3}|{"😀":<3}|{"x":0}|{"e\u{301}":>3}|{"é":3}|")
+  let xs = [1, 2]
+  let one = Some(1)
+  let single: f32 = 1.5
+  print("|{3.14159:8.2}|{byte:<6x}|{xs:>8}|{one:9}|{single:7}|")
+}

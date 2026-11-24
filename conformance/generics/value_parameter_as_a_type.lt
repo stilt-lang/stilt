@@ -1,0 +1,12 @@
+//~ tier: meta
+//~ rule: generics.value-parameters-in-body, declarations.wrong-kind-of-name
+
+// A value parameter is a value, as a constant is, so writing one where a type
+// stands names the wrong kind of thing.
+fn pair<n: i64>(x: i64) -> (n, i64) { (x, x) } //~ ERROR E0212
+
+const LIMIT: i64 = 3
+
+fn limited(x: LIMIT) -> i64 { 0 } //~ ERROR E0212
+
+fn main() {}

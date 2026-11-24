@@ -1,0 +1,11 @@
+//~ rule: facts.inferred-facts, facts.interfaces
+//~ run-output: "25"
+
+fn risky(n: i64) -> i64 { 100 / n }
+
+fn apply(f: fn(i64) -> i64, n: i64) -> i64 { f(n) }
+
+fn main() / io {
+  let f: fn(i64) -> i64 = risky
+  print("{apply(f, 4)}")
+}

@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────────────── E0100_c_if_without_braces.lt:2:14  [E0100]
+
+The body of `if` is a block, in braces:
+
+  2 │   if n > 100 return 100
+    │              ^^^^^^
+
+Braces always mark a branch or a loop's body, so the condition needs no
+parentheses.
+
+To fix it, write the body in braces:
+
+  2 │   if n > 100 { return 100 }
+    │              ++          ++

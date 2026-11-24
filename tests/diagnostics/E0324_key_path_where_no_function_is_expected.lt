@@ -1,0 +1,6 @@
+type Order = { total: i64 }
+
+fn totals(orders: List<Order>) -> List<i64> {
+  let get = .total
+  orders.map(get)
+}

@@ -1,0 +1,9 @@
+//~ rule: tests.property-results
+//~ run-output: "main"
+
+/// prop: |x: i64| 100 / x > 0
+fn f() {}
+
+fn broken() -> i64 { "not a number" } //~ ERROR E0311
+
+fn main() / io { print("main") }

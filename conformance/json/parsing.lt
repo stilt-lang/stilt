@@ -1,0 +1,44 @@
+//~ tier: meta
+//~ rule: std.json, std.json-parsing, std.json-effects
+//~ stdout:
+//~ | escapes true true true
+//~ | Ok(Array([Number("1"), Number("-0.5e+3"), Bool(true), Null, Object([("a", Text("b"))])]))
+//~ | Err(Syntax(1, 8)) Err(Syntax(1, 5)) Err(Syntax(1, 10)) Err(Syntax(1, 11))
+//~ | Err(Syntax(2, 6)) Err(Syntax(1, 5)) Err(Syntax(1, 7))
+//~ | Err(Syntax(1, 1)) Err(Syntax(1, 3)) Err(Syntax(1, 4)) Err(Syntax(1, 3)) Err(Syntax(1, 3))
+//~ | Err(Syntax(1, 2)) Err(Syntax(1, 2)) Err(Syntax(1, 3)) Err(Syntax(1, 4)) Err(Syntax(1, 2))
+//~ | Err(Syntax(1, 6)) Err(Syntax(1, 2)) Err(Syntax(1, 4))
+//~ | 512 deep: true
+//~ | Err(Syntax(1, 513)) Err(Syntax(1, 518))
+
+use std.json
+
+fn parsed(text: str) -> Result<json.Value, json.Error> {
+  Result.of(|| try json.parse(text))
+}
+
+fn main() / io {
+  // Every escape, a surrogate pair's two escapes as one character, in
+  // either case of hexadecimal digits.
+  let all = parsed("\"\\\"\\\\\\/\\b\\f\\n\\r\\t\\u0041\\u00e9\"")
+  let pair = parsed("\"\\ud83d\\ude00\"")
+  let upper = parsed("\"\\uD83D\\uDE00x\"")
+  print("escapes {all == Ok(json.Text("\"\\/\u{8}\u{c}\n\r\tAé"))} {pair == Ok(json.Text("\u{1f600}"))} {upper == Ok(json.Text("\u{1f600}x"))}")
+  print("{parsed(" \t\n\r[1, -0.5e+3, true, null, \{\"a\": \"b\"}] \n")}")
+  // A lone surrogate: a high one that no low one follows, at the first
+  // character that can't continue its escape, and a low one, at the digit
+  // that makes it one.
+  print("{parsed("\"\\ud800\"")} {parsed("\"\\udc00\"")} {parsed("\"\\ud800\\u0041\"")} {parsed("\"\\ud800\\ud800\"")}")
+  // Lines and columns count from 1, columns in Unicode scalar values.
+  print("{parsed("[1,\n  tru]")} {parsed("[1] 2")} {parsed("[\"é\", x]")}")
+  // The end of the text, a string's control character, an unknown escape.
+  print("{parsed("")} {parsed("  ")} {parsed("\"ab")} {parsed("\"a\tb\"")} {parsed("\"\\x\"")}")
+  // Numbers as RFC 8259 writes them.
+  print("{parsed("-")} {parsed("01")} {parsed("1.")} {parsed("1e+")} {parsed("-a")}")
+  // Objects: a member's name is a string, and a `:` follows it.
+  print("{parsed("\{\"a\" 1}")} {parsed("\{1:2}")} {parsed("[1,]")}")
+  // The bracket that opens the 513th array or object is an error.
+  let deep = "{"[".repeat(512)}{"]".repeat(512)}"
+  print("512 deep: {parsed(deep).is_ok()}")
+  print("{parsed("{"[".repeat(513)}{"]".repeat(513)}")} {parsed("[\{\"a\": {"[".repeat(510)}\{\"b\": 1}")}")
+}

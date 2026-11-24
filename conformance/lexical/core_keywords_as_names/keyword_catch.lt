@@ -1,0 +1,1 @@
+fn catch() {} //~ ERROR E0100

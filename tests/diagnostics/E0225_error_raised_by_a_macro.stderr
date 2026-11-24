@@ -1,0 +1,10 @@
+── ERROR RAISED BY A MACRO ─────────────────────────────── main.lt:4:36  [E0225]
+
+`sec` isn't a unit: write `s`, `min` or `h`:
+
+  4 │   let timeout = units.seconds!(90, sec)
+    │                 ───────────── raised by `units.seconds!`
+    │                                    ^^^
+
+The macro rejected its input, and its message says why. Change the use to give
+it what it expects.

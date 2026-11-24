@@ -1,0 +1,16 @@
+── VALUE PARAMETER OF A TYPE THAT CAN'T BE COMPARED ── E0345_value_parameter_of_a_type_that_cant_be_compared.lt:1:16  [E0345]
+
+A value parameter's type is an integer type or `bool`, whose values compare
+exactly, so two types with equal arguments are one type, and `f64` isn't one:
+
+  1 │ type Scaled<k: f64> = { value: f64 }
+    │                ^^^
+
+Two types are one type when their value arguments are equal, so a value
+parameter is an integer or a `bool`, which compare exactly. Use an integer,
+scaled if you need fractions.
+
+To fix it, use `i64`, whose values compare exactly:
+
+  1 │ type Scaled<k: i64> = { value: f64 }
+    │                ~~~

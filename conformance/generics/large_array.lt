@@ -1,0 +1,13 @@
+//~ tier: meta
+//~ rule: generics.large-arrays
+//~ run-output: "65536 9 65536"
+
+use std.array
+
+fn main() / io {
+  var big: array.Array<i64, 65536> = array.fill(1)
+  big[65535] = 9
+  var sum = 0
+  for x in big { sum = sum + x }
+  print("{big.len()} {big[65535]} {sum - 8}")
+}

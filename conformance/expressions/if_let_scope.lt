@@ -1,0 +1,8 @@
+//~ rule: expressions.if-let, expressions.scope
+
+fn main() {
+  let o = Some(1)
+  let y = if let Some(x) = o { x + 1 } else { x } //~ ERROR E0211
+  if let Some(z) = o { let _ = z }
+  let _ = z //~ ERROR E0211
+}

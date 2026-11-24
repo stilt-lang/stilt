@@ -1,0 +1,19 @@
+//~ rule: facts.loop-heads, facts.widening, facts.for-loops, facts.proved-indexes
+//~ run-output: "7"
+//~ panic: bounds
+//~ panic-at: order_summed.lt:12:10
+
+// The second iteration reads the list's second element.
+fn summed(n: i64) -> i64 / io {
+  let xs = [7]
+  var s = 0
+  var i = 0
+  while i < n {
+    s += xs[i]
+    print("{s}")
+    i += 1
+  }
+  s
+}
+
+fn main() / io { print("{summed(2)}") }

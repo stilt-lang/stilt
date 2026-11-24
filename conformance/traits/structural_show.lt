@@ -1,0 +1,28 @@
+//~ rule: traits.structural-impls, traits.show, std.show-output
+//~ stdout:
+//~ | ana ana "ana"
+//~ | ["ana", "bo"] ("ana", 1) ("ana",)
+//~ | Order { customer: "ana", qty: 3 }
+//~ | Node(Leaf, "x", Leaf) Some("ana") Ok("ana") None
+//~ | {"k": ["ana"]} () Blank {}
+
+type Order = { customer: str, qty: i64 }
+
+type Tree = | Leaf | Node(Tree, str, Tree)
+
+type Blank = {}
+
+fn main() / io {
+  let s = "ana"
+  print("{s} {s.show()} {s.show_nested()}")
+  print("{[s, "bo"]} {(s, 1)} {(s,)}")
+  let o = Order { customer: s, qty: 3 }
+  print("{o}")
+  let r: Result<str, i64> = Ok(s)
+  let none: Option<str> = None
+  print("{Node(Leaf, "x", Leaf)} {Some(s)} {r} {none}")
+  var m: Map<str, List<str>> = Map.new()
+  m["k"] = [s]
+  let blank = Blank {}
+  print("{m} {()} {blank}")
+}

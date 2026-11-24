@@ -1,0 +1,21 @@
+# Integers, booleans and functions, one line at a time.
+let square = fn(x) => x * x
+square(12) - 2 * 3
+
+# Functions call themselves, and each other, through their global names.
+let fact = fn(n) => if n <= 1 then 1 else n * fact(n - 1)
+fact(20)
+let fib = fn(n) => if n < 2 then n else fib(n - 1) + fib(n - 2)
+fib(15)
+let gcd = fn(a, b) => if b == 0 then a else gcd(b, a % b)
+gcd(1071, 462)
+let even = fn(n) => if n == 0 then true else odd(n - 1)
+let odd = fn(n) => if n == 0 then false else even(n - 1)
+even(10) && !odd(7)
+
+# Functions are values, and capture the local names around them.
+let compose = fn(f, g) => fn(x) => f(g(x))
+compose(square, fn(x) => x + 1)(4)
+let x = 7 in let y = x * 6 in y
+-(3 - 10) % 4
+compose

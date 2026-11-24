@@ -1,0 +1,33 @@
+//~ rule: syntax.else-attachment, syntax.if-let-heads, expressions.else-after-if, expressions.if-let, patterns.pattern-forms, patterns.match
+//~ run-output: "c2 | s3 | big | other | 5 | pair 1 2 | none"
+
+type Shape = | Circle(i64) | Square(i64) | Rect(i64, i64)
+
+type Box = { shape: Shape, label: Option<str> }
+
+fn name(t: Shape) -> str {
+  if let Circle(r) = t { "c{r}" } else if let Square(w) = t { "s{w}" } else if let Rect(w, h) = t {
+    let a = w * h
+    if a > 9 { "big" } else { "r {a}" }
+  } else { "never" }
+}
+
+fn side(s: Shape) -> str { if let Circle(n) | Square(n) = s { "{n}" } else { "other" } }
+
+fn label(b: Box) -> str {
+  if let Box { shape: Rect(w, h), label: None } = b {
+    let pair = "pair {w} {h}"
+    pair
+  } else if let Box { label: Some(text), .. } = b { text } else { "none" }
+}
+
+fn main() / io {
+  let a = name(Circle(2))
+  let b = name(Square(3))
+  let c = name(Rect(10, 1))
+  let d = side(Rect(1, 1))
+  let e = side(Square(5))
+  let f = label(Box { shape: Rect(1, 2), label: None })
+  let g = label(Box { shape: Circle(1), label: None })
+  print("{a} | {b} | {c} | {d} | {e} | {f} | {g}")
+}

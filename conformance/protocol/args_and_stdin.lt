@@ -1,0 +1,19 @@
+//~ rule: conformance.commands, conformance.header-annotations, conformance.quoted-strings
+//~ args: plain "two words" "q\"uote" "back\\slash" "" "tab\there"
+//~ stdin: "first\tline\nsecond"
+//~ stdout:
+//~ | ["plain", "two words", "q\"uote", "back\\slash", "", "tab\there"]
+//~ | ["first\tline", "second"]
+
+use std.cli
+use std.io
+
+fn main() / io {
+  print("{cli.args()}")
+  var lines: List<str> = []
+  loop {
+    let line = io.read_line() else break
+    lines.push(line)
+  }
+  print("{lines}")
+}

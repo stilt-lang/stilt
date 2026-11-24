@@ -1,0 +1,33 @@
+//~ rule: std.lists, std.option-result-and-ordering
+//~ stdout:
+//~ | [] 0 true [1] 1 false
+//~ | [0, 1, 2] Some(3) None
+//~ | 0 2 [7]
+//~ | Some(1) Some(3) None None [] [] [1, 2, 3] [2]
+//~ | [1, 2, 3] [] [] [] [1, 2] [(1, "a")] [] [(-1, "a"), (0, "b")]
+//~ | [1] [] [] Some(5) Some(5) false 9 false true None [] [] []
+
+fn main() / io {
+  var xs: List<i64> = List.new()
+  let before = "{xs} {xs.len()} {xs.is_empty()}"
+  xs.push(1)
+  print("{before} {xs} {xs.len()} {xs.is_empty()}")
+  xs.insert(0, 0)
+  xs.insert(2, 3)
+  xs.insert(2, 2)
+  let last = xs.pop()
+  var empty: List<i64> = []
+  let nothing = empty.pop()
+  print("{xs} {last} {nothing}")
+  let first = xs.remove(0)
+  let end = xs.remove(xs.len() - 1)
+  xs[0] = 7
+  print("{first} {end} {xs}")
+  let ys = [1, 2, 3]
+  print("{ys.get(0)} {ys.get(2)} {ys.get(3)} {ys.get(-1)} {ys.slice(0, 0)} {ys.slice(3, 3)} {ys.slice(0, 3)} {ys.slice(1, 2)}")
+  print("{ys.skip(-1)} {ys.take(-1)} {ys.take(0)} {ys.skip(3)} {ys.take(2)} {[1].zip(["a", "b"])} {empty.zip(["a"])} {["a", "b"].enumerate(-1)}")
+  let five = [5]
+  var kept = [1, 2]
+  kept.retain(|x| x > 2)
+  print("{empty.concat([1])} {empty.reversed()} {empty.concat(empty)} {five.first()} {five.last()} {empty.contains(0)} {empty.fold(9, |a, x| a + x)} {empty.any(|x| x > 0)} {empty.all(|x| x > 0)} {empty.find(|x| x > 0)} {empty.map(|x| x + 1)} {ys.filter(|x| x > 3)} {kept}")
+}

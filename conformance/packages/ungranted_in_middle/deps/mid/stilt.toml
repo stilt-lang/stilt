@@ -1,0 +1,5 @@
+[package]
+name = "mid"
+
+[dependencies]
+leaf = { path = "../leaf" } # //~ ERROR E0608

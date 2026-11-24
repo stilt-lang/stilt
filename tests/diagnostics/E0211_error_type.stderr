@@ -1,0 +1,9 @@
+── UNKNOWN NAME ────────────────────────────── E0211_error_type.lt:1:27  [E0211]
+
+Stilt has no `error` type: a function that can fail raises its own error type:
+
+  1 │ fn parse(s: str) -> (i64, error) {
+    │                           ^^^^^
+
+A function's row names the type of what it raises, as `/ raise<ParseError>`, and
+`try f() catch e => …` handles it.

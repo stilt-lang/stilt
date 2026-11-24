@@ -1,0 +1,5 @@
+//~ rule: lexical.terminator-insertion, lexical.terminator-positions, syntax.inserted-token-positions
+fn one() -> i64 //~ ERROR E0100
+{
+  1
+}

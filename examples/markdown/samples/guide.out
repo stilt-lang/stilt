@@ -1,0 +1,37 @@
+<h1>Stilt, in <em>one</em> page</h1>
+<p>Stilt checks every <strong>effect</strong> a function performs, and the
+compiler infers the rest.<br />
+A line that ends with two spaces breaks.</p>
+<h2>What it gives</h2>
+<ul>
+<li>Values that are copied, never shared</li>
+<li>Errors in types: <code>raise&lt;E&gt;</code> and <code>try</code>
+<ul>
+<li>every raising call is marked</li>
+<li>a catch-all needs a reason</li>
+</ul>
+</li>
+<li>Fast builds, with <a href="https://cranelift.dev" title="the code generator">Cranelift</a></li>
+</ul>
+<ol>
+<li>
+<p>Write the code.</p>
+</li>
+<li>
+<p>Run <code>stilt check</code>.</p>
+</li>
+<li>
+<p>Read the diagnostics.</p>
+</li>
+</ol>
+<blockquote>
+<p>Each name has one home.
+A reader finds it by its qualifier,
+and so does a tool.</p>
+</blockquote>
+<hr />
+<pre><code class="language-stilt">fn main() / io { print(&quot;1 &lt; 2 &amp;&amp; 3 &gt; 2&quot;) }
+</code></pre>
+<p>Escapes: *not emphasis*, <code>a ` tick</code>, snake_case_name, 2 * 3 * 4, and <a href="https://stilt.dev">https://stilt.dev</a>.</p>
+<p><img src="logo.png" alt="The logo, small" /></p>
+<h3>Closing</h3>

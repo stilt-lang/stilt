@@ -1,0 +1,269 @@
+//~ rule: program.test-results, numbers.integer-panics, std.integers
+
+test "i8 stays in range at its edges" { //~ PASS
+  let max = i8.MAX
+  let min = i8.MIN
+  assert max - 1 + 1 == 127
+  assert min + 1 - 1 == -128
+  assert min + max == -1
+  assert max - max == 0
+  assert max * 1 == max
+  assert min * 1 == min
+  assert max * -1 == min + 1
+  assert -(min + 1) == max
+  assert (min + 1) / -1 == max
+  assert min / 1 == min
+  assert min % 1 == 0
+  assert min % 2 == 0
+}
+
+test "i8 + above MAX" { //~ FAIL
+  let max = i8.MAX
+  let _ = max + 1
+}
+
+test "i8 + below MIN" { //~ FAIL
+  let min = i8.MIN
+  let _ = min + -1
+}
+
+test "i8 - below MIN" { //~ FAIL
+  let min = i8.MIN
+  let _ = min - 1
+}
+
+test "i8 - above MAX" { //~ FAIL
+  let max = i8.MAX
+  let _ = max - -1
+}
+
+test "i8 * above MAX" { //~ FAIL
+  let max = i8.MAX
+  let _ = max * 2
+}
+
+test "i8 * below MIN" { //~ FAIL
+  let min = i8.MIN
+  let _ = min * 2
+}
+
+test "i8 * of MIN by -1" { //~ FAIL
+  let min = i8.MIN
+  let _ = min * -1
+}
+
+test "i8 unary - of MIN" { //~ FAIL
+  let min = i8.MIN
+  let _ = -min
+}
+
+test "i8 MIN / -1" { //~ FAIL
+  let min = i8.MIN
+  let _ = min / -1
+}
+
+test "i8 MIN % -1" { //~ FAIL
+  let min = i8.MIN
+  let _ = min % -1
+}
+
+test "i16 stays in range at its edges" { //~ PASS
+  let max = i16.MAX
+  let min = i16.MIN
+  assert max - 1 + 1 == 32767
+  assert min + 1 - 1 == -32768
+  assert min + max == -1
+  assert max - max == 0
+  assert max * 1 == max
+  assert min * 1 == min
+  assert max * -1 == min + 1
+  assert -(min + 1) == max
+  assert (min + 1) / -1 == max
+  assert min / 1 == min
+  assert min % 1 == 0
+  assert min % 2 == 0
+}
+
+test "i16 + above MAX" { //~ FAIL
+  let max = i16.MAX
+  let _ = max + 1
+}
+
+test "i16 + below MIN" { //~ FAIL
+  let min = i16.MIN
+  let _ = min + -1
+}
+
+test "i16 - below MIN" { //~ FAIL
+  let min = i16.MIN
+  let _ = min - 1
+}
+
+test "i16 - above MAX" { //~ FAIL
+  let max = i16.MAX
+  let _ = max - -1
+}
+
+test "i16 * above MAX" { //~ FAIL
+  let max = i16.MAX
+  let _ = max * 2
+}
+
+test "i16 * below MIN" { //~ FAIL
+  let min = i16.MIN
+  let _ = min * 2
+}
+
+test "i16 * of MIN by -1" { //~ FAIL
+  let min = i16.MIN
+  let _ = min * -1
+}
+
+test "i16 unary - of MIN" { //~ FAIL
+  let min = i16.MIN
+  let _ = -min
+}
+
+test "i16 MIN / -1" { //~ FAIL
+  let min = i16.MIN
+  let _ = min / -1
+}
+
+test "i16 MIN % -1" { //~ FAIL
+  let min = i16.MIN
+  let _ = min % -1
+}
+
+test "i32 stays in range at its edges" { //~ PASS
+  let max = i32.MAX
+  let min = i32.MIN
+  assert max - 1 + 1 == 2147483647
+  assert min + 1 - 1 == -2147483648
+  assert min + max == -1
+  assert max - max == 0
+  assert max * 1 == max
+  assert min * 1 == min
+  assert max * -1 == min + 1
+  assert -(min + 1) == max
+  assert (min + 1) / -1 == max
+  assert min / 1 == min
+  assert min % 1 == 0
+  assert min % 2 == 0
+}
+
+test "i32 + above MAX" { //~ FAIL
+  let max = i32.MAX
+  let _ = max + 1
+}
+
+test "i32 + below MIN" { //~ FAIL
+  let min = i32.MIN
+  let _ = min + -1
+}
+
+test "i32 - below MIN" { //~ FAIL
+  let min = i32.MIN
+  let _ = min - 1
+}
+
+test "i32 - above MAX" { //~ FAIL
+  let max = i32.MAX
+  let _ = max - -1
+}
+
+test "i32 * above MAX" { //~ FAIL
+  let max = i32.MAX
+  let _ = max * 2
+}
+
+test "i32 * below MIN" { //~ FAIL
+  let min = i32.MIN
+  let _ = min * 2
+}
+
+test "i32 * of MIN by -1" { //~ FAIL
+  let min = i32.MIN
+  let _ = min * -1
+}
+
+test "i32 unary - of MIN" { //~ FAIL
+  let min = i32.MIN
+  let _ = -min
+}
+
+test "i32 MIN / -1" { //~ FAIL
+  let min = i32.MIN
+  let _ = min / -1
+}
+
+test "i32 MIN % -1" { //~ FAIL
+  let min = i32.MIN
+  let _ = min % -1
+}
+
+test "i64 stays in range at its edges" { //~ PASS
+  let max = i64.MAX
+  let min = i64.MIN
+  assert max - 1 + 1 == 9223372036854775807
+  assert min + 1 - 1 == -9223372036854775808
+  assert min + max == -1
+  assert max - max == 0
+  assert max * 1 == max
+  assert min * 1 == min
+  assert max * -1 == min + 1
+  assert -(min + 1) == max
+  assert (min + 1) / -1 == max
+  assert min / 1 == min
+  assert min % 1 == 0
+  assert min % 2 == 0
+}
+
+test "i64 + above MAX" { //~ FAIL
+  let max = i64.MAX
+  let _ = max + 1
+}
+
+test "i64 + below MIN" { //~ FAIL
+  let min = i64.MIN
+  let _ = min + -1
+}
+
+test "i64 - below MIN" { //~ FAIL
+  let min = i64.MIN
+  let _ = min - 1
+}
+
+test "i64 - above MAX" { //~ FAIL
+  let max = i64.MAX
+  let _ = max - -1
+}
+
+test "i64 * above MAX" { //~ FAIL
+  let max = i64.MAX
+  let _ = max * 2
+}
+
+test "i64 * below MIN" { //~ FAIL
+  let min = i64.MIN
+  let _ = min * 2
+}
+
+test "i64 * of MIN by -1" { //~ FAIL
+  let min = i64.MIN
+  let _ = min * -1
+}
+
+test "i64 unary - of MIN" { //~ FAIL
+  let min = i64.MIN
+  let _ = -min
+}
+
+test "i64 MIN / -1" { //~ FAIL
+  let min = i64.MIN
+  let _ = min / -1
+}
+
+test "i64 MIN % -1" { //~ FAIL
+  let min = i64.MIN
+  let _ = min % -1
+}

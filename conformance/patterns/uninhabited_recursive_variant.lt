@@ -1,0 +1,12 @@
+//~ rule: patterns.types-without-values
+//~ run-output: "0"
+
+type Loop = | Loop(Loop)
+
+fn count(o: Option<Loop>) -> i64 {
+  match o {
+    None => 0
+  }
+}
+
+fn main() / io { print("{count(None)}") }

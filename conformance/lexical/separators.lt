@@ -1,0 +1,17 @@
+//~ rule: lexical.explicit-separators, lexical.separators, syntax.blocks
+//~ stdout:
+//~ | 3
+//~ | 1 0
+;
+;; use std.cli; use std.io;
+fn three() -> i64 {;
+  let a = 1;;
+  ; let b = 2;
+  a + b;
+}
+fn pair() -> (i64, i64) {
+  (1, 0)
+}
+
+fn main() / io { print("{three()}"); let (x, y) = pair(); print("{x} {y}") };
+;

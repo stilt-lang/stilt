@@ -1,0 +1,24 @@
+//~ rule: values.independent-copies, values.passing-values, modes.durations
+//~ stdout:
+//~ | [1, 2, 9] [1, 2]
+//~ | [1, 2, 8] [1, 2]
+
+fn extend(xs: List<i64>) -> List<i64> {
+  var xs = xs
+  xs.push(9)
+  xs
+}
+
+fn consume(xs: List<i64>) -> List<i64> {
+  var xs = xs
+  xs.push(8)
+  xs
+}
+
+fn main() / io {
+  let a = [1, 2]
+  let b = extend(a)
+  print("{b} {a}")
+  let c = consume(a)
+  print("{c} {a}")
+}

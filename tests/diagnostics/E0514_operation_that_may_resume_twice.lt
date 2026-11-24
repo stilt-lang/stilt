@@ -1,0 +1,13 @@
+effect Ask {
+  fn ask() -> i64
+}
+
+fn answer() -> i64 {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      let a = resume(1)
+      a + resume(2)
+    }
+  }
+  with h { Ask.ask() }
+}

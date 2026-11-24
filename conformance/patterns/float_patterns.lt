@@ -1,0 +1,36 @@
+//~ rule: patterns.floats, declarations.constants-in-patterns
+
+const HALF: f64 = 0.5
+const ZERO: i64 = 0
+
+type Reading = { value: f64 }
+
+const EMPTY: Reading = Reading { value: 0.0 }
+
+fn classify(x: f64) -> str {
+  match x {
+    HALF => "half" //~ ERROR E0328
+    _ => "other"
+  }
+}
+
+fn is_one(x: f64) -> bool {
+  match x {
+    1 => true //~ ERROR E0328
+    _ => false
+  }
+}
+
+fn is_empty(r: Reading) -> bool {
+  match r {
+    EMPTY => true //~ ERROR E0328
+    _ => false
+  }
+}
+
+fn is_zero(n: i64) -> bool {
+  match n {
+    ZERO => true
+    _ => false
+  }
+}

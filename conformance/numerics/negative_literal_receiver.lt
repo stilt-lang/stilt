@@ -1,0 +1,5 @@
+//~ rule: numbers.negative-literals
+
+fn f() -> i64 {
+  -9223372036854775808.abs() //~ ERROR E0320
+}

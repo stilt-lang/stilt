@@ -1,0 +1,7 @@
+//~ rule: program.module-names, errors.error-type
+
+use a
+use a.b
+use helpers
+
+fn total() -> i64 { a.b.g() + b.g() + helpers.h() }

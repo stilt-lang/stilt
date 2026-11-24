@@ -1,0 +1,25 @@
+//~ tier: meta
+//~ rule: docs.bodies-compared, docs.duplicate-bodies, macros.procedural-bodies
+
+// Two macros of the same body report nothing, since no call can stand in for
+// a macro in its own module; two functions of the same body still report
+// W0302 at the later one.
+use std.meta
+
+/// The expression, its successor and its double, in a list.
+macro first(e: meta.Expr) -> meta.Expr {
+  let n: i64 = 2
+  quote { [$e, $e + 1, $e * $n, $(n + 1)] }
+}
+
+/// The same, again.
+macro second(e: meta.Expr) -> meta.Expr {
+  let n: i64 = 2
+  quote { [$e, $e + 1, $e * $n, $(n + 1)] }
+}
+
+fn spread(x: i64) -> List<i64> { [x, x + 1, x * 2, x - 3, x % 4 + 5] }
+
+fn again(y: i64) -> List<i64> { [y, y + 1, y * 2, y - 3, y % 4 + 5] } //~ WARN W0302
+
+fn main() {}

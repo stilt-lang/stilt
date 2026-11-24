@@ -1,0 +1,63 @@
+[package]
+name = "stilt-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+# A workspace of its own: `cargo fuzz` builds it with a nightly compiler and the sanitizers, which
+# the main workspace never uses.
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+salsa = "0.28.5"
+serde = "1.0"
+# The server's selection ranges nest as deep as the backend's spans, past the depth that
+# serde_json reads by default.
+serde_json = { version = "1.0", features = ["unbounded_depth"] }
+stilt-db = { path = "../../compiler/stilt-db" }
+stilt-fmt = { path = "../../compiler/stilt-fmt" }
+stilt-lsp = { path = "../../compiler/stilt-lsp" }
+stilt-pkg = { path = "../../compiler/stilt-pkg" }
+stilt-rc = { path = "../../compiler/stilt-rc" }
+stilt-syntax = { path = "../../compiler/stilt-syntax" }
+
+[[bin]]
+name = "parse"
+path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "format"
+path = "fuzz_targets/format.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "check"
+path = "fuzz_targets/check.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lsp"
+path = "fuzz_targets/lsp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pack"
+path = "fuzz_targets/pack.rs"
+test = false
+doc = false
+bench = false

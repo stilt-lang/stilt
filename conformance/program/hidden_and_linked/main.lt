@@ -1,0 +1,12 @@
+//~ rule: program.module-names
+//~ stdout:
+//~ | through a directory's link
+//~ | through a file's link
+
+use lib.util
+use tool
+
+fn main() / io {
+  util.say("through a directory's link")
+  tool.say("through a file's link")
+}

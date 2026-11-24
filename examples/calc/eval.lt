@@ -1,0 +1,158 @@
+// Evaluating calc expressions.
+
+use ast
+
+/// A value: an integer, a boolean, or a function with the local names it captured.
+pub type Value = | Int(i64) | Bool(bool) | Fun(Closure)
+
+/// A function value: its parameters, its body, and the local names in scope where it was made.
+/// Names that aren't local are looked up among the globals when the body runs, so a global
+/// function can call itself and the globals defined after it.
+pub type Closure = { params: List<str>, body: ast.Expr, locals: Map<str, Value> }
+
+impl Show for Value {
+  fn show(self) -> str {
+    match self {
+      Int(n) => "{n}"
+      Bool(b) => "{b}"
+      Fun(c) => "fn({", ".join(c.params)})"
+    }
+  }
+}
+
+/// How deep calls may nest before evaluation stops.
+const DEPTH: i64 = 400
+
+/// The value of `e` with no local names, the global names being `globals`.
+/// ex: try value(ast.Apply2(ast.Mul, ast.Int(6), ast.Int(7)), Map.new()) == Int(42)
+/// ex: Result.of(|| try value(ast.Name("x"), Map.new())) == Err("unknown name x")
+pub fn value(e: ast.Expr, globals: Map<str, Value>) -> Value / raise<str> {
+  try eval(e, Map.new(), globals, 0)
+}
+
+fn eval(
+  e: ast.Expr,
+  locals: Map<str, Value>,
+  globals: Map<str, Value>,
+  depth: i64,
+) -> Value / raise<str> {
+  match e {
+    Int(n) => Int(n)
+    Bool(b) => Bool(b)
+    Name(n) => locals.get(n) else globals.get(n) else raise "unknown name {n}"
+    Apply1(op, x) => try unary(op, eval(x, locals, globals, depth))
+    Apply2(And, x, y) => Bool(
+      try truth(eval(x, locals, globals, depth)) && truth(eval(y, locals, globals, depth)),
+    )
+    Apply2(Or, x, y) => Bool(
+      try truth(eval(x, locals, globals, depth)) || truth(eval(y, locals, globals, depth)),
+    )
+    Apply2(op, x, y) => {
+      let a = try eval(x, locals, globals, depth)
+      try binary(op, a, eval(y, locals, globals, depth))
+    }
+    If(c, yes, no) => {
+      let branch = if try truth(eval(c, locals, globals, depth)) { yes } else { no }
+      try eval(branch, locals, globals, depth)
+    }
+    Lambda(params, body) => Fun(Closure { params, body, locals })
+    Let(name, x, body) => {
+      var inner = locals
+      inner[name] = try eval(x, locals, globals, depth)
+      try eval(body, inner, globals, depth)
+    }
+    Call(f, args) => {
+      let callee = try eval(f, locals, globals, depth)
+      try call(callee, args.map(|a| eval(a, locals, globals, depth)), globals, depth)
+    }
+  }
+}
+
+fn call(
+  callee: Value,
+  args: List<Value>,
+  globals: Map<str, Value>,
+  depth: i64,
+) -> Value / raise<str> {
+  let Fun(c) = callee else raise "{callee} isn't a function"
+  if args.len() != c.params.len() {
+    raise "{callee} takes {arguments(c.params.len())}, but was given {args.len()}"
+  }
+  if depth == DEPTH { raise "calls nest more than {DEPTH} deep" }
+  var locals = c.locals
+  for (p, a) in c.params.zip(args) { locals[p] = a }
+  try eval(c.body, locals, globals, depth + 1)
+}
+
+/// ex: arguments(1) == "1 argument"
+/// ex: arguments(0) == "0 arguments"
+fn arguments(n: i64) -> str { if n == 1 { "1 argument" } else { "{n} arguments" } }
+
+fn truth(v: Value) -> bool / raise<str> {
+  let Bool(b) = v else raise "expected true or false, but found {v}"
+  b
+}
+
+fn integer(v: Value) -> i64 / raise<str> {
+  let Int(n) = v else raise "expected an integer, but found {v}"
+  n
+}
+
+fn unary(op: ast.Unary, v: Value) -> Value / raise<str> {
+  match op {
+    Neg => Int(try (0).checked_sub(integer(v)) else raise "-{v} overflows")
+    Not => Bool(!try truth(v))
+  }
+}
+
+/// The value of `a op b`, for every operator but `&&` and `||`, which evaluate `b` only when
+/// they need it.
+/// ex: try binary(ast.Rem, Int(-7), Int(3)) == Int(-1)
+/// ex: try binary(ast.Eq, Bool(true), Bool(true)) == Bool(true)
+/// ex: Result.of(|| try binary(ast.Div, Int(1), Int(0))) == Err("division by zero")
+pub fn binary(op: ast.Binary, a: Value, b: Value) -> Value / raise<str> {
+  match op {
+    Eq => Bool(try same(a, b))
+    Ne => Bool(!try same(a, b))
+    Lt => Bool(try integer(a) < integer(b))
+    Le => Bool(try integer(a) <= integer(b))
+    Gt => Bool(try integer(a) > integer(b))
+    Ge => Bool(try integer(a) >= integer(b))
+    _ => Int(try arithmetic(op, integer(a), integer(b)))
+  }
+}
+
+fn arithmetic(op: ast.Binary, x: i64, y: i64) -> i64 / raise<str> {
+  if (op == ast.Div || op == ast.Rem) && y == 0 { raise "division by zero" }
+  let result = match op {
+    Add => x.checked_add(y)
+    Sub => x.checked_sub(y)
+    Mul => x.checked_mul(y)
+    Div => if x == i64.MIN && y == -1 { None } else { Some(x / y) }
+    _ => if y == -1 { Some(0) } else { Some(x % y) }
+  }
+  result else raise "{x} {ast.sign(op)} {y} overflows"
+}
+
+/// Whether two integers or two booleans are equal. Functions can't be compared.
+fn same(a: Value, b: Value) -> bool / raise<str> {
+  match (a, b) {
+    (Int(x), Int(y)) => x == y
+    (Bool(x), Bool(y)) => x == y
+    (Fun(_), _) | (_, Fun(_)) => raise "functions can't be compared"
+    _ => raise "can't compare {a} with {b}"
+  }
+}
+
+test "closures capture their local names" {
+  let add = ast.Lambda(["x"], ast.Lambda(["y"], ast.Apply2(ast.Add, ast.Name("x"), ast.Name("y"))))
+  let e = ast.Call(ast.Call(add, [ast.Int(2)]), [ast.Int(40)])
+  assert try value(e, Map.new()) == Int(42)
+}
+
+test "runaway recursion stops" {
+  var globals = Map.new()
+  globals["f"] = Fun(Closure { params: [], body: ast.Call(ast.Name("f"), []), locals: Map.new() })
+  assert Result.of(|| try value(ast.Call(ast.Name("f"), []), globals)) ==
+    Err("calls nest more than 400 deep")
+}

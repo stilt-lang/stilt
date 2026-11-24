@@ -1,0 +1,9 @@
+use std.sync
+
+type Account = { balance: i64 }
+
+fn balance(a: sync.Shared<Account>) -> i64 {
+  a.balance
+}
+
+fn main() {}

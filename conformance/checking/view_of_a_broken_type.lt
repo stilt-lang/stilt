@@ -1,0 +1,10 @@
+//~ rule: views.viewable-types, errors.error-type
+
+use std.view
+
+// The parameter's type is an error, reported where it is written, so a view of it, whose type
+// nothing decides, gets no error of its own.
+fn viewed(xs: Self<i64>) -> i64 { //~ ERROR E0215
+  let v = view.View.all(xs)
+  v.len()
+}

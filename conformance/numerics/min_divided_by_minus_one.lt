@@ -1,0 +1,8 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ panic: overflow
+//~ panic-at: min_divided_by_minus_one.lt:7:11
+
+fn main() / io {
+  let m = i64.MIN
+  print("{m / -1}")
+}

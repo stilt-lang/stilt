@@ -1,0 +1,21 @@
+[package]
+name = "stilt-meta"
+description = "The compile-time interpreter of Stilt's compiler, which runs procedural macros"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-db = { path = "../stilt-db" }
+stilt-hir = { path = "../stilt-hir" }
+stilt-mir = { path = "../stilt-mir" }
+stilt-runtime = { path = "../stilt-runtime" }
+stilt-syntax = { path = "../stilt-syntax" }
+stilt-types = { path = "../stilt-types" }
+rustc-hash.workspace = true
+salsa.workspace = true
+
+[lints]
+workspace = true

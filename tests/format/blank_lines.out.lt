@@ -1,0 +1,15 @@
+// Blank lines between lines are kept, at most one, except right after an opening brace, right
+// before a closing one, and at the start and the end of the file.
+
+use std.cli
+
+use std.fs
+fn first() -> i64 {
+  let a = 1
+
+  let b = 2
+
+  a + b
+}
+
+fn second() -> i64 { 2 }

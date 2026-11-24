@@ -1,0 +1,54 @@
+//~ tier: advanced
+//~ rule: syntax.bounds-placement, traits.member-types, traits.where
+//~ stdout:
+//~ | Some(7)
+//~ | None
+//~ | [3, 1]
+
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+  fn size(self) -> i64
+}
+
+impl<T> Collection<T> for List<T> {
+  fn at(self, i: i64) -> Option<T> { self.get(i) }
+  fn size(self) -> i64 { self.len() }
+}
+
+// `<` on the member type needs the bound that the `where` clause gives.
+fn largest<C: Collection>(c: C) -> Option<C.Item> where C.Item: Ord {
+  var best = c.at(0)
+  for i in 1..c.size() {
+    if let Some(x) = c.at(i) {
+      if let Some(b) = best {
+        if x > b { best = Some(x) }
+      }
+    }
+  }
+  best
+}
+
+type Shelf<C> = { books: C }
+
+// A `where` clause on an impl.
+impl<C: Collection> Show for Shelf<C> where C.Item: Show {
+  fn show(self) -> str {
+    var out = ""
+    var i = self.books.size() - 1
+    while i >= 0 {
+      if let Some(x) = self.books.at(i) {
+        out = if out == "" { "{x}" } else { "{out}, {x}" }
+      }
+      i -= 1
+    }
+    "[{out}]"
+  }
+}
+
+fn main() / io {
+  print("{largest([3, 7, 5])}")
+  let empty: List<i64> = []
+  print("{largest(empty)}")
+  let shelf = Shelf { books: [1, 3] }
+  print("{shelf}")
+}

@@ -1,0 +1,14 @@
+use std.meta
+
+/// Counts `n` down by twos to zero, which an odd `n` never reaches.
+fn count_down(n: i64) -> i64 {
+  var left = n
+  while left != 0 { left -= 2 }
+  left
+}
+
+/// The expression, plus what counting 9 down leaves.
+pub macro padded(e: meta.Expr) -> meta.Expr {
+  let left = count_down(9)
+  quote { $e + $left }
+}

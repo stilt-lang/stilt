@@ -1,0 +1,41 @@
+//~ tier: advanced
+//~ rule: shared.names-that-may-be-one-place
+//~ stdout:
+//~ | 1 10
+//~ | 1 10
+//~ | 1 10
+
+use std.sync
+
+type Account = { balance: i64, fee: i64 }
+
+type Log = { count: i64 }
+
+fn both(inout x: i64, inout y: i64) {
+  x += 1
+  y += 10
+}
+
+// Different fields of names that may reach one value don't overlap.
+fn pay(a: sync.Shared<Account>, b: sync.Shared<Account>) {
+  when a, b { both(inout a.balance, inout b.fee) }
+}
+
+// Names whose values have different types never reach one value.
+fn mixed(a: sync.Shared<Account>, l: sync.Shared<Log>) {
+  when a, l { both(inout a.balance, inout l.count) }
+}
+
+fn main() / io {
+  let acc = sync.Shared.new(Account { balance: 0, fee: 0 })
+  pay(acc, acc)
+  when acc { print("{acc.balance} {acc.fee}") }
+  let c = sync.Shared.new(Account { balance: 0, fee: 0 })
+  let d = sync.Shared.new(Account { balance: 0, fee: 0 })
+  pay(c, d)
+  when c, d { print("{c.balance} {d.fee}") }
+  let log = sync.Shared.new(Log { count: 0 })
+  let e = sync.Shared.new(Account { balance: 0, fee: 0 })
+  mixed(e, log)
+  when e, log { print("{e.balance} {log.count}") }
+}

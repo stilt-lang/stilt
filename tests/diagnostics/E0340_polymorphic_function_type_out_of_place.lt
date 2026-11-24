@@ -1,0 +1,3 @@
+fn make() -> fn<T>(T) -> T { |x| x }
+
+fn main() {}

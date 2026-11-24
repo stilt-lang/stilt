@@ -1,0 +1,15 @@
+//~ tier: meta
+//~ rule: macros.expansion-order, macros.failed-uses
+
+// `tools` has an error, so its macros expand no use and report nothing here:
+// each use stands as a failed use, from which nothing else follows.
+meta use tools
+
+fn main() / io {
+  let n: tools.int!() = tools.one!()
+  let s = match 1 {
+    tools.one_pattern!() => "one"
+    _ => "other"
+  }
+  print("{n} {s}")
+}

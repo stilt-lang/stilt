@@ -1,0 +1,34 @@
+//~ rule: facts.guarding-tests, facts.divisors
+
+// A then-branch with a path that completes gives the code after the `if` nothing.
+
+fn print_nothing() {}
+
+fn one_branch(n: i64, d: i64, quiet: bool) -> i64 without panic {
+  if d == 0 {
+    if quiet { return 0 }
+  }
+  n / d //~ ERROR E0204
+}
+
+fn other_completes(n: i64, d: i64, quiet: bool) -> i64 without panic {
+  if d == 0 {
+    if quiet { return 0 } else { print_nothing() }
+  }
+  n / d //~ ERROR E0204
+}
+
+fn one_arm(n: i64, d: i64, k: i64) -> i64 without panic {
+  if d == 0 {
+    match k {
+      0 => return 7,
+      _ => {},
+    }
+  }
+  n / d //~ ERROR E0204
+}
+
+fn not_never(n: i64, d: i64) -> i64 without panic {
+  if d == 0 { print_nothing() }
+  n / d //~ ERROR E0204
+}

@@ -1,0 +1,7 @@
+//~ rule: lexical.no-characters, std.str
+//~ run-output: "[\"t\", \"e\", \"a\"] t true"
+
+fn main() / io {
+  let letters = "tea".chars()
+  print("{letters} {letters[0]} {letters[0] == "t"}")
+}

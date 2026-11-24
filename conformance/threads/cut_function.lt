@@ -1,0 +1,37 @@
+//~ tier: advanced
+//~ rule: tasks.scope-failure
+//~ stdout:
+//~ | caught 2
+//~ | n1! n2! n3!
+
+use std.task
+
+type Bad = { n: i64 }
+
+fn quick_raise(n: i64) -> i64 / raise<Bad> { raise Bad { n } }
+
+// Copies the words over and over, never ending.
+fn forever(words: List<str>) -> i64 {
+  var n = 0
+  loop {
+    var kept: List<str> = []
+    for w in words { kept.push(w) }
+    n = (n + kept.len()) % 1000
+  }
+}
+
+// The sequential run never reaches the call of `forever`, which under threads goes on past the
+// raise that cuts the scope's function, while the code that called the scope lets go of the
+// words.
+fn failing() -> i64 / {io, async, raise<Bad>} {
+  let words = [1, 2, 3].map(|x| "w{x}")
+  try task.scope(|s| {
+    try s.spawn(|| quick_raise(2))
+    forever(words)
+  })
+}
+
+fn main() / io {
+  with task.threads() { print("caught {try failing() catch e => e.n}") }
+  print(" ".join([1, 2, 3].map(|x| "n{x}!")))
+}

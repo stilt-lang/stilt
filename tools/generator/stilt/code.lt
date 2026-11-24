@@ -1,0 +1,53 @@
+// Source code: the text of expressions, and lines of code with their depth of
+// nesting, as a program prints them.
+
+/// An expression's text. `atom` tells whether it can be an operand or a
+/// receiver without parentheses. `known` tells whether its type is fixed
+/// without an expected type, as a receiver's must be (types.known-types).
+pub type Code = { text: str, atom: bool, known: bool }
+
+/// ex: atom("x") == Code { text: "x", atom: true, known: true }
+pub fn atom(text: str) -> Code { Code { text, atom: true, known: true } }
+
+pub fn atom_with(text: str, known: bool) -> Code { Code { text, atom: true, known } }
+
+pub fn compound(text: str) -> Code { Code { text, atom: false, known: true } }
+
+pub fn compound_with(text: str, known: bool) -> Code { Code { text, atom: false, known } }
+
+/// ex: operand(compound("a + b")) == "(a + b)"
+pub fn operand(c: Code) -> str { if c.atom { c.text } else { "({c.text})" } }
+
+/// `text` as the head of an `if`, `while` or `match`, or the iterable of a
+/// `for`, which end at their first `{` outside brackets (expressions.heads).
+/// ex: head("A \{ x: 1 } == a") == "(A \{ x: 1 } == a)"
+pub fn head(text: str) -> str { if text.contains("\{") { "({text})" } else { text } }
+
+/// ex: call_text("f", ["1", "x"]) == "f(1, x)"
+pub fn call_text(name: str, args: List<str>) -> str { "{name}({", ".join(args)})" }
+
+/// ex: method_on(compound("-1"), "abs", []).text == "(-1).abs()"
+pub fn method_on(recv: Code, name: str, args: List<str>) -> Code {
+  atom("{operand(recv)}.{call_text(name, args)}")
+}
+
+/// Lines of code, each with its depth of nesting.
+/// ex: nest([(0, "a"), (1, "b")]) == [(1, "a"), (2, "b")]
+pub fn nest(lines: List<(i64, str)>) -> List<(i64, str)> {
+  lines.map(|(depth, text)| (depth + 1, text))
+}
+
+pub fn line(text: str) -> List<(i64, str)> { [(0, text)] }
+
+/// ex: block_lines("f \{", [(0, "x")], "}") == [(0, "f \{"), (1, "x"), (0, "}")]
+pub fn block_lines(opening: str, lines: List<(i64, str)>, closing: str) -> List<(i64, str)> {
+  var out = [(0, opening)]
+  out.extend(nest(lines))
+  out.push((0, closing))
+  out
+}
+
+/// ex: render([(0, "f \{"), (1, "x"), (0, "}")]) == "f \{\n  x\n}\n"
+pub fn render(lines: List<(i64, str)>) -> str {
+  "".join(lines.map(|(depth, text)| "{"  ".repeat(depth)}{text}\n"))
+}

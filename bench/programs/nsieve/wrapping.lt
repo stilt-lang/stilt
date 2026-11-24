@@ -1,0 +1,29 @@
+// nsieve: counts the primes below three bounds with the sieve of Eratosthenes, as the
+// Benchmarks Game's former program does.
+
+use std.cli
+
+fn primes(m: i64) -> i64 {
+  var flags = []
+  for _ in 0..m +% 1 { flags.push(true) }
+  var count = 0
+  for i in 2..m +% 1 {
+    if flags[i] {
+      count +%= 1
+      var k = i +% i
+      while k <= m {
+        flags[k] = false
+        k +%= i
+      }
+    }
+  }
+  count
+}
+
+fn main() / io {
+  let size = (cli.arg(0) else "").to_i64() else 22
+  for shift in 0..3 {
+    let m = (1 << (size -% shift)) *% 10000 / 4096
+    print("Primes up to {m:>8} {primes(m):>8}")
+  }
+}

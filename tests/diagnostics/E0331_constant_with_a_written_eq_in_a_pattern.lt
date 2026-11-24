@@ -1,0 +1,14 @@
+type Money = { cents: i64 }
+
+impl Eq for Money {
+  fn eq(self, other: Money) -> bool { self.cents == other.cents }
+}
+
+const FREE: Money = Money { cents: 0 }
+
+fn label(price: Money) -> str {
+  match price {
+    FREE => "free"
+    _ => "paid"
+  }
+}

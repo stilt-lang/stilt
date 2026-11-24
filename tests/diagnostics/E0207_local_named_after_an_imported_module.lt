@@ -1,0 +1,6 @@
+use std.fs
+
+fn main() / io {
+  let fs = "notes.txt"
+  print(fs)
+}

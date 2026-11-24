@@ -1,0 +1,11 @@
+//~ rule: program.prelude-functions, numbers.integer-panics, effects.panic-kinds
+//~ run-output: "start"
+//~ panic: divide-by-zero
+//~ panic-at: divide_by_zero.lt:6:35
+
+fn ratio(a: i64, b: i64) -> i64 { a / b }
+
+fn main() / io {
+  print("start")
+  print("{ratio(1, 0)}")
+}

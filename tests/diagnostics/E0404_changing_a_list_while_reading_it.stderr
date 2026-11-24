@@ -1,0 +1,9 @@
+── CHANGING A LIST WHILE READING IT ── E0404_changing_a_list_while_reading_it.lt:1:57  [E0404]
+
+`orders` is being read by a `for` loop around this change:
+
+  1 │ fn doubled(inout orders: List<i64>) { for o in orders { orders.push(o) } }
+    │                                                         ^^^^^^
+
+Changing a list while a `for` loop reads it would silently copy it. Build the
+changes in another list and apply them after the loop, or loop over its indexes.

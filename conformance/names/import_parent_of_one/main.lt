@@ -1,0 +1,7 @@
+//~ rule: program.child-modules, program.import-clashes
+//~ run-output: "hello"
+
+use app
+use std.io
+
+fn main() / io { app.io.hello() }

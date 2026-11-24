@@ -1,0 +1,9 @@
+//~ rule: types.field-access, types.option-field-not-place, expressions.places, modes.places
+
+type Point = { x: i64 }
+type Shape = { corner: Point }
+
+fn shift() {
+  var s: Option<Shape> = None
+  s.corner.x = 1 //~ ERROR E0401
+}

@@ -1,0 +1,7 @@
+//~ rule: traits.impl-blocks
+
+use shapes
+
+impl shapes.Shape { //~ ERROR E0301
+  pub fn unit() -> shapes.Shape { shapes.Dot }
+}

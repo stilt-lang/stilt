@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: records.record-bounds, records.open-parameter-types, errors.unknown-names
+
+// An open record type or a record bound where none may stand is E0341, and a name in it that
+// resolves to nothing is reported too, since it is no part of that error.
+type Holder = { inner: { name: Nme, .. } } //~ ERROR E0341 ERROR E0211
+
+fn made() -> { name: Txt, .. } { { name: "a" } } //~ ERROR E0341 ERROR E0211
+
+fn closed<P: { v: Num }>(p: P) -> i64 { 0 } //~ ERROR E0341 ERROR E0211
+
+fn local(p: { name: str, .. }) -> str {
+  let q: { name: Strr, .. } = p //~ ERROR E0341 ERROR E0211
+  q.name
+}
+
+fn main() {}

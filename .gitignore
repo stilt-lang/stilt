@@ -1,0 +1,25 @@
+# Build outputs, and the compile commands that dune writes for the C of the reference
+# interpreter
+/target
+/target.noindex
+/_build/
+/compile_commands.json
+
+# Repository-local opam switch
+/_opam
+
+# Lean build outputs
+/formal/.lake/
+/tools/proof-map/.lake/
+
+# The VS Code extension's npm packages, and the extension packaged
+/editors/vscode/node_modules/
+/editors/vscode/*.vsix
+
+# Editors and operating systems
+.DS_Store
+*.swp
+/.idea/
+/.vscode/
+
+/.claude/worktrees/

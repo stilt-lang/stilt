@@ -1,0 +1,14 @@
+── SYNTAX ERROR ─────────────────────────────── E0100_python_def.lt:1:1  [E0100]
+
+Stilt declares a function with `fn`, not `def`:
+
+  1 │ def add(a: i64, b: i64) -> i64 { a + b }
+    │ ^^^
+
+A function is `fn`, its name, its parameters with their types, and `->` and its
+result type.
+
+To fix it, write `fn`:
+
+  1 │ fn add(a: i64, b: i64) -> i64 { a + b }
+    │ ~~

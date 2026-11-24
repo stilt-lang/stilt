@@ -1,0 +1,178 @@
+// The forms that make a list: the methods of other lists, the pieces of a
+// string, and lists of pairs.
+
+use closures
+use code
+use context
+use lit
+use pick
+use ty
+
+/// The fields of type `t` of the records that hold no map, as the key paths
+/// `.f` that read them, each with its record's type.
+fn key_paths(decls: List<(str, ty.Decl)>, t: ty.Ty) -> List<(ty.Ty, str)> {
+  var out = []
+  for (name, d) in decls {
+    let Record(fields) = d else continue
+    if ty.has_map(decls, ty.Named(name)) { continue }
+    for (f, u) in fields { if u == t { out.push((ty.Named(name), ".{f}")) } }
+  }
+  out
+}
+
+/// The two element types of the lists that zip into a list of `t`, or `None`
+/// when no list of pairs makes one. A first element of `i64` enumerates.
+fn pairs(decls: List<(str, ty.Decl)>, t: ty.Ty) -> Option<(ty.Ty, ty.Ty)> {
+  match t {
+    Tuple([Int(I64), u]) if !ty.has_map(decls, u) => Some((ty.Int(ty.I64), u))
+    Tuple([x, y]) if !ty.has_map(decls, t) => Some((x, y))
+    _ => None
+  }
+}
+
+/// The forms that make a list of `t`, each with its weight: the methods of
+/// other lists, the pieces of a string, and a list of pairs.
+pub fn ops(
+  ex: context.Expr,
+  b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  t: ty.Ty,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let methods = list_methods(ex, b, sc, d, t)
+  let strs = if t == ty.Str { 2 } else { 0 }
+  let bytes = if t == ty.Int(ty.U8) { 1 } else { 0 }
+  let pieces = [
+    (strs, |inout b| pieces(ex, inout b, sc, d)),
+    (bytes, |inout b| code.method_on(ex.make(inout b, sc, d, true, ty.Str), "bytes", [])),
+  ]
+  let zips = match pairs(b.p.decls, t) {
+    Some(_) => [(1, |inout b| zipped(ex, inout b, sc, d, t))]
+    None => []
+  }
+  methods.concat(pieces).concat(zips)
+}
+
+/// Lists of `t` made by a method of another list.
+fn list_methods(
+  ex: context.Expr,
+  b: context.Body,
+  sc: context.Scope,
+  d: i64,
+  t: ty.Ty,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let fixable = if ty.has_map(b.p.decls, t) { 0 } else { 1 }
+  let paths = key_paths(b.p.decls, t)
+  [
+    (
+      3 * fixable,
+      |inout b| {
+        let u = context.random_ty(inout b.p, false, 1)
+        let xs = ex.make(inout b, sc, d, true, ty.ListOf(u))
+        code.method_on(xs, "map", [closures.closure(ex, inout b, sc, d, true, u, t)])
+      },
+    ),
+    (
+      2,
+      |inout b| {
+        let f = closures.closure(ex, inout b, sc, d, false, t, ty.Bool)
+        code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(t)), "filter", [f])
+      },
+    ),
+    (2, |inout b| cut(ex, inout b, sc, d, t)),
+    (
+      if ty.ordered(b.p.decls, t) { 1 } else { 0 },
+      |inout b| {
+        let m = pick.one(inout b.p.r, ["sorted", "sorted_desc", "deduped"])
+        code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(t)), m, [])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let key = context.leaf_ty(inout b.p.r)
+        let f = closures.closure(ex, inout b, sc, d, true, t, key)
+        let m = pick.one(inout b.p.r, ["sorted_by", "sorted_desc_by"])
+        code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(t)), m, [f])
+      },
+    ),
+    (
+      fixable,
+      |inout b| {
+        let u = context.random_ty(inout b.p, false, 1)
+        let xs = ex.make(inout b, sc, d, true, ty.ListOf(u))
+        code.method_on(
+          xs,
+          "filter_map",
+          [closures.closure(ex, inout b, sc, d, true, u, ty.OptionOf(t))],
+        )
+      },
+    ),
+    (
+      if paths.is_empty() { 0 } else { 2 },
+      |inout b| {
+        let (u, path) = pick.one(inout b.p.r, paths)
+        code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(u)), "map", [path])
+      },
+    ),
+  ]
+}
+
+/// A list reversed, cut, or joined to another.
+fn cut(ex: context.Expr, inout b: context.Body, sc: context.Scope, d: i64, t: ty.Ty) -> code.Code {
+  let xs = ex.make(inout b, sc, d, true, ty.ListOf(t))
+  context.run(
+    inout b,
+    [
+      (1, |inout b| code.method_on(xs, "reversed", [])),
+      (
+        1,
+        |inout b| {
+          let n = pick.between(inout b.p.r, 0, 4)
+          code.method_on(
+            xs,
+            pick.one(inout b.p.r, ["take", "skip", "take_last", "skip_last"]),
+            ["{n}"],
+          )
+        },
+      ),
+      (
+        1,
+        |inout b| code.method_on(xs, "concat", [ex.make(inout b, sc, d, false, ty.ListOf(t)).text]),
+      ),
+    ],
+  )
+}
+
+/// The pieces of a string: substrings, characters, lines, or words.
+fn pieces(ex: context.Expr, inout b: context.Body, sc: context.Scope, d: i64) -> code.Code {
+  let s = ex.make(inout b, sc, d, true, ty.Str)
+  context.run(
+    inout b,
+    [
+      (2, |inout b| code.method_on(s, "split", [lit.string(inout b.p.r)])),
+      (1, |inout b| code.method_on(s, "chars", [])),
+      (1, |inout b| code.method_on(s, "lines", [])),
+      (1, |inout b| code.method_on(s, "split_whitespace", [])),
+    ],
+  )
+}
+
+/// A list enumerated, or two lists zipped. `zip`'s parameter is generic, so
+/// its argument fixes its own type.
+fn zipped(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  d: i64,
+  t: ty.Ty,
+) -> code.Code {
+  let (x, y) = pairs(b.p.decls, t) else unreachable()
+  if x == ty.Int(ty.I64) && !ty.has_map(b.p.decls, y) {
+    let start = pick.between(inout b.p.r, 0, 2)
+    return code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(y)), "enumerate", ["{start}"])
+  }
+  let ys = ex.make(inout b, sc, d, true, ty.ListOf(y))
+  code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(x)), "zip", [ys.text])
+}

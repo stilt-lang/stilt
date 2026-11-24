@@ -1,0 +1,23 @@
+//~ tier: advanced
+//~ rule: views.reads-that-last, views.change-while-viewed
+//~ run-output: "[2, 3] [1, 2] [9, 2] 2"
+
+use std.view
+
+fn bump(inout xs: List<i64>) -> i64 {
+  xs[0] = 9
+  0
+}
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var ys = [1, 2, 3]
+  // A later operand that only reads the source is fine.
+  let a = view.View.of(xs, 1, xs.len())
+  // So is one that changes another variable.
+  let b = view.View.of(xs, bump(inout ys), 2)
+  // A source passed `inout` is read when the call starts, after the change.
+  var zs = [1, 2, 3]
+  let c = view.into(inout zs, bump(inout zs), 2)
+  print("{a} {b} {c} {a.len()}")
+}

@@ -1,0 +1,153 @@
+//~ tier: advanced
+//~ rule: handlers.with, handlers.performing-operation, handlers.rows-pass-effects-on, shared.when
+//~ stdout:
+//~ | Alice()
+//~ | Bob()
+//~ | true
+//~ | false
+//~ | true
+//~ | Board(3, 7)
+
+// Effekt, examples/pos/nim.effekt, which translates Koka's test/algeff/nim.kk: the game of Nim,
+// whose players take 1 to 3 sticks in turn, the one who takes the last winning. Each move is an
+// operation, and handlers pick the strategy: `perfect` leaves a multiple of 4, and `pc` plays
+// Alice perfectly while Bob takes every stick. `deterministic` answers `Choose` from a fixed
+// list of flips, starting over once it runs out, and `bob_chooses` picks Bob's strategy by a
+// flip. Ten games under it, scored by handlers of `GetScore` and `UpdateScore`, give Alice 3
+// and Bob 7. Effekt shows a player with its own `show`, which this program writes too, and the
+// board with the `Show` of its variant, which Stilt's structural `Show` writes the same way.
+// Effekt's handlers keep their state in local variables they assign; a Stilt handler captures
+// by copy, so here the state is in `Shared` values. The original's game trees and list of all
+// results resume twice, and its cheating handlers perform effects that their operations' rows
+// don't hold, so this port leaves those lines out.
+
+use std.sync
+
+type Player = | Bob | Alice
+
+fn show(p: Player) -> str {
+  match p {
+    Bob => "Bob()"
+    Alice => "Alice()"
+  }
+}
+
+effect Move {
+  fn move(p: Player, sticks: i64) -> i64
+}
+
+fn alice_turn(n: i64) -> Player / Move {
+  if n <= 0 { Bob } else { bob_turn(n - Move.move(Alice, n)) }
+}
+
+fn bob_turn(n: i64) -> Player / Move {
+  if n <= 0 { Alice } else { alice_turn(n - Move.move(Bob, n)) }
+}
+
+fn game(n: i64) -> Player / Move { alice_turn(n) }
+
+fn perfect<R>(prog: fn() -> R / Move) -> R {
+  let h = handler Move {
+    fn move(p: Player, sticks: i64) -> i64 { 1.max(sticks % 4) }
+  }
+  with h { prog() }
+}
+
+fn pc<R>(prog: fn() -> R / Move) -> R {
+  let h = handler Move {
+    fn move(p: Player, sticks: i64) -> i64 {
+      match p {
+        Alice => 1.max(sticks % 4)
+        Bob => sticks
+      }
+    }
+  }
+  with h { prog() }
+}
+
+effect Choose {
+  fn choose() -> bool
+}
+
+fn bob_chooses(prog: fn() -> Player / Move) -> Player / Choose {
+  if Choose.choose() { pc(prog) } else { perfect(prog) }
+}
+
+fn deterministic<R>(prog: fn() -> R / Choose) -> R {
+  let all_flips = [true, false, true, true, false]
+  let flips = sync.Shared.new(all_flips)
+  let h = handler Choose {
+    fn choose() -> bool {
+      when flips {
+        match flips {
+          [] => {
+            flips = all_flips
+            true
+          }
+          [b, ..rest] => {
+            flips = rest
+            b
+          }
+        }
+      }
+    }
+  }
+  with h { prog() }
+}
+
+type Scoreboard = | Board(i64, i64)
+
+effect GetScore {
+  fn get_score() -> Scoreboard
+}
+
+effect UpdateScore {
+  fn update_score(p: Player)
+}
+
+fn updated_score(p: Player, board: Scoreboard) -> Scoreboard {
+  match (board, p) {
+    (Board(a, b), Alice) => Board(a + 1, b)
+    (Board(a, b), Bob) => Board(a, b + 1)
+  }
+}
+
+fn with_score<R>(prog: fn() -> R / {GetScore, UpdateScore}) -> R {
+  let s = sync.Shared.new(Board(0, 0))
+  let gets = handler GetScore { fn get_score() -> Scoreboard { when s { s } } }
+  let updates = handler UpdateScore {
+    fn update_score(p: Player) { when s { s = updated_score(p, s) } }
+  }
+  with gets, updates { prog() }
+}
+
+fn replay(n: i64, action: fn()) {
+  if n > 0 {
+    action()
+    replay(n - 1, action)
+  }
+}
+
+fn test_print2() / io {
+  with_score(|| {
+    deterministic(|| replay(10, || {
+      let _ = bob_chooses(|| {
+        let p = game(7)
+        UpdateScore.update_score(p)
+        p
+      })
+    }))
+    print("{GetScore.get_score()}")
+  })
+}
+
+fn main() / io {
+  print(perfect(|| show(game(7))))
+  print(perfect(|| show(game(12))))
+  deterministic(|| {
+    print("{Choose.choose()}")
+    print("{Choose.choose()}")
+    print("{Choose.choose()}")
+  })
+  test_print2()
+}

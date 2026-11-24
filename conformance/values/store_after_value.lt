@@ -1,0 +1,17 @@
+//~ rule: values.assignment-order
+//~ stdout:
+//~ | index
+//~ | value
+//~ panic: bounds
+//~ panic-at: store_after_value.lt:15:3
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn main() / io {
+  var xs = [0]
+  xs[note("index", 3)] = note("value", 1)
+  print("not reached")
+}

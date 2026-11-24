@@ -1,0 +1,11 @@
+//~ rule: traits.hash-follows-written-eq, std.finding-keys
+
+type Name = { text: str }
+
+impl Eq for Name {
+  fn eq(self, other: Name) -> bool { self.text.ascii_lower() == other.text.ascii_lower() }
+}
+
+fn lookup(m: Map<Name, i64>, n: Name) -> i64 {
+  m[n] //~ ERROR E0318
+}

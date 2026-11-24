@@ -1,0 +1,36 @@
+// pipeline: records through closures: maps, filters, folds and sorts by key, and groups in a
+// map.
+
+use std.cli
+
+type Item = { id: i64, group: i64, score: i64, name: str }
+
+fn items(n: i64) -> List<Item> {
+  var out = []
+  var x = 3
+  for i in 0..n {
+    x = (x * 1103515245 + 12345) % 2147483648
+    out.push(Item { id: i, group: x % 13, score: x % 1000, name: "n{x % 97}" })
+  }
+  out
+}
+
+fn main() / io {
+  let size = (cli.arg(0) else "").to_i64() else 100000
+  let all = items(size)
+  var total = 0
+  for round in 0..10 {
+    let boosted = all.map(
+      |it| Item { id: it.id, group: it.group, score: it.score + round, name: it.name },
+    )
+    let kept = boosted.filter(|it| it.score % 3 != 0)
+    total += kept.fold(0, |acc, it| (acc + it.score * it.group) % 1000000007)
+    let best = kept.sorted_desc_by(.score).take(5).map(.id)
+    total += best.fold(0, |acc, id| acc + id)
+  }
+  var groups = Map.with_default(0)
+  for it in all { groups[it.group] += it.score }
+  let named = all.filter(|it| it.name.ends_with("7")).len()
+  let top = all.find(|it| it.score == 999).map(.id) else -1
+  print("{total} {groups[4]} {named} {top} {all.any(|it| it.score > 998)}")
+}

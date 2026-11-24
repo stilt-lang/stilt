@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: records.bound-fields, records.record-bounds, errors.root-causes
+
+type Person = { name: str, age: i64 }
+
+// A record bound without `..` is E0341, whose fix adds it, so the bound still
+// gives its fields, and reading one through it is no second mistake.
+fn value<B: { v: i64 }>(b: B) -> i64 { b.v } //~ ERROR E0341
+
+fn name_of<P: { name: str }>(p: P) -> str { //~ ERROR E0341
+  let { name, .. } = p
+  name
+}
+
+// A record that lacks the field meets the bound neither way, a mistake of its own.
+fn a() -> i64 { value(Person { name: "x", age: 1 }) } //~ ERROR E0318
+
+fn main() {}

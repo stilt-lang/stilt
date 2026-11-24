@@ -1,0 +1,9 @@
+── NAME DEFINED TWICE ───────────────── E0208_name_defined_twice.lt:3:4  [E0208]
+
+`total` is already defined in this module:
+
+  3 │ fn total(prices: List<f64>) -> f64 { prices.fold(0.0, |sum, p| sum + p) }
+    │    ^^^^^
+
+A name is defined once in its scope, and Stilt has no overloading. Give the
+second definition a name of its own.

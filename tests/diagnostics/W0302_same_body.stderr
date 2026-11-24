@@ -1,0 +1,17 @@
+── DUPLICATE BODY ────────────────────────────── W0302_same_body.lt:5:4  [W0302]
+
+This function has the same body as `main.mass`:
+
+  3 │ fn mass(o: Order) -> i64 { o.qty * o.grams + o.box * 2 + o.qty - 1 }
+    │    ──── the first
+  4 │ 
+  5 │ fn heft(p: Order) -> i64 { p.qty * p.grams + p.box * 2 + p.qty - 1 }
+    │    ^^^^
+
+Two copies of one body drift apart when only one is fixed. Call the first
+function, or move what both do into a function that each calls.
+
+To fix it, call `main.mass`, whose body this is:
+
+  5 │ fn heft(p: Order) -> i64 { mass(p) }
+    │                          ~~~~~~~~~~~

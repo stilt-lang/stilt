@@ -1,0 +1,14 @@
+use std.meta
+
+type Chain = | End | Link(i64, Chain)
+
+/// Builds a chain of variants that holds more than a run's memory.
+pub macro chain() -> meta.Expr {
+  var c = End
+  var n = 0
+  while n < 9_000_000 {
+    c = Link(n, Link(n, Link(n, Link(n, Link(n, Link(n, Link(n, Link(n, c))))))))
+    n += 1
+  }
+  quote { 1 }
+}

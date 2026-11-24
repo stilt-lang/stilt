@@ -1,0 +1,23 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.declaring-effect
+//~ run-output: "42"
+
+// Koka, test/algeff/exn3.kk: an operation whose result type is never produced, here `Never`
+// where Koka's is any type, is handled by a body that doesn't resume. Its value, 42, is the
+// `with`'s, and the `0` after the performance never runs. Koka prints the value that its `main`
+// returns, which `main` here prints.
+
+effect Abort {
+  fn abort() -> Never
+}
+
+fn main() / io {
+  let to_42 = handler Abort -> i64 {
+    fn abort() -> Never { 42 }
+  }
+  let r = with to_42 {
+    Abort.abort()
+    0
+  }
+  print("{r}")
+}

@@ -1,0 +1,10 @@
+── OVERLAPPING `inout` ARGUMENTS ───── E0402_names_of_one_when.lt:12:33  [E0402]
+
+`b` may reach the value of `a`, which this call already modifies:
+
+  12 │     both(inout a.balance, inout b.balance)
+     │                                 ^^^^^^^^^
+
+Two places that one call modifies can't overlap, since the result would depend
+on which one is written back last. Use a method made for it, such as `xs.swap(i,
+j)`, or copy one of them first.

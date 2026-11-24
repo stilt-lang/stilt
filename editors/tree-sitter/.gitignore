@@ -1,0 +1,4 @@
+# What `tree-sitter generate` writes beside the sources and the editors don't read.
+/build/
+/*.dylib
+/*.so

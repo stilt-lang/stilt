@@ -1,0 +1,9 @@
+type Shape = | Circle(radius: f64) | Square(side: f64)
+
+fn size(s: Shape) -> f64 {
+  match s {
+    Circle(r) | Square(side) => r
+  }
+}
+
+fn main() {}

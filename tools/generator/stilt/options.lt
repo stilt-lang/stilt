@@ -1,0 +1,172 @@
+// The forms that make an `Option`: lookups, the methods of options, fields
+// read through an option, and conversions that can fail.
+
+use closures
+use code
+use context
+use lit
+use pick
+use ty
+
+/// Records with a field of type `t` or `Option<t>`, which a field access
+/// reads through an `Option` of the record. A field whose type is an `Option`
+/// isn't wrapped again (types.fields-through-option).
+fn through(decls: List<(str, ty.Decl)>, t: ty.Ty) -> List<(ty.Ty, str)> {
+  let wrapped = match t {
+    OptionOf(_) => false
+    _ => true
+  }
+  var out = []
+  for (name, d) in decls {
+    let Record(fields) = d else continue
+    if ty.has_map(decls, ty.Named(name)) { continue }
+    for (f, u) in fields {
+      if u == t && wrapped || u == ty.OptionOf(t) { out.push((ty.Named(name), f)) }
+    }
+  }
+  out
+}
+
+/// The integer kinds that a conversion to `t` may not hold.
+fn narrower(t: ty.Ty) -> List<ty.IntKind> {
+  match t {
+    Int(k) => ty.INT_KINDS.filter(|j| !ty.widens(j, k))
+    _ => []
+  }
+}
+
+/// The forms that make an option of `t`, each with its weight: lookups in a
+/// list, methods of another option, fields read through an option, and
+/// conversions that can fail.
+pub fn ops(
+  ex: context.Expr,
+  b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  t: ty.Ty,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  lookups(ex, b, sc, depth, t).concat(conversions(ex, sc, depth, t))
+}
+
+/// Options of `t` made by a lookup in a list, by a method of another option,
+/// or by reading a field through an option.
+fn lookups(
+  ex: context.Expr,
+  b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  t: ty.Ty,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let through = through(b.p.decls, t)
+  let fixable = if ty.has_map(b.p.decls, t) { 0 } else { 1 }
+  [
+    (3 * fixable, |inout b| lookup(ex, inout b, sc, d, t)),
+    (
+      2 * fixable,
+      |inout b| {
+        let u = context.random_ty(inout b.p, false, 1)
+        let o = ex.make(inout b, sc, d, true, ty.OptionOf(u))
+        code.method_on(o, "map", [closures.closure(ex, inout b, sc, d, true, u, t)])
+      },
+    ),
+    (
+      fixable,
+      |inout b| {
+        let o = ex.make(inout b, sc, d, true, ty.OptionOf(t))
+        code.method_on(o, "filter", [closures.closure(ex, inout b, sc, d, false, t, ty.Bool)])
+      },
+    ),
+    (
+      if through.is_empty() { 0 } else { 3 },
+      |inout b| {
+        let (owner, f) = pick.one(inout b.p.r, through)
+        let o = ex.make(inout b, sc, d, true, ty.OptionOf(owner))
+        code.atom("{code.operand(o)}.{f}")
+      },
+    ),
+  ]
+}
+
+/// Options of `t` made by a conversion that can fail, or a search.
+fn conversions(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+  t: ty.Ty,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let narrower = narrower(t)
+  let number = match t {
+    Int(_) | Float(_) => 1
+    _ => 0
+  }
+  [
+    (
+      number,
+      |inout b| {
+        let s = if pick.chance(inout b.p.r, 0.5) {
+          quoted(pick.below(inout b.p.r, 300))
+        } else {
+          ex.make(inout b, sc, d, true, ty.Str)
+        }
+        code.method_on(s, "to_{ty.to_string(t)}", [])
+      },
+    ),
+    (
+      if narrower.is_empty() { 0 } else { 1 },
+      |inout b| {
+        let j = pick.one(inout b.p.r, narrower)
+        code.method_on(ex.make(inout b, sc, d, true, ty.Int(j)), "to_{ty.to_string(t)}", [])
+      },
+    ),
+    (
+      if t == ty.Int(ty.I64) { 1 } else { 0 },
+      |inout b| {
+        let sub = lit.string(inout b.p.r)
+        code.method_on(ex.make(inout b, sc, d, true, ty.Str), "find", [sub])
+      },
+    ),
+  ]
+}
+
+/// The number `n` in a string literal.
+fn quoted(n: i64) -> code.Code { code.atom("\"{n}\"") }
+
+/// The first, the last, an indexed or a found element of a list. Each draws
+/// its argument before the list.
+fn lookup(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  d: i64,
+  t: ty.Ty,
+) -> code.Code {
+  let list = ty.ListOf(t)
+  context.run(
+    inout b,
+    [
+      (
+        2,
+        |inout b| {
+          let m = pick.one(inout b.p.r, ["first", "last"])
+          code.method_on(ex.make(inout b, sc, d, true, list), m, [])
+        },
+      ),
+      (
+        1,
+        |inout b| {
+          let i = ex.make(inout b, sc, d, false, ty.Int(ty.I64))
+          code.method_on(ex.make(inout b, sc, d, true, list), "get", [i.text])
+        },
+      ),
+      (
+        1,
+        |inout b| {
+          let f = closures.closure(ex, inout b, sc, d, false, t, ty.Bool)
+          code.method_on(ex.make(inout b, sc, d, true, list), "find", [f])
+        },
+      ),
+    ],
+  )
+}

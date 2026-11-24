@@ -1,0 +1,23 @@
+//~ rule: values.passing-values, values.inout-arguments
+//~ run-output: "[1, 9] [1] [1, 9] []"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn early(inout xs: List<i64>, c: bool) -> List<i64> {
+  let ys = grown(xs)
+  if c { return ys }
+  xs = []
+  ys
+}
+
+fn main() / io {
+  var a = [1]
+  let n = early(inout a, true)
+  var b = [1]
+  let m = early(inout b, false)
+  print("{n} {a} {m} {b}")
+}

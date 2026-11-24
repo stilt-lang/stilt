@@ -1,0 +1,21 @@
+//~ rule: values.left-to-right
+//~ stdout:
+//~ | callee
+//~ | argument
+//~ | 2
+
+fn chooser() -> (fn(i64) -> i64) / io {
+  print("callee")
+  let add = |x: i64| x + 1
+  add
+}
+
+fn argument() -> i64 / io {
+  print("argument")
+  1
+}
+
+fn main() / io {
+  let n = chooser()(argument())
+  print("{n}")
+}

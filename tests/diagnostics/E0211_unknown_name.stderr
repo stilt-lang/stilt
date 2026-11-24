@@ -1,0 +1,9 @@
+── UNKNOWN NAME ──────────────────────────── E0211_unknown_name.lt:1:13  [E0211]
+
+Unknown name `Shared`:
+
+  1 │ fn count(s: Shared<i64>) -> i64 { 0 }
+    │             ^^^^^^
+
+Check the spelling. A local is visible after its `let`, and an item of another
+module is named through it, as `fs.exists` after `use std.fs`.

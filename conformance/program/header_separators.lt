@@ -1,0 +1,8 @@
+//~ rule: lexical.explicit-separators, syntax.programs, program.module-header, facts.without-copy
+//~ run-output: "separators"
+
+module main; without panic, copy
+
+fn main() / io {
+  print("separators")
+}

@@ -1,0 +1,4 @@
+use csv
+use bytes
+
+fn main() / io { print("{csv.width()} {bytes.size()}") }

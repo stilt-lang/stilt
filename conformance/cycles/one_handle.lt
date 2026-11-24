@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: cycles.through-shared-values, cycles.freeing, cycles.check-at-exit
+//~ stdout:
+//~ | 1
+
+// A handle whose value holds the handle itself.
+
+use std.sync
+
+type Me = { n: i64, me: Option<sync.Shared<Me>> }
+
+fn main() / io {
+  let a = sync.Shared.new(Me { n: 1, me: None })
+  let same = a
+  when a { a.me = Some(same) }
+  when a { print("{a.n}") }
+}

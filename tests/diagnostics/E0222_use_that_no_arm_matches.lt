@@ -1,0 +1,8 @@
+syntax between {
+  ($x: expr, $low: expr, $high: expr) => $low <= $x && $x <= $high
+}
+
+fn main() / io {
+  let n = 5
+  print("{between!(n, 1)}")
+}

@@ -1,0 +1,1 @@
+fn return() {} //~ ERROR E0100

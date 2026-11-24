@@ -1,0 +1,214 @@
+// The EBNF of `reference/03-syntax.md`: its expressions, and the rules of its `ebnf` blocks.
+
+/// A grammar expression.
+pub type Expr =
+  | Lit(str)
+  | Ref(str)
+  | Call(str, List<Expr>)
+  | Seq(List<Expr>)
+  | Alt(List<Expr>)
+  | Opt(Expr)
+  | Star(Expr)
+  | Empty
+
+/// A rule of the grammar, with the parameters of a rule such as `arms(a)`.
+pub type RuleDef = { name: str, params: List<str>, body: Expr }
+
+/// A token of an `ebnf` block. `Open` is the `(` that directly follows a name: the arguments
+/// of a macro.
+type Tok = | Str(str) | Name(str) | Open | Sym(str)
+
+type Parser = { toks: List<Tok>, at: i64 }
+
+/// The rules of every `ebnf` block of the Markdown text, in order.
+/// ex: Result.of(|| try extract("```ebnf\nx = \"a\" ;\n```")) == Ok([RuleDef { name: "x", params: [], body: Lit("a") }])
+/// ex: Result.of(|| try extract("```ebnf\nx = \"a ;\n```")) == Err("unterminated string in an ebnf block")
+pub fn extract(markdown: str) -> List<RuleDef> / raise<str> {
+  var rules = []
+  var inside = false
+  var text = []
+  for line in markdown.lines() {
+    if !inside {
+      inside = line.trim_end() == "```ebnf"
+    } else if line.trim_end() == "```" {
+      rules.extend(try parse_block("\n".join(text)))
+      inside = false
+      text = []
+    } else {
+      text.push(line)
+    }
+  }
+  rules
+}
+
+fn parse_block(text: str) -> List<RuleDef> / raise<str> {
+  var parser = Parser { toks: try lex(text), at: 0 }
+  var rules = []
+  while parser.at < parser.toks.len() { rules.push(try parser.rule()) }
+  rules
+}
+
+fn is_name_start(c: str) -> bool { c.is_ascii_alpha() || c == "_" }
+
+fn is_name_part(c: str) -> bool { c.is_ascii_alphanumeric() || c == "_" }
+
+/// The string that begins at the quote `chars[start]`, and the offset after its closing quote.
+fn lex_string(chars: List<str>, start: i64) -> (str, i64) / raise<str> {
+  var i = start + 1
+  var pieces = []
+  loop {
+    let c = chars.get(i) else raise "unterminated string in an ebnf block"
+    if c == "\"" { return ("".join(pieces), i + 1) }
+    if c == "\\" { i += 1 }
+    pieces.push(chars.get(i) else raise "unterminated string in an ebnf block")
+    i += 1
+  }
+}
+
+/// The name that begins at `chars[start]`, and the offset after it.
+fn lex_name(chars: List<str>, start: i64) -> (str, i64) {
+  var i = start
+  while i < chars.len() && is_name_part(chars[i]) { i += 1 }
+  ("".join(chars.slice(start, i)), i)
+}
+
+/// The tokens of an `ebnf` block.
+fn lex(text: str) -> List<Tok> / raise<str> {
+  let chars = text.chars()
+  var toks = []
+  var i = 0
+  while i < chars.len() {
+    let c = chars[i]
+    if c.is_ascii_whitespace() {
+      i += 1
+    } else if c == "\"" {
+      let (s, next) = try lex_string(chars, i)
+      toks.push(Str(s))
+      i = next
+    } else if is_name_start(c) {
+      let (name, next) = lex_name(chars, i)
+      toks.push(Name(name))
+      i = next
+      if chars.get(i) == Some("(") {
+        toks.push(Open)
+        i += 1
+      }
+    } else if "=|[]\{}();,".contains(c) {
+      toks.push(Sym(c))
+      i += 1
+    } else {
+      raise "unexpected '{c}' in an ebnf block"
+    }
+  }
+  toks
+}
+
+/// The expression itself when it has one element, and `make` of the elements otherwise.
+fn one_or(items: List<Expr>, make: fn(List<Expr>) -> Expr) -> Expr {
+  match items {
+    [] => Empty
+    [only] => only
+    _ => make(items)
+  }
+}
+
+fn ends_sequence(tok: Option<Tok>) -> bool {
+  match tok {
+    None => true
+    Some(Sym(s)) => "|]})".contains(s) || s == ";" || s == ","
+    Some(_) => false
+  }
+}
+
+impl Parser {
+  fn peek(self) -> Option<Tok> { self.toks.get(self.at) }
+
+  fn eat(inout self, sym: str) -> bool {
+    let found = self.peek() == Some(Sym(sym))
+    if found { self.at += 1 }
+    found
+  }
+
+  fn expect(inout self, sym: str) / raise<str> {
+    if !self.eat(sym) { raise "expected {sym}, found {self.peek()}" }
+  }
+
+  fn name(inout self) -> str / raise<str> {
+    match self.peek() {
+      Some(Name(name)) => {
+        self.at += 1
+        name
+      }
+      other => raise "expected a name, found {other}"
+    }
+  }
+
+  fn rule(inout self) -> RuleDef / raise<str> {
+    let name = try self.name()
+    var params = []
+    if self.peek() == Some(Open) {
+      self.at += 1
+      loop {
+        params.push(try self.name())
+        if !self.eat(",") { break }
+      }
+      try self.expect(")")
+    }
+    try self.expect("=")
+    let body = try self.alt()
+    try self.expect(";")
+    RuleDef { name, params, body }
+  }
+
+  fn alt(inout self) -> Expr / raise<str> {
+    var branches = [try self.seq()]
+    while self.eat("|") { branches.push(try self.seq()) }
+    one_or(branches, Alt)
+  }
+
+  fn seq(inout self) -> Expr / raise<str> {
+    var items = []
+    while !ends_sequence(self.peek()) { items.push(try self.item()) }
+    one_or(items, Seq)
+  }
+
+  fn item(inout self) -> Expr / raise<str> {
+    let tok = self.peek() else raise "unexpected end of an ebnf block"
+    self.at += 1
+    match tok {
+      Str(s) => Lit(s)
+      Name(name) => {
+        if self.peek() != Some(Open) { return Ref(name) }
+        self.at += 1
+        var args = [try self.alt()]
+        while self.eat(",") { args.push(try self.alt()) }
+        try self.expect(")")
+        Call(name, args)
+      }
+      Sym("[") => try self.wrapped("]", Opt)
+      Sym("\{") => try self.wrapped("}", Star)
+      Sym("(") => try self.wrapped(")", |e| e)
+      other => raise "unexpected {other}"
+    }
+  }
+
+  fn wrapped(inout self, close: str, make: fn(Expr) -> Expr) -> Expr / raise<str> {
+    let inner = try self.alt()
+    try self.expect(close)
+    make(inner)
+  }
+}
+
+test "reads rules with macros and groups" {
+  let text = "```ebnf\nfn = \"fn\" lower [ list(param) ] \{ \",\" x } ;\narms(a) = a | ( b c ) ;\n```\n"
+  let rules = try extract(text)
+  assert rules.len() == 2
+  assert rules[1].params == ["a"]
+  let Seq(items) = rules[0].body else panic("a sequence")
+  assert items[0] == Lit("fn")
+  assert items[2] == Opt(Call("list", [Ref("param")]))
+}
+
+test "reports what it cannot read" {
+  assert Result.of(|| try extract("```ebnf\nx = a\n```")).is_err()
+}

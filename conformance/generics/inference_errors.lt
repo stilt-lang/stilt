@@ -1,0 +1,17 @@
+//~ tier: meta
+//~ rule: generics.value-parameters-determined, generics.value-parameter-inference
+
+use std.array
+
+fn apply<n: i64>(g: fn(array.Array<i64, n>)) {}
+
+fn undetermined() {
+  let z = array.fill(0) //~ ERROR E0312
+}
+
+// The closure's type gives no size.
+fn closure() {
+  apply(|a| {}) //~ ERROR E0312
+}
+
+fn main() {}

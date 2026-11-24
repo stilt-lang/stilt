@@ -1,0 +1,45 @@
+//~ tier: advanced
+//~ rule: syntax.projection-results, projections.declaring-projection, projections.yield, projections.call-is-place, projections.when-projection-runs
+//~ run-output: "6 10 [0, 6, 10, 0] [[7, 2, 9], [3, 4]] 3"
+
+type Grid = { w: i64, cells: List<i64> }
+
+impl Grid {
+  // `at` hands the caller one cell as a place, and resumes once the caller is done with it.
+  fn at(inout self, x: i64, y: i64) -> inout i64 {
+    yield self.cells[y * self.w + x]
+  }
+}
+
+type Board = { rows: List<List<i64>> }
+
+impl Board {
+  fn row(inout self, y: i64) -> inout List<i64> {
+    yield self.rows[y]
+  }
+}
+
+type Pair = { a: i64, b: i64 }
+
+fn pick(inout ps: List<Pair>, i: i64) -> inout Pair {
+  yield ps[i]
+}
+
+fn bump(inout n: i64) { n += 10 }
+
+fn main() / io {
+  var g = Grid { w: 2, cells: [0, 0, 0, 0] }
+  // Assigned to, compound-assigned, passed `inout`, and read.
+  g.at(1, 0) = 5
+  g.at(1, 0) += 1
+  bump(inout g.at(0, 1))
+  let c = g.at(1, 0)
+  // Followed by an index, and the receiver of an `inout self` method.
+  var b = Board { rows: [[1, 2], [3, 4]] }
+  b.row(0)[0] = 7
+  b.row(0).push(9)
+  // Followed by a field.
+  var ps = [Pair { a: 1, b: 2 }]
+  pick(inout ps, 0).a = 3
+  print("{c} {g.at(0, 1)} {g.cells} {b.rows} {ps[0].a}")
+}

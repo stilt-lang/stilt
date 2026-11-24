@@ -1,0 +1,3 @@
+//~ rule: program.main
+
+fn main() / raise<fn()> {} //~ ERROR E0310

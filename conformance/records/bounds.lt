@@ -1,0 +1,40 @@
+//~ tier: advanced
+//~ rule: syntax.record-types-and-spreads, records.record-bounds, records.bound-fields, records.open-parameter-types
+//~ stdout:
+//~ | hello Ada hello Bo
+//~ | 37 2
+//~ | 7 none
+//~ | Ada is 37
+
+type Person = { name: str, age: i64 }
+
+type Box<T> = { v: T }
+
+fn greet(p: { name: str, .. }) -> str { "hello {p.name}" }
+
+fn birthday<P: { age: i64, .. }>(inout p: P) { p.age += 1 }
+
+fn value<B: { v: i64, .. }>(b: B) -> i64 { b.v }
+
+// A field read through an `Option`.
+fn age_of<P: { age: i64, .. }>(p: Option<P>) -> str {
+  match p.age {
+    Some(a) => "{a}"
+    None => "none"
+  }
+}
+
+// Two open parameters, each its own type.
+fn describe(p: { name: str, .. }, q: { age: i64, .. }) -> str { "{p.name} is {q.age}" }
+
+fn main() / io {
+  var ada = Person { name: "Ada", age: 36 }
+  print("{greet(ada)} {greet({ name: "Bo", pet: "cat" })}")
+  birthday(inout ada)
+  var anon = { age: 1, tag: true }
+  birthday(inout anon)
+  print("{ada.age} {anon.age}")
+  let none: Option<Person> = None
+  print("{value(Box { v: 7 })} {age_of(none)}")
+  print(describe(ada, ada))
+}

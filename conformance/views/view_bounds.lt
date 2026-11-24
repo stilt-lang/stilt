@@ -1,0 +1,14 @@
+//~ tier: advanced
+//~ rule: views.making-view
+//~ run-output: "b"
+//~ panic: bounds
+//~ panic-at: view_bounds.lt:12:11
+
+use std.view
+
+fn main() / io {
+  let v = view.View.of("abc", 0, 3)
+  print("{v.view(1, 2)}")
+  let w = view.View.of([1, 2], 2, 1)
+  print("{w}")
+}

@@ -1,0 +1,12 @@
+//~ rule: std.map-functions
+//~ run-output: "5"
+//~ panic: missing-key
+//~ panic-at: map_values_drops_default.lt:11:11
+
+fn main() / io {
+  var d = Map.with_default(0)
+  d["x"] = 4
+  let mapped = d.map_values(|v| v + 1)
+  print("{mapped["x"]}")
+  print("{mapped["y"]}")
+}

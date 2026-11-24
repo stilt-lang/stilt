@@ -1,0 +1,15 @@
+//~ tier: advanced
+//~ rule: variadics.spread-expressions
+//~ stdout:
+//~ | 5 (3, 2, 1)
+
+fn add(a: i64, b: i64) -> i64 { a + b }
+
+// `extra` grows by one element on each call, while `g` and `args` keep theirs.
+fn deep<..Ts, ..Us: Show>(g: fn(..Ts) -> i64, args: (..Ts), extra: (..Us), n: i64) -> str {
+  if n == 0 { "{g(..args)} {extra}" } else { deep(g, args, (..extra, n), n - 1) }
+}
+
+fn main() / io {
+  print(deep(add, (2, 3), (), 3))
+}

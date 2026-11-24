@@ -1,0 +1,24 @@
+//~ rule: effects.panic-kinds, effects.without-panic, std.option-result-and-ordering
+
+fn first(xs: List<i64>) -> i64 without panic {
+  xs.first().unwrap() //~ ERROR E0204
+}
+
+fn port(s: str) -> i64 without panic {
+  s.to_i64().expect("a port") //~ ERROR E0204
+}
+
+fn parsed(r: Result<i64, str>) -> i64 without panic {
+  r.unwrap() //~ ERROR E0204
+}
+
+fn checked(r: Result<i64, str>) -> i64 without panic {
+  r.expect("checked") //~ ERROR E0204
+}
+
+// The fallback and `unwrap_or` give a value without panicking.
+fn fallback(s: str, r: Result<i64, str>) -> i64 without panic {
+  let a = s.to_i64() else 0
+  let b = r.unwrap_or(0)
+  a +% b
+}

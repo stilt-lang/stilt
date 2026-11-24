@@ -1,0 +1,459 @@
+module std.json
+
+use std.meta
+
+// JSON (std.json), a derive written in Stilt on `std.meta` alone. A type's
+// JSON follows its shape, or its own impl of `ToJson` or `FromJson` where
+// it has one, at any depth. Each function that writes or reads a type
+// reflects on its parts (meta.reflects), so a part without a shape and
+// without an impl is an error where the type is given.
+
+/// A JSON value: a number kept as its text, and an object's members in their
+/// order.
+pub type Value = | Null | Bool(bool) | Number(str) | Text(str) | Array(List<Value>) | Object(List<(str, Value)>)
+
+/// Why text or a value isn't a value of the type asked for.
+pub type Error = | Syntax(line: i64, column: i64) | Missing(path: str) | Mismatch(path: str, expected: str, found: str)
+
+/// A type's own JSON, which writing uses wherever the type is.
+pub trait ToJson {
+  fn to_json(self) -> Value
+}
+
+/// A type's own reading of JSON, which reading uses wherever the type is.
+pub trait FromJson {
+  fn from_json(v: Value) -> Self / raise<Error>
+}
+
+/// `value` as JSON: its own when its type has an impl of `ToJson`, and
+/// otherwise what its shape gives.
+/// ex: to_value((1, "a", ())) == Array([Number("1"), Text("a"), Null])
+/// ex: to_value([Some(1.5), None]) == Array([Number("1.5"), Null])
+pub fn to_value<T>(value: T) -> Value { write(value, "$") }
+
+/// `value` as JSON text, with no whitespace.
+/// ex: to_text(Sample { id: 7, tags: ["x"] }) == "\{\"id\":7,\"tags\":[\"x\"]}"
+pub fn to_text<T>(value: T) -> str { render(to_value(value)) }
+
+/// The `T` that `v` holds: its own reading when `T` has an impl of
+/// `FromJson`, and otherwise what `to_value` writes for a `T`.
+/// ex: try from_value(Array([Number("1"), Text("a")])) == (1, "a")
+/// ex: Result.of(|| { let x: u8 = try from_value(Number("300")); x }) == Err(Mismatch("$", "u8", "300"))
+pub fn from_value<T>(v: Value) -> T / raise<Error> { try read(v, "$") }
+
+/// The `T` that `text` holds as JSON.
+/// ex: { let s: Sample = try from_text("\{\"tags\": [], \"id\": 2, \"more\": 1}"); s.id == 2 }
+/// ex: Result.of(|| { let s: Sample = try from_text("\{\"id\": 2}"); s }) == Err(Missing("$.tags"))
+pub fn from_text<T>(text: str) -> T / raise<Error> { try from_value(try parse(text)) }
+
+// Writing (std.json-writing)
+
+// The JSON of `value`, which is at `path` in what is written.
+fn write<T>(value: T, path: str) -> Value {
+  if T: ToJson {
+    value.to_json()
+  } else {
+    match T.shape() {
+      Int(n) => Number(n.text(value))
+      Float(x) => float(value, x.get(value), path)
+      Bool(b) => Bool(b.get(value))
+      Str(s) => Text(s.get(value))
+      Unit(_) => Null
+      Option(o) => match o.get(value) { Some(x) => write(x, path), None => Null }
+      List(l) => elements(l.get(value), path)
+      Set(l) => elements(l.get(value), path)
+      Array(a) => elements(a.get(value), path)
+      Map(m) => entries(m.get(value), path)
+      Tuple(fields) => {
+        var items: List<Value> = []
+        for f in fields { items.push(write(f.get(value), "{path}[{f.index()}]")) }
+        Array(items)
+      }
+      Record(fields) => {
+        var members: List<(str, Value)> = []
+        for f in fields { members.push((f.name(), write(f.get(value), "{path}.{f.name()}"))) }
+        Object(members)
+      }
+      Variants(cases) => {
+        var out = Null
+        for c in cases {
+          if let Some(payload) = c.get(value) {
+            out = match write(payload, "{path}.{c.name()}") { Null => Text(c.name()), items => Object([(c.name(), items)]) }
+          }
+        }
+        out
+      }
+    }
+  }
+}
+
+// A float's number, its text as numbers.printing-floats prints it in its own
+// format, which every float type shows. NaN and the infinities panic.
+fn float<T>(value: T, x: f64, path: str) -> Value {
+  if x.is_nan() || x.is_infinite() {
+    panic("the float at {path} is {x}, which JSON has no number for")
+  }
+  if T: Show { Number("{value}") } else { Number("{x}") }
+}
+
+fn elements<E>(xs: List<E>, path: str) -> Value {
+  Array(xs.enumerate(0).map(|(i, x)| write(x, "{path}[{i}]")))
+}
+
+// A map's entries: an object when its key type's shape is `Str`, and
+// otherwise an array of `[key, value]` arrays.
+fn entries<K, V>(pairs: List<(K, V)>, path: str) -> Value {
+  if K: ToJson {
+    elements(pairs, path)
+  } else {
+    match K.shape() {
+      Str(s) => Object(pairs.map(|(k, v)| (s.get(k), write(v, "{path}.{s.get(k)}"))))
+      _ => elements(pairs, path)
+    }
+  }
+}
+
+// Reading (std.json-reading)
+
+// The `T` that `v` holds, which is at `path` in what is read.
+fn read<T>(v: Value, path: str) -> T / raise<Error> {
+  if T: FromJson {
+    try T.from_json(v)
+  } else {
+    let wrong = || mismatch(T.name(), v, path)
+    match (T.shape(), v) {
+      (Int(n), Number(text)) => n.parse(text) else raise wrong()
+      (Float(x), Number(text)) => x.make(text.to_f64() else raise wrong())
+      (Bool(b), Bool(y)) => b.make(y)
+      (Str(s), Text(t)) => s.make(t)
+      (Unit(u), Null) => u.make(())
+      (Option(o), Null) => o.make(None)
+      (Option(o), _) => o.make(Some(try read(v, path)))
+      (List(l), Array(items)) => l.make(try read_all(items, path))
+      (Set(l), Array(items)) => l.make(try read_all(items, path))
+      (Array(a), Array(items)) if items.len() == a.len() => a.make(try read_all(items, path)) else raise wrong()
+      (Map(m), _) => m.make(try read_entries(v, path) else raise wrong())
+      (Tuple(fields), Array(items)) if items.len() == fields.len() => try fields.build(|f| try read(items.get(f.index()) else Null, "{path}[{f.index()}]"))
+      (Record(fields), Object(members)) => try fields.build(|f| try read_field(members, f.name(), path))
+      (Variants(cases), _) => try read_variant(cases, v, path) else raise wrong()
+      _ => raise wrong()
+    }
+  }
+}
+
+// A mismatch at `path`, where a value of the type named `expected` was
+// asked for and `v` was found, rendered and cut to 40 characters.
+fn mismatch(expected: str, v: Value, path: str) -> Error {
+  Mismatch(path, expected, "".join(render(v).chars().take(40)))
+}
+
+fn read_all<E>(items: List<Value>, path: str) -> List<E> / raise<Error> {
+  var out: List<E> = []
+  for (i, x) in items.enumerate(0) { out.push(try read(x, "{path}[{i}]")) }
+  out
+}
+
+// A map's entries: from an object when its key type's shape is `Str`, and
+// otherwise from an array of `[key, value]` arrays, or `None` from another
+// value.
+fn read_entries<K, V>(v: Value, path: str) -> Option<List<(K, V)>> / raise<Error> {
+  let keyed = if K: FromJson { false } else { match K.shape() { Str(_) => true, _ => false } }
+  match (keyed, v) {
+    (true, Object(members)) => {
+      var out: List<(K, V)> = []
+      for (name, x) in members { out.push((try read(Text(name), path), try read(x, "{path}.{name}"))) }
+      Some(out)
+    }
+    (false, Array(items)) => Some(try read_all(items, path))
+    _ => None
+  }
+}
+
+// The field `name` of a record at `path`: the last member of that name,
+// `None` for a missing field of an option type, and `Missing` for another.
+fn read_field<F>(members: List<(str, Value)>, name: str, path: str) -> F / raise<Error> {
+  var found: Option<Value> = None
+  for (n, x) in members { if n == name { found = Some(x) } }
+  match found {
+    Some(x) => try read(x, "{path}.{name}")
+    None => if F: FromJson { raise Missing("{path}.{name}") } else {
+      match F.shape() {
+        Option(o) => o.make(None)
+        _ => raise Missing("{path}.{name}")
+      }
+    }
+  }
+}
+
+// The variant that `v` holds: a string that names one without a payload,
+// or an object with one member that names one with a payload, holding an
+// array of its payload's length.
+fn read_variant<T>(cases: meta.Cases<T>, v: Value, path: str) -> Option<T> / raise<Error> {
+  for c in cases {
+    let bare = Result.of(|| c.make(try read(Null, path))).is_ok()
+    match v {
+      Text(name) if bare && name == c.name() => return Some(c.make(try read(Null, path)))
+      Object([(name, payload)]) if !bare && name == c.name() => return Some(c.make(try read(payload, "{path}.{name}")))
+      _ => {}
+    }
+  }
+  None
+}
+
+// Parsing (std.json-parsing)
+
+/// The value that `text` holds, with whitespace before and after it.
+/// ex: try parse(" [1, \"a\\u00e9\", \{\"b\": null}] ") == Array([Number("1"), Text("aé"), Object([("b", Null)])])
+/// ex: Result.of(|| try parse("[1,\n 2,]")) == Err(Syntax(2, 4))
+pub fn parse(text: str) -> Value / raise<Error> {
+  var r = Reader { text, bytes: text.bytes(), at: 0 }
+  let v = try value(inout r, 0)
+  space(inout r)
+  if r.at < r.bytes.len() { raise fail(r) }
+  v
+}
+
+// The bytes of JSON text, and the position of the next one. Only ASCII
+// bytes stand for JSON's grammar, so a string's other bytes are copied as
+// they are, and every position the reader stops at starts a character.
+type Reader = { text: str, bytes: List<u8>, at: i64 }
+
+// The bytes of the ASCII characters that JSON's grammar names.
+const TAB: u8 = 9
+const LINE_FEED: u8 = 10
+const RETURN: u8 = 13
+const SPACE: u8 = 32
+const QUOTE: u8 = 34
+const PLUS: u8 = 43
+const COMMA: u8 = 44
+const MINUS: u8 = 45
+const DOT: u8 = 46
+const SLASH: u8 = 47
+const ZERO: u8 = 48
+const NINE: u8 = 57
+const COLON: u8 = 58
+const UPPER_E: u8 = 69
+const OPEN_BRACKET: u8 = 91
+const BACKSLASH: u8 = 92
+const CLOSE_BRACKET: u8 = 93
+const LOWER_E: u8 = 101
+const LOWER_F: u8 = 102
+const LOWER_N: u8 = 110
+const LOWER_T: u8 = 116
+const LOWER_U: u8 = 117
+const OPEN_BRACE: u8 = 123
+const CLOSE_BRACE: u8 = 125
+
+// The next byte, or 0 at the end of the text, where a 0 byte fails as the
+// end does.
+fn peek(r: Reader) -> u8 { r.bytes.get(r.at) else 0 }
+
+fn is_digit(b: u8) -> bool { b >= ZERO && b <= NINE }
+
+// The syntax error at the reader's position, its line and column counted
+// from 1, in Unicode scalar values: each byte that doesn't continue a
+// character's UTF-8 starts one.
+fn fail(r: Reader) -> Error {
+  var line = 1
+  var column = 1
+  for b in r.bytes.take(r.at) {
+    if b == LINE_FEED { line += 1; column = 1 } else if b < 0x80 || b >= 0xc0 { column += 1 }
+  }
+  Syntax(line, column)
+}
+
+fn space(inout r: Reader) {
+  loop {
+    let b = peek(r)
+    if b != SPACE && b != TAB && b != LINE_FEED && b != RETURN { return }
+    r.at += 1
+  }
+}
+
+// A value after any whitespace, which `depth` arrays and objects hold. The
+// bracket that opens the 513th is an error.
+fn value(inout r: Reader, depth: i64) -> Value / raise<Error> {
+  space(inout r)
+  let b = peek(r)
+  if (b == OPEN_BRACKET || b == OPEN_BRACE) && depth == 512 { raise fail(r) }
+  if b == LOWER_N { try word(inout r, "null"); return Null }
+  if b == LOWER_T { try word(inout r, "true"); return Bool(true) }
+  if b == LOWER_F { try word(inout r, "false"); return Bool(false) }
+  if b == QUOTE { return Text(try string(inout r)) }
+  if b == OPEN_BRACKET { return try array(inout r, depth + 1) }
+  if b == OPEN_BRACE { return try object(inout r, depth + 1) }
+  if b == MINUS || is_digit(b) { return try number(inout r) }
+  raise fail(r)
+}
+
+// The ASCII word `w`, byte by byte.
+fn word(inout r: Reader, w: str) / raise<Error> {
+  for b in w.bytes() {
+    if peek(r) != b { raise fail(r) }
+    r.at += 1
+  }
+}
+
+fn array(inout r: Reader, depth: i64) -> Value / raise<Error> {
+  r.at += 1
+  var items: List<Value> = []
+  space(inout r)
+  if peek(r) == CLOSE_BRACKET { r.at += 1; return Array(items) }
+  loop {
+    items.push(try value(inout r, depth))
+    space(inout r)
+    let b = peek(r)
+    r.at += 1
+    if b == CLOSE_BRACKET { return Array(items) }
+    if b != COMMA { r.at -= 1; raise fail(r) }
+  }
+}
+
+fn object(inout r: Reader, depth: i64) -> Value / raise<Error> {
+  r.at += 1
+  var members: List<(str, Value)> = []
+  space(inout r)
+  if peek(r) == CLOSE_BRACE { r.at += 1; return Object(members) }
+  loop {
+    space(inout r)
+    if peek(r) != QUOTE { raise fail(r) }
+    let name = try string(inout r)
+    space(inout r)
+    if peek(r) != COLON { raise fail(r) }
+    r.at += 1
+    members.push((name, try value(inout r, depth)))
+    space(inout r)
+    let b = peek(r)
+    r.at += 1
+    if b == CLOSE_BRACE { return Object(members) }
+    if b != COMMA { r.at -= 1; raise fail(r) }
+  }
+}
+
+// A number, as RFC 8259 writes one, kept as its text.
+fn number(inout r: Reader) -> Value / raise<Error> {
+  let start = r.at
+  if peek(r) == MINUS { r.at += 1 }
+  if peek(r) == ZERO { r.at += 1 } else { try digits(inout r) }
+  if peek(r) == DOT { r.at += 1; try digits(inout r) }
+  if peek(r) == LOWER_E || peek(r) == UPPER_E {
+    r.at += 1
+    if peek(r) == PLUS || peek(r) == MINUS { r.at += 1 }
+    try digits(inout r)
+  }
+  Number(r.text.slice(start, r.at))
+}
+
+fn digits(inout r: Reader) / raise<Error> {
+  if !is_digit(peek(r)) { raise fail(r) }
+  while is_digit(peek(r)) { r.at += 1 }
+}
+
+// A string, from its opening quote to its closing one. A character below
+// U+0020 is written escaped. Each run of bytes between escapes is copied
+// as one slice of the text, and a string without escapes is one slice.
+fn string(inout r: Reader) -> str / raise<Error> {
+  r.at += 1
+  var out: List<str> = []
+  var start = r.at
+  loop {
+    let b = peek(r)
+    if b == QUOTE {
+      let last = r.text.slice(start, r.at)
+      r.at += 1
+      if out.is_empty() { return last }
+      out.push(last)
+      return "".join(out)
+    }
+    if b < SPACE { raise fail(r) }
+    if b == BACKSLASH {
+      out.push(r.text.slice(start, r.at))
+      out.push(try escape(inout r))
+      start = r.at
+    } else {
+      r.at += 1
+    }
+  }
+}
+
+// An escape, from its backslash: one character, which the two `\u` escapes
+// of a surrogate pair make together.
+fn escape(inout r: Reader) -> str / raise<Error> {
+  r.at += 1
+  let escapes: List<(u8, str)> = [
+    (QUOTE, "\""), (BACKSLASH, "\\"), (SLASH, "/"), (98, "\u{8}"), (LOWER_F, "\u{c}"),
+    (LOWER_N, "\n"), (114, "\r"), (LOWER_T, "\t"),
+  ]
+  let b = peek(r)
+  if let Some((_, c)) = escapes.find(|(e, _)| e == b) {
+    r.at += 1
+    return c
+  }
+  try word(inout r, "u")
+  let first = try unit(inout r, false)
+  if first < 0xd800 || first > 0xdbff { return scalar(first) }
+  try word(inout r, "\\u")
+  let second = try unit(inout r, true)
+  scalar(0x10000 + (first - 0xd800) * 1024 + second - 0xdc00)
+}
+
+// The four hexadecimal digits of a `\u` escape: a high surrogate's or no
+// surrogate's, or after one, a low surrogate's. A lone low surrogate fails
+// at its second digit, the first that no escape can continue with.
+fn unit(inout r: Reader, low: bool) -> i64 / raise<Error> {
+  let a = try hex(inout r, if low { 13 } else { 0 }, if low { 13 } else { 15 })
+  let b = try hex(inout r, if low { 12 } else { 0 }, if low || a != 13 { 15 } else { 11 })
+  let c = try hex(inout r, 0, 15)
+  let d = try hex(inout r, 0, 15)
+  a * 4096 + b * 256 + c * 16 + d
+}
+
+// A hexadecimal digit whose value is from `lo` to `hi`.
+fn hex(inout r: Reader, lo: i64, hi: i64) -> i64 / raise<Error> {
+  let b = peek(r).to_i64()
+  let n = if b >= 48 && b <= 57 { b - 48 } else if b >= 97 && b <= 102 { b - 87 } else if b >= 65 && b <= 70 { b - 55 } else { -1 }
+  if n < lo || n > hi { raise fail(r) }
+  r.at += 1
+  n
+}
+
+fn scalar(code: i64) -> str { str.from_code_point(code.to_u32() else 0) else "" }
+
+// Rendering (std.json-rendering)
+
+/// `v` as text, with no whitespace.
+/// ex: render(Object([("a", Array([Null, Bool(true), Number("-1e3")]))])) == "\{\"a\":[null,true,-1e3]}"
+/// ex: render(Text("\"\\\t\u{1}é")) == "\"\\\"\\\\\\t\\u0001é\""
+pub fn render(v: Value) -> str {
+  match v {
+    Null => "null"
+    Bool(b) => "{b}"
+    Number(text) => text
+    Text(s) => quoted(s)
+    Array(items) => "[{",".join(items.map(render))}]"
+    Object(members) => "\{{",".join(members.map(|(k, x)| "{quoted(k)}:{render(x)}"))}}"
+  }
+}
+
+// A string between `"`, `"` and `\` escaped by `\`, the control characters
+// that JSON names by their names, and the others below U+0020 as `\u`.
+fn quoted(s: str) -> str {
+  var out = ["\""]
+  for c in s.chars() {
+    out.push(match c {
+      "\"" => "\\\""
+      "\\" => "\\\\"
+      "\u{8}" => "\\b"
+      "\t" => "\\t"
+      "\n" => "\\n"
+      "\u{c}" => "\\f"
+      "\r" => "\\r"
+      _ => if c < " " { "\\u{(c.code_points().get(0) else 0):0>4x}" } else { c }
+    })
+  }
+  out.push("\"")
+  "".join(out)
+}
+
+// The type that the examples above write and read.
+type Sample = { id: i64, tags: List<str> }

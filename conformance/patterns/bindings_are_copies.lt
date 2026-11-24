@@ -1,0 +1,23 @@
+//~ rule: values.independent-copies, patterns.bindings-are-copies
+//~ run-output: "11 22 (1, 2) 5 Point { x: 1, y: 2 } [1] [1, 9] 4"
+
+type Point = { x: i64, y: i64 }
+
+fn main() / io {
+  let pair = (1, 2)
+  var (a, b) = pair
+  a += 10
+  b += 20
+  let p = Point { x: 1, y: 2 }
+  var Point { x, y } = p
+  x = 5
+  let xs = [1]
+  var ys = match xs {
+    [..rest] => rest
+  }
+  ys.push(9)
+  let n = 3
+  var n = n
+  n += 1
+  print("{a} {b} {pair} {x} {p} {xs} {ys} {n}")
+}

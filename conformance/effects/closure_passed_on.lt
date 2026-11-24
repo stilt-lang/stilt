@@ -1,0 +1,23 @@
+//~ rule: effects.no-escape
+//~ stdout:
+//~ | 2
+//~ | 4
+//~ | [3, 5]
+//~ | [[10], [20]]
+
+// A closure literal that calls `f` may be passed on to another non-escaping
+// parameter, at any depth.
+fn add_one_each(xs: List<i64>, f: fn(i64) -> i64) -> List<i64> { xs.map(|x| f(x) + 1) }
+
+fn table(xs: List<i64>, ys: List<i64>, f: fn(i64, i64) -> i64) -> List<List<i64>> {
+  xs.map(|x| ys.map(|y| f(x, y)))
+}
+
+fn main() / io {
+  let ys = add_one_each([1, 2], |x| {
+    print("{x * 2}")
+    x * 2
+  })
+  print("{ys}")
+  print("{table([1, 2], [10], |a, b| a * b)}")
+}

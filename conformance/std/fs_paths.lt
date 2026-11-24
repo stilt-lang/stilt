@@ -1,0 +1,15 @@
+//~ rule: std.fs-paths
+//~ stdout:
+//~ | ["a/b", "a/b", "b", "/b", "/b"]
+//~ | ["b.txt", "", "b", "", ""]
+//~ | ["a", "/", "", "a/b", "a", "/", "//", ""]
+//~ | [Some("gz"), None, None, None, Some(""), None, Some("a")]
+
+use std.fs
+
+fn main() / io {
+  print("{[fs.join("a", "b"), fs.join("a/", "b"), fs.join("", "b"), fs.join("a", "/b"), fs.join("/", "b")]}")
+  print("{[fs.file_name("a/b.txt"), fs.file_name("a/"), fs.file_name("b"), fs.file_name("/"), fs.file_name("")]}")
+  print("{[fs.parent("a/b"), fs.parent("/a"), fs.parent("b"), fs.parent("a/b/"), fs.parent("a//b"), fs.parent("/"), fs.parent("//a"), fs.parent("")]}")
+  print("{[fs.extension("a/b.tar.gz"), fs.extension(".profile"), fs.extension("a/.profile"), fs.extension("notes"), fs.extension("a."), fs.extension("a.b/c"), fs.extension("..a")]}")
+}

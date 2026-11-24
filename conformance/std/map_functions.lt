@@ -1,0 +1,45 @@
+//~ rule: std.map-functions
+//~ stdout:
+//~ | [("a", 3), ("b", 2)] {} 0
+//~ | 1 9 7
+//~ | 5 5 1 [("a", 1), ("b", 2), ("z", 5)]
+//~ | [("b", 2), ("c", 3)] [("a", 1)]
+//~ | [("a", 10), ("b", 20)]
+//~ | [("a", 4), ("b", 2), ("c", 3)] [("c", 3), ("a", 1), ("b", 2)]
+//~ | [("a", 1), ("b", 2), ("c", 3)] true
+//~ | 0 0 0 0
+//~ | 0 None
+//~ | 9 Some(9)
+
+fn main() / io {
+  let empty: List<(str, i64)> = []
+  print("{Map.from_entries([("a", 1), ("b", 2), ("a", 3)]).entries()} {Map.from_entries(empty)} {Map.from_entries(empty).len()}")
+  let m = Map.from_entries([("a", 1), ("b", 2)])
+  print("{m.get_or("a", 9)} {m.get_or("z", 9)} {Map.from_entries(empty).get_or("a", 7)}")
+  var n = m
+  let got = n.get_or_insert("z", 5)
+  let again = n.get_or_insert("z", 7)
+  print("{got} {again} {n.get_or_insert("a", 0)} {n.entries()}")
+  var r = Map.from_entries([("a", 1), ("b", 2), ("c", 3)])
+  r.retain(|_, v| v > 1)
+  print("{r.entries()} {m.filter(|k, _| k == "a").entries()}")
+  print("{m.map_values(|v| v * 10).entries()}")
+  let other = Map.from_entries([("c", 3), ("a", 4)])
+  var e = Map.from_entries([("c", 3)])
+  e.extend(m)
+  print("{m.merged(other).entries()} {e.entries()}")
+  var c = Map.from_entries([("a", 1), ("b", 2), ("c", 3)])
+  print("{c.entries()} {!c.is_empty()}")
+  var d = Map.with_default(0)
+  d["x"] = 4
+  let kept = d.filter(|_, v| v > 9)
+  var retained = d
+  retained.retain(|_, v| v > 9)
+  var cleared = d
+  cleared.clear()
+  print("{kept["missing"]} {retained["missing"]} {cleared["missing"]} {cleared.len()}")
+  let mapped = d.map_values(|v| v + 1)
+  print("{d.get_or("y", 0)} {mapped.get("y")}")
+  var g = Map.with_default(1)
+  print("{g.get_or_insert("k", 9)} {g.get("k")}")
+}

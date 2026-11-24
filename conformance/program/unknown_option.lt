@@ -1,0 +1,5 @@
+//~ rule: program.header-limits
+
+module main
+without panic
+fast //~ ERROR E0100

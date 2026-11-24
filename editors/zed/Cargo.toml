@@ -1,0 +1,23 @@
+# The extension's code, which Zed builds for wasm32-wasip2. It isn't a member of the repository's
+# workspace, which the root Cargo.toml's `exclude` says.
+[package]
+name = "stilt-zed"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+zed_extension_api = "0.7.0"
+
+[lints.rust]
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }

@@ -1,0 +1,16 @@
+//~ tier: advanced
+
+// A trait with a parameter puts the module that declares it in the advanced tier (traits.advanced-tier,
+// traits.advanced-tier).
+
+pub trait Convert<T> {
+  fn convert(self) -> T
+}
+
+pub type Celsius = { degrees: i64 }
+
+impl Convert<i64> for Celsius {
+  fn convert(self) -> i64 { 100 / self.degrees } //~ PANIC OVERFLOW
+}
+
+pub fn celsius(degrees: i64) -> Celsius { Celsius { degrees: degrees } }

@@ -1,0 +1,16 @@
+//~ rule: syntax.rows
+//~ stdout:
+//~ | made
+//~ | inner
+
+// The first `/` gives its row to the function type, which has none yet, and the second to
+// `make` itself.
+fn make() -> fn() / io / io {
+  print("made")
+  || print("inner")
+}
+
+fn main() / io {
+  let f = make()
+  f()
+}

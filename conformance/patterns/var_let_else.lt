@@ -1,0 +1,13 @@
+//~ rule: patterns.let-else
+//~ run-output: "[2, 2] none"
+
+fn first_two(xs: List<i64>) -> List<i64> {
+  var [a, b, ..] = xs else return []
+  a += 1
+  [a, b]
+}
+
+fn main() / io {
+  let short = first_two([1])
+  print("{first_two([1, 2, 3])} {if short.is_empty() { "none" } else { "some" }}")
+}

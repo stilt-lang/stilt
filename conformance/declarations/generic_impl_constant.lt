@@ -1,0 +1,15 @@
+//~ rule: declarations.impl-constants
+//~ run-output: "100 []"
+
+type Stack<T> = { items: List<T> }
+
+impl<T> Stack<T> {
+  const LIMIT: i64 = 100
+
+  fn new() -> Stack<T> { Stack { items: [] } }
+}
+
+fn main() / io {
+  let s: Stack<str> = Stack.new()
+  print("{Stack.LIMIT} {s.items}")
+}

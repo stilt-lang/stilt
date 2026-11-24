@@ -1,0 +1,4 @@
+fn report(prices: List<i64>) -> str {
+  prices.len()
+  "{prices}"
+}

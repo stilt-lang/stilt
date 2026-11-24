@@ -1,0 +1,13 @@
+//~ rule: errors.error-type, modes.copy-on-write-types
+
+// A field of the error type holds nothing copy-on-write, so the write shares nothing.
+type Broken = { m: Missing, n: i64 } //~ ERROR E0211
+
+fn bump(b: Broken) -> i64 without copy {
+  var c = b
+  let d = c
+  c.n += 1
+  c.n + d.n
+}
+
+fn main() / io {}

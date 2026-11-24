@@ -1,0 +1,28 @@
+[package]
+name = "stilt-playground"
+description = "The compiler's checking and showing of a program of one file, built for WebAssembly, which the playground's page runs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# The front end and what `check` and `show` print, without the back ends, the engine, the
+# package manager's commands or the language server.
+[dependencies]
+stilt-db = { path = "../../compiler/stilt-db" }
+stilt-diag = { path = "../../compiler/stilt-diag" }
+stilt-edit = { path = "../../compiler/stilt-edit" }
+stilt-fmt = { path = "../../compiler/stilt-fmt" }
+stilt-hir = { path = "../../compiler/stilt-hir" }
+stilt-ide = { path = "../../compiler/stilt-ide" }
+stilt-meta = { path = "../../compiler/stilt-meta" }
+stilt-mir = { path = "../../compiler/stilt-mir" }
+stilt-rc = { path = "../../compiler/stilt-rc" }
+stilt-runtime = { path = "../../compiler/stilt-runtime" }
+stilt-syntax = { path = "../../compiler/stilt-syntax" }
+stilt-types = { path = "../../compiler/stilt-types" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

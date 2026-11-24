@@ -1,0 +1,47 @@
+module std.io
+
+// Standard input and output, and the errors of every I/O operation (std.io-errors,
+// ; std.io). What a program writes to stdout reaches it a line
+// at a time (program.output-flushing).
+
+/// The ways an I/O operation can fail.
+pub type IoError =
+  | NotFound(path: str)
+  | PermissionDenied(path: str)
+  | InvalidUtf8(path: str)
+  | Other(path: str)
+
+/// One line of stdin, without its `\n` or a `\r` before it. `None` at the end
+/// of the input. Invalid UTF-8 becomes U+FFFD. What the program wrote to
+/// stdout is written out first.
+pub fn read_line() -> Option<str> / io = ?
+
+/// One line of stdin, read as `read_line` reads it, when a whole line, or the
+/// last line before the end of the input, is waiting, and `None` otherwise,
+/// without waiting. What the program wrote to stdout is written out first.
+pub fn poll_line() -> Option<str> / io = ?
+
+/// Writes `s` to stdout, with no newline. Its text reaches stdout with its
+/// newlines, and the rest with the next newline, at `flush`, before a read or
+/// when the program ends.
+pub fn write(s: str) / io = ?
+
+/// Writes out what the program has written to stdout and not yet written out.
+pub fn flush() / io = ?
+
+/// Writes `s` to stderr, with no newline.
+pub fn ewrite(s: str) / io = ?
+
+/// The rest of stdin, with invalid UTF-8 replaced, or `""` at the end of the
+/// input.
+pub fn read_all() -> str / io = ?
+
+/// The rest of stdin's lines, each read as `read_line` reads it.
+pub fn read_lines() -> List<str> / io {
+  var lines = []
+  loop {
+    let line = read_line() else break
+    lines.push(line)
+  }
+  lines
+}

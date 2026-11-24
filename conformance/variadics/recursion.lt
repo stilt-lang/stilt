@@ -1,0 +1,15 @@
+//~ tier: advanced
+//~ rule: polymorphism.recursion
+//~ stdout:
+//~ | (0,)
+//~ | (0, 1)
+
+// `nest` calls itself with a pack one element longer.
+fn nest<..Ts: Show>(xs: (..Ts), n: i64, stop: i64) -> str {
+  if n == stop { "{xs}" } else { nest((..xs, n), n + 1, stop) }
+}
+
+fn main() / io {
+  print(nest((), 0, 1))
+  print(nest((), 0, 2))
+}

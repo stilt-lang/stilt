@@ -1,0 +1,62 @@
+// What a call through a trait can't see (meta.shape-and-name): a trait method's own type
+// parameter that an impl names or tests a bound on, and `Self` and a trait's parameter that a
+// default method names. Their descriptors travel with their witnesses, through a direct call,
+// a bound, a method named as a value, and a function that meets the bound with its own type
+// parameter.
+
+use std.meta
+
+trait Named {
+  fn kind<U>(self, u: U) -> str
+}
+
+trait Convert<U> {
+  fn convert(self) -> U
+  fn label(self) -> str { "{Self.name()} to {U.name()}" }
+}
+
+type Point = { x: i64, y: i64 }
+
+type Holder<X> = { inner: X }
+
+impl Named for Point {
+  fn kind<U>(self, u: U) -> str {
+    if U: Show { "point with {u}" } else { "point with {U.name()}" }
+  }
+}
+
+impl<X> Named for Holder<X> {
+  fn kind<U>(self, u: U) -> str { "holder of {X.name()} with {U.name()}" }
+}
+
+impl Convert<i64> for Point {
+  fn convert(self) -> i64 { self.x }
+}
+
+impl<X> Convert<X> for Holder<X> {
+  fn convert(self) -> X { self.inner }
+}
+
+fn through<T: Named, V>(t: T, v: V) -> str { t.kind(v) }
+
+fn valued<T: Named>(t: T) -> str {
+  let k = T.kind
+  k(t, (1, 2.5))
+}
+
+fn labelled<T: Convert<V>, V>(value: T) -> str { value.label() }
+
+fn boxed<X>(x: X) -> str { labelled(Holder { inner: x }) }
+
+fn main() / io {
+  let p = Point { x: 1, y: 2 }
+  print(p.kind(true))
+  let f = || 1
+  print(through(p, f))
+  print(through(Holder { inner: 2.5 }, [true]))
+  print(Holder { inner: 1 }.kind((1, "a")))
+  print(valued(Holder { inner: 7 }))
+  print(p.label())
+  print(labelled(Holder { inner: true }))
+  print(boxed([1.5]))
+}

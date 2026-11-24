@@ -1,0 +1,32 @@
+//~ rule: modes.copies, modes.shared-writes, modes.shared-conservative, modes.durations, facts.copy
+//~ run-output: "2 [1, 2, 3, 4]"
+
+// A copy lasts until the end of the scope of the binding that holds it, so a write after that
+// scope shares nothing: neither the block's copy nor the `if` branch's lasts at the push.
+fn grow(inout xs: List<i64>) -> i64 without copy {
+  var n = 0
+  {
+    let ys = xs
+    n += ys.len()
+  }
+  if n > 0 {
+    let zs = xs
+    n = zs.len()
+  }
+  xs.push(3)
+  xs.push(4)
+  n
+}
+
+// Within the scope, the same write copies.
+fn shared(inout xs: List<i64>) -> i64 without copy {
+  let ys = xs
+  xs.push(3) //~ ERROR E0204
+  ys.len()
+}
+
+fn main() / io {
+  var xs = [1, 2]
+  let n = grow(inout xs)
+  print("{n} {xs}")
+}

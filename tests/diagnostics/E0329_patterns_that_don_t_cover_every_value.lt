@@ -1,0 +1,8 @@
+type Status = | Pending | Paid | Shipped
+
+fn label(s: Status) -> str {
+  match s {
+    Pending => "pending"
+    Paid => "paid"
+  }
+}

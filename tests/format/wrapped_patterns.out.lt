@@ -1,0 +1,51 @@
+// A pattern that doesn't fit in 100 columns breaks like an argument list: a variant pattern, a
+// record pattern and a list pattern have one element per line, a comma after each. Alternatives
+// that don't fit have one per line, each after a `|`, a level in.
+fn classify(event: Event) -> i64 {
+  match event {
+    Shipped(
+      customer_name,
+      shipping_address,
+      billing_address,
+      order_total,
+      tax_amount,
+      currency,
+    ) => 1
+    Order {
+      customer,
+      address,
+      items,
+      total,
+      shipping_method,
+      billing_method,
+      notes,
+      status,
+      ..
+    } => 2
+    [
+      first,
+      second,
+      third,
+      fourth,
+      fifth,
+      sixth,
+      seventh,
+      eighth,
+      ninth,
+      tenth,
+      eleventh,
+      ..rest
+    ] => 3
+    Delivered
+      | Returned
+      | Cancelled
+      | Refunded
+      | PartiallyShipped
+      | WaitingForCustomer
+      | OnHold
+      | Lost => 4
+    Pair(a, b) => 5
+    Shipped(a, b, c, d, e, f) => 6
+    _ => 0
+  }
+}

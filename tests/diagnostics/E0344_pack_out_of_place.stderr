@@ -1,0 +1,9 @@
+── PACK OUT OF PLACE ────────────────── E0344_pack_out_of_place.lt:1:12  [E0344]
+
+A trait's parameters are never packs:
+
+  1 │ trait Wrap<..Ts> {}
+    │            ^^^^
+
+Only the last type parameter of a function or a type can be a pack, and a
+trait's parameters never are.

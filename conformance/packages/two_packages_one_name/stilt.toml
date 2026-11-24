@@ -1,0 +1,3 @@
+[dependencies]
+json = { path = "deps/json" }
+csv = { path = "deps/csv" } # //~ ERROR E0606

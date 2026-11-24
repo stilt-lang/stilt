@@ -1,0 +1,29 @@
+//~ rule: numbers.wrapping, numbers.printing-integers
+//~ stdout:
+//~ | -128 127 -128 -128 -2
+//~ | 4294967295 1 9223372036854775807 0
+//~ | 4 255 254 -2 65535
+
+fn main() / io {
+  let a: i8 = 127
+  let b: i8 = -128
+  let c: i8 = 64
+  let d: i16 = 32767
+  print("{a +% 1} {b -% 1} {c *% 2} {b *% -1} {d +% d}")
+  let e: u32 = 0
+  let f = u64.MAX
+  let g = i64.MIN
+  print("{e -% 1} {f *% f} {g -% 1} {g +% g}")
+  var h: u8 = 250
+  h +%= 10
+  let first = h
+  h -%= 5
+  let second = h
+  h *%= 2
+  let third = h
+  var w = i64.MAX
+  w *%= 2
+  var u: u16 = 1
+  u -%= 2
+  print("{first} {second} {third} {w} {u}")
+}

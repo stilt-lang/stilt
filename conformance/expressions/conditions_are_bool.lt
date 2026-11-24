@@ -1,0 +1,28 @@
+//~ rule: expressions.conditions
+
+fn branch(n: i64) -> i64 {
+  if n { 1 } else { 0 } //~ ERROR E0311
+}
+
+fn spin(n: i64) {
+  while n {} //~ ERROR E0311
+}
+
+fn pick(n: i64) -> i64 {
+  match n {
+    x if x => x //~ ERROR E0311
+    _ => 0
+  }
+}
+
+fn check(n: i64) {
+  assert n //~ ERROR E0311
+}
+
+fn both(n: i64) -> bool {
+  n && true //~ ERROR E0311
+}
+
+fn either(n: i64) -> bool {
+  false || n //~ ERROR E0311
+}

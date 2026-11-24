@@ -1,0 +1,38 @@
+//~ tier: advanced
+//~ rule: projections.once-on-every-path
+//~ run-output: "[9, 2, 8] 7 1"
+
+// Both arms yield.
+fn either(inout xs: List<i64>, last: bool) -> inout i64 {
+  if last {
+    yield xs[xs.len() - 1]
+  } else {
+    yield xs[0]
+  }
+}
+
+// A panicking arm has type `Never`, and constrains nothing.
+fn checked(inout xs: List<i64>, i: i64) -> inout i64 {
+  match i < xs.len() {
+    true => { yield xs[i] }
+    false => panic("out of range")
+  }
+}
+
+// A `yield` followed by `return`.
+fn once(inout x: i64, flag: bool) -> inout i64 {
+  if flag {
+    yield x
+    return
+  }
+  yield x
+}
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  either(inout xs, true) = 8
+  either(inout xs, false) = 9
+  var n = 0
+  once(inout n, true) = 7
+  print("{xs} {n} {checked(inout xs, 0) - 8}")
+}

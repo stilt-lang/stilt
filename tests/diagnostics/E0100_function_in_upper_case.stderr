@@ -1,0 +1,16 @@
+── SYNTAX ERROR ─────────────────── E0100_function_in_upper_case.lt:1:4  [E0100]
+
+Stilt names a function in lower case, as `area`:
+
+  1 │ fn Area(w: i64, h: i64) -> i64 { w * h }
+    │    ^^^^
+
+A function's name is in snake case; `pub` makes it visible outside its module.
+
+To fix it, rename it `area`:
+
+  1 │ fn area(w: i64, h: i64) -> i64 { w * h }
+    │    ~~~~
+    ┆
+  3 │ fn main() / io { print("{area(2, 3)}") }
+    │                          ~~~~

@@ -1,0 +1,7 @@
+//~ rule: numbers.negative-literals
+//~ run-output: "-9223372036854775808"
+
+fn main() / io {
+  let x: i64 = -9223372036854775808
+  print("{x}")
+}

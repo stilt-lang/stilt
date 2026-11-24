@@ -1,0 +1,1 @@
+type _point = { x: i64 } //~ ERROR E0100

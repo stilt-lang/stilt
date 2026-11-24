@@ -1,0 +1,14 @@
+//~ tier: meta
+//~ rule: macros.procedural-declarations, macros.meta-use, errors.parts, errors.resuming
+
+use std.meta
+
+// A part that breaks ends before a line that begins with `macro`, or with
+// `meta` and `use`, whose declarations are then read and checked.
+fn broken() -> i64 { 1 + } //~ ERROR E0100
+macro generic<T>(e: meta.Expr) -> meta.Expr { e } //~ ERROR E0228
+
+fn also_broken() -> i64 { 2 * } //~ ERROR E0100
+meta use nowhere //~ ERROR E0205
+
+fn main() {}

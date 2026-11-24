@@ -1,0 +1,28 @@
+//~ rule: patterns.irrefutable-positions
+
+type Shape = | Circle(f64) | Dot
+
+fn head(xs: List<i64>) -> i64 {
+  let [x, ..] = xs //~ ERROR E0321
+  x
+}
+
+fn exactly_zero(n: i64) {
+  let 0 = n //~ ERROR E0321
+}
+
+fn every_variant(s: Shape) {
+  let (Circle(_) | Dot) = s //~ ERROR E0321
+}
+
+fn heads(lists: List<List<i64>>) -> i64 {
+  var sum = 0
+  for [x, ..rest] in lists { //~ ERROR E0321
+    sum += x
+  }
+  sum
+}
+
+fn present(xs: List<Option<i64>>) -> List<i64> {
+  xs.map(|Some(x)| x) //~ ERROR E0321
+}

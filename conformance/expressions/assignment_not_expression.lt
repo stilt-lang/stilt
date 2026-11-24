@@ -1,0 +1,7 @@
+//~ rule: syntax.statements, expressions.statements, expressions.assignment
+
+fn set() -> i64 {
+  var b = 0
+  let a = (b = 1) //~ ERROR E0100
+  a
+}

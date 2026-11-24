@@ -1,0 +1,9 @@
+── DEPENDENCY CYCLE ──────────────────────────────────── stilt.toml:5:1  [E0609]
+
+`a` depends on itself, through the manifests of its dependencies:
+
+  5 │ a = { path = "deps/a" }
+    │ ^
+
+A package can't depend on itself, even through others. Move what both packages
+use into a package of its own.

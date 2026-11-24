@@ -1,0 +1,15 @@
+//~ rule: effects.marking, effects.innermost-catch
+
+type Failure = | Failed
+
+fn fail() -> i64 / raise<Failure> { raise Failed }
+
+fn later() -> i64 / raise<Failure> {
+  let f = try (|| fail()) catch _ because "a fallback is never needed" => || 0
+  f() //~ ERROR E0505
+}
+
+fn marked_later() -> i64 / raise<Failure> {
+  let f = || try fail()
+  try f()
+}

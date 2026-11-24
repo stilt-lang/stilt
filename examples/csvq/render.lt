@@ -1,0 +1,34 @@
+// Printing a table with its columns aligned.
+
+use csv
+
+/// The lines that show `t`: its header, a rule under it, and its rows, each column as wide as
+/// its widest field and two spaces apart. A column of numbers is aligned right, any other
+/// left, and no line ends with a space.
+/// ex: lines(csv.Table { header: ["a", "n"], rows: [["xy", "5"]] }) == ["a   n", "--  -", "xy  5"]
+pub fn lines(t: csv.Table) -> List<str> {
+  let columns = List.generate(t.header.len(), |i| [t.header[i]].concat(t.rows.map(|r| r[i])))
+  let widths = columns.map(|c| c.map(.char_count()).max() else 0)
+  let right = columns.map(|c| numeric(c.skip(1)))
+  var out = [line(t.header, widths, right)]
+  out.push(line(widths.map(|w| "-".repeat(w)), widths, right))
+  for r in t.rows { out.push(line(r, widths, right)) }
+  out
+}
+
+/// Whether every non-empty field is a number, and one is.
+/// ex: numeric(["1", "", "2.5"])
+/// ex: !numeric(["1", "x"])
+/// ex: !numeric([""])
+fn numeric(fields: List<str>) -> bool {
+  let present = fields.filter(|f| !f.is_empty())
+  !present.is_empty() && present.all(|f| f.to_f64() != None)
+}
+
+fn line(fields: List<str>, widths: List<i64>, right: List<bool>) -> str {
+  var cells = []
+  for (i, f) in fields.enumerate(0) {
+    cells.push(if right[i] { f.pad_start(widths[i], " ") } else { f.pad_end(widths[i], " ") })
+  }
+  "  ".join(cells).trim_end()
+}

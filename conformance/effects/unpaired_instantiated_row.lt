@@ -1,0 +1,21 @@
+//~ rule: effects.catch-around-row-variables
+
+type Box = { v: i64 }
+
+fn apply(k: fn() / raise<Box>) / raise<Box> { try k() }
+
+fn f(g: fn()) -> i64 {
+  try {
+    apply(g) //~ ERROR E0506
+    0
+  }
+    catch x because "only a Box was expected" => x.v
+}
+
+fn written<e>(escaping g: fn() / e) -> i64 / e {
+  try {
+    apply(g) //~ ERROR E0506
+    0
+  }
+    catch x because "only a Box was expected" => x.v
+}

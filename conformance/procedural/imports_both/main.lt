@@ -1,0 +1,16 @@
+//~ tier: meta
+//~ rule: macros.meta-use
+//~ run-output: "3 2 pair"
+
+// `meta use` gives the procedural macros of `tools`, and `use` its other
+// items, its pattern macros among them.
+meta use tools
+use tools
+
+fn main() / io {
+  let p = match (1, 2) {
+    tools.pair!(1, 2) => "pair"
+    _ => "other"
+  }
+  print("{tools.succ!(2)} {tools.two()} {p}")
+}

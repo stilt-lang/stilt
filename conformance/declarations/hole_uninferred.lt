@@ -1,0 +1,5 @@
+//~ rule: declarations.typed-holes, errors.undecided-types-last
+
+fn later() {
+  let x = ? //~ ERROR E0312
+}

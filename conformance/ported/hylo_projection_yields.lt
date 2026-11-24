@@ -1,0 +1,35 @@
+//~ tier: advanced
+//~ rule: projections.once-on-every-path
+
+// Hylo, Tests/HyloTests/TestCases/Lowering/ProjectionWithTwoYields.hylo,
+// ProjectionWithYiedInLoop.hylo, ProjectionYieldMissingOnSomePaths.hylo and
+// ProjectionWithNoYields.hylo: a projection yields exactly once on every path. Hylo rejects a
+// second `yield` on one path, a `yield` in a loop, and a body with a path that never yields or
+// with no `yield` at all. Stilt rejects the same four, at the places its rule names: the
+// second `yield`, the `yield` in the loop, and the closing brace of a body that a path without
+// a `yield` reaches. Hylo's projections yield literals; a Stilt projection yields a place, so
+// each yields a local.
+
+fn two_yields() -> inout i64 {
+  var one = 1
+  yield one
+  var two = 2
+  yield two //~ ERROR E0424
+}
+
+fn yield_in_loop() -> inout i64 {
+  var counts = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  for i in 0..10 {
+    yield counts[i] //~ ERROR E0424
+  }
+}
+
+fn yield_missing_on_some_paths(i: i64) -> inout i64 {
+  var one = 1
+  if i == 0 {
+    yield one
+  }
+} //~ ERROR E0424
+
+fn no_yields() -> inout i64 {
+} //~ ERROR E0424

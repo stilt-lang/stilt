@@ -1,0 +1,33 @@
+// binarytrees: builds perfect binary trees bottom-up and counts their nodes, from a stretch tree of
+// depth 22 down to trees of depth 4, while one of depth 21 lives throughout, as the Benchmarks
+// Game's program does, on one thread (Reinking et al., Perceus, PLDI 2021).
+
+type Tree = | Tip | Node(Tree, Tree)
+
+fn make(depth: i64) -> Tree {
+  if depth > 0 { Node(make(depth - 1), make(depth - 1)) } else { Node(Tip, Tip) }
+}
+
+fn check(t: Tree) -> i64 {
+  match t {
+    Node(l, r) => check(l) + check(r) + 1
+    Tip => 0
+  }
+}
+
+fn main() / io {
+  let min_depth = 4
+  let max_depth = 21
+  let stretch = max_depth + 1
+  print("stretch tree of depth {stretch}\t check: {check(make(stretch))}")
+  let long_lived = make(max_depth)
+  var depth = min_depth
+  while depth <= max_depth {
+    let count = 1 << (max_depth + min_depth - depth)
+    var total = 0
+    for _ in 0..count { total += check(make(depth)) }
+    print("{count}\t trees of depth {depth}\t check: {total}")
+    depth += 2
+  }
+  print("long lived tree of depth {max_depth}\t check: {check(long_lived)}")
+}

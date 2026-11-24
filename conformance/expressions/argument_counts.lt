@@ -1,0 +1,15 @@
+//~ rule: expressions.arguments
+
+fn add(a: i64, b: i64) -> i64 { a + b }
+
+fn too_few() -> i64 {
+  add(1) //~ ERROR E0315
+}
+
+fn too_many() -> i64 {
+  add(1, 2, 3) //~ ERROR E0315
+}
+
+fn none_at_all() -> i64 {
+  add() //~ ERROR E0315
+}

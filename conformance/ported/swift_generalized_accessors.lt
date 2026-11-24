@@ -1,0 +1,60 @@
+//~ tier: advanced
+//~ rule: projections.yield, projections.call-is-place, projections.when-projection-runs
+//~ stdout:
+//~ | 0: begin.
+//~ | read: yielding 0.
+//~ | 1: current value of x is 0.
+//~ | read: yielding 1.
+//~ | 2: current value of x is 1.
+//~ | modify: current value is 2.
+//~ | modify: incoming value is -8.
+//~ | modify: rejecting.
+//~ | modify: resulting value is 2.
+//~ | read: yielding 2.
+//~ | 3: current value of x is 2.
+//~ | modify: current value is 3.
+//~ | modify: incoming value is 13.
+//~ | modify: accepting.
+//~ | modify: resulting value is 13.
+//~ | read: yielding 13.
+//~ | 4: current value of x is 13.
+//~ | 5: end.
+
+// Swift, test/Interpreter/generalized_accessors.swift: a property whose `_read` accessor yields
+// the stored value and then increments it, and whose `_modify` accessor yields a temporary and
+// keeps what the caller wrote only if it doesn't decrease the stored value. Each runs its code
+// after `yield` once the caller's access ends, so a read sees the value before the increment.
+// A Stilt projection serves reads and modifications alike, so the two accessors are two
+// projections, and the global variable is a local that both take `inout`.
+
+fn read_x(inout backing: i64) -> inout i64 / io {
+  print("read: yielding {backing}.")
+  yield backing
+  backing += 1
+}
+
+fn modify_x(inout backing: i64) -> inout i64 / io {
+  var temp = backing
+  print("modify: current value is {temp}.")
+  yield temp
+  print("modify: incoming value is {temp}.")
+  if temp >= backing {
+    print("modify: accepting.")
+    backing = temp
+  } else {
+    print("modify: rejecting.")
+  }
+  print("modify: resulting value is {backing}.")
+}
+
+fn main() / io {
+  var backing = 0
+  print("0: begin.")
+  print("1: current value of x is {read_x(inout backing)}.")
+  print("2: current value of x is {read_x(inout backing)}.")
+  modify_x(inout backing) -= 10
+  print("3: current value of x is {read_x(inout backing)}.")
+  modify_x(inout backing) += 10
+  print("4: current value of x is {read_x(inout backing)}.")
+  print("5: end.")
+}

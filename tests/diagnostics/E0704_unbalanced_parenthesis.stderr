@@ -1,0 +1,9 @@
+── EDIT THAT DOESN'T PARSE AS ITS PART ──────────────────── edit 1:1:15  [E0704]
+
+The new text of `main.totals/body` has a syntax error: unexpected `)`:
+
+  1 │ { orders.len()) }
+    │               ^
+
+A body's new text is a block, and a declaration's is one declaration of the same
+kind. Nothing was written.

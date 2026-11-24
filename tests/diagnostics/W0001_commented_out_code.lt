@@ -1,0 +1,6 @@
+fn total(prices: List<i64>) -> i64 {
+  // let discount = 10
+  prices.fold(0, |sum, p| sum + p)
+}
+
+fn main() {}

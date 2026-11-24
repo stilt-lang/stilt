@@ -1,0 +1,22 @@
+//~ rule: syntax.heads, expressions.heads
+//~ stdout:
+//~ | 1
+//~ | one
+//~ | 2
+//~ | 3
+//~ | 5
+
+type Point = { x: i64, y: i64 }
+
+fn main() / io {
+  for p in [Point { x: 1, y: 2 }] { print("{p.x}") }
+  if [Point { x: 0, y: 0 }].len() == 1 { print("one") }
+  let xs = [1, 2]
+  if xs.any(|x| x > 1) { print("{xs[1]}") }
+  var n = 0
+  while n < [Point { x: 3, y: 0 }][0].x { n += 1 }
+  print("{n}")
+  match [Point { x: 5, y: 0 }][0] {
+    Point { x, .. } => print("{x}")
+  }
+}

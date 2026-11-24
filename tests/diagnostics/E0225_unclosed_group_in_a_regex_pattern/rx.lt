@@ -1,0 +1,264 @@
+// `regex!`, a procedural macro (macros.procedural-declarations) that reads a pattern while the
+// program is checked and writes its matcher, a composition of the steps of `matcher`.
+//
+// The patterns: a character stands for itself; `.` for any character; `[…]` for one of the
+// characters and ranges it lists, `[^…]` for any other, with `-` first or last standing for
+// itself; `\d`, `\w` and `\s` for a digit, a word character and a space or tab, and `\D`, `\W`
+// and `\S` for any other; `\` before any other character that is neither a letter nor a digit
+// for that character; `(…)` for a group, numbered by its `(` from 1; `x*`, `x+` and `x?` for
+// `x` repeated any number of times, at least once and at most once, as many times as it can;
+// `a|b` for either, `a` preferred; and `^` and `$` for the start and the end of the line.
+
+use std.meta
+use matcher
+
+// A pattern, read.
+type Node =
+  | Lit(str)
+  | Any
+  | Class(bool, List<(str, str)>)
+  | Seq(List<Node>)
+  | Alt(List<Node>)
+  | Star(Node)
+  | Plus(Node)
+  | Opt(Node)
+  | Group(i64, Node)
+  | Bol
+  | Eol
+
+// A pattern being read: its characters, the byte where each starts in its text, which has one
+// more for the end, the position of the next, and how many groups it has opened.
+type Reader = { chars: List<str>, offsets: List<i64>, at: i64, groups: i64, text: meta.Text }
+
+/// `regex!("^(\\d+) (GET|POST) (.*)$")`: a function that takes a line and gives the first match
+/// of the pattern in it, with the text of each group, or `None`. A pattern that can't be read
+/// is an error at its first character that can't stand where it is.
+pub macro regex(pattern: meta.Text) -> meta.Expr / raise<meta.Error> {
+  var r = try reader(pattern)
+  let node = try alternation(inout r)
+  if r.at < r.chars.len() { raise fail(r, r.at, "this `)` closes no `(`") }
+  let anchored = match node {
+    Seq(items) => items.first() == Some(Bol)
+    _ => false
+  }
+  let body = code(node)
+  let groups = r.groups
+  quote { |line: str| matcher.search(line, $groups, $anchored, $body) }
+}
+
+// A reader at the start of the pattern's value.
+fn reader(pattern: meta.Text) -> Reader / raise<meta.Error> {
+  let chars = pattern.value().chars()
+  var offsets: List<i64> = []
+  var n = 0
+  for c in chars {
+    offsets.push(n)
+    n += c.len()
+  }
+  offsets.push(n)
+  Reader { chars, offsets, at: 0, groups: 0, text: pattern }
+}
+
+// The error at the character `at`, saying `message`.
+fn fail(r: Reader, at: i64, message: str) -> meta.Error {
+  meta.error(r.text.span(r.offsets[at], r.offsets[at + 1]), message)
+}
+
+// The next character, or "" at the end.
+fn peek(r: Reader) -> str { r.chars.get(r.at) else "" }
+
+// Branches separated by `|`.
+fn alternation(inout r: Reader) -> Node / raise<meta.Error> {
+  var branches = [try sequence(inout r)]
+  while peek(r) == "|" {
+    r.at += 1
+    branches.push(try sequence(inout r))
+  }
+  if branches.len() == 1 { branches[0] } else { Alt(branches) }
+}
+
+// Items one after another, up to a `|`, a `)` or the end, the characters that follow one
+// another joined into one literal.
+fn sequence(inout r: Reader) -> Node / raise<meta.Error> {
+  var items: List<Node> = []
+  while r.at < r.chars.len() && peek(r) != "|" && peek(r) != ")" {
+    let item = try repeated(inout r)
+    match (items.last(), item) {
+      (Some(Lit(a)), Lit(b)) => { items[items.len() - 1] = Lit("{a}{b}") }
+      _ => items.push(item)
+    }
+  }
+  Seq(items)
+}
+
+// An atom, and the `*`, `+` or `?` after it.
+fn repeated(inout r: Reader) -> Node / raise<meta.Error> {
+  let a = try atom(inout r)
+  let wrap = match peek(r) {
+    "*" => Star(a)
+    "+" => Plus(a)
+    "?" => Opt(a)
+    _ => return a
+  }
+  r.at += 1
+  wrap
+}
+
+fn atom(inout r: Reader) -> Node / raise<meta.Error> {
+  let at = r.at
+  let c = peek(r)
+  r.at += 1
+  match c {
+    "(" => {
+      r.groups += 1
+      let i = r.groups
+      let inner = try alternation(inout r)
+      if peek(r) != ")" { raise fail(r, at, "this `(` is never closed") }
+      r.at += 1
+      Group(i, inner)
+    }
+    "[" => try class(inout r, at)
+    "." => Any
+    "^" => Bol
+    "$" => Eol
+    "*" | "+" | "?" => raise fail(r, at, "`{c}` follows nothing it could repeat")
+    "\\" => try escape(inout r, at)
+    _ => Lit(c)
+  }
+}
+
+// What follows the `\` at `at`, outside a class.
+fn escape(inout r: Reader, at: i64) -> Node / raise<meta.Error> {
+  let c = peek(r)
+  if c == "" { raise fail(r, at, "this `\\` escapes nothing") }
+  r.at += 1
+  match c {
+    "d" => Class(false, DIGITS)
+    "D" => Class(true, DIGITS)
+    "w" => Class(false, WORD)
+    "W" => Class(true, WORD)
+    "s" => Class(false, SPACE)
+    "S" => Class(true, SPACE)
+    _ => if c.is_ascii_alphanumeric() {
+      raise fail(r, at, "`\\{c}` is no escape of a pattern")
+    } else {
+      Lit(c)
+    }
+  }
+}
+
+const DIGITS: List<(str, str)> = [("0", "9")]
+
+const WORD: List<(str, str)> = [("a", "z"), ("A", "Z"), ("0", "9"), ("_", "_")]
+
+const SPACE: List<(str, str)> = [(" ", " "), ("\t", "\t")]
+
+// A class, after its `[` at `at`.
+fn class(inout r: Reader, at: i64) -> Node / raise<meta.Error> {
+  let negated = peek(r) == "^"
+  if negated { r.at += 1 }
+  var ranges: List<(str, str)> = []
+  while peek(r) != "]" {
+    if peek(r) == "" { raise fail(r, at, "this `[` is never closed") }
+    ranges.extend(try member(inout r))
+  }
+  if ranges.is_empty() { raise fail(r, r.at, "a class lists at least one character") }
+  r.at += 1
+  Class(negated, ranges)
+}
+
+// One character of a class, a range or an escape.
+fn member(inout r: Reader) -> List<(str, str)> / raise<meta.Error> {
+  let lo = try one(inout r)
+  if peek(r) != "-" || r.chars.get(r.at + 1) == Some("]") { return lo }
+  let dash = r.at
+  r.at += 1
+  let hi = try one(inout r)
+  match (lo, hi) {
+    ([(a, a2)], [(b, b2)]) if a == a2 && b == b2 && a <= b => [(a, b)]
+    _ => raise fail(r, dash, "this `-` joins no range")
+  }
+}
+
+// A character of a class, or the characters of an escape.
+fn one(inout r: Reader) -> List<(str, str)> / raise<meta.Error> {
+  let at = r.at
+  let c = peek(r)
+  r.at += 1
+  if c != "\\" { return [(c, c)] }
+  let e = peek(r)
+  r.at += 1
+  match e {
+    "d" => DIGITS
+    "w" => WORD
+    "s" => SPACE
+    "" => raise fail(r, at, "this `\\` escapes nothing")
+    _ => if e.is_ascii_alphanumeric() {
+      raise fail(r, at, "`\\{e}` is no escape of a class")
+    } else {
+      [(e, e)]
+    }
+  }
+}
+
+// The step of a node: a function from the threads before it to the threads after it.
+fn code(n: Node) -> meta.Expr {
+  match n {
+    Lit(s) => quote { |r| r.text($s) }
+    Any => quote { |r| r.any() }
+    Class(negated, ranges) => {
+      let c = meta.fresh("c")
+      let accepted = accepts(c, ranges)
+      if negated {
+        quote { |r| r.class(|$c| !$accepted) }
+      } else {
+        quote { |r| r.class(|$c| $accepted) }
+      }
+    }
+    Seq(items) => match items.len() {
+      0 => quote { |r| r }
+      1 => code(items[0])
+      _ => {
+        let steps = items.map(code)
+        quote { |r| r.seq([$..steps]) }
+      }
+    }
+    Alt(items) => {
+      let branches = items.map(code)
+      quote { |r| r.alt([$..branches]) }
+    }
+    Star(a) => {
+      let body = code(a)
+      quote { |r| r.star($body) }
+    }
+    Plus(a) => {
+      let body = code(a)
+      quote { |r| r.plus($body) }
+    }
+    Opt(a) => {
+      let body = code(a)
+      quote { |r| r.opt($body) }
+    }
+    Group(i, a) => {
+      let body = code(a)
+      quote { |r| r.group($i, $body) }
+    }
+    Bol => quote { |r| r.bol() }
+    Eol => quote { |r| r.eol() }
+  }
+}
+
+// Whether the character `c` is in one of the ranges.
+fn accepts(c: meta.Name, ranges: List<(str, str)>) -> meta.Expr {
+  var accepted = within(c, ranges[0])
+  for range in ranges.skip(1) {
+    let next = within(c, range)
+    accepted = quote { $accepted || $next }
+  }
+  accepted
+}
+
+fn within(c: meta.Name, range: (str, str)) -> meta.Expr {
+  let (lo, hi) = range
+  if lo == hi { quote { $c == $lo } } else { quote { $c >= $lo && $c <= $hi } }
+}

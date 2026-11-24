@@ -1,0 +1,5 @@
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn total(text: str) -> i64 / raise<ParseError> { parse(text)? + 1 }

@@ -1,0 +1,134 @@
+//~ tier: core
+
+type Pair = { left: List<i64>, right: List<i64> }
+
+type Stack = { items: List<i64> }
+
+// `grown` consumes `xs`, which it rebinds with `var`, so a caller that passes its last use of a
+// list lets `push` grow it in place.
+fn grown(xs: List<i64>, x: i64) -> List<i64> {
+  var out = xs //~ CONSUMES xs
+  out.push(x) //~ ALLOC
+  out //~ ESCAPES out
+}
+
+// `joined` consumes `xs` and only reads `ys`.
+fn joined(xs: List<i64>, ys: List<i64>) -> List<i64> {
+  var out = xs //~ CONSUMES xs
+  for y in ys { out.push(y) } //~ ALLOC
+  out //~ ESCAPES out
+}
+
+fn swapped(p: Pair) -> Pair {
+  Pair { left: p.right, right: p.left } //~ CONSUMES p
+}
+
+impl Stack {
+  fn pushed(self, x: i64) -> Stack {
+    var s = self //~ CONSUMES self
+    s.items.push(x) //~ ALLOC
+    s //~ ESCAPES s
+  }
+}
+
+// A value used after the call that consumes it is still shared when the callee gets it.
+fn used_after() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  let ys = grown(xs, 3) //~ ESCAPES xs LOST-REUSE xs ALLOC
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// The last use of a value gives it up.
+fn last_use() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  let n = xs.len()
+  let ys = grown(xs, 3) //~ ESCAPES xs ALLOC
+  n + ys.len() //~ OVERFLOW
+}
+
+// A loop uses the value again on its next turn.
+fn in_a_loop() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  var n = 0
+  for i in 0..3 {
+    n += grown(xs, i).len() //~ OVERFLOW ESCAPES xs LOST-REUSE xs ALLOC
+  }
+  n
+}
+
+// A closure made after the call captures the value, so it keeps using it.
+fn captured_later() -> fn() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  let ys = grown(xs, 3) //~ ESCAPES xs LOST-REUSE xs ALLOC
+  || xs.len() + ys.len() //~ OVERFLOW ESCAPES ys ALLOC
+}
+
+// A call given a value twice reads the one while it consumes the other.
+fn passed_twice() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  joined(xs, xs).len() //~ ESCAPES xs LOST-REUSE xs ALLOC
+}
+
+// A value passed to a parameter that isn't consumed is only read.
+fn only_read() -> i64 {
+  let xs = [1, 2] //~ ALLOC
+  let ys = joined([0], xs) //~ ALLOC
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// A parameter passed to a consumed parameter is consumed, and using it after the call loses
+// the reuse.
+fn parameter(xs: List<i64>) -> i64 {
+  grown(xs, 1).len() + xs.len() //~ OVERFLOW CONSUMES xs LOST-REUSE xs ALLOC
+}
+
+// A field is a place of its own, and a value of several fields is passed as one place.
+fn fields() -> i64 {
+  let p = Pair { left: [1], right: [2] } //~ ALLOC
+  let ys = grown(p.left, 3) //~ ESCAPES p LOST-REUSE p.left ALLOC
+  let q = swapped(p) //~ LOST-REUSE p
+  ys.len() + p.left.len() + p.right.len() + q.left.len() //~ OVERFLOW
+}
+
+// A method consumes `self` as a function consumes a parameter.
+fn receiver() -> i64 {
+  let s = Stack { items: [] } //~ ALLOC
+  let t = s.pushed(1) //~ ESCAPES s LOST-REUSE s ALLOC
+  s.items.len() + t.items.len() //~ OVERFLOW
+}
+
+// A closure's calls are those of the function that writes it.
+fn in_a_closure() -> fn() -> i64 {
+  || { //~ ALLOC
+    let xs = [1] //~ ALLOC
+    grown(xs, 2).len() + xs.len() //~ OVERFLOW ESCAPES xs LOST-REUSE xs ALLOC
+  }
+}
+
+// A variable that `push` grows lives in memory, and its last use gives it up as a value in a
+// register does.
+fn variable_last_use() -> i64 {
+  var xs = [1, 2, 3] //~ ALLOC
+  xs.push(4) //~ ALLOC
+  let zs = grown(xs, 5) //~ ESCAPES xs ALLOC
+  zs.len()
+}
+
+// A variable in memory that the code reads after the call is still shared when the callee
+// gets it.
+fn variable_used_after() -> i64 {
+  var xs = [1, 2, 3] //~ ALLOC
+  xs.push(4) //~ ALLOC
+  let zs = grown(xs, 5) //~ ESCAPES xs LOST-REUSE xs ALLOC
+  zs.len() + xs.len() //~ OVERFLOW
+}
+
+// A variable that a loop passes in each turn gives up its value as the loop gives it a new one.
+fn variable_in_a_loop() -> i64 {
+  var xs = [1] //~ ALLOC
+  for i in 0..3 {
+    xs.push(i) //~ ALLOC
+    xs = grown(xs, i) //~ ESCAPES xs ALLOC
+  }
+  xs.len()
+}

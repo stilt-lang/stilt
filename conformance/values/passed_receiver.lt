@@ -1,0 +1,18 @@
+//~ rule: values.passing-values
+//~ run-output: "Bag { items: [1] } [1, 9]"
+
+type Bag = { items: List<i64> }
+
+impl Bag {
+  fn into_items(self) -> List<i64> {
+    var b = self
+    b.items.push(9)
+    b.items
+  }
+}
+
+fn main() / io {
+  let b = Bag { items: [1] }
+  let xs = b.into_items()
+  print("{b} {xs}")
+}

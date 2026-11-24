@@ -1,0 +1,19 @@
+//~ rule: types.mismatch, expressions.block-value
+
+fn value() -> i64 {
+  let a = 1
+  "a" //~ ERROR E0311
+}
+
+fn no_final() -> i64 { //~ ERROR E0311
+  let a = 1
+}
+
+fn unit() {
+  1 //~ ERROR E0311
+}
+
+fn fine() -> i64 {
+  let a = 1
+  a
+}

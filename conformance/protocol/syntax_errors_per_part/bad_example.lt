@@ -1,0 +1,4 @@
+/// Doubles a number.
+/// ex: double( //~ ERROR E0100
+fn double(x: i64) -> i64 { x * 2 }
+fn later( {} //~ ERROR E0100

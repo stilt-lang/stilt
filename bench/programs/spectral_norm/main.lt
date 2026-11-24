@@ -1,0 +1,48 @@
+// spectral-norm: the spectral norm of an infinite matrix, by the power method, as the
+// Benchmarks Game's program computes it.
+
+use std.cli
+
+fn a(i: i64, j: i64) -> f64 { 1.0 / ((i + j) * (i + j + 1) / 2 + i + 1).to_f64() }
+
+fn times(v: List<f64>) -> List<f64> {
+  let n = v.len()
+  var out = []
+  for i in 0..n {
+    var sum = 0.0
+    for j in 0..n { sum += a(i, j) * v[j] }
+    out.push(sum)
+  }
+  out
+}
+
+fn times_transposed(v: List<f64>) -> List<f64> {
+  let n = v.len()
+  var out = []
+  for i in 0..n {
+    var sum = 0.0
+    for j in 0..n { sum += a(j, i) * v[j] }
+    out.push(sum)
+  }
+  out
+}
+
+fn times_both(v: List<f64>) -> List<f64> { times_transposed(times(v)) }
+
+fn main() / io {
+  let n = (cli.arg(0) else "").to_i64() else 1000
+  var u = []
+  for _ in 0..n { u.push(1.0) }
+  var v = []
+  for _ in 0..10 {
+    v = times_both(u)
+    u = times_both(v)
+  }
+  var vbv = 0.0
+  var vv = 0.0
+  for i in 0..n {
+    vbv += u[i] * v[i]
+    vv += v[i] * v[i]
+  }
+  print("{(vbv / vv).sqrt():.9}")
+}

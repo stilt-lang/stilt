@@ -1,0 +1,1 @@
+type Shape = | circle(f64) | Square(f64) //~ ERROR E0100

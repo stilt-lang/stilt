@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: cycles.through-shared-values, cycles.freeing, cycles.check-at-exit
+//~ stdout:
+//~ | linked
+
+// Two handles that hold each other, freed once `main` lets go of both.
+
+use std.sync
+
+type Node = { name: str, next: Option<sync.Shared<Node>> }
+
+fn main() / io {
+  let a = sync.Shared.new(Node { name: "a", next: None })
+  let b = sync.Shared.new(Node { name: "b", next: Some(a) })
+  when a { a.next = Some(b) }
+  print("linked")
+}

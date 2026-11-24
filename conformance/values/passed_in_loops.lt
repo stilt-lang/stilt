@@ -1,0 +1,29 @@
+//~ rule: values.passing-values, expressions.loops
+//~ run-output: "4 [0] [0, 9] [1] [5, 9] [5]"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn main() / io {
+  var acc = [0]
+  var total = 0
+  for x in [1, 2] { total += grown(acc).len() }
+  var d = [1]
+  var i = 0
+  var last = []
+  while i < 2 {
+    last = grown(d)
+    d = [i]
+    i += 1
+  }
+  var e = [5]
+  var once = []
+  loop {
+    once = grown(e)
+    break
+  }
+  print("{total} {acc} {last} {d} {once} {e}")
+}

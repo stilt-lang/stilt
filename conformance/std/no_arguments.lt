@@ -1,0 +1,9 @@
+//~ rule: std.cli
+//~ run-output: "[] 0 None None"
+
+use std.cli
+
+fn main() / io {
+  let args = cli.args()
+  print("{args} {args.len()} {cli.arg(0)} {cli.arg(-1)}")
+}

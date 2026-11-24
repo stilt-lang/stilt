@@ -1,0 +1,18 @@
+//~ rule: std.durations
+//~ stdout:
+//~ | 5 5000 -5000000 2000000000 120000000000 3600000000000
+//~ | 2 -2 2 2.5
+//~ | 1.5ms -2ms true
+//~ | 1.5s 250µs 0ns 7ns 1.000001s -90s
+//~ | [1ms, 2ms]
+
+use std.clock
+
+fn main() / io {
+  print("{clock.Duration.from_ns(5).ns} {clock.Duration.from_us(5).ns} {clock.Duration.from_ms(-5).ns} {clock.Duration.from_seconds(2).ns} {clock.Duration.from_minutes(2).ns} {clock.Duration.from_hours(1).ns}")
+  print("{clock.Duration.from_us(2500).whole_ms()} {clock.Duration.from_us(-2500).whole_ms()} {clock.Duration.from_ms(2500).whole_seconds()} {clock.Duration.from_ms(2500).seconds()}")
+  let one = clock.Duration.from_ms(1)
+  print("{one.plus(clock.Duration.from_us(500))} {one.minus(clock.Duration.from_ms(3))} {one < clock.Duration.from_ms(2)}")
+  print("{clock.Duration.from_ms(1500)} {clock.Duration.from_us(250)} {clock.Duration.from_ns(0)} {clock.Duration.from_ns(7)} {clock.Duration.from_ns(1000001000)} {clock.Duration.from_seconds(-90)}")
+  print("{[clock.Duration.from_ms(2), clock.Duration.from_ms(1)].sorted()}")
+}

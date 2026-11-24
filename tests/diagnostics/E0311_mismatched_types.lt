@@ -1,0 +1,1 @@
+fn discounted(price: i64) -> i64 { price * 0.9 }

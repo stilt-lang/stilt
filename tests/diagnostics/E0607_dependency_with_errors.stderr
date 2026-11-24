@@ -1,0 +1,9 @@
+── DEPENDENCY WITH ERRORS ───────────────────────────── stilt.toml:4:15  [E0607]
+
+`csv` 2.1.0 has errors, the first an E0311 at csv/src/read.lt:2:16:
+
+  4 │ [dependencies.csv]
+    │               ^^^
+
+A fetched dependency with errors can't be used where they are. Use another
+version, or tell its author; `stilt show` with the error's code explains it.

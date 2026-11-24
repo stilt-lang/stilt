@@ -1,0 +1,14 @@
+── SYNTAX ERROR ─────────────────────────────────── E0100_import.lt:1:1  [E0100]
+
+Stilt imports a module with `use`, not `import`:
+
+  1 │ import std.fs
+    │ ^^^^^^
+
+`use std.fs` imports a module, whose items are then named through it, as
+`fs.exists`.
+
+To fix it, write `use`:
+
+  1 │ use std.fs
+    │ ~~~

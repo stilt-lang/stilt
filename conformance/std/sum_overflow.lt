@@ -1,0 +1,10 @@
+//~ rule: std.clamp-and-sum
+//~ panic: overflow
+//~ panic-at: sum_overflow.lt:9:11
+//~ run-output: "254"
+
+fn main() / io {
+  let xs: List<u8> = [127, 127]
+  print("{u8.sum(xs)}")
+  print("{u8.sum([255, 1])}")
+}

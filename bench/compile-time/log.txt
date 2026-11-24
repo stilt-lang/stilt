@@ -1,0 +1,266 @@
+2026-11-03T08:00:00Z ops-1 INFO deploy: version 1.4.1 by bo to web-1,web-2,web-3
+2026-11-03T08:00:11Z jobs-1 INFO job: started name=reindex
+2026-11-03T08:00:26Z web-2 INFO http: DELETE /api/users/12 200 16ms 17406B
+2026-11-03T08:00:36Z web-3 INFO http: GET /admin/stats 200 171ms 10728B
+2026-11-03T08:00:46Z web-3 INFO http: GET /api/orders 200 55ms 8032B
+2026-11-03T08:00:49Z cache-1 DEBUG cache: hit key=user:14
+2026-11-03T08:01:28Z db-1 WARN sql: slow query on search_index took 674ms rows=7426
+2026-11-03T08:01:59Z web-2 INFO http: POST /api/users 201 53ms 19342B
+2026-11-03T08:02:05Z web-2 INFO http: POST /api/search 200 62ms 24706B
+2026-11-03T08:02:07Z web-3 INFO http: POST /auth/refresh 200 13ms 4482B
+2026-11-03T08:02:10Z cache-1 DEBUG cache: hit key=page:34
+2026-11-03T08:02:22Z web-1 WARN http: POST /auth/refresh 404 35ms 0B
+2026-11-03T08:02:34Z web-3 INFO http: GET /api/users? 200 93ms 8279B
+2026-11-03T08:02:39Z web-2 INFO http: POST /auth/refresh 200 117ms 23472B
+2026-11-03T08:02:50Z cache-1 DEBUG cache: hit key=session:16
+2026-11-03T08:03:26Z web-2 INFO http: GET /api/search 200 140ms 19512B
+2026-11-03T08:03:34Z web-2 WARN http: POST /auth/login 404 95ms 0B
+2026-11-03T08:03:44Z web-2 INFO http: POST /auth/refresh 200 145ms 24728B
+2026-11-03T08:03:53Z cache-1 DEBUG cache: hit key=user:18
+2026-11-03T08:04:07Z db-1 WARN sql: slow query on orders took 925ms rows=45200
+2026-11-03T08:04:35Z web-2 INFO http: GET /static/style.css 201 30ms 5693B
+2026-11-03T08:04:47Z web-1 INFO http: GET /api/orders 200 3ms 13466B
+2026-11-03T08:04:57Z web-2 INFO http: GET /static/app.js 200 20ms 1585B
+2026-11-03T08:05:02Z cache-1 INFO cache: evict key=page:44 size=26624
+2026-11-03T08:05:20Z auth-1 INFO auth: login ok user=ana ip=10.0.0.4
+2026-11-03T08:05:50Z auth-1 INFO auth: login ok user=bo ip=192.168.1.20
+2026-11-03T08:06:20Z web-3 INFO http: POST /auth/login 200 142ms 12660B
+2026-11-03T08:06:28Z web-2 INFO http: GET /api/users? 200 137ms 5245B
+2026-11-03T08:06:37Z web-3 INFO http: GET /static/logo.png 200 10ms 20773B
+2026-11-03T08:06:48Z cache-1 DEBUG cache: hit key=user:29
+2026-11-03T08:07:12Z web-3 ERROR http: GET /api/orders/7/items 500 33ms 631B
+2026-11-03T08:07:14Z web-1 INFO http: GET /static/style.css 200 6ms 21950B
+2026-11-03T08:07:25Z web-2 INFO http: GET /api/users/12?q=tea 200 24ms 7963B
+2026-11-03T08:07:34Z cache-1 DEBUG cache: hit key=user:2
+2026-11-03T08:08:08Z db-1 WARN sql: slow query on order_items took 1378ms rows=20835
+2026-11-03T08:08:41Z web-3 INFO http: GET /api/orders 200 154ms 11604B
+2026-11-03T08:08:44Z web-2 INFO http: GET /static/style.css 200 30ms 23479B
+2026-11-03T08:08:53Z web-3 INFO http: POST /auth/login 200 154ms 23820B
+2026-11-03T08:09:03Z cache-1 DEBUG cache: miss key=user:23
+2026-11-03T08:09:26Z jobs-1 INFO job: finished name=reindex in 2140ms
+
+    
+2026-11-03T08:10:01Z web-3 WARN http: GET /api/users/12 404 146ms 0B
+2026-11-03T08:10:11Z web-2 INFO http: POST /api/orders 200 149ms 18872B
+2026-11-03T08:10:17Z web-2 WARN http: GET /static/logo.png 404 12ms 0B
+2026-11-03T08:10:19Z cache-1 INFO cache: evict key=user:15 size=25600
+2026-11-03T08:10:53Z web-3 INFO http: GET /admin/stats 200 168ms 8250B
+2026-11-03T08:11:02Z web-3 INFO http: POST /auth/refresh 200 45ms 9430B
+2026-11-03T08:11:10Z web-2 INFO http: GET /api/orders/7/items 200 85ms 4630B
+2026-11-03T08:11:21Z cache-1 DEBUG cache: hit key=user:46
+2026-11-03T08:11:28Z db-1 WARN sql: slow query on order_items took 1277ms rows=34253
+2026-11-03T08:11:50Z ops-1 INFO disk: /var at 72%
+2026-11-03T08:1x:00Z web-1 INFO http: GET / 200 1ms 1B
+2026-11-03T08:12:22Z web-2 INFO http: GET /api/users/12 200 38ms 18010B
+2026-11-03T08:12:30Z web-2 INFO http: GET /api/search 200 124ms 1582B
+2026-11-03T08:12:36Z web-2 INFO http: POST /auth/login 200 8ms 22978B
+2026-11-03T08:12:47Z cache-1 DEBUG cache: hit key=session:42
+2026-11-03T08:13:00Z web-3 INFO http: PUT /api/users/12 200 92ms 15434B
+2026-11-03T08:13:10Z web-3 INFO http: POST /auth/login 200 36ms 23944B
+2026-11-03T08:13:22Z web-1 INFO http: GET /static/logo.png 200 18ms 18254B
+2026-11-03T08:13:34Z cache-1 DEBUG cache: miss key=session:41
+2026-11-03T08:13:41Z web-3 INFO http: GET /static/logo.png 200 25ms 8057B
+2026-11-03T08:13:50Z web-2 INFO http: GET /admin/stats 200 279ms 11385B
+2026-11-03T08:13:57Z web-2 INFO http: GET /api/search?page=3&size=50 200 47ms 24348B
+2026-11-03T08:14:02Z cache-1 INFO cache: evict key=session:17 size=22528
+2026-11-03T08:14:37Z db-1 WARN sql: slow query on orders took 1243ms rows=31004
+2026-11-03T08:14:51Z web-3 INFO http: GET /api/users/12 200 134ms 17212B
+2026-11-03T08:14:55Z web-1 INFO http: GET /static/style.css 200 3ms 24347B
+2026-11-03T08:15:04Z web-1 INFO http: GET /admin/stats 200 175ms 4513B
+2026-11-03T08:15:06Z cache-1 DEBUG cache: hit key=user:36
+2026-11-03T08:15:24Z web-2 ERROR http: GET /static/logo.png 500 10ms 16678B
+2026-11-03T08:15:29Z web-3 INFO http: POST /api/orders/7/items 200 83ms 5653B
+2026-11-03T08:15:32Z web-1 INFO http: GET /admin/stats 200 219ms 9298B
+2026-11-03T08:15:44Z cache-1 DEBUG cache: miss key=session:16
+2026-11-03T08:16:05Z web-3 INFO http: GET /static/app.js 200 7ms 10977B
+2026-11-03T08:16:11Z web-2 INFO http: POST /auth/login 200 88ms 13359B
+2026-11-03T08:16:18Z web-1 INFO http: POST /auth/refresh 200 31ms 20385B
+2026-11-03T08:16:28Z cache-1 DEBUG cache: hit key=session:23
+2026-11-03T08:16:39Z db-1 WARN sql: slow query on search_index took 1268ms rows=18568
+2026-11-03T08:16:56Z web-1 INFO http: POST /auth/refresh 200 49ms 17897B
+2026-11-03T08:16:59Z web-3 INFO http: GET /static/style.css 200 17ms 19966B
+2026-11-03T08:17:08Z web-3 INFO http: GET /api/search?page=2 200 133ms 10436B
+2026-11-03T08:17:13Z cache-1 DEBUG cache: hit key=session:1
+2026-11-03T08:17:30Z web-3 INFO http: GET /static/style.css 201 19ms 1253B
+2026-11-03T08:17:35Z web-3 INFO http: GET /api/orders/7/items?q=tea 200 90ms 23361B
+2026-11-03T08:17:46Z web-1 INFO http: GET /admin/stats 200 172ms 19902B
+2026-11-03T08:17:53Z cache-1 DEBUG cache: miss key=user:41
+2026-11-03T08:18:16Z web-1 INFO http: GET /api/search 200 49ms 9391B
+2026-11-03T08:18:20Z web-3 INFO http: GET /static/logo.png 200 27ms 6842B
+2026-11-03T08:18:32Z web-1 INFO http: POST /auth/login 200 35ms 7421B
+2026-11-03T08:18:42Z cache-1 DEBUG cache: hit key=session:3
+2026-11-03T08:18:55Z db-1 WARN sql: slow query on orders took 280ms rows=47275
+2026-11-03T08:19:29Z web-2 INFO http: GET /static/style.css 200 11ms 17501B
+2026-11-03T08:19:38Z web-3 INFO http: POST /api/search 200 151ms 184B
+2026-11-03T08:19:43Z web-1 INFO http: GET /api/search 200 46ms 12598B
+2026-11-03T08:19:54Z cache-1 DEBUG cache: hit key=page:12
+2026-11-03T08:20:24Z auth-1 WARN auth: login failed user=eve ip=203.0.113.9 attempts=1
+2026-11-03T08:20:29Z web-2 INFO http: GET /admin/stats 200 195ms 3438B
+2026-11-03T08:20:35Z auth-1 WARN auth: login failed user=eve ip=203.0.113.9 attempts=2
+2026-11-03T08:20:41Z web-3 WARN http: GET /static/app.js 404 5ms 0B
+2026-11-03T08:20:45Z auth-1 ERROR auth: login failed user=eve ip=203.0.113.9 attempts=3
+2026-11-03T08:20:47Z web-3 INFO http: GET /api/users/12?q=tea 200 37ms 25704B
+2026-11-03T08:20:50Z auth-1 ERROR auth: login failed user=eve ip=203.0.113.9 attempts=4
+2026-11-03T08:20:56Z web-1 INFO http: GET /api/users/12 200 119ms 23946B
+2026-11-03T08:21:01Z auth-1 INFO auth: login ok user=dee ip=172.20.4.1 attempts=2
+2026-11-03T08:21:26Z jobs-1 INFO job: started name=backup
+2026-11-03T08:21:36Z ops-1 INFO config: set http.timeout from 30s to 45s
+2026-11-03T08:21:51Z web-3 INFO http: GET /api/search 200 125ms 2049B
+2026-11-03T08:21:55Z web-3 ERROR http: GET /static/style.css 500 17ms 13983B
+2026-11-03T08:22:05Z web-1 INFO http: GET /api/orders/7/items 200 52ms 10890B
+2026-11-03T08:22:09Z web-3 INFO http: GET /api/users/12?page=2 200 10ms 16213B
+2026-11-03T08:22:21Z web-3 INFO http: GET /static/app.js 200 30ms 19515B
+2026-11-03T08:22:31Z web-3 WARN http: GET /admin/stats 404 181ms 0B
+2026-11-03T08:22:34Z web-3 INFO http: GET /static/logo.png 200 7ms 24293B
+2026-11-03T08:22:41Z web-2 INFO http: DELETE /api/users 200 64ms 2409B
+2026-11-03T08:22:49Z ops-1 WARN disk: /var at 91%
+2026-11-03T08:23:01Z jobs-1 ERROR job: failed name=backup reason="disk full"
+2026-11-03T08:31:00Z web-9 INFO mail: sent 3 messages
+2026-11-03T08:23:26Z web-3 INFO http: GET /static/logo.png 201 9ms 24707B
+2026-11-03T08:23:29Z web-3 INFO http: GET /api/users/12?page=2 200 103ms 12461B
+2026-11-03T08:23:35Z web-3 INFO http: GET /api/orders/7/items?page=2 200 106ms 613B
+2026-11-03T08:23:45Z web-1 INFO http: GET /admin/stats 200 191ms 16534B
+2026-11-03T08:23:50Z web-2 INFO http: GET /static/logo.png 200 24ms 6824B
+2026-11-03T08:23:55Z web-3 INFO http: GET /admin/stats 200 191ms 22803B
+2026-11-03T08:24:02Z web-1 INFO http: GET /static/logo.png 200 22ms 10647B
+2026-11-03T08:24:11Z web-3 INFO http: GET /api/orders/7/items 200 61ms 9896B
+2026-11-03T08:24:22Z web-3 INFO http: PUT /api/orders/7/items 200 152ms 14506B
+2026-11-03T08:24:27Z web-2 ERROR http: GET /static/logo.png 500 8ms 3014B
+2026-11-03T08:24:34Z ops-1 INFO deploy: version 1.5.0 by ana to web-1,web-2
+2026-11-03T08:24:57Z web-3 INFO http: GET /api/search 200 109ms 10854B
+2026-11-03T08:25:05Z web-3 INFO http: GET /api/search?q=tea 200 136ms 16298B
+2026-11-03T08:25:10Z web-1 INFO http: POST /auth/refresh 200 911ms 9336B
+2026-11-03T08:25:13Z web-2 WARN http: GET /static/style.css 404 15ms 0B
+2026-11-03T08:25:20Z web-3 INFO http: DELETE /api/search 200 158ms 22460B
+2026-11-03T08:25:29Z web-2 WARN http: GET /api/users 404 972ms 0B
+2026-11-03T08:25:38Z web-2 INFO http: GET /admin/stats 200 253ms 11445B
+2026-11-03T08:25:45Z web-3 INFO http: POST /api/search 200 57ms 6791B
+2026-11-03T08:25:54Z web-1 INFO http: GET /api/users/12 200 12ms 23626B
+2026-11-03T08:25:56Z web-2 INFO http: GET /api/search 200 151ms 14145B
+2026-11-03T08:26:01Z web-2 ERROR panic: thread worker-3 panicked: index out of bounds
+2026-11-03T08:26:04Z web-3 ERROR http: DELETE /api/orders 500 38ms 4462B
+2026-11-03T08:26:06Z web-3 ERROR http: GET /api/users 503 142ms 22328B
+2026-11-03T08:26:07Z jobs-1 WARN retry: fetch attempt 1 of 5 after 200ms
+2026-11-03T08:26:14Z jobs-1 WARN retry: fetch attempt 2 of 5 after 400ms
+2026-11-03T08:26:22Z jobs-1 WARN retry: fetch attempt 3 of 5 after 600ms
+2026-11-03T08:26:24Z jobs-1 WARN retry: fetch attempt 4 of 5 after 800ms
+2026-11-03T08:26:31Z jobs-1 ERROR retry: fetch attempt 5 of 5 after 1000ms
+2026-11-03T08:26:33Z web-2 INFO http: GET /api/users 200 12ms
+2026-11-03T08:26:42Z ops-1 INFO config: set cache.size from 512mb to 256mb
+2026-11-03T08:27:17Z ops-1 INFO config: set mode from blue to green
+2026-11-03T08:27:25Z db-1 WARN sql: slow query on orders took 812ms rows=12000
+2026-11-03T08:27:48Z db-1 INFO sql: vacuum done
+2026-11-03T08:27:55Z web-2 INFO http: GET /api/users/12?page=2 200 39ms 4340B
+2026-11-03T08:28:01Z web-1 INFO http: GET /api/users? 200 94ms 25243B
+2026-11-03T08:28:03Z web-2 INFO http: GET /api/users/12 200 123ms 10058B
+2026-11-03T08:28:12Z cache-1 DEBUG cache: miss key=user:18
+2026-11-03T08:28:43Z web-2 INFO http: GET /api/users/12?q=tea 200 122ms 7754B
+2026-11-03T08:28:54Z web-2 INFO http: POST /auth/login 200 17ms 6048B
+2026-11-03T08:29:05Z web-3 INFO http: GET /admin/stats 200 139ms 24647B
+2026-11-03T08:29:13Z cache-1 DEBUG cache: hit key=user:60
+2026-11-03T08:29:28Z web-3 INFO http: GET /static/app.js 304 24ms 0B
+2026-11-03T08:29:35Z web-1 INFO http: GET /admin/stats 200 239ms 11945B
+2026-11-03T08:29:39Z web-3 INFO http: GET /api/orders/7/items?q=tea 200 63ms 16564B
+2026-11-03T08:29:44Z cache-1 DEBUG cache: hit key=session:37
+2026-11-03T08:30:11Z web-1 INFO http: POST /api/users/12 200 50ms 7334B
+2026-11-03T08:30:17Z web-3 INFO http: POST /api/users 200 86ms 4364B
+2026-11-03T08:30:24Z web-3 INFO http: GET /admin/stats 200 213ms 21725B
+2026-11-03T08:30:33Z cache-1 INFO cache: evict key=user:14 size=18944
+2026-11-03T08:30:46Z jobs-1 INFO job: started name=report
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":31,"second":12},"source":{"host":"auth","index":2},"level":"Info","event":{"Auth":[{"user":"cy","ip":{"a":10,"b":0,"c":3,"d":7},"ok":true,"attempts":null}]}}
+2026-11-03T08:31:21Z web-3 INFO http: GET /api/orders? 200 44ms 17741B
+2026-11-03T08:31:27Z web-3 WARN http: GET /api/users? 404 27ms 0B
+2026-11-03T08:31:38Z web-2 INFO http: POST /auth/login 200 4ms 5055B
+2026-11-03T08:31:46Z cache-1 DEBUG cache: hit key=page:16
+2026-11-03T08:32:01Z web-2 WARN http: GET /static/app.js 404 27ms 0B
+2026-11-03T08:32:04Z web-3 INFO http: GET /api/users 200 39ms 13167B
+2026-11-03T08:32:15Z web-2 INFO http: GET /api/search?page=3&size=50 200 6ms 7450B
+2026-11-03T08:32:18Z cache-1 INFO cache: evict key=page:37 size=25088
+{ "level": "Warn", "event": {"Auth": [{"ok": false, "ip": {"d": 9, "c": 113, "b": 0, "a": 203}, "user": "eve"}]}, "note": "from the gateway", "source": {"index": 2, "host": "auth"}, "at": {"date": {"year": 2026, "month": 11, "day": 3}, "hour": 8, "minute": 32, "second": 38} }
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":32,"second":54},"source":{"host":"cache","index":2},"level":"Info","event":{"Cache":[{"Evict":[{"space":"page","id":3},4096]}]}}
+2026-11-03T08:33:18Z web-3 INFO http: GET /api/users 200 106ms 20521B
+2026-11-03T08:33:30Z web-3 INFO http: POST /auth/refresh 200 65ms 18342B
+2026-11-03T08:33:41Z web-2 INFO http: POST /auth/refresh 200 123ms 12188B
+2026-11-03T08:33:44Z cache-1 INFO cache: evict key=session:33 size=32256
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":34,"second":23},"source":{"host":"web","index":3},"event":{"Http":[{"method":"Get","path":"/","query":null,"status":200,"millis":4,"bytes":512}]}}
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":34,"second":50},"source":{"host":"web","index":3},"level":"Fatal","event":{"Http":[{"method":"Get","path":"/","query":null,"status":200,"millis":4,"bytes":512}]}}
+2026-11-03T08:35:07Z web-3 INFO http: POST /auth/refresh 200 79ms 2111B
+2026-11-03T08:35:10Z web-1 INFO http: GET /admin/stats 200 278ms 11705B
+2026-11-03T08:35:20Z web-1 INFO http: GET /api/users 200 64ms 25127B
+2026-11-03T08:35:31Z cache-1 DEBUG cache: hit key=user:17
+2026-11-03T08:35:39Z web-1 INFO http: GET /api/users?page=2 200 112ms 9797B
+2026-11-03T08:35:42Z web-2 ERROR http: GET /admin/stats 500 172ms 25348B
+2026-11-03T08:35:46Z web-2 INFO http: GET /api/users/12 200 59ms 19187B
+2026-11-03T08:35:54Z cache-1 DEBUG cache: miss key=user:31
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":300,"minute":36,"second":7},"source":{"host":"jobs","index":1},"level":"Info","event":{"Job":[{"Finished":["report",3300]}]}}
+{"level": "Info",, "source": {}}
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":36,"second":38},"source":{"host":"ops","index":1},"level":"Info","event":{"Mail":[{"to":"ops@example.com","count":3}]}}
+2026-11-03T08:36:50Z jobs-1 INFO job: finished name=report in 3300ms
+2026-11-03T08:37:00Z web-3 INFO http: POST /auth/login 200 117ms 8279B
+2026-11-03T08:37:07Z web-1 INFO http: DELETE /api/users 200 122ms 24397B
+2026-11-03T08:37:19Z web-3 INFO http: GET /api/orders 200 141ms 21273B
+2026-11-03T08:37:26Z cache-1 INFO cache: evict key=user:8 size=11776
+2026-11-03T08:37:56Z web-2 INFO http: GET /static/style.css 200 27ms 15842B
+2026-11-03T08:38:02Z web-2 INFO http: GET /admin/stats 304 274ms 0B
+2026-11-03T08:38:12Z web-3 INFO http: GET /api/users/12 200 60ms 23368B
+2026-11-03T08:38:22Z cache-1 DEBUG cache: hit key=session:44
+2026-11-03T08:38:50Z jobs-1 WARN retry: mail attempt 1 of 3 after 100ms
+2026-11-03T08:38:58Z jobs-1 WARN retry: mail attempt 2 of 3 after 100ms
+2026-11-03T08:39:03Z auth-1 WARN auth: login failed user=ana ip=10.0.0.4
+2026-11-03T08:39:39Z auth-1 INFO auth: login ok user=ana ip=10.0.0.5
+2026-02-30T09:00:00Z web-1 INFO http: GET / 200 1ms 1B
+2026-11-03T08:40:11Z web-3 INFO http: POST /auth/login 200 109ms 22019B
+2026-11-03T08:40:23Z web-3 INFO http: GET /api/orders? 200 33ms 5673B
+2026-11-03T08:40:30Z web-1 ERROR http: GET /static/app.js 500 4ms 18438B
+2026-11-03T08:40:34Z cache-1 DEBUG cache: hit key=user:22
+2026-11-03T08:41:13Z web-2 INFO http: POST /auth/refresh 200 51ms 25142B
+2026-11-03T08:41:15Z web-1 INFO http: GET /admin/stats 200 228ms 6362B
+2026-11-03T08:41:27Z web-2 INFO http: GET /static/logo.png 200 13ms 14103B
+2026-11-03T08:41:38Z cache-1 DEBUG cache: hit key=user:13
+{"at":{"date":{"year":2026,"month":11,"day":3},"hour":8,"minute":41,"second":54},"source":{"host":"ops","index":1},"level":"Warn","event":{"Disk":[{"mount":"/data","percent":88}]}}
+2026-11-03T08:42:28Z ops-1 ERROR disk: /data at 97%
+2026-11-03T08:42:58Z web-3 INFO http: GET /static/style.css 201 28ms 6180B
+2026-11-03T08:43:09Z web-1 INFO http: DELETE /api/orders/7/items 200 54ms 25088B
+2026-11-03T08:43:15Z web-3 INFO http: PUT /api/search 200 107ms 2823B
+2026-11-03T08:43:21Z cache-1 DEBUG cache: miss key=user:15
+2026-11-03T08:43:46Z web-3 INFO http: GET /api/users/12 200 40ms 22198B
+2026-11-03T08:43:51Z web-1 INFO http: GET /static/style.css 200 5ms 10302B
+2026-11-03T08:43:54Z web-2 INFO http: GET /api/search 200 69ms 17898B
+2026-11-03T08:44:05Z cache-1 DEBUG cache: hit key=session:54
+2026-11-03T08:44:42Z web-1 INFO http: PUT /api/orders 201 45ms 22730B
+2026-11-03T08:44:52Z web-3 ERROR http: GET /admin/stats 500 250ms 2884B
+2026-11-03T08:45:03Z web-3 INFO http: DELETE /api/orders/7/items 200 128ms 2220B
+2026-11-03T08:45:07Z cache-1 DEBUG cache: hit key=user:46
+2026-11-03T08:45:19Z web-2 INFO http: GET /api/users/12 304 54ms 0B
+2026-11-03T08:45:25Z web-1 INFO http: POST /auth/refresh 200 25ms 17607B
+2026-11-03T08:45:30Z web-2 INFO http: GET /api/users/12 200 133ms 19839B
+2026-11-03T08:45:32Z cache-1 DEBUG cache: miss key=page:28
+2026-11-03T08:45:39Z web-3 INFO http: GET /api/orders/7/items 200 95ms 24257B
+2026-11-03T08:45:45Z web-2 INFO http: GET /admin/stats 200 219ms 763B
+2026-11-03T08:45:52Z web-1 INFO http: GET /admin/stats 200 189ms 22577B
+2026-11-03T08:46:01Z cache-1 DEBUG cache: miss key=user:46
+2026-11-03T08:46:41Z web-2 ERROR http: GET /api/users?page=3&size=50 500 136ms 16739B
+2026-11-03T08:46:53Z web-3 INFO http: GET /admin/stats 304 140ms 0B
+2026-11-03T08:47:00Z web-2 INFO http: POST /auth/refresh 200 36ms 15301B
+2026-11-03T08:47:02Z cache-1 DEBUG cache: hit key=page:27
+2026-11-03T08:47:25Z web-1 INFO http: GET /api/users 200 115ms 20294B
+2026-11-03T08:47:28Z web-3 INFO http: GET /static/style.css 200 27ms 22996B
+2026-11-03T08:47:39Z web-1 INFO http: POST /auth/refresh 200 140ms 8552B
+2026-11-03T08:47:46Z cache-1 INFO cache: evict key=session:12 size=30720
+2026-11-03T08:47:55Z web-2 INFO http: GET /api/users/12 200 33ms 6111B
+2026-11-03T08:48:06Z web-1 INFO http: GET /static/logo.png 304 8ms 0B
+2026-11-03T08:48:16Z web-2 ERROR http: GET /static/logo.png 500 3ms 10521B
+2026-11-03T08:48:24Z cache-1 DEBUG cache: hit key=page:10
+2026-11-03T08:48:38Z web-1 INFO http: POST /api/orders/7/items 200 28ms 20595B
+2026-11-03T08:48:43Z web-3 INFO http: GET /static/style.css 200 14ms 21899B
+2026-11-03T08:48:49Z web-3 INFO http: GET /api/users/12 200 113ms 23455B
+2026-11-03T08:48:51Z cache-1 DEBUG cache: hit key=page:27
+2026-11-03T08:49:14Z web-1 INFO http: POST /api/search 200 104ms 11424B
+2026-11-03T08:49:16Z web-1 INFO http: GET /static/logo.png 200 13ms 20114B
+2026-11-03T08:49:22Z web-2 INFO http: DELETE /api/orders 200 103ms 14790B
+2026-11-03T08:49:24Z cache-1 DEBUG cache: hit key=user:59
+2026-11-03T08:49:47Z web-1 INFO http: PUT /api/orders 200 70ms 23406B
+2026-11-03T08:49:59Z web-3 ERROR http: GET /api/orders/7/items 500 59ms 5333B
+2026-11-03T08:50:08Z web-3 INFO http: GET /api/users/12 200 107ms 11463B
+2026-11-03T08:50:12Z cache-1 DEBUG cache: hit key=user:6
+connection reset by peer

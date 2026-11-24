@@ -1,0 +1,9 @@
+//~ rule: expressions.statements, expressions.assignment
+
+fn is_one(x: i64) -> bool {
+  if x = 1 { //~ ERROR E0100
+    true
+  } else {
+    false
+  }
+}

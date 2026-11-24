@@ -1,0 +1,11 @@
+//~ rule: lexical.contextual-keywords.as-names
+//~ run-output: "2"
+
+fn twice(escaping f: fn(i64) -> i64, x: i64) -> i64 {
+  let escaping = f
+  escaping(escaping(x))
+}
+
+fn main() / io {
+  print("{twice(|n| n + 1, 0)}")
+}

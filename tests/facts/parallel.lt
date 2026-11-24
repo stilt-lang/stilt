@@ -1,0 +1,23 @@
+//~ tier: core
+
+// Deterministic parallelism (par.core-tier, par.implicit-effects-and-capabilities): `std.par`
+// is core, so a module that names it stays core. A call of one of its functions has the implicit
+// effects of its arguments, a closure literal allocating where it is written, and `alloc` for
+// the lists it makes, which `fold` makes none of, and no capability; its natives consume nothing.
+// A call may make the counts of its closure and list's shared elements atomic (par.atomic-sites).
+
+use std.par
+
+fn squares(xs: List<i64>) -> List<i64> {
+  par.map(xs, |x| x * x) //~ OVERFLOW ALLOC ATOMIC
+}
+
+fn firsts(xss: List<List<i64>>) -> List<i64> {
+  par.map(xss, |xs| xs[0]) //~ ALLOC PANIC ATOMIC
+}
+
+fn total(xs: List<i64>) -> i64 {
+  par.fold(xs, 0, add) //~ OVERFLOW ATOMIC ALLOC
+}
+
+fn add(a: i64, b: i64) -> i64 { a + b } //~ OVERFLOW

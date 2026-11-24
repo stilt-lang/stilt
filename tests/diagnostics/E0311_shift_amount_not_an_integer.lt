@@ -1,0 +1,3 @@
+fn mask(bits: u64, square: f64) -> u64 { bits << square }
+
+fn main() {}

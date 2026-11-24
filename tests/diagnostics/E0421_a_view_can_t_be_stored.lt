@@ -1,0 +1,5 @@
+use std.view
+
+type Line = { text: view.View<str> }
+
+fn main() {}

@@ -1,0 +1,10 @@
+//~ rule: lexical.primitive-type-names, syntax.lowercase-types
+//~ run-output: "127 255 Str(\"x\")"
+
+type Str = | Str(str)
+
+fn widest(x: u8) -> u8 { x }
+
+fn main() / io {
+  print("{i8.MAX} {widest(u8.MAX)} {Str("x")}")
+}

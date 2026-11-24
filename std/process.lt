@@ -1,0 +1,148 @@
+module std.process
+
+// Running other programs (std.process, std.process-commands, std.process-starting,
+// std.process-runs and std.children). Every native here has the capability `exec`
+// (facts.capability-natives).
+
+use std.io
+
+/// A program to run: its name or path, its arguments, the changes it makes to
+/// the environment it inherits, each setting a variable or removing it, its
+/// working directory, `""` for the running program's own, and the text that
+/// `output` gives it as its standard input.
+pub type Command = { program: str, args: List<str>, env: List<(str, Option<str>)>, dir: str, input: str }
+
+/// How a run that `output` waited for ended: its status, and the text it wrote
+/// to its standard output and its standard error.
+pub type Output = { status: i64, stdout: str, stderr: str }
+
+/// A program that runs beside the one that started it, which writes to its
+/// standard input and reads its standard output.
+pub type Child = { id: i64 }
+
+impl Command {
+  /// The command that runs `program`, with no arguments, its environment
+  /// unchanged, in the working directory of the running program and with no
+  /// input.
+  /// ex: Command.new("ls").program == "ls" && Command.new("ls").args == []
+  pub fn new(program: str) -> Command { Command { program: program, args: [], env: [], dir: "", input: "" } }
+
+  /// The command with `arg` after its arguments.
+  /// ex: Command.new("ls").with_arg("-l").with_arg("/").args == ["-l", "/"]
+  pub fn with_arg(self, arg: str) -> Command { Command { ..self, args: self.args.concat([arg]) } }
+
+  /// The command with `args` after its arguments.
+  /// ex: Command.new("ls").with_arg("-l").with_args(["-a", "/"]).args == ["-l", "-a", "/"]
+  pub fn with_args(self, args: List<str>) -> Command { Command { ..self, args: self.args.concat(args) } }
+
+  /// The command that sets the variable `name` to `value` in the environment it
+  /// runs with.
+  /// ex: Command.new("env").with_env("LANG", "C").env == [("LANG", Some("C"))]
+  pub fn with_env(self, name: str, value: str) -> Command { Command { ..self, env: self.env.concat([(name, Some(value))]) } }
+
+  /// The command that removes the variable `name` from the environment it runs
+  /// with.
+  /// ex: Command.new("env").with_env("A", "1").without_env("A").env == [("A", Some("1")), ("A", None)]
+  pub fn without_env(self, name: str) -> Command { Command { ..self, env: self.env.concat([(name, None)]) } }
+
+  /// The command that runs in the directory `dir`.
+  /// ex: Command.new("ls").with_dir("/tmp").dir == "/tmp"
+  pub fn with_dir(self, dir: str) -> Command { Command { ..self, dir: dir } }
+
+  /// The command whose run by `output` reads `input` as its standard input.
+  /// ex: Command.new("cat").with_input("hi").input == "hi"
+  pub fn with_input(self, input: str) -> Command { Command { ..self, input: input } }
+
+  /// Runs the command to its end, with its input as its standard input, and
+  /// gives its status and the text it wrote.
+  pub fn output(self) -> Output / {io, raise<io.IoError>} {
+    let id = try begin(self, 0)
+    Output { status: waited(id), stdout: captured(id, 1), stderr: captured(id, 2) }
+  }
+
+  /// Runs the command to its end, with the running program's own standard
+  /// input, output and error, and gives its status.
+  pub fn status(self) -> i64 / {io, raise<io.IoError>} {
+    waited(try begin(self, 1))
+  }
+
+  /// Starts the command, with its standard input and output piped to the
+  /// running program and its standard error the running program's own, and
+  /// gives it without waiting.
+  pub fn spawn(self) -> Child / {io, raise<io.IoError>} {
+    Child { id: try begin(self, 2) }
+  }
+}
+
+/// Runs `program` with `args` to its end, as `Command.output` runs it.
+pub fn run(program: str, args: List<str>) -> Output / {io, raise<io.IoError>} {
+  try Command.new(program).with_args(args).output()
+}
+
+impl Child {
+  /// Writes `text` to the child's standard input.
+  pub fn write(inout self, text: str) / {io, raise<io.IoError>} { try write_input(self.id, text) }
+
+  /// Closes the child's standard input, so that it reads to the end.
+  pub fn close_input(inout self) / io { close(self.id) }
+
+  /// The next line of the child's standard output, without its `\n` or a `\r`
+  /// before it, or `None` at the end.
+  pub fn read_line(inout self) -> Option<str> / io { next_line(self.id) }
+
+  /// The rest of the child's standard output.
+  pub fn read_all(inout self) -> str / io { rest(self.id) }
+
+  /// Closes the child's standard input, keeps what is left of its output for
+  /// `read_line` and `read_all`, waits for it to end and gives its status.
+  pub fn wait(inout self) -> i64 / io { waited(self.id) }
+
+  /// Ends the child at once, unless it has ended already.
+  pub fn kill(inout self) / io { stop(self.id) }
+}
+
+// The variables that the changes to the environment set, as names and values
+// in pairs, and those that they remove, the last change of each name winning.
+fn changes(env: List<(str, Option<str>)>) -> (List<str>, List<str>) {
+  var last: Map<str, Option<str>> = Map.new()
+  for (name, value) in env { last[name] = value }
+  var set: List<str> = []
+  var removed: List<str> = []
+  for (name, value) in last.entries() {
+    match value {
+      Some(v) => {
+        set.push(name)
+        set.push(v)
+      }
+      None => removed.push(name)
+    }
+  }
+  (set, removed)
+}
+
+// Starts a command, as `output` runs it for `mode` 0, as `status` does for 1,
+// and as `spawn` starts it for 2, and gives the run's number.
+fn start(program: str, args: List<str>, set: List<str>, removed: List<str>, dir: str, mode: i64, input: str) -> i64 / {io, raise<io.IoError>} = ?
+
+// Starts a command in `mode`, with the changes to its environment.
+fn begin(c: Command, mode: i64) -> i64 / {io, raise<io.IoError>} {
+  let (set, removed) = changes(c.env)
+  try start(c.program, c.args, set, removed, c.dir, mode, c.input)
+}
+
+// The status of run `id`, once it has ended.
+fn waited(id: i64) -> i64 / io = ?
+
+// The text that run `id` of `output` wrote to its standard output, for 1, and
+// to its standard error, for 2.
+fn captured(id: i64, stream: i64) -> str / io = ?
+
+fn write_input(id: i64, text: str) / {io, raise<io.IoError>} = ?
+
+fn close(id: i64) / io = ?
+
+fn next_line(id: i64) -> Option<str> / io = ?
+
+fn rest(id: i64) -> str / io = ?
+
+fn stop(id: i64) / io = ?

@@ -1,0 +1,38 @@
+//~ rule: std.deque, program.qualified-names, expressions.loops
+//~ stdout:
+//~ | n = 5, k = 2: killed [1, 3, 0, 4], survivor 2
+//~ | n = 41, k = 3: survivor 30
+//~ | by recurrence: 2 30
+
+// Rosetta Code, Josephus problem: n prisoners stand in a circle, numbered from 0, and every
+// k-th is killed until one is left. The task's example kills 1, 3, 0 and 4 of five with k = 2,
+// leaving 2, and for n = 41 and k = 3 the survivor is 30. The circle is a deque, rotated k - 1
+// places before each kill, and the survivor also follows from J(1) = 0, J(n) = (J(n - 1) + k) mod n.
+
+use std.collections
+
+fn kill_order(n: i64, k: i64) -> (List<i64>, i64) {
+  var circle = collections.Deque.from_list(List.generate(n, |i| i))
+  var killed = []
+  while circle.len() > 1 {
+    for _ in 1..k {
+      let front = circle.pop_front() else return (killed, -1)
+      circle.push_back(front)
+    }
+    killed.push(circle.pop_front() else return (killed, -1))
+  }
+  (killed, circle.front() else -1)
+}
+
+fn survivor(n: i64, k: i64) -> i64 {
+  var j = 0
+  for m in 2..=n { j = (j + k) % m }
+  j
+}
+
+fn main() / io {
+  let (killed, last) = kill_order(5, 2)
+  print("n = 5, k = 2: killed {killed}, survivor {last}")
+  print("n = 41, k = 3: survivor {kill_order(41, 3).1}")
+  print("by recurrence: {survivor(5, 2)} {survivor(41, 3)}")
+}

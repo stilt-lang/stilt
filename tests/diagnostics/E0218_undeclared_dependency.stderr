@@ -1,0 +1,10 @@
+── PACKAGE THAT ISN'T A DEPENDENCY ──────────────────── src/main.lt:2:1  [E0218]
+
+`json` is a dependency of `http`, not of this package: add `json = { path =
+"deps/json" }` to its stilt.toml:
+
+  2 │ use json
+    │ ^^^^^^^^
+
+A module imports only from its own package, the standard library and the
+packages that stilt.toml lists. Add the package to `[dependencies]`.

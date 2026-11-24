@@ -1,0 +1,5 @@
+use std.fs
+
+fn logged(path: str) -> bool / io { fs.exists(path) }
+
+pub fn report(path: str) / io without fs { if logged(path) { print("logged") } }

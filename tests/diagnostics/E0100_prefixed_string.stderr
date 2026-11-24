@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────────────────── E0100_prefixed_string.lt:3:10  [E0100]
+
+Stilt's strings take no `f` before them:
+
+  3 │   print(f"hello {name}")
+    │          ^^^^^^^^
+
+Every string inserts the value of each `{…}` in it, as `"hello {name}"`, and
+`{{` writes a brace.
+
+To fix it, delete the prefix:
+
+  3 │   print(f"hello {name}")
+    │         -

@@ -1,0 +1,29 @@
+module pure
+without panic
+
+use lib
+
+pub fn called(xs: List<i64>) -> i64 {
+  lib.first(xs) //~ ERROR E0204
+}
+
+pub fn indirect(xs: List<i64>) -> i64 {
+  lib.via(xs) //~ ERROR E0204
+}
+
+pub fn named() -> fn(List<i64>) -> i64 {
+  lib.first //~ ERROR E0204
+}
+
+pub fn named_inside() -> fn(List<i64>) -> i64 {
+  lib.chooser() //~ ERROR E0204
+}
+
+pub fn safe(xs: List<i64>) -> i64 { lib.length(xs) }
+
+pub fn native(xs: List<i64>) -> i64 {
+  var ys = xs
+  ys.remove(0) //~ ERROR E0204
+}
+
+pub fn native_safe(xs: List<i64>) -> Option<i64> { xs.get(0) }

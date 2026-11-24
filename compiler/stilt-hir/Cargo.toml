@@ -1,0 +1,20 @@
+[package]
+name = "stilt-hir"
+description = "Name resolution and declarations of Stilt's compiler"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-db = { path = "../stilt-db" }
+stilt-diag = { path = "../stilt-diag" }
+stilt-syntax = { path = "../stilt-syntax" }
+rowan.workspace = true
+rustc-hash.workspace = true
+salsa.workspace = true
+serde.workspace = true
+
+[lints]
+workspace = true

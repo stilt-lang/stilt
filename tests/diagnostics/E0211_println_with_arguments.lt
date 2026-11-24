@@ -1,0 +1,4 @@
+fn main() / io {
+  let n = 2
+  println!("{} and {}", n, n + 1)
+}

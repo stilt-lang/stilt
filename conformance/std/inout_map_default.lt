@@ -1,0 +1,13 @@
+//~ rule: values.inout-arguments, std.finding-keys
+//~ run-output: "{\"x\": 7, \"y\": 8} None"
+
+fn keep(inout n: i64) {}
+
+fn bump(inout n: i64) { n += 1 }
+
+fn main() / io {
+  var m: Map<str, i64> = Map.with_default(7)
+  keep(inout m["x"])
+  bump(inout m["y"])
+  print("{m} {m.get("z")}")
+}

@@ -1,0 +1,11 @@
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  fn show(self) -> str { "({self.x}, {self.y})" }
+}
+
+impl Show for Point {
+  fn show(self) -> str { "Point({self.x}, {self.y})" }
+}
+
+fn main() {}

@@ -1,0 +1,71 @@
+// Tables whose columns are the fields of their rows' record type, read from its shape
+// (meta.shapes): a column of integers aligns right, and any other aligns left.
+
+use std.meta
+
+/// The lines of a table of `rows`: a head that names each field of `T`, a rule under it, and a
+/// line for each row, its columns two spaces apart and as wide as their widest cell.
+/// ex: render([Pair { name: "a", count: 10 }, Pair { name: "bcd", count: 2 }]) == ["name  count", "----  -----", "a        10", "bcd       2"]
+/// ex: render([Some(1)]) == ["value", "-----", "    1"]
+pub fn render<T>(rows: List<T>) -> List<str> {
+  let names = columns(rows)
+  let grid = rows.map(|r| cells(r))
+  var widths = names.map(.len())
+  for row in grid {
+    for (i, (text, _)) in row.enumerate(0) { widths[i] = widths[i].max(text.char_count()) }
+  }
+  let right = List.generate(names.len(), |i| !grid.is_empty() && grid.all(|row| row[i].1))
+  var out = [line(names, widths, right), line(widths.map(|w| "-".repeat(w)), widths, right)]
+  for row in grid { out.push(line(row.map(.0), widths, right)) }
+  out
+}
+
+// The names of the columns of a table of `rows`: the fields of `T`, or one column, `value`,
+// when `T` isn't a record.
+fn columns<T>(rows: List<T>) -> List<str> {
+  var names: List<str> = []
+  comptime match T.shape() {
+    Record(fields) => { comptime for f in fields { names.push(f.name()) } }
+    _ => names.push("value")
+  }
+  names
+}
+
+// The cells of a row: one for each field, with whether it holds an integer.
+fn cells<T>(row: T) -> List<(str, bool)> {
+  comptime match T.shape() {
+    Record(fields) => {
+      var out: List<(str, bool)> = []
+      comptime for f in fields { out.push(cell(f.get(row))) }
+      out
+    }
+    _ => [cell(row)]
+  }
+}
+
+// A cell's text, and whether it holds an integer: an option's value, or `-` for `None`, and a
+// list's elements separated by commas.
+fn cell<T>(value: T) -> (str, bool) {
+  comptime match T.shape() {
+    Int(n) => (n.text(value), true)
+    Str(s) => (s.get(value), false)
+    Option(o) => match o.get(value) {
+      Some(x) => cell(x)
+      None => ("-", false)
+    }
+    List(l) => (",".join(l.get(value).map(|x| cell(x).0)), false)
+    _ => if T: Show { ("{value}", false) } else { (T.name(), false) }
+  }
+}
+
+// A line of the table: each text padded to its column's width, on the side its column aligns
+// to, without the spaces at its end.
+fn line(texts: List<str>, widths: List<i64>, right: List<bool>) -> str {
+  let padded = texts.enumerate(0).map(
+    |(i, t)| if right[i] { t.pad_start(widths[i], " ") } else { t.pad_end(widths[i], " ") },
+  )
+  "  ".join(padded).trim_end()
+}
+
+// The type the examples above render.
+type Pair = { name: str, count: i64 }

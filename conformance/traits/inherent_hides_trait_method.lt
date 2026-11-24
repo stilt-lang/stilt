@@ -1,0 +1,23 @@
+//~ rule: traits.name-clashes
+
+trait Named {
+  fn name(self) -> str
+}
+
+type Thing = {}
+
+impl Thing {
+  fn name(self) -> str { "inherent" }
+}
+
+impl Named for Thing { //~ ERROR E0308
+  fn name(self) -> str { "trait" }
+}
+
+type Point = { x: i64 }
+
+impl Point {
+  fn show(self) -> str { //~ ERROR E0308
+    "point"
+  }
+}

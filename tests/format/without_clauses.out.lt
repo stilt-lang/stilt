@@ -1,0 +1,40 @@
+// A `without` clause stays on its signature's line when the line, with the body's `{`, fits in
+// 100 columns, wherever the source breaks it, and otherwise starts the next line, a level in,
+// followed by the `{` or the `= ?`. The signature before it is then laid out on its own: here
+// on one line, at the boundary, in an impl, and with its parameter list broken.
+type Stats = { n: i64 }
+
+type Particle = { x: f64, v: f64 }
+
+fn short(x: i64) -> i64 without alloc { x }
+
+fn step(inout ps: List<Particle>, dt: f64, gravity: f64, drags: f64) -> Stats without alloc, panic {
+  let n = ps.len()
+  Stats { n }
+}
+
+fn steps(inout ps: List<Particle>, dt: f64, gravity: f64, drags: f64) -> Stats
+  without alloc, panic {
+  let n = ps.len()
+  Stats { n }
+}
+
+fn later(first_parameter: i64, second_parameter: i64, third_parameter: i64) -> i64
+  without alloc, div = ?
+
+impl Stats {
+  fn advance(inout self, ps: List<Particle>, dt: f64, gravity: f64, drag: f64) -> i64
+    without alloc { self.n }
+}
+
+pub fn make(
+  inout body: List<Particle>,
+  scope: Stats,
+  depth: i64,
+  targets: List<i64>,
+  choice: i64,
+) -> Stats
+  without alloc {
+  let n = depth
+  Stats { n }
+}

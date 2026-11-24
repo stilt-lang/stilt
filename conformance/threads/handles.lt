@@ -1,0 +1,32 @@
+//~ tier: advanced
+//~ rule: tasks.std-task, tasks.values-in-tasks, tasks.sequential-run
+//~ stdout:
+//~ | ["n1", "n2", "n3"] 3 ["n1", "n2", "n3", "more"] ["n1", "n2", "n3"]
+//~ | 2
+//~ | [10, 20, 30]
+
+use std.sync
+use std.task
+
+// Tasks that wait for a task they capture, and a shared value made in a task.
+fn main() / io {
+  with task.threads() {
+    let a = task.spawn(|| [1, 2, 3].map(|x| "n{x}"))
+    let b = task.spawn(|| a.await().len())
+    let c = task.spawn(|| {
+      var xs = a.await()
+      xs.push("more")
+      xs
+    })
+    print("{a.await()} {b.await()} {c.await()} {a.await()}")
+    let s = task.spawn(|| sync.Shared.new([10]))
+    let h = s.await()
+    let d = task.spawn(|| when h {
+      h.push(20)
+      h.len()
+    })
+    when h { h.push(30) }
+    print("{d.await()}")
+    when h { print("{h}") }
+  }
+}

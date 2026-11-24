@@ -1,0 +1,4 @@
+//~ tier: systems
+//~ rule: c.granting-unsafe
+
+// `io` doesn't grant `unsafe`.

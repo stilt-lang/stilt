@@ -1,0 +1,30 @@
+//~ rule: values.left-to-right, values.assignment-order, values.compound-assignment-order, expressions.struct-literal-fields
+//~ stdout:
+//~ | left
+//~ | right
+//~ | b
+//~ | a
+//~ | t1
+//~ | t2
+//~ | index
+//~ | value
+//~ | index again
+//~ | increment
+//~ | 3 P { a: 1, b: 2 } (1, 2) [3, 5]
+
+type P = { a: i64, b: i64 }
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn main() / io {
+  let sum = note("left", 1) + note("right", 2)
+  let p = P { b: note("b", 2), a: note("a", 1) }
+  let t = (note("t1", 1), note("t2", 2))
+  var xs = [0, 0]
+  xs[note("index", 1)] = note("value", 5)
+  xs[note("index again", 0)] += note("increment", 3)
+  print("{sum} {p} {t} {xs}")
+}

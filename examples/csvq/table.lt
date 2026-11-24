@@ -1,0 +1,151 @@
+// Running a query on a table.
+
+use csv
+use query
+
+/// The table that `q` makes of `t`: its rows filtered, grouped, sorted and cut to the limit,
+/// then its columns chosen.
+pub fn run(t: csv.Table, q: query.Query) -> csv.Table / raise<str> {
+  var t = t
+  for f in q.filters { t = try keep(t, f) }
+  if let Some(key) = q.group { t = try group(t, key, q.aggregates) }
+  if let Some(key) = q.sort { t = try sort(t, key, q.descending) }
+  if let Some(n) = q.limit { t = csv.Table { header: t.header, rows: t.rows.take(n) } }
+  if !q.columns.is_empty() { t = try select(t, q.columns) }
+  t
+}
+
+/// The index of the column `name`.
+fn index(t: csv.Table, name: str) -> i64 / raise<str> {
+  t.header.index_of(name) else raise "no column {name}; the columns are {", ".join(t.header)}"
+}
+
+/// Compares two fields as numbers when both are numbers, and as text otherwise.
+/// ex: compare("10", "9") == Greater
+/// ex: compare("10", "9a") == Less
+/// ex: compare("-2.5", "-2.5") == Equal
+pub fn compare(a: str, b: str) -> Ordering {
+  match (a.to_f64(), b.to_f64()) {
+    (Some(x), Some(y)) => Ord.compare(x, y)
+    _ => Ord.compare(a, b)
+  }
+}
+
+/// Whether `field` passes a filter with this operator and value.
+/// ex: passes("12", query.Above, "9")
+/// ex: !passes("Lyon", query.Equals, "lyon")
+fn passes(field: str, op: query.Op, value: str) -> bool {
+  let order = compare(field, value)
+  match op {
+    Equals => order == Equal
+    Differs => order != Equal
+    Below => order == Less
+    AtMost => order != Greater
+    Above => order == Greater
+    AtLeast => order != Less
+  }
+}
+
+fn keep(t: csv.Table, f: query.Filter) -> csv.Table / raise<str> {
+  let i = try index(t, f.column)
+  csv.Table { header: t.header, rows: t.rows.filter(|r| passes(r[i], f.op, f.value)) }
+}
+
+/// One row per value of the column `key`, in the order the values first appear, with a
+/// column for each aggregate.
+fn group(t: csv.Table, key: str, aggregates: List<query.Aggregate>) -> csv.Table / raise<str> {
+  let k = try index(t, key)
+  var header = [key]
+  for a in aggregates { header.push(name(a)) }
+  var rows = []
+  for (value, members) in t.rows.group_by(|r| r[k]) {
+    var row = [value]
+    for a in aggregates { row.push(try aggregate(t, a, members)) }
+    rows.push(row)
+  }
+  csv.Table { header, rows }
+}
+
+/// The name of an aggregate's column.
+/// ex: name(query.Sum("qty")) == "sum(qty)"
+fn name(a: query.Aggregate) -> str {
+  match a {
+    Count => "count"
+    Sum(c) => "sum({c})"
+    Mean(c) => "mean({c})"
+    Min(c) => "min({c})"
+    Max(c) => "max({c})"
+  }
+}
+
+fn aggregate(t: csv.Table, a: query.Aggregate, rows: List<List<str>>) -> str / raise<str> {
+  match a {
+    Count => "{rows.len()}"
+    Sum(c) => number(f64.sum(try numbers(t, c, rows)))
+    Mean(c) => {
+      let xs = try numbers(t, c, rows)
+      if xs.is_empty() { "" } else { number(f64.sum(xs) / xs.len().to_f64()) }
+    }
+    Min(c) => try fields(t, c, rows).sorted_with(compare).first() else ""
+    Max(c) => try fields(t, c, rows).sorted_with(compare).last() else ""
+  }
+}
+
+/// The non-empty fields of column `c` in `rows`.
+fn fields(t: csv.Table, c: str, rows: List<List<str>>) -> List<str> / raise<str> {
+  let i = try index(t, c)
+  rows.map(|r| r[i]).filter(|f| !f.is_empty())
+}
+
+/// The non-empty fields of column `c` in `rows`, each read as a number.
+fn numbers(t: csv.Table, c: str, rows: List<List<str>>) -> List<f64> / raise<str> {
+  try fields(t, c, rows).map(|f| f.to_f64() else raise "column {c} holds {f}, which isn't a number")
+}
+
+/// `x` without a fraction when it is a whole number, and with two digits after the point
+/// otherwise.
+/// ex: number(12.0) == "12"
+/// ex: number(2.0 / 3.0) == "0.67"
+/// ex: number(-0.5) == "-0.50"
+pub fn number(x: f64) -> str {
+  if x.trunc() == x && x.abs() < 1e15 { return "{x.to_i64() else 0}" }
+  "{x:.2}"
+}
+
+/// The rows sorted by the column `key`, keeping the order of rows whose keys are equal.
+fn sort(t: csv.Table, key: str, descending: bool) -> csv.Table / raise<str> {
+  let i = try index(t, key)
+  let rows = if descending {
+    t.rows.sorted_with(|a, b| compare(b[i], a[i]))
+  } else {
+    t.rows.sorted_with(|a, b| compare(a[i], b[i]))
+  }
+  csv.Table { header: t.header, rows }
+}
+
+fn select(t: csv.Table, columns: List<str>) -> csv.Table / raise<str> {
+  var indexes = []
+  for c in columns { indexes.push(try index(t, c)) }
+  csv.Table { header: columns, rows: t.rows.map(|r| indexes.map(|i| r[i])) }
+}
+
+const SALES: str = "city,product,qty\nLyon,tea,3\nNice,jam,1\nLyon,jam,2\nNice,tea,10"
+
+test "groups keep the order their values first appear in" {
+  let q = try query.parse(["x", "--group", "city", "--sum", "qty", "--count"])
+  let t = try run(try csv.parse(SALES), q)
+  assert t.header == ["city", "sum(qty)", "count"]
+  assert t.rows == [["Lyon", "5", "2"], ["Nice", "11", "2"]]
+}
+
+test "numbers sort as numbers, and ties keep their order" {
+  let q = try query.parse(["x", "--sort", "qty", "--desc", "--columns", "product,qty"])
+  let t = try run(try csv.parse("product,qty\na,2\nb,10\nc,2"), q)
+  assert t.rows == [["b", "10"], ["a", "2"], ["c", "2"]]
+}
+
+test "a filter on a column that doesn't exist names the columns" {
+  let q = try query.parse(["x", "--where", "town=Lyon"])
+  let r = Result.of(|| try run(try csv.parse(SALES), q))
+  assert r == Err("no column town; the columns are city, product, qty")
+}

@@ -1,0 +1,36 @@
+//~ tier: advanced
+//~ rule: tasks.scope-failure
+//~ stdout:
+//~ | caught 2
+
+use std.task
+
+type Bad = { n: i64 }
+
+// Spends a while before it raises, so that the task after it may start first under threads.
+fn slow_raise(n: i64) -> i64 / raise<Bad> {
+  var i = 0
+  var sum = 0
+  while i < 200000 {
+    sum += i % 7
+    i += 1
+  }
+  if sum >= 0 { raise Bad { n } } else { sum }
+}
+
+fn forever() -> i64 {
+  var n = 0
+  loop { n = (n + 1) % 1000 }
+}
+
+// The sequential run never starts the second task, which never ends: the scope waits for no
+// task that a raise before it cancels.
+fn failing() -> i64 / {io, async, raise<Bad>} {
+  try task.scope(|s| {
+    try s.spawn(|| slow_raise(2))
+    try s.spawn(|| forever())
+    0
+  })
+}
+
+fn main() / io { with task.threads() { print("caught {try failing() catch e => e.n}") } }

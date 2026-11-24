@@ -1,0 +1,4 @@
+//~ rule: lexical.interpolation
+fn f() -> str {
+  "{}" //~ ERROR E0100
+}

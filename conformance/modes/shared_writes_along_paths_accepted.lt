@@ -1,0 +1,66 @@
+//~ rule: modes.shared-writes, modes.shared-paths, modes.copies, facts.without-copy
+//~ stdout:
+//~ | 2 2 4 5 4
+
+// Paths that execution can't take make no write shared: a copy that a `break` or a `return`
+// takes away, or that a turn's own binding held, doesn't reach the writes after it.
+
+// The copy `w` takes in the branch leaves the loop with the `break`, so the write that the loop
+// goes on to reaches no copy of `x`.
+fn broken_off(c: bool) -> i64 without copy {
+  var x = [5]
+  var w = [1]
+  var i = 0
+  while i < 2 {
+    if c {
+      w = x
+      break
+    }
+    w[0] = 9
+    i += 1
+    w = [2]
+  }
+  x.len() + w.len() + i
+}
+
+// The closure that holds a copy of `xs` leaves the body with the `return`, which the push is on
+// no path after.
+fn returned_closure(flag: bool) -> fn() -> i64 without copy {
+  var xs = [1]
+  if flag {
+    let f = || xs.len()
+    return f
+  }
+  xs.push(2)
+  let n = xs.len()
+  || n
+}
+
+// `ys` is bound anew on each turn, and the copy that `zs` holds, of the turn before's `ys`,
+// ends with that turn.
+fn turn_bindings() -> i64 without copy {
+  var total = 0
+  for i in 0..2 {
+    var ys = [i]
+    ys.push(1)
+    let zs = ys
+    total += zs.len()
+  }
+  total
+}
+
+// `ys` holds a copy of `xs` only within a turn, and the push starts the next one.
+fn turn_holder(n: i64) -> i64 without copy {
+  var xs = [n]
+  var total = 0
+  for i in 0..2 {
+    xs.push(i)
+    let ys = xs
+    total += ys.len()
+  }
+  total
+}
+
+fn main() / io {
+  print("{broken_off(true)} {returned_closure(false)()} {turn_bindings()} {turn_holder(0)} {broken_off(false)}")
+}

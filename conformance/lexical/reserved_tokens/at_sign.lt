@@ -1,0 +1,2 @@
+@inline //~ ERROR E0100
+fn f() {}

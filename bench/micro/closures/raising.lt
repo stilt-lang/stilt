@@ -1,0 +1,16 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+type Fail = | Fail
+
+fn apply(f: fn(i64) -> i64, x: i64) -> i64 / raise<Fail> { f(x) }
+
+fn main() / {io, raise<Fail>} {
+  var xs = []
+  for i in 0..1000 { xs.push(i) }
+  var total = 0
+  for round in 0..30000 {
+    total = xs.fold(total, |acc, x| (acc + x * round) % 1000003)
+    total = try apply(|x| (x + round) % 1000003, total)
+  }
+  print("{total}")
+}

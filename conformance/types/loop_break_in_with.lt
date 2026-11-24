@@ -1,0 +1,23 @@
+//~ tier: advanced
+//~ rule: expressions.loop-types, handlers.with
+
+effect Ticks {
+  fn tick()
+}
+
+fn stops() -> i64 {
+  let quiet = handler Ticks { fn tick() {} }
+  loop { //~ ERROR E0311
+    with quiet {
+      Ticks.tick()
+      break
+    }
+  }
+}
+
+fn spins() -> i64 {
+  let quiet = handler Ticks { fn tick() {} }
+  loop {
+    with quiet { Ticks.tick() }
+  }
+}

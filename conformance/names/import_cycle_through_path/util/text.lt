@@ -1,0 +1,3 @@
+use main //~ ERROR E0206
+
+pub fn g() {}

@@ -1,0 +1,6 @@
+//~ rule: patterns.empty-matches
+//~ run-output: "checked"
+
+fn absurd(x: (i64, Never)) -> i64 { match x {} }
+
+fn main() / io { print("checked") }

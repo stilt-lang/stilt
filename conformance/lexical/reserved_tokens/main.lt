@@ -1,0 +1,4 @@
+//~ rule: lexical.no-characters, lexical.reserved-tokens, errors.syntax-errors
+fn initial() -> str {
+  'a' //~ ERROR E0100
+}

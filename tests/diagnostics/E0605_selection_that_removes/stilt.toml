@@ -1,0 +1,6 @@
+[package]
+name = "app"
+
+[dependencies]
+json = { from = "file:///repos/json", version = "1.4.0", hash = "b3:9d282c077407c18a81690a96a7b02dba823ca26fe41c0e410207f019f4ab30d7" }
+http = { path = "deps/http" }

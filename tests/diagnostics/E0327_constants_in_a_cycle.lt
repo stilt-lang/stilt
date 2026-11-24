@@ -1,0 +1,4 @@
+const WIDTH: i64 = HEIGHT
+const HEIGHT: i64 = WIDTH
+
+fn main() {}

@@ -1,0 +1,12 @@
+── FACT BEYOND A `without` LIMIT ── E0204_recursion_without_descent.lt:2:30  [E0204]
+
+This call of `steps` to itself, on no part of a parameter, may not end, but
+`steps` says `without div`:
+
+  1 │ fn steps(n: i64) -> i64 without div {
+    │                                 ─── the limit
+  2 │   if n <= 1 { 0 } else { 1 + steps(n / 2) }
+    │                              ^^^^^^^^^^^^
+
+Shrinking recursion needs every self-call to pass `p - s` or `p + s` at one
+parameter.

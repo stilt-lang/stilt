@@ -1,0 +1,231 @@
+//~ tier: core
+
+// Uniqueness (modes.shared-writes): a `var` of a copy-on-write type is shared at a write while a
+// copy of the written part may still last, or while the binding its value copies, or another
+// copy of that binding, may still read it, along the paths that execution may take, which is
+// conservative.
+
+type Pair = { left: List<i64>, right: List<i64> }
+
+fn grown(xs: List<i64>, x: i64) -> List<i64> {
+  var out = xs //~ CONSUMES xs
+  out.push(x) //~ ALLOC
+  out //~ ESCAPES out
+}
+
+// A copy bound by `let` lasts to the end of its scope.
+fn after_let() -> i64 {
+  var xs = [1] //~ ALLOC
+  let ys = xs
+  xs.push(2) //~ SHARED xs ALLOC COPY
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// A copy of a part, bound by a pattern, shares the part.
+fn after_pattern(p: Pair) -> i64 {
+  var p = p //~ CONSUMES p
+  let Pair { left, right } = p
+  p.left.push(1) //~ SHARED p ALLOC COPY
+  left.len() + right.len() //~ OVERFLOW
+}
+
+// A copy captured by a closure lasts to the end of the closure's binding's scope.
+fn after_capture() -> i64 {
+  var xs = [1] //~ ALLOC
+  let f = || xs.len() //~ ALLOC
+  xs.push(2) //~ SHARED xs ALLOC COPY
+  f() + f() //~ OVERFLOW DIV
+}
+
+// A copy stored in a value lasts as the value's binding does.
+fn after_literal() -> i64 {
+  var xs = [1] //~ ALLOC
+  let p = Pair { left: xs, right: [] } //~ ESCAPES xs ALLOC
+  xs.push(2) //~ SHARED xs ALLOC COPY
+  p.left.len()
+}
+
+// A copy passed to a consumed parameter, which the caller uses after the call, lasts as the
+// call's result does.
+fn after_lost_reuse() -> i64 {
+  var xs = [1] //~ ALLOC
+  let ys = grown(xs, 2) //~ ESCAPES xs LOST-REUSE xs ALLOC
+  xs.push(3) //~ SHARED xs ALLOC COPY
+  ys.len()
+}
+
+// A copy made later in a loop's body, held by a binding outside it, lasts into the next turn.
+fn in_a_loop() -> i64 {
+  var xs = [1] //~ ALLOC
+  var ys = [0] //~ ALLOC
+  var n = 0
+  for i in 0..3 {
+    xs.push(i) //~ SHARED xs ALLOC COPY
+    ys = xs
+    n += ys.len() //~ OVERFLOW
+  }
+  n
+}
+
+// One held by a binding of the body ends with its turn.
+fn in_a_turn() -> i64 {
+  var xs = [1] //~ ALLOC
+  var n = 0
+  for i in 0..3 {
+    xs.push(i) //~ ALLOC
+    let ys = xs
+    n += ys.len() //~ OVERFLOW
+  }
+  n
+}
+
+// A `break` that skips the assignment that would replace a copy leaves the copy held.
+fn after_break(flag: bool) -> i64 {
+  var x = [5] //~ ALLOC
+  var w = [1] //~ ALLOC
+  loop { //~ DIV
+    if flag {
+      w = x
+      break
+    }
+    w = [1] //~ ALLOC
+  }
+  w[0] = 9 //~ SHARED w PANIC ALLOC COPY
+  x.len() + w.len() //~ OVERFLOW
+}
+
+// A copy whose scope has ended lasts no more.
+fn after_scope(flag: bool) -> i64 {
+  var xs = [1] //~ ALLOC
+  var n = 0
+  if flag {
+    let ys = xs
+    n = ys.len()
+  }
+  xs.push(2) //~ ALLOC
+  n + xs.len() //~ OVERFLOW
+}
+
+// Assigning the whole binding again replaces its value, so earlier copies don't share it.
+fn after_assignment() -> i64 {
+  var xs = [1] //~ ALLOC
+  let ys = xs
+  xs = [5] //~ ALLOC
+  xs.push(2) //~ ALLOC
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// A copy of one part doesn't share another.
+fn other_part(p: Pair) -> i64 {
+  var p = p //~ CONSUMES p
+  let l = p.left
+  p.right.push(1) //~ ALLOC
+  l.len()
+}
+
+// A scalar has no uniqueness: nothing is copied on write.
+fn scalar() -> i64 {
+  var n = 0
+  let m = n
+  n += 1 //~ OVERFLOW
+  n + m //~ OVERFLOW
+}
+
+// A copy of a copy is a copy of the binding, and lasts as its own holder does.
+fn copy_of_a_copy(flag: bool) -> i64 {
+  var xs = [1] //~ ALLOC
+  var ws = [0] //~ ALLOC
+  if flag {
+    let ys = xs
+    ws = ys
+  }
+  xs.push(2) //~ SHARED xs ALLOC COPY
+  xs.len() + ws.len() //~ OVERFLOW
+}
+
+// A `var` whose value is a copy of another binding is shared while that binding may still read
+// it, after the write.
+fn holds_a_copy() -> i64 {
+  let xs = [1] //~ ALLOC
+  var ys = xs
+  ys.push(2) //~ SHARED ys ALLOC COPY
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// When the binding isn't read again, the copy is the only holder, and the write is unique.
+fn copy_read_no_more() -> i64 {
+  let xs = [1] //~ ALLOC
+  var ys = xs
+  ys.push(2) //~ ALLOC
+  ys.len()
+}
+
+// Another copy of the binding that may still read the part shares it too.
+fn another_copy() -> i64 {
+  let xs = [1] //~ ALLOC
+  let zs = xs
+  var ys = xs
+  ys.push(2) //~ SHARED ys ALLOC COPY
+  zs.len() + ys.len() //~ OVERFLOW
+}
+
+// A loop around the write reads the binding again on its next turn.
+fn read_in_a_loop() -> i64 {
+  let xs = [1] //~ ALLOC
+  var n = 0
+  for _ in 0..2 {
+    n += xs.len() //~ OVERFLOW
+    var ys = xs
+    ys.push(2) //~ SHARED ys ALLOC COPY
+    n += ys.len() //~ OVERFLOW
+  }
+  n
+}
+
+// Assigning the whole of the binding before the write replaces what it read.
+fn original_replaced() -> i64 {
+  var xs = [1] //~ ALLOC
+  var ys = xs
+  xs = [5] //~ ALLOC
+  ys.push(2) //~ ALLOC
+  xs.len() + ys.len() //~ OVERFLOW
+}
+
+// A copy held at a place inside a `var`'s value is written by a write that reaches inside the
+// place, and not by one beside it.
+fn holds_a_stored_copy() -> i64 {
+  let xs = [1] //~ ALLOC
+  var p = Pair { left: xs, right: [] } //~ ESCAPES xs ALLOC
+  p.left.push(2) //~ SHARED p ALLOC COPY
+  p.right.push(3) //~ ALLOC
+  xs.len() + p.left.len() //~ OVERFLOW
+}
+
+// The caller reads an `inout` parameter when the call returns, so a write to a copy of it is
+// shared, though nothing names the parameter after it.
+fn copied_inout(inout xs: List<i64>) {
+  var ys = xs
+  ys.push(2) //~ SHARED ys ALLOC COPY
+}
+
+// A closure's next call reads what it captures.
+fn copied_capture() -> i64 {
+  let xs = [1] //~ ALLOC
+  let f = || { //~ ALLOC
+    var ys = xs
+    ys.push(2) //~ SHARED ys ALLOC COPY
+    ys.len()
+  }
+  f() + f() //~ OVERFLOW DIV
+}
+
+type Tree = { items: List<i64>, kids: List<Tree> }
+
+// A copy made before `x = x.kids[0]` holds the part the assignment gives `x`.
+fn descended(t: Tree) -> i64 {
+  var x = Tree { items: [1], kids: [t] } //~ CONSUMES t ALLOC
+  let z = x
+  x = x.kids[0] //~ PANIC
+  x.items.push(2) //~ SHARED x ALLOC COPY
+  z.items.len()
+}

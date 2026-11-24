@@ -1,0 +1,24 @@
+//~ rule: values.inout-arguments, std.method-names, std.list-sorting, std.list-changes
+//~ stdout:
+//~ | [3, 2, 1] ["a", "bb", "ccc"]
+//~ | [1, 2, 3] [2, 1]
+
+// A function that takes a list `inout` sorts, de-duplicates and reverses its caller's list.
+fn tidy(inout xs: List<i64>) {
+  xs.sort()
+  xs.dedup()
+  xs.reverse()
+}
+
+fn by_length(inout words: List<str>) { words.sort_by(.len()) }
+
+fn main() / io {
+  var xs = [3, 1, 3, 2, 1]
+  tidy(inout xs)
+  var words = ["ccc", "a", "bb"]
+  by_length(inout words)
+  print("{xs} {words}")
+  var nested = [[3, 1, 2], [2, 1]]
+  nested[0].sort()
+  print("{nested[0]} {nested[1]}")
+}

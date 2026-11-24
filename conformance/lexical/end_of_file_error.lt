@@ -1,0 +1,5 @@
+//~ rule: conformance.diagnostic-lines, lexical.terminator-positions, syntax.inserted-token-positions
+fn unfinished() -> i64 { //~ ERROR E0100
+
+
+// Only comments and blank lines follow.

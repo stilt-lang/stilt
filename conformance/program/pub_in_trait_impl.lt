@@ -1,0 +1,9 @@
+//~ rule: syntax.programs, program.visibility
+
+type Point = { x: i64 }
+
+impl Show for Point {
+  pub fn show(self) -> str { //~ ERROR E0100
+    "point"
+  }
+}

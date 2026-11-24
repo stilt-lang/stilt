@@ -1,0 +1,13 @@
+//~ rule: lexical.continuation-lines, syntax.limit-clauses, declarations.limits
+
+// A `without` that ends its line before its limit starts no clause, so a terminator ends the
+// signature, and so does a line between them that holds another token.
+fn alone() -> i64 //~ ERROR E0100
+  without
+  alloc { 1 }
+
+fn between() -> i64 //~ ERROR E0100
+  1
+  without alloc { 1 }
+
+fn main() {}

@@ -1,0 +1,10 @@
+use std.task
+
+fn started() -> i64 / {io, async, raise<str>} {
+  try task.scope(|s| {
+    let t = try s.spawn(|| try s.spawn(|| 1).await())
+    t.await()
+  })
+}
+
+fn main() {}

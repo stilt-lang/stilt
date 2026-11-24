@@ -1,0 +1,15 @@
+//~ rule: par.panics
+//~ panic: explicit
+//~ stdout:
+//~ | start
+//~ stderr:
+//~ | panic: explicit: "first"
+//~ |   at panics.lt:13:47
+
+use std.par
+
+fn main() / io {
+  print("start")
+  let ys = par.map([1, 2, 3], |x| if x >= 2 { panic(if x == 2 { "first" } else { "second" }) } else { x })
+  print("{ys}")
+}

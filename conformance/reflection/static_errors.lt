@@ -1,0 +1,30 @@
+//~ tier: meta
+//~ rule: meta.not-static, meta.static-reflection
+
+use std.meta
+
+// `get` reads the value, a parameter, which is known only at run time.
+fn elements<T>(value: T) -> i64 {
+  var n = 0
+  comptime match T.shape() {
+    List(c) => {
+      comptime for x in c.get(value) { n += 1 } //~ ERROR E0349
+    }
+    _ => {}
+  }
+  n
+}
+
+// Without `comptime`, an arm's fields are bound at run time.
+fn fields_of<T>(value: T) -> i64 {
+  var n = 0
+  match T.shape() {
+    Record(fields) => {
+      comptime for f in fields { n += 1 } //~ ERROR E0349
+    }
+    _ => {}
+  }
+  n
+}
+
+fn main() {}

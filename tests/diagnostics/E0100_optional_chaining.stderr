@@ -1,0 +1,14 @@
+── SYNTAX ERROR ─────────────────────── E0100_optional_chaining.lt:3:38  [E0100]
+
+Stilt reads a field through an `Option` with `.`, without `?`:
+
+  3 │ fn boss_name(u: User) -> str { u.boss?.name ?? "none" }
+    │                                      ^
+
+A field read through an `Option` is an `Option` of the field, `None` when the
+value is missing.
+
+To fix it, write `.` and `else`:
+
+  3 │ fn boss_name(u: User) -> str { u.boss.name else "none" }
+    │                                            ~~~~

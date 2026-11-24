@@ -1,0 +1,10 @@
+use std.sync
+use std.lazy
+
+type Rates = { euro: f64 }
+
+fn priced(rates: sync.Shared<Rates>, amount: f64) -> lazy.Lazy<f64> {
+  lazy.Lazy.new(|| when rates { amount * rates.euro })
+}
+
+fn main() {}

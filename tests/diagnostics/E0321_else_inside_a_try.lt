@@ -1,0 +1,11 @@
+fn cell(text: str) -> Option<Option<i64>> / raise<str> {
+  if text == "" { raise "empty" }
+  Some(text.to_i64())
+}
+
+fn describe(text: str) -> str / raise<str> {
+  let Some(n) = try cell(text) else raise "missing"
+  "{n}"
+}
+
+fn main() {}

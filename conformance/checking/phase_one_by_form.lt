@@ -1,0 +1,49 @@
+//~ rule: errors.phase-by-form
+
+type Color = | Red | Green
+type Failure = | Missing
+
+fn fetch() -> i64 / raise<Failure> { raise Missing }
+
+fn refutable(o: Option<i64>, c: Color) -> i64 {
+  let Some(n) = o //~ ERROR E0321
+  match c {
+    Red => n
+  }
+}
+
+fn float_pattern(x: f64, c: Color) -> i64 {
+  let n = match x {
+    1 => 1 //~ ERROR E0328
+    _ => 0
+  }
+  match c {
+    Red => n
+  }
+}
+
+fn alternatives(p: (i64, i64), c: Color) -> i64 {
+  let n = match p {
+    (a, 0) | (0, b) => 1 //~ ERROR E0217
+    _ => 0
+  }
+  match c {
+    Red => n
+  }
+}
+
+fn reason(c: Color) -> i64 {
+  let n = try fetch() catch {
+    Missing because "a missing value counts as zero" => 0 //~ ERROR E0504
+  }
+  match c {
+    Red => n
+  }
+}
+
+fn outside(c: Color) -> i64 {
+  break //~ ERROR E0216
+  match c {
+    Red => 1
+  }
+}

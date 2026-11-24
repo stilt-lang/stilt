@@ -1,0 +1,14 @@
+//~ rule: types.mismatch, expressions.if-let, patterns.match
+
+fn main() {
+  let o = Some(1)
+  let a = if let Some(x) = o { x } else { "none" } //~ ERROR E0311
+}
+
+fn unit_block(o: Option<i64>) {
+  if let Some(x) = o { x } //~ ERROR E0323
+}
+
+fn pattern_type(o: Option<i64>) {
+  if let Ok(x) = o { let _ = x } //~ ERROR E0311
+}

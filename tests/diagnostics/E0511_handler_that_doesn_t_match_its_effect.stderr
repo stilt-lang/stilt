@@ -1,0 +1,9 @@
+── HANDLER THAT DOESN'T MATCH ITS EFFECT ── E0511_handler_that_doesn_t_match_its_effect.lt:7:17  [E0511]
+
+This handler doesn't match `Ask`: it misses the operation `tell`:
+
+  7 │   with (handler Ask { fn ask() -> i64 { 1 } }) { Ask.ask() }
+    │                 ^^^
+
+A handler implements every operation of its effect, with the parameter and
+result types that the effect declares. Add the missing operations.

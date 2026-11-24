@@ -1,0 +1,9 @@
+//~ rule: program.panic-location
+//~ stderr:
+//~ | panic: explicit: "ünïcode"
+//~ |   at panic_location_columns.lt:8:21
+//~ panic: explicit
+
+fn main() {
+	let s = "ünïcode"; panic(s)
+}

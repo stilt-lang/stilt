@@ -1,0 +1,19 @@
+//~ rule: expressions.places, modes.places
+
+type Point = { x: i64, y: i64 }
+
+fn bump(inout n: i64) { n += 1 }
+
+fn make() -> Point { Point { x: 0, y: 0 } }
+
+fn make_list() -> List<i64> { [0] }
+
+fn assign() {
+  make().x = 1 //~ ERROR E0401
+  make_list()[0] = 1 //~ ERROR E0401
+  bump(inout make().y) //~ ERROR E0401
+  make_list().push(1) //~ ERROR E0401
+  var p = make()
+  p.x = 1
+  bump(inout p.y)
+}

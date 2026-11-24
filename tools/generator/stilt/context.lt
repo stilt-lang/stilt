@@ -1,0 +1,189 @@
+// Where code is generated: the program so far, the scope of the code, the
+// budget of the body it belongs to, and the types it can name.
+
+use code
+use pick
+use ty
+
+/// A function of the program: its name, whether each parameter is `inout`
+/// with its type, its return type, whether its row is `raise<Fault>`, and an
+/// estimate of the steps a call takes.
+pub type FnSig = { fname: str, params: List<(bool, ty.Ty)>, ret: ty.Ty, raises: bool, cost: i64 }
+
+/// The program so far: the generator its choices draw from, the declared
+/// types in declaration order, the functions declared so far, the number in
+/// the last fresh name, and the error type of every function that raises,
+/// with its variants.
+pub type Program = {
+  r: pick.Rng,
+  decls: List<(str, ty.Decl)>,
+  fns: List<FnSig>,
+  count: i64,
+  fault: str,
+  fault_variants: List<(str, List<ty.Ty>)>,
+}
+
+/// A name no other name of the program has.
+/// ex: { var p = program(pick.make(0), FAULT, FAULT_VARIANTS); fresh(inout p, "g") == "g1" && fresh(inout p, "v") == "v2" }
+pub fn fresh(inout p: Program, prefix: str) -> str {
+  p.count += 1
+  "{prefix}{p.count}"
+}
+
+/// A program with no declarations yet.
+pub fn program(r: pick.Rng, fault: str, fault_variants: List<(str, List<ty.Ty>)>) -> Program {
+  Program { r, decls: [], fns: [], count: 0, fault, fault_variants }
+}
+
+/// The error type of every function that raises, as its own module writes it.
+pub const FAULT: str = "Fault"
+
+pub const FAULT_VARIANTS: List<(str, List<ty.Ty>)> = [
+  ("Bad", [ty.Int(ty.I64)]),
+  ("Odd", [ty.Str]),
+  ("Lost", []),
+]
+
+pub const FAULT_DECL: str = "type Fault = | Bad(i64) | Odd(str) | Lost"
+
+pub type Var = { name: str, ty: ty.Ty, mutable: bool }
+
+/// Where code is being generated. `vars` are latest first. `frozen` are the
+/// variables that can't change here: those that an enclosing loop reads
+/// (modes.law), and loop counters. `in_loop` tells whether `break` and
+/// `continue` have a loop to act on, `may_raise` whether a raise of `Fault`
+/// may escape, `returns` what `return` returns outside closures, and `weight`
+/// how many times the code may run per call.
+pub type Scope = {
+  vars: List<Var>,
+  frozen: List<str>,
+  in_loop: bool,
+  may_raise: bool,
+  io: bool,
+  returns: Option<ty.Ty>,
+  weight: i64,
+}
+
+/// The body being generated, and how much of its budget it has used.
+pub type Body = { p: Program, budget: i64, spent: i64 }
+
+/// What makes expressions: `expr.expr`, which the modules of the forms take
+/// to make their operands.
+pub type Expr = { make: fn(inout Body, Scope, i64, bool, ty.Ty) -> code.Code }
+
+pub fn affordable(b: Body, sc: Scope, cost: i64) -> bool { b.spent + sc.weight * cost <= b.budget }
+
+pub fn spend(inout b: Body, sc: Scope, cost: i64) { b.spent += sc.weight * cost }
+
+pub fn decl(b: Body, name: str) -> ty.Decl { ty.lookup(b.p.decls, name) }
+
+pub fn typed(vars: List<Var>, t: ty.Ty) -> List<Var> { vars.filter(|v| v.ty == t) }
+
+pub fn declare(sc: Scope, name: str, t: ty.Ty, mutable: bool) -> Scope {
+  var out = sc
+  out.vars = [Var { name, ty: t, mutable }].concat(sc.vars)
+  out
+}
+
+pub fn changeable(sc: Scope) -> List<Var> {
+  sc.vars.filter(|v| v.mutable && !sc.frozen.contains(v.name))
+}
+
+pub fn without(names: List<str>, sc: Scope) -> Scope {
+  var out = sc
+  out.vars = sc.vars.filter(|v| !names.contains(v.name))
+  out
+}
+
+/// The scope of a closure's body. It reads copies of the variables, which it
+/// can't change (expressions.capture), and `return`, `break` and `continue` don't
+/// cross it.
+pub fn closure_scope(sc: Scope, params: List<Var>) -> Scope {
+  Scope {
+    vars: params.concat(sc.vars.map(|v| Var { name: v.name, ty: v.ty, mutable: false })),
+    frozen: sc.frozen,
+    in_loop: false,
+    may_raise: false,
+    io: false,
+    returns: None,
+    weight: sc.weight * 4,
+  }
+}
+
+pub fn leaf_ty(inout r: pick.Rng) -> ty.Ty {
+  pick.run(
+    inout r,
+    [
+      (6, |inout r| ty.Int(pick.one(inout r, ty.INT_KINDS))),
+      (2, |inout r| ty.Float(pick.one(inout r, ty.FLOAT_KINDS))),
+      (3, |inout r| ty.Bool),
+      (4, |inout r| ty.Str),
+    ],
+  )
+}
+
+pub fn key_ty(inout r: pick.Rng) -> ty.Ty {
+  pick.run(
+    inout r,
+    [
+      (3, |inout r| ty.Int(pick.one(inout r, ty.INT_KINDS))),
+      (2, |inout r| ty.Str),
+      (1, |inout r| ty.Bool),
+    ],
+  )
+}
+
+/// A type of at most `depth` levels. Without `maps`, no map appears in it,
+/// since no map has a type that is known without an expected type.
+pub fn random_ty(inout p: Program, maps: bool, depth: i64) -> ty.Ty {
+  if depth <= 0 { return leaf_ty(inout p.r) }
+  let decls = p.decls
+  let named = decls.filter_map(
+    |(name, _)| if maps || !ty.has_map(decls, ty.Named(name)) {
+      Some(ty.Named(name))
+    } else {
+      None
+    },
+  )
+  run_in(
+    inout p,
+    [
+      (10, |inout p| leaf_ty(inout p.r)),
+      (2, |inout p| ty.ListOf(random_ty(inout p, maps, depth - 1))),
+      (2, |inout p| ty.OptionOf(random_ty(inout p, maps, depth - 1))),
+      (
+        1,
+        |inout p| {
+          let n = pick.between(inout p.r, 2, 3)
+          var ts = []
+          for _ in 0..n { ts.push(random_ty(inout p, maps, depth - 1)) }
+          ty.Tuple(ts)
+        },
+      ),
+      (
+        if maps { 1 } else { 0 },
+        |inout p| {
+          // The value's type is drawn before the key's.
+          let v = random_ty(inout p, maps, depth - 1)
+          ty.MapOf(key_ty(inout p.r), v)
+        },
+      ),
+      (if named.is_empty() { 0 } else { 3 }, |inout p| pick.one(inout p.r, named)),
+      (1, |inout p| ty.Unit),
+    ],
+  )
+}
+
+/// What one of the closures makes, each as likely as its weight, drawing from the
+/// program's generator.
+pub fn run_in<T>(inout p: Program, choices: List<(i64, fn(inout Program) -> T)>) -> T {
+  let i = pick.weighted(inout p.r, choices.map(|(w, _)| w))
+  choices[i].1(inout p)
+}
+
+/// What one of the closures makes, each as likely as its weight, drawing from the
+/// generator of the body's program.
+pub fn run<T>(inout b: Body, choices: List<(i64, fn(inout Body) -> T)>) -> T {
+  let i = pick.weighted(inout b.p.r, choices.map(|(w, _)| w))
+  choices[i].1(inout b)
+}

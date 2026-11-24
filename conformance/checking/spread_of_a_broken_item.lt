@@ -1,0 +1,12 @@
+//~ rule: variadics.spread-checks, errors.error-type, program.meeting-the-error-type
+
+// A `use` of an item binds its name to the error type, reported at the `use`, so a spread of a
+// call to it, which names no tuple of a pack, gets no error of its own.
+use std.io.read_line //~ ERROR E0230
+
+fn first(x: i64) -> i64 { x }
+
+fn spread() -> i64 { first(..read_line()) }
+
+// A tuple holding such a spread has the error type, since nothing says how many elements it has.
+fn tupled() -> i64 { (..read_line()) }

@@ -1,0 +1,22 @@
+//~ tier: meta
+//~ rule: errors.error-type, program.meeting-the-error-type, program.programs-with-errors
+//~ stdout:
+//~ | {"x":1,"y":2}
+//~ | Point
+
+use std.json
+use std.meta
+
+type Point = { x: i64, y: i64 }
+
+// An impl of a type that no declaration names adds a member to no type. A program's member of
+// that name meets the error type, since the impl may have meant its type, but the library's
+// code never does, so `json.to_text` still reads `Point`'s shape.
+impl Nope { //~ ERROR E0211
+  fn shape() -> i64 { 1 }
+}
+
+fn main() / io {
+  print(json.to_text(Point { x: 1, y: 2 }))
+  print(Point.name())
+}

@@ -1,0 +1,13 @@
+//~ rule: types.expected-types, expressions.key-paths
+//~ run-output: "[3, 1] 5"
+
+type Item = { name: str, qty: i64 }
+
+fn total(items: List<Item>, f: fn(Item) -> i64) -> i64 { items.fold(0, |a, i| a + f(i)) }
+
+fn main() / io {
+  let items = [Item { name: "pen", qty: 3 }, Item { name: "c", qty: 2 }]
+  let names: fn(Item) -> str = .name
+  let lengths = items.map(.name.len())
+  print("{lengths} {total(items, .qty)}")
+}

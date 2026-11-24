@@ -1,0 +1,14 @@
+//~ rule: effects.catch-syntax, effects.reasons-only-on-catch-alls
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> {
+  raise Missing
+}
+
+fn lookup(key: str) -> i64 {
+  try fetch(key) catch {
+    failure if key == "" because "an empty key never matches" => 0 //~ ERROR E0100
+    _ because "every failure counts as zero" => 1
+  }
+}

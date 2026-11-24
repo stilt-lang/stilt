@@ -1,0 +1,19 @@
+module std.lazy
+
+// Values computed on their first use and kept (polymorphism.lazy-values and polymorphism.lazy-implicit-effects). The
+// function a `Lazy` keeps performs no effect, so no program can observe when
+// it runs, and every copy of a `Lazy` shares its result. Both functions here
+// are native (views.std-view).
+
+/// A value of type `T`, computed by a function the first time it is asked for.
+pub type Lazy<T> = ?
+
+impl<T> Lazy<T> {
+  /// A `Lazy` whose value is `f()`, which runs when `get` is first called.
+  /// ex: Lazy.new(|| 2 + 3).get() == 5
+  pub fn new(escaping f: fn() -> T) -> Lazy<T> = ?
+
+  /// The value, computed by the first call on this value or a copy of it.
+  /// ex: Lazy.new(|| [1, 2]).get().len() == 2
+  pub fn get(self) -> T = ?
+}

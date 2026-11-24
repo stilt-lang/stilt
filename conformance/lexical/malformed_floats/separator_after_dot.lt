@@ -1,0 +1,1 @@
+const A: f64 = 1._5 //~ ERROR E0003

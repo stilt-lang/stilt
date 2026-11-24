@@ -1,0 +1,32 @@
+//~ rule: lexical.contextual-keywords.as-names, lexical.continuation-lines, syntax.limit-clauses, declarations.limits
+//~ run-output: "3 7 2 4"
+
+// A line that begins with `without` and a limit continues the line before it, so a function's
+// `without` clause may start the line after its signature, past blank lines and comment lines.
+type Stats = { n: i64 }
+
+fn step(xs: List<i64>, gravity: i64) -> Stats
+  without alloc, panic {
+  Stats { n: xs.len() + gravity }
+}
+
+fn later(x: i64) -> i64
+
+  // the limits
+  without alloc {
+  x + 6
+}
+
+impl Stats {
+  fn twice(self) -> i64
+    without alloc { self.n * 2 }
+}
+
+fn main() / io {
+  var without = 1
+  // A line that begins with a local named `without` and no limit is a statement of its own.
+  let n = without
+  without = n + 3
+  let s = Stats { n: 1 }
+  print("{step([1, 2], 1).n} {later(1)} {s.twice()} {without}")
+}

@@ -1,0 +1,46 @@
+//~ rule: declarations.variant-types, patterns.variants-by-type, patterns.or-patterns, std.lists
+//~ stdout:
+//~ | (empty)   OK
+//~ | []        OK
+//~ | ][        NOT OK
+//~ | [][]      OK
+//~ | ][][      NOT OK
+//~ | []][[]    NOT OK
+//~ | [[][]]    OK
+//~ | ([]{})    OK
+//~ | ([)]      NOT OK
+
+// Rosetta Code, Balanced brackets: a string of brackets is balanced when every opening bracket is
+// closed, in order, by its own closing bracket. The task's examples are its first seven strings;
+// the last two mix the three kinds of bracket.
+
+type Bracket = | Open(str) | Close(str) | Other
+
+fn classify(c: str) -> Bracket {
+  match c {
+    "[" | "(" | "\{" => Open(c)
+    "]" => Close("[")
+    ")" => Close("(")
+    "}" => Close("\{")
+    _ => Other
+  }
+}
+
+fn balanced(s: str) -> bool {
+  var open = []
+  for c in s.chars() {
+    match classify(c) {
+      Open(b) => open.push(b)
+      Close(b) => { if open.pop() != Some(b) { return false } }
+      Other => {}
+    }
+  }
+  open.is_empty()
+}
+
+fn main() / io {
+  for s in ["", "[]", "][", "[][]", "][][", "[]][[]", "[[][]]", "([]\{})", "([)]"] {
+    let shown = if s == "" { "(empty)" } else { s }
+    print("{shown:<9} {if balanced(s) { "OK" } else { "NOT OK" }}")
+  }
+}

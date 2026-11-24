@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: views.adapters
+
+use std.view
+
+fn shout(x: i64) -> i64 / io {
+  print("{x}")
+  x
+}
+
+fn main() / io {
+  let it = view.Iter.of([1]).map(|x| { print("{x}"); x }) //~ ERROR E0502
+  let f = shout
+  let it2 = view.Iter.of([1]).map(f) //~ ERROR E0311
+  let it3 = view.Iter.of([1]).filter(|x| raise "no") //~ ERROR E0502
+  print("{it.count()} {it2.count()} {it3.count()}")
+}

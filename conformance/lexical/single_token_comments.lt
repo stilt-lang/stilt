@@ -1,0 +1,12 @@
+//~ rule: lexical.commented-out-code.single-token, lexical.string-literals
+// "hello {name}"
+// ()
+// (unused)
+// - retries
+// ?
+// true
+// -1.5
+// i.e. done //~ WARN W0001
+// "a {x}" == "b" //~ WARN W0001
+
+fn main() {}

@@ -1,0 +1,19 @@
+//~ rule: patterns.constants, patterns.constants-with-written-eq
+//~ run-output: "true false"
+
+type Name = { text: str }
+
+const ANA: Name = Name { text: "ana" }
+
+fn is_ana(n: Name) -> bool {
+  match n {
+    ANA => true
+    _ => false
+  }
+}
+
+fn main() / io {
+  let a = Name { text: "ana" }
+  let b = Name { text: "bo" }
+  print("{is_ana(a)} {is_ana(b)}")
+}

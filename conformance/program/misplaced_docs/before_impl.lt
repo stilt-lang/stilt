@@ -1,0 +1,4 @@
+pub type Point = { x: i64 }
+
+/// Before an impl block. //~ ERROR E0100
+impl Point {}

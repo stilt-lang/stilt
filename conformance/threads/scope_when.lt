@@ -1,0 +1,48 @@
+//~ tier: advanced
+//~ rule: tasks.scope-failure, shared.when, shared.when-order
+//~ stdout:
+//~ | raised 2
+//~ | [0, 1]
+//~ | raised 2
+//~ | [0, 1]
+
+use std.sync
+use std.task
+
+type Bad = { n: i64 }
+
+fn slow(n: i64) -> i64 {
+  var s = 0
+  var i = 0
+  while i < 200000 {
+    s = (s + i) % 7
+    i += 1
+  }
+  n + s - s
+}
+
+fn check(n: i64) -> i64 / raise<Bad> {
+  if slow(n) == 2 { raise Bad { n } } else { n }
+}
+
+// The second task raises: neither the third task nor the scope's function, which the
+// sequential run never reaches, adds to the list.
+fn logged(h: handler async) -> List<i64> / io {
+  let log = sync.Shared.new([0])
+  with h {
+    let r = try task.scope(|s| {
+      try s.spawn(|| when log { log.push(1) })
+      try s.spawn(|| check(2))
+      try s.spawn(|| when log { log.push(3) })
+      when log { log.push(4) }
+      0
+    }) catch e => e.n
+    print("raised {r}")
+  }
+  when log { log }
+}
+
+fn main() / io {
+  print("{logged(task.threads())}")
+  print("{logged(task.sequential())}")
+}

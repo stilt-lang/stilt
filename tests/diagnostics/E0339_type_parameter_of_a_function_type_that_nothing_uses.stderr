@@ -1,0 +1,15 @@
+── TYPE PARAMETER OF A FUNCTION TYPE THAT NOTHING USES ── E0339_type_parameter_of_a_function_type_that_nothing_uses.lt:1:19  [E0339]
+
+`U` appears in neither the parameters nor the result, so no call can tell what
+it is:
+
+  1 │ fn first(f: fn<T, U>(T) -> T) -> i64 { f(1) }
+    │                   ^
+
+A function type's type parameter appears in its parameters or its result, so
+that each call can tell what it is. Delete the one that doesn't.
+
+To fix it, delete `U`:
+
+  1 │ fn first(f: fn<T, U>(T) -> T) -> i64 { f(1) }
+    │                 ---

@@ -1,0 +1,19 @@
+//~ rule: traits.inherent-names, traits.declaring-trait
+
+type Wrapper<T> = { inner: T }
+
+impl<T> Wrapper<T> {
+  fn map<U>(self, f: fn(T) -> U) -> Wrapper<U> { Wrapper { inner: f(self.inner) } }
+
+  fn replace<T>(self, x: T) -> T { //~ ERROR E0208
+    x
+  }
+}
+
+trait Chooser {
+  fn choose<T>(self, a: T, b: T) -> T
+}
+
+impl<T> Chooser for Wrapper<T> {
+  fn choose<U>(self, a: U, b: U) -> U { a }
+}

@@ -1,0 +1,8 @@
+── `when` ON SOMETHING THAT ISN'T SHARED ── E0433_when_on_something_that_isn_t_shared.lt:2:8  [E0433]
+
+`n` has type `i64`, so `when` can't hold it; only a `Shared<T>` can be held:
+
+  2 │   when n { n + 1 }
+    │        ^
+
+`when` holds shared values, of type `Shared<T>`. Use an ordinary value directly.

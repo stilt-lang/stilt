@@ -1,0 +1,71 @@
+// Who logged in, from where, and what the cache did with their sessions.
+
+/// An address of IPv4: its four numbers.
+pub type Ip = { a: u8, b: u8, c: u8, d: u8 }
+
+/// A login: the user, the address it came from, whether it succeeded, and how many attempts it
+/// took when the line says.
+pub type Login = { user: str, ip: Ip, ok: bool, attempts: Option<i64> }
+
+/// A key of the cache: its space and its number, as in `user:42`.
+pub type Key = { space: str, id: i64 }
+
+/// What the cache did: found a key, missed it, or evicted it, freeing some bytes.
+pub type Cache = | Hit(Key) | Miss(Key) | Evict(Key, i64)
+
+impl Ip {
+  /// The address of four numbers, each below 256.
+  /// ex: Ip.parse(["10", "0", "0", "4"]) == Some(Ip { a: 10, b: 0, c: 0, d: 4 })
+  /// ex: Ip.parse(["10", "0", "0", "256"]) == None
+  pub fn parse(parts: List<str>) -> Option<Ip> {
+    let numbers = Option.all(parts.map(|p| p.to_u8())) else return None
+    let [a, b, c, d] = numbers else return None
+    Some(Ip { a, b, c, d })
+  }
+
+  /// The address as a line writes it.
+  /// ex: Ip { a: 10, b: 0, c: 0, d: 4 }.text() == "10.0.0.4"
+  pub fn text(self) -> str { "{self.a}.{self.b}.{self.c}.{self.d}" }
+
+  /// Whether the address belongs to a private network.
+  /// ex: Ip { a: 10, b: 1, c: 2, d: 3 }.private()
+  /// ex: Ip { a: 192, b: 168, c: 0, d: 1 }.private()
+  /// ex: !Ip { a: 8, b: 8, c: 8, d: 8 }.private()
+  pub fn private(self) -> bool {
+    self.a == 10 ||
+      (self.a == 172 && self.b >= 16 && self.b < 32) ||
+      (self.a == 192 && self.b == 168)
+  }
+}
+
+impl Login {
+  /// The attempts the login took: those the line gave, or one.
+  /// ex: Login { user: "a", ip: Ip { a: 1, b: 1, c: 1, d: 1 }, ok: true, attempts: None }.tries() == 1
+  pub fn tries(self) -> i64 { self.attempts else 1 }
+}
+
+impl Key {
+  /// The key as a line writes it.
+  /// ex: Key { space: "user", id: 42 }.text() == "user:42"
+  pub fn text(self) -> str { "{self.space}:{self.id}" }
+}
+
+impl Cache {
+  /// The key the cache looked up or evicted.
+  /// ex: Evict(Key { space: "s", id: 1 }, 10).key() == Key { space: "s", id: 1 }
+  pub fn key(self) -> Key {
+    match self {
+      Hit(k) | Miss(k) | Evict(k, _) => k
+    }
+  }
+
+  /// What the cache did, in a word.
+  /// ex: Miss(Key { space: "s", id: 1 }).action() == "miss"
+  pub fn action(self) -> str {
+    match self {
+      Hit(_) => "hit"
+      Miss(_) => "miss"
+      Evict(_, _) => "evict"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+// Writing a JSON value as pick prints it: indented two spaces a level, as jq prints it, or on one
+// line.
+
+use std.json
+
+/// `v` as text: on one line when `compact`, and a string with no quotes when `raw`.
+/// ex: shown(json.Text("a\"b"), true, false) == "\"a\\\"b\""
+/// ex: shown(json.Text("a\"b"), true, true) == "a\"b"
+pub fn shown(v: json.Value, compact: bool, raw: bool) -> str {
+  match v {
+    Text(s) if raw => s
+    _ if compact => json.render(v)
+    _ => {
+      var out = []
+      indented(v, "", inout out)
+      "".join(out)
+    }
+  }
+}
+
+/// Writes `v` to `out`, each element and member on a line of its own, `indent` before its
+/// closing bracket.
+fn indented(v: json.Value, indent: str, inout out: List<str>) {
+  let inner = "{indent}  "
+  match v {
+    Array(items) if !items.is_empty() => {
+      out.push("[")
+      for (i, x) in items.enumerate(0) {
+        out.push(if i == 0 { "\n{inner}" } else { ",\n{inner}" })
+        indented(x, inner, inout out)
+      }
+      out.push("\n{indent}]")
+    }
+    Object(members) if !members.is_empty() => {
+      out.push("\{")
+      for (i, (k, x)) in members.enumerate(0) {
+        out.push(if i == 0 { "\n{inner}" } else { ",\n{inner}" })
+        out.push("{json.render(json.Text(k))}: ")
+        indented(x, inner, inout out)
+      }
+      out.push("\n{indent}}")
+    }
+    _ => out.push(json.render(v))
+  }
+}
+
+test "a value is printed as jq prints it" {
+  let v = json.Object(
+    [("a", json.Array([json.Number("1"), json.Object([])])), ("b", json.Array([]))],
+  )
+  assert shown(v, false, false) == "\{\n  \"a\": [\n    1,\n    \{}\n  ],\n  \"b\": []\n}"
+}

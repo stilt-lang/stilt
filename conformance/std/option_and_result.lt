@@ -1,0 +1,29 @@
+//~ rule: traits.structural-calls, effects.result, std.option-result-and-ordering
+//~ stdout:
+//~ | true false false true Some(2) None 5 7 Ok(1) Err("none")
+//~ | true false false true Some(1) None None Some("bad") Ok(2) Err("bad") Ok(1) Err(3)
+//~ | true true true true true true true
+//~ | Ok(3) Err("odd") 4 -1
+
+fn half(n: i64) -> i64 / raise<str> {
+  if n % 2 == 1 { raise "odd" }
+  n / 2
+}
+
+fn main() / {io, raise<str>} {
+  let one = Some(1)
+  let none: Option<i64> = None
+  print("{one.is_some()} {one.is_none()} {none.is_some()} {none.is_none()} {one.map(|x| x + 1)} {none.map(|x| x + 1)} {Some(5).unwrap_or(7)} {none.unwrap_or(7)} {one.ok_or("none")} {none.ok_or("none")}")
+  let good: Result<i64, str> = Ok(1)
+  let bad: Result<i64, str> = Err("bad")
+  let code: Result<i64, i64> = Err(1)
+  print("{good.is_ok()} {good.is_err()} {bad.is_ok()} {bad.is_err()} {good.ok()} {bad.ok()} {good.err()} {bad.err()} {good.map(|x| x + 1)} {bad.map(|x| x + 1)} {good.map_err(|e| e.len())} {code.map_err(|e| e + 2)}")
+  let small: Option<i64> = Some(0)
+  let ok: Result<i64, i64> = Ok(1)
+  let err: Result<i64, i64> = Err(0)
+  print("{none < small} {ok < err} {Less < Equal} {Equal < Greater} {Some(1) < Some(2)} {Err(0) > Ok(100)} {Less < Greater}")
+  let caught = try bad.get() catch error because "the test shows the fallback" => -1
+  let fine: Result<i64, str> = Ok(4)
+  let four = try fine.get()
+  print("{Result.of(|| try half(6))} {Result.of(|| try half(3))} {four} {caught}")
+}

@@ -1,0 +1,7 @@
+use std.meta
+
+/// One.
+pub macro one() -> meta.Expr { quote { 1 } }
+
+/// Two.
+pub fn two() -> i64 { 2 }

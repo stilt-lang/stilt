@@ -1,0 +1,33 @@
+//~ rule: syntax.expressions, syntax.ambiguities, syntax.operator-precedence, syntax.longest-operands, expressions.precedence, expressions.open-ended-forms
+//~ stdout:
+//~ | -5 true
+//~ | -2
+//~ | 7 8 6 7 5
+//~ | true true true
+//~ | false 2
+//~ | 10 5 7 4
+
+fn first_or(o: Option<bool>, a: bool, b: bool) -> bool { o else a || b }
+
+fn chained(x: Option<i64>, y: Option<i64>) -> i64 { x else y else 2 }
+
+fn early(x: i64) -> i64 { x + return 5 * 2 }
+
+fn negated_early(x: i64) -> i64 { -return x + 1 }
+
+fn fallback(x: Option<i64>, e: i64) -> i64 / raise<i64> { x else raise e + 1 }
+
+fn main() / io {
+  let x = -5
+  let xs = [1]
+  print("{-x.abs()} {!xs.is_empty()}")
+  let zero: i64 = 0
+  print("{!zero * 2}")
+  let one: i64 = 1
+  print("{1 + 2 * 3} {one << 2 + 1} {6 & 3 << 1} {6 ^ 3 & 5} {1 | 6 ^ 3}")
+  print("{1 | 2 == 3} {1 < 2 && 3 < 4} {true || false && false}")
+  print("{first_or(Some(false), false, true)} {chained(None, None)}")
+  let raised = try fallback(None, 4) catch n because "the raised value is the answer" => n
+  let kept = try fallback(Some(7), 4) catch n because "the raised value is the answer" => n
+  print("{early(1)} {raised} {kept} {negated_early(3)}")
+}

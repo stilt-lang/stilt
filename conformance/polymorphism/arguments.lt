@@ -1,0 +1,42 @@
+//~ tier: advanced
+//~ rule: syntax.polymorphic-function-types, polymorphism.function-types, polymorphism.instantiation, polymorphism.rigid-types, polymorphism.arguments, polymorphism.effects-and-escaping
+//~ stdout:
+//~ | '1' and 'a'
+//~ | <2> and <b>
+//~ | 3 and c / true
+//~ | 6 or []
+//~ | 0 or [1, 2]
+//~ | odd 3
+
+type Odd = | Odd(i64)
+
+fn both(f: fn<T: Show>(T) -> str, n: i64, s: str) -> str { "{f(n)} and {f(s)}" }
+
+fn quoted<T: Show>(x: T) -> str { "'{x}'" }
+
+// A polymorphic parameter passed on to another function.
+fn again(f: fn<T: Show>(T) -> str) -> str { "{both(f, 3, "c")} / {f(true)}" }
+
+fn second<T>(a: T, b: T) -> T { b }
+
+fn pick(f: fn<T>(T, T) -> T, a: i64, b: List<i64>) -> str {
+  let empty: List<i64> = []
+  "{f(a, 6)} or {f(b, empty)}"
+}
+
+fn check(n: i64) / raise<Odd> {
+  if n % 2 != 0 { raise Odd(n) }
+}
+
+// The closure's `raise<Odd>` passes through `twice` to its caller.
+fn twice(f: fn<T>(T) -> T, n: i64) -> i64 { f(f(n)) }
+
+fn main() / io {
+  print(both(quoted, 1, "a"))
+  print(both(|x| "<{x}>", 2, "b"))
+  print(again(|x| "{x}"))
+  print(pick(second, 0, [1, 2]))
+  print(pick(|a, b| a, 0, [1, 2]))
+  let r = try twice(|x| { try check(3); x }, 3) catch Odd(n) => n
+  print("odd {r}")
+}

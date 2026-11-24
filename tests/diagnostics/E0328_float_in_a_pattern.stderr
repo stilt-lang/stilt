@@ -1,0 +1,9 @@
+── FLOAT IN A PATTERN ───────────────── E0328_float_in_a_pattern.lt:3:5  [E0328]
+
+A float can't be matched by a pattern:
+
+  3 │     0 => "freezing"
+    │     ^
+
+Floats don't compare reliably for equality, so a pattern can't match one.
+Compare it with `<` or `<=` in an `if`, or in a guard.

@@ -1,0 +1,98 @@
+use std.array
+use std.meta
+use std.task
+
+type Grid = { cells: array.Array<i64, 65536>, name: str }
+
+type Shape = Dots(points: array.Array<i64, 65536>) | Blank
+
+effect Sum {
+  fn sum(a: array.Array<i64, 65536>, k: i64) -> i64
+}
+
+fn total<n: i64>(a: array.Array<i64, n>) -> i64 {
+  var s = 0
+  for x in a { s += x }
+  s
+}
+
+fn ramp() -> array.Array<i64, 65536> {
+  var a: array.Array<i64, 65536> = array.fill(0)
+  for i in 0..65536 { a[i] = i }
+  a
+}
+
+fn bump(inout a: array.Array<i64, 65536>) { a[65535] += 1 }
+
+fn first<T, n: i64>(a: array.Array<T, n>) -> T { a[0] }
+
+fn described<T>(value: T) -> str {
+  match T.shape() {
+    Array(c) => "array {c.len()} {c.get(value).len()} {c.make(c.get(value)).is_some()}"
+    _ => "other"
+  }
+}
+
+fn main() / io {
+  let r = ramp()
+  var c = r
+  c[0] = 7
+  bump(inout c)
+  print("{total(r)} {total(c)} {r[65535]} {c[65535]} {first(c)}")
+  let g = Grid { cells: r, name: "g" }
+  let s = Dots(r)
+  let size = match s {
+    Dots(p) => total(p)
+    Blank => 0
+  }
+  print("{g.name} {g.cells[1]} {size}")
+  let at = |i: i64| r[i] + c[i]
+  print("{at(1)} {at(65535)}")
+  let xs: List<i64> = r.to_list()
+  let back: Option<array.Array<i64, 65536>> = array.from_list(xs)
+  let none: Option<array.Array<i64, 65536>> = array.from_list([1, 2])
+  print("{xs.len()} {back == Some(r)} {none.is_none()}")
+  let doubled = r.map(|x| x * 2)
+  print("{doubled[65535]} {total(doubled)}")
+  let [p, q, ..] = r
+  match c {
+    [7, x, ..] => print("{p} {q} {x}")
+    _ => print("no")
+  }
+  var words: array.Array<str, 65536> = array.fill("ab")
+  words[65535] = "abc"
+  let copy = words
+  words[0] = ""
+  var n = 0
+  for w in copy { n += w.len() }
+  print("{n} {words[0].len()} {copy[0]}")
+  var many: List<array.Array<i64, 65536>> = [r, c]
+  many[1][0] = 9
+  print("{many.len()} {many[1][0]} {c[0]} {many[0][2]}")
+  var m: Map<str, array.Array<i64, 65536>> = Map.new()
+  let k = "r"
+  m[k] = r
+  print("{m[k][3]}")
+  print("{r == c} {r < c} {r == ramp()}")
+  var keyed: Map<array.Array<i64, 65536>, str> = Map.new()
+  keyed[r] = "r"
+  keyed[c] = "c"
+  print("{keyed.len()} {keyed[c]}")
+  let small: array.Array<i64, 20> = array.fill(3)
+  print("{small}")
+  var grid: array.Array<array.Array<i64, 256>, 256> = array.fill(array.fill(1))
+  grid[255][255] = 5
+  var t = 0
+  for row in grid { for x in row { t += x } }
+  print("{t} {grid[255][255]} {grid[0][0]}")
+  let pair = (r, 5)
+  print("{pair.0[3]} {pair.1}")
+  let h = handler Sum { fn sum(a: array.Array<i64, 65536>, k: i64) -> i64 { total(a) + k } }
+  let via = with h { Sum.sum(r, 1) }
+  print("{via}")
+  print(described(r))
+  with task.threads() {
+    let job = task.spawn(|| total(r) + grid[255][255])
+    print("{job.await()}")
+  }
+}

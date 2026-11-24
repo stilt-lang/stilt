@@ -1,0 +1,6 @@
+meta use rows
+
+fn main() / io {
+  let width = rows.padded!(4)
+  print("{width}")
+}

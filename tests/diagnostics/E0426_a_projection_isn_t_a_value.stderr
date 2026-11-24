@@ -1,0 +1,10 @@
+── A PROJECTION ISN'T A VALUE ── E0426_a_projection_isn_t_a_value.lt:7:14  [E0426]
+
+A projection can only be called: its call is a place, so it has no function
+type:
+
+  7 │   let cell = at
+    │              ^^
+
+A projection's call is a place, not a value, so it can only be called. Call it
+where you use it.

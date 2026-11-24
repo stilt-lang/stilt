@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: patterns.non-exhaustive-matches, expressions.if-let-always, effects.marking, effects.catch, effects.catch-alls-need-reason, errors.error-type-raises
+
+// `broken`'s result is the error type, so code around its calls reports nothing: a `try` marks
+// what may raise it, a `catch` handles it, arms against it are never unreachable, and an `if let`
+// on it never always matches.
+fn broken() -> Nope { broken() } //~ ERROR E0211
+
+fn marked() -> i64 { try broken() }
+
+fn dropped() -> i64 { try broken() catch _ => 0 }
+
+fn named() -> i64 { try broken() catch e => e.code }
+
+fn records() -> i64 {
+  try broken() catch {
+    { code: 7, line } => line
+    { code, .. } => code
+  }
+}
+
+fn matched() -> i64 {
+  match broken() {
+    { code: 7, line } => line
+    { code, .. } => code
+  }
+}
+
+fn bound() -> i64 {
+  if let x = broken() { 1 } else { 2 }
+}
+
+fn main() {}

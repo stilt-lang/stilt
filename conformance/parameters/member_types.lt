@@ -1,0 +1,38 @@
+//~ tier: advanced
+//~ rule: traits.bound-arguments, traits.member-types
+
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+trait Keyed<Item> {
+  fn key(self) -> Item
+}
+
+type Point = { x: i64 }
+
+impl Collection<str> for Point {
+  fn at(self, i: i64) -> Option<str> { if i == 0 { Some("{self.x}") } else { None } }
+}
+
+// The bound gives the argument, so `C.Item` is `i64`.
+fn zero<C: Collection<i64>>(c: C) -> C.Item { 0 }
+
+fn first_or_zero<C: Collection<i64>>(c: C) -> i64 {
+  match c.at(0) {
+    Some(x) => x
+    None => 0
+  }
+}
+
+// `Point` holds `str`, not `i64`.
+fn origin() -> i64 { first_or_zero(Point { x: 0 }) } //~ ERROR E0318
+
+// `Point` is a type, not a type parameter.
+fn of_point(p: Point) -> Option<Point.Item> { None } //~ ERROR E0334
+
+// `Collection` has no parameter `Key`.
+fn keys<C: Collection>(c: C) -> Option<C.Key> { None } //~ ERROR E0334
+
+// Both bounds have a parameter `Item`.
+fn items<C: Collection + Keyed>(c: C) -> Option<C.Item> { None } //~ ERROR E0335

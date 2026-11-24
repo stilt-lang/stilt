@@ -1,0 +1,33 @@
+//~ tier: advanced
+//~ rule: traits.shared-member-names
+
+trait Small {
+  const SIZE: i64
+  fn make() -> Self
+}
+
+trait Large {
+  const SIZE: i64
+  fn make() -> Self
+}
+
+type Box = { n: i64 }
+
+// Two traits may give one type members of the same name.
+impl Small for Box {
+  const SIZE: i64 = 1
+  fn make() -> Box { Box { n: 1 } }
+}
+
+impl Large for Box {
+  const SIZE: i64 = 100
+  fn make() -> Box { Box { n: 100 } }
+}
+
+// Named on the type, each could be either.
+fn size() -> i64 { Box.SIZE } //~ ERROR E0319
+
+fn fresh() -> Box { Box.make() } //~ ERROR E0319
+
+// Named on a type parameter whose bounds both have it.
+fn both<T: Small + Large>() -> i64 { T.SIZE } //~ ERROR E0319

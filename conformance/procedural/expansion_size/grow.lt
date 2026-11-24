@@ -1,0 +1,15 @@
+use std.meta
+
+/// Doubles its code sixteen times: more than 100,000 tokens, in little memory.
+pub macro doubled() -> meta.Expr {
+  var e = quote { 1 }
+  var n = 0
+  while n < 16 {
+    e = quote { $e + $e }
+    n += 1
+  }
+  e
+}
+
+/// Gives a small expression.
+pub macro small() -> meta.Expr { quote { 2 } }

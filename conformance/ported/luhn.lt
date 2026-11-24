@@ -1,0 +1,29 @@
+//~ rule: std.str, std.list-functions, numbers.parsing
+//~ stdout:
+//~ | 49927398716 valid
+//~ | 49927398717 invalid
+//~ | 1234567812345678 invalid
+//~ | 1234567812345670 valid
+
+// Rosetta Code, Luhn test of credit card numbers: reversing the digits, the odd-placed ones are
+// summed as they are, and the even-placed ones doubled, with the digits of each product summed.
+// The number passes when the total ends in zero. The task's four numbers are checked.
+
+fn luhn(number: str) -> bool {
+  let digits = number.chars().reversed().map(|c| c.to_i64() else 0)
+  let total = digits.enumerate(0).fold(0, |sum, (i, d)| {
+    if i % 2 == 0 {
+      sum + d
+    } else {
+      let doubled = d * 2
+      sum + doubled / 10 + doubled % 10
+    }
+  })
+  total % 10 == 0
+}
+
+fn main() / io {
+  for n in ["49927398716", "49927398717", "1234567812345678", "1234567812345670"] {
+    print("{n} {if luhn(n) { "valid" } else { "invalid" }}")
+  }
+}

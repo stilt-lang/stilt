@@ -1,0 +1,2 @@
+/// ex: 1 + //~ ERROR E0100
+pub fn f() {}

@@ -1,0 +1,5 @@
+use app
+
+pub fn hello() / io { app.greet.say("hello") }
+
+fn say(text: str) / io { print(text) }

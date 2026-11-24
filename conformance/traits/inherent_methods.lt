@@ -1,0 +1,37 @@
+//~ rule: declarations.constant-declarations, traits.impl-blocks, traits.associated-functions
+//~ stdout:
+//~ | 3 true Some(3) 3
+//~ | [3, 1, 2]
+
+type Meter = { n: i64 }
+
+impl Meter {
+  const MAX: i64 = 3
+}
+
+type Stack<T> = { items: List<T> }
+
+impl<T> Stack<T> {
+  fn new() -> Self { Self { items: [] } }
+
+  fn push(inout self, x: T) { self.items.push(x) }
+
+  fn size(self) -> i64 { self.items.len() }
+
+  fn full(self) -> bool { self.size() >= Meter.MAX }
+
+  fn into_items(self) -> List<T> { self.items }
+}
+
+impl<T: Ord> Stack<T> {
+  fn top(self) -> Option<T> { self.items.sorted().last() }
+}
+
+fn main() / io {
+  var s: Stack<i64> = Stack.new()
+  s.push(3)
+  s.push(1)
+  s.push(2)
+  print("{s.size()} {s.full()} {s.top()} {Meter.MAX}")
+  print("{s.into_items()}")
+}

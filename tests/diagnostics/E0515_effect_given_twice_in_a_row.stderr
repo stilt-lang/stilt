@@ -1,0 +1,8 @@
+── EFFECT GIVEN TWICE IN A ROW ── E0515_effect_given_twice_in_a_row.lt:5:34  [E0515]
+
+`State` is already in this row, which holds one instance of an effect:
+
+  5 │ fn count() -> i64 / {State<i64>, State<str>} {
+    │                                  ^^^^^
+
+A row holds one instance of each effect. Use one, or declare two effects.

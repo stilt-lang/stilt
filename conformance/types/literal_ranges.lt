@@ -1,0 +1,39 @@
+//~ rule: numbers.integer-literals, numbers.float-literals, numbers.negative-literals
+
+fn byte() -> u8 { 255 }
+
+fn too_big() -> u8 {
+  256 //~ ERROR E0320
+}
+
+fn smallest() -> i8 { -128 }
+
+fn below() -> i8 {
+  -129 //~ ERROR E0320
+}
+
+fn unsigned() -> u16 {
+  -1 //~ ERROR E0320
+}
+
+fn exact() -> f64 { 9007199254740992 }
+
+fn inexact() -> f64 {
+  9007199254740993 //~ ERROR E0320
+}
+
+fn huge() -> f32 {
+  1e39 //~ ERROR E0320
+}
+
+fn half() -> i64 {
+  0.5 //~ ERROR E0311
+}
+
+fn negated() -> i8 {
+  -(128) //~ ERROR E0320
+}
+
+fn spaced() -> i8 {
+  - 128 //~ ERROR E0320
+}

@@ -1,0 +1,126 @@
+// Assembling a program's text into instructions, in two passes: the first finds the address of
+// each label and function, the second writes each instruction with its targets.
+//
+// A line holds a label, `NAME:`, a function's header, `fn NAME PARAMETERS`, or an instruction,
+// and `;` starts a comment. A function's parameters are its first slots, and its header becomes
+// an `enter` that makes as many slots as its instructions name.
+
+use machine
+
+/// A mistake in a program's text, at a line counted from 1.
+pub type AsmError = { line: i64, message: str }
+
+/// A line that holds something: its number, and its words.
+type Line = { number: i64, words: List<str> }
+
+/// A function: where it starts, and how many parameters it takes.
+type Function = { at: i64, params: i64 }
+
+/// The program that `text` writes, which starts at its function `main`.
+/// ex: (try assemble("fn main 0\n  push 2\n  ret")).code == [machine.Enter(0), machine.Push(2), machine.Ret]
+/// ex: Result.of(|| try assemble("fn main 0\n  jump nowhere")) == Err(AsmError { line: 2, message: "no label is named nowhere" })
+pub fn assemble(text: str) -> machine.Program / raise<AsmError> {
+  let lines = (text.lines().enumerate(1))
+    .map(
+      |(number, l)| Line { number, words: (l.split_once(";").map(.0) else l).split_whitespace() },
+    )
+    .filter(|l| !l.words.is_empty())
+  var (labels, functions) = (Map.new(), Map.new())
+  var at = 0
+  for l in lines {
+    match l.words {
+      [label] if label.ends_with(":") => { labels[label.strip_suffix(":") else label] = at }
+      ["fn", name, params] => {
+        let n = params.to_i64()
+          else raise AsmError { line: l.number, message: "{params} isn't a number of parameters" }
+        functions[name] = Function { at, params: n }
+        at += 1
+      }
+      _ => { at += 1 }
+    }
+  }
+  let main = functions.get("main")
+    else raise AsmError { line: 1, message: "the program has no function main" }
+  var (code, numbers) = ([], [])
+  for l in lines {
+    if l.words.len() == 1 && l.words[0].ends_with(":") { continue }
+    code.push(
+      try instruction(l, labels, functions)
+        catch message => raise AsmError { line: l.number, message },
+    )
+    numbers.push(l.number)
+  }
+  machine.Program { code: sized(code), lines: numbers, main: main.at, params: main.params }
+}
+
+/// The instruction that a line writes, with its targets.
+fn instruction(
+  l: Line,
+  labels: Map<str, i64>,
+  functions: Map<str, Function>,
+) -> machine.Op / raise<str> {
+  match l.words {
+    ["fn", _, params] => machine.Enter(params.to_i64() else 0)
+    ["push", n] => machine.Push(n.to_i64() else raise "{n} isn't an integer")
+    ["load", k] => machine.Load(try slot(k))
+    ["store", k] => machine.Store(try slot(k))
+    ["jump", label] => machine.Jump(labels.get(label) else raise "no label is named {label}")
+    ["jumpz", label] => machine.JumpIfZero(labels.get(label) else raise "no label is named {label}")
+    ["call", name] => {
+      let f = functions.get(name) else raise "no function is named {name}"
+      machine.Call(f.at, f.params)
+    }
+    [word] => PLAIN.find(|(w, _)| w == word).map(.1) else raise "{word} is no instruction"
+    words => raise "{" ".join(words)} is no instruction"
+  }
+}
+
+/// The instructions that take nothing after their name.
+const PLAIN: List<(str, machine.Op)> = [
+  ("add", machine.Add),
+  ("sub", machine.Sub),
+  ("mul", machine.Mul),
+  ("div", machine.Div),
+  ("mod", machine.Mod),
+  ("lt", machine.Lt),
+  ("le", machine.Le),
+  ("eq", machine.Eq),
+  ("not", machine.Not),
+  ("ret", machine.Ret),
+  ("print", machine.Print),
+  ("dup", machine.Dup),
+  ("drop", machine.Drop),
+  ("halt", machine.Halt),
+]
+
+fn slot(k: str) -> i64 / raise<str> {
+  let n = k.to_i64() else raise "{k} isn't a slot"
+  if n < 0 || n > 255 { raise "slot {n} isn't between 0 and 255" }
+  n
+}
+
+/// The code with each function's `enter` making as many slots as the function's parameters
+/// and as its instructions name, up to the next function.
+fn sized(code: List<machine.Op>) -> List<machine.Op> {
+  var out = code
+  var (start, size) = (-1, 0)
+  for (i, op) in code.enumerate(0).concat([(code.len(), machine.Enter(0))]) {
+    match op {
+      Enter(params) => {
+        if start >= 0 && start < out.len() { out[start] = machine.Enter(size) }
+        start = i
+        size = params
+      }
+      Load(k) | Store(k) => { size = size.max(k + 1) }
+      _ => {}
+    }
+  }
+  out
+}
+
+test "a function makes the slots its instructions name" {
+  let p = try assemble("fn main 1\n  load 0\n  store 3\n  ret\nfn other 2\n  ret")
+    catch e => raise e.message
+  assert p.code[0] == machine.Enter(4)
+  assert p.code[4] == machine.Enter(2)
+}

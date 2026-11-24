@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: projections.once-on-every-path, declarations.running-holes
+//~ run-output: "5"
+
+// Reaching a hole panics, so a path that ends at one needs no `yield`.
+fn pick(inout x: i64, ready: bool) -> inout i64 {
+  if ready {
+    yield x
+  } else {
+    ? //~ WARN W0300
+  }
+}
+
+fn main() / io {
+  var x = 1
+  pick(inout x, true) = 5
+  print("{x}")
+}

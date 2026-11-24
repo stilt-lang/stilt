@@ -1,0 +1,10 @@
+//~ rule: std.show-names-and-escapes, std.cli
+//~ args: "" "two words" "q\"uote" -
+//~ run-output: "4 [\"\", \"two words\", \"q\\\"uote\", \"-\"] Some(\"\") Some(\"-\") None None"
+
+use std.cli
+
+fn main() / io {
+  let args = cli.args()
+  print("{args.len()} {args} {cli.arg(0)} {cli.arg(3)} {cli.arg(4)} {cli.arg(-1)}")
+}

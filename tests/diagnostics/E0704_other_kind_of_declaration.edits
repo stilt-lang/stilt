@@ -1,0 +1,2 @@
+main.totals#f9d9
+type Totals = { sum: i64 }

@@ -1,0 +1,13 @@
+//~ rule: modes.places, modes.change-while-iterating
+//~ run-output: "[1, 2] [0, 2]"
+
+fn main() / io {
+  var xs = [1, 2]
+  var last = [0]
+  for x in xs {
+    var xs = [0]
+    xs.push(x)
+    last = xs
+  }
+  print("{xs} {last}")
+}

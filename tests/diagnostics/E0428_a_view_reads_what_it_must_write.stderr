@@ -1,0 +1,14 @@
+── A VIEW READS WHAT IT MUST WRITE ── E0428_a_view_reads_what_it_must_write.lt:5:14  [E0428]
+
+This view reads `xs`, which `head` must write:
+
+  5 │   var head = view.View.of(xs, 0, 2)
+    │              ^^^^^^^^^^^^^^^^^^^^^^
+
+A view that the code writes through is made writable, with `view.into(inout xs,
+…)`.
+
+To fix it, make it with `view.into(inout xs, …)`:
+
+  5 │   var head = view.into(inout xs, 0, 2)
+    │              ~~~~~~~~~~++++++

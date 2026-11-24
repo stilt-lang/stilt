@@ -1,0 +1,2 @@
+// `exit` performs `io` with no capability, which only `io` grants.
+pub fn stop() / io { exit(3) }

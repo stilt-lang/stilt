@@ -1,0 +1,9 @@
+── `self` OR `Self` WHERE IT DOESN'T EXIST ── E0215_self_or_self_where_it_doesn_t_exist.lt:4:23  [E0215]
+
+`self` exists only in methods:
+
+  4 │   fn width() -> f64 { self.w }
+    │                       ^^^^
+
+`self` exists only in a method, which takes it as its first parameter, and
+`Self` only in impl and trait blocks. Add `self` to the parameters.

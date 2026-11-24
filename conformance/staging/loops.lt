@@ -1,0 +1,54 @@
+//~ tier: meta
+//~ rule: meta.staging-annotations, meta.erasure, meta.staged-loops, meta.annotated-code, meta.staging-tier
+//~ stdout:
+//~ | 14
+//~ | 012
+//~ | 34
+//~ | ab
+//~ | 579
+//~ | 10 20 21
+//~ | 1 3
+
+use std.array
+
+const COUNT: i64 = 3
+
+fn dot<n: i64>(a: array.Array<i64, n>, b: array.Array<i64, n>) -> i64 {
+  var sum = 0
+  comptime for i in 0..n { sum = sum + a[i] * b[i] }
+  sum
+}
+
+fn main() / io {
+  let v: array.Array<i64, 3> = [1, 2, 3]
+  print("{dot(v, v)}")
+  // Bounded by a constant, and by literals.
+  var line = ""
+  comptime for i in 0..COUNT { line = "{line}{i}" }
+  print(line)
+  line = ""
+  comptime for i in 3..=4 { line = "{line}{i}" }
+  print(line)
+  // Over a literal list, and over an array literal.
+  line = ""
+  comptime for s in ["a", "b"] { line = "{line}{s}" }
+  print(line)
+  line = ""
+  let odd: array.Array<i64, 3> = [5, 7, 9]
+  comptime for x in odd { line = "{line}{x}" }
+  print(line)
+  // A nested loop whose range reads the outer loop's variable.
+  line = ""
+  comptime for i in 1..3 {
+    comptime for j in 0..i { line = "{line} {i}{j}" }
+  }
+  print(line.trim())
+  // `break` and `continue`, as the loop without its annotation has them.
+  line = ""
+  comptime for i in 0..10 {
+    if i == 0 || i == 2 { continue }
+    if i > 3 { break }
+    line = "{line} {i}"
+  }
+  print(line.trim())
+}

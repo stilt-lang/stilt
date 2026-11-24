@@ -1,0 +1,35 @@
+//~ tier: advanced
+//~ rule: handlers.ended-projections
+//~ stdout:
+//~ | [11, 20] 0
+//~ | resumed
+//~ | [18, 20]
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn first(inout xs: List<i64>) -> inout i64 / io {
+  yield xs[0]
+  print("resumed")
+}
+
+fn add(inout n: i64) / Ask {
+  n += 1
+  n += Ask.ask()
+}
+
+fn main() / io {
+  let ended = handler Ask -> i64 { fn ask() -> i64 { 0 } }
+  var xs = [10, 20]
+  // The projection doesn't resume, and its place keeps the write before the performance.
+  let t = with ended {
+    add(inout first(inout xs))
+    5
+  }
+  print("{xs} {t}")
+  let resumed = handler Ask { fn ask() -> i64 { 7 } }
+  var ys = [10, 20]
+  with resumed { add(inout first(inout ys)) }
+  print("{ys}")
+}

@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: views.laziness
+//~ run-output: "[5] 1 0"
+//~ panic: bounds
+//~ panic-at: laziness.lt:16:59
+
+use std.view
+
+fn main() / io {
+  // `take(1)` never asks for the second element, whose `map` would divide by zero, and
+  // each consumer starts the iterator over.
+  let it = view.Iter.of([2, 0]).map(|x| 10 / x)
+  print("{it.take(1).collect()} {it.take(1).count()} {it.take(0).count()}")
+  // The first element goes through `map` and then `filter` before the second is asked for,
+  // so `filter` panics with `bounds` before `map` can divide by zero.
+  print("{view.Iter.of([2, 0]).map(|x| 10 / x).filter(|y| [1][y] == 1).count()}")
+}

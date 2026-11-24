@@ -1,0 +1,27 @@
+//~ rule: std.integers
+//~ stdout:
+//~ | 0 64 64
+//~ | 1 63 0
+//~ | 64 0 0
+//~ | 1 0 63
+//~ | 8 0 0 1 0 7 0 8 8
+//~ | 32 0 0 16 15 0
+//~ | 3 61 1
+
+fn main() / io {
+  let zero: i64 = 0
+  let one: i64 = 1
+  let minus: i64 = -1
+  print("{zero.count_ones()} {zero.leading_zeros()} {zero.trailing_zeros()}")
+  print("{one.count_ones()} {one.leading_zeros()} {one.trailing_zeros()}")
+  print("{minus.count_ones()} {minus.leading_zeros()} {minus.trailing_zeros()}")
+  print("{i64.MIN.count_ones()} {i64.MIN.leading_zeros()} {i64.MIN.trailing_zeros()}")
+  let b: i8 = -1
+  let m: i8 = i8.MIN
+  let z: u8 = 0
+  print("{b.count_ones()} {b.leading_zeros()} {b.trailing_zeros()} {m.count_ones()} {m.leading_zeros()} {m.trailing_zeros()} {z.count_ones()} {z.leading_zeros()} {z.trailing_zeros()}")
+  let w: u32 = u32.MAX
+  let h: u16 = 1
+  print("{w.count_ones()} {w.leading_zeros()} {w.trailing_zeros()} {h.count_ones() + 15} {h.leading_zeros()} {h.trailing_zeros()}")
+  print("{i64.count_ones(7)} {i64.leading_zeros(6)} {i64.trailing_zeros(6)}")
+}

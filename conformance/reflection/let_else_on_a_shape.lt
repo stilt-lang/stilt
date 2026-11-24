@@ -1,0 +1,19 @@
+//~ tier: meta
+//~ rule: patterns.else-after-pattern, meta.shapes
+//~ run-output: "2 0"
+
+// A let-else names a case of a shape without its module, as a `match` arm
+// does: the case is found in the shape's type, so the pattern can fail and
+// the `else` runs for a type of another shape.
+use std.meta
+
+fn count<T>(value: T) -> i64 {
+  let Record(fields) = T.shape() else return 0
+  fields.len()
+}
+
+type Point = { x: i64, y: i64 }
+
+fn main() / io {
+  print("{count(Point { x: 1, y: 2 })} {count(7)}")
+}

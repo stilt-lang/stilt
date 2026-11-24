@@ -1,0 +1,62 @@
+//~ tier: advanced
+//~ rule: macros.checked-templates, macros.uses, macros.matching, macros.nested-expansions, macros.errors-in-expansions, macros.expansion-effects
+
+syntax pair {
+  ($a: pattern, $b: pattern) => ($a, $b)
+}
+
+syntax two {
+  ($a: expr, $b: expr) => $a + $b
+}
+
+syntax size {
+  ($x: expr) => $x.len()
+}
+
+syntax forever {
+  ($x: expr) => forever!($x)
+}
+
+syntax say {
+  ($s: expr) => print($s)
+}
+
+fn arms() -> i64 {
+  two!(1) //~ ERROR E0222
+}
+
+fn placed() -> i64 {
+  let q = pair!(1, 2) //~ ERROR E0223
+  0
+}
+
+fn as_pattern(n: i64) -> i64 {
+  match n {
+    two!(1, 2) => 1 //~ ERROR E0223
+    _ => 0
+  }
+}
+
+// An error in a fragment is at the fragment's tokens.
+fn in_fragment() -> i64 {
+  size!(
+    missing //~ ERROR E0211
+  )
+}
+
+// An error in the template's own tokens is at the use.
+fn in_template() -> i64 {
+  size!( //~ ERROR E0314
+    5
+  )
+}
+
+fn deep() -> i64 {
+  forever!(1) //~ ERROR E0224
+}
+
+fn quiet() {
+  say!("hi") //~ ERROR E0502
+}
+
+fn main() {}

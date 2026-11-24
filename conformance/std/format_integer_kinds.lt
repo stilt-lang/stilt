@@ -1,0 +1,23 @@
+//~ rule: std.width-fill-and-alignment, std.integer-kinds, std.invalid-specs
+//~ stdout:
+//~ | ff FF 377 11111111 0 0 7fffffffffffffff
+//~ | ff ffff ffffffff ffffffffffffffff 80 8000000000000000 377 11111111
+//~ | 11111111111111111111111111111111 177777 FFFFFFFFFFFFFFFF 1777777777777777777777
+//~ | [00000101] [    ff] [ff    ] [  ff  ] [   -1] [ffff]
+
+fn main() / io {
+  let a = 255
+  let zero = 0
+  print("{a:x} {a:X} {a:o} {a:b} {zero:x} {zero:b} {i64.MAX:x}")
+  let b: i8 = -1
+  let c: i16 = -1
+  let d: i32 = -1
+  let e: i64 = -1
+  let f = i8.MIN
+  print("{b:x} {c:x} {d:x} {e:x} {f:x} {i64.MIN:x} {b:o} {b:b}")
+  let g = u64.MAX
+  print("{d:b} {c:o} {g:X} {g:o}")
+  let five: u8 = 5
+  let small: i16 = -1
+  print("[{five:0>8b}] [{a:6x}] [{a:<6x}] [{a:^6x}] [{small:5}] [{small:<2x}]")
+}

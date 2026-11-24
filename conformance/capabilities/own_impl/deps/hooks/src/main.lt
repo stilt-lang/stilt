@@ -1,0 +1,16 @@
+// The package's own trait, implemented for a type of `std`: the impl's method is
+// the package's own code, so naming it gives only what its body does, and its
+// body calls a function value, which adds nothing. So `hooks` needs no grant of
+// `io`, and `console` is enough.
+pub trait Hook {
+  fn fire(self, f: fn() / io) / io
+}
+
+impl Hook for i64 {
+  fn fire(self, f: fn() / io) / io { f() }
+}
+
+pub fn run(f: fn() / io) / io {
+  let n: i64 = 1
+  n.fire(f)
+}

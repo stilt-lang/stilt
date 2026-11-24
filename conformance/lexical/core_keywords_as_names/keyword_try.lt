@@ -1,0 +1,1 @@
+fn try() {} //~ ERROR E0100

@@ -1,0 +1,12 @@
+//~ rule: effects.panicking-operations, effects.without-panic, facts.map-element-places, std.map-element-places
+
+module main
+without panic
+
+type Count = { n: i64 }
+
+fn reset(m: Map<str, Count>) -> Map<str, Count> {
+  var m = m
+  m["a"].n = 0 //~ ERROR E0204
+  m
+}

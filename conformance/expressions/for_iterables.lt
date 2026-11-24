@@ -1,0 +1,15 @@
+//~ rule: expressions.for-iterables
+
+fn letters(s: str) {
+  for c in s {} //~ ERROR E0311
+}
+
+fn count(n: i64) {
+  for i in n {} //~ ERROR E0311
+}
+
+fn pairs(m: Map<str, i64>) -> i64 {
+  var total = 0
+  for (k, v) in m { total += v }
+  total
+}

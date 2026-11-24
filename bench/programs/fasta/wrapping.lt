@@ -1,0 +1,63 @@
+// fasta: writes random DNA sequences, from cumulative probabilities and a linear congruential
+// generator, and a repeated one, as the Benchmarks Game's program does, in lines of 60.
+
+use std.cli
+
+fn random(inout seed: i64) -> f64 {
+  seed = (seed *% 3877 +% 29573) % 139968
+  seed.to_f64() / 139968.0
+}
+
+fn repeat(alu: str, n: i64) / io {
+  let len = alu.len()
+  var start = 0
+  var left = n
+  while left > 0 {
+    let width = if left < 60 { left } else { 60 }
+    var line = []
+    for i in 0..width { line.push(alu.slice((start +% i) % len, (start +% i) % len +% 1)) }
+    print("".join(line))
+    start = (start +% width) % len
+    left -%= width
+  }
+}
+
+fn randomly(symbols: List<str>, chances: List<f64>, n: i64, inout seed: i64) / io {
+  var cumulative = []
+  var sum = 0.0
+  for c in chances {
+    sum += c
+    cumulative.push(sum)
+  }
+  var left = n
+  while left > 0 {
+    let width = if left < 60 { left } else { 60 }
+    var line = []
+    for _ in 0..width {
+      let r = random(inout seed)
+      var k = 0
+      while k < cumulative.len() -% 1 && r >= cumulative[k] { k +%= 1 }
+      line.push(symbols[k])
+    }
+    print("".join(line))
+    left -%= width
+  }
+}
+
+fn main() / io {
+  let n = (cli.arg(0) else "").to_i64() else 100000
+  let alu = "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGGGAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGACCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAATACAAAAATTAGCCGGGCGTGGTGGCGCGCGCCTGTAATCCCAGCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGGAGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCCAGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"
+  var seed = 42
+  print(">ONE Homo sapiens alu")
+  repeat(alu, n *% 2)
+  print(">TWO IUB ambiguity codes")
+  let iub = ["a", "c", "g", "t", "B", "D", "H", "K", "M", "N", "R", "S", "V", "W", "Y"]
+  let iub_chances = [
+    0.27, 0.12, 0.12, 0.27, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02,
+  ]
+  randomly(iub, iub_chances, n *% 3, inout seed)
+  print(">THREE Homo sapiens frequency")
+  let sapiens = ["a", "c", "g", "t"]
+  let sapiens_chances = [0.3029549426680, 0.1979883004921, 0.1975473066391, 0.3015094502008]
+  randomly(sapiens, sapiens_chances, n *% 5, inout seed)
+}

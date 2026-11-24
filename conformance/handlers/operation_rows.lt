@@ -1,0 +1,27 @@
+//~ tier: advanced
+//~ rule: handlers.declaring-effect, handlers.with
+//~ run-output: "110 1"
+
+// The body of `bar` performs `Foo`, which the operation's row holds, on the handlers outside
+// the `with` that installs `b`. So that `with` performs `Foo`, which `hundred` handles. `one`,
+// installed around the performance, answers only the block's own `Foo.foo()`.
+
+effect Foo {
+  fn foo() -> i64
+}
+
+effect Bar {
+  fn bar() -> i64 / Foo
+}
+
+fn main() / io {
+  let hundred = handler Foo { fn foo() -> i64 { 100 } }
+  let one = handler Foo { fn foo() -> i64 { 1 } }
+  let b = handler Bar { fn bar() -> i64 / Foo { Foo.foo() + 10 } }
+  with hundred {
+    let (x, y) = with b {
+      with one { (Bar.bar(), Foo.foo()) }
+    }
+    print("{x} {y}")
+  }
+}

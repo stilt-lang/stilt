@@ -1,0 +1,97 @@
+// The proof rules that the corpus's other programs leave out, each in a function of its own:
+// accesses in range loops, of lists and of arrays, and of an array by a literal
+// (facts.range-loops); divisors that are literals or known positive (facts.divisors); the calls
+// of facts.proved-indexes; a key made present before it is read (facts.keys); and the overflow
+// that the intervals of facts.intervals rule out (facts.proved-overflow).
+
+use std.array
+
+fn index_of(xs: List<i64>, x: i64) -> i64 { //~ ONCE
+  for i in 0..xs.len() {
+    if xs[i] == x { return i } //~ PROVED bounds
+  }
+  xs.len()
+}
+
+// `i + 1` is below `xs.len()`, since the loop stops at `xs.len() - 1`, and neither subtraction
+// nor addition can leave `i64`.
+fn sorted(xs: List<i64>) -> bool { //~ ONCE
+  if xs.len() < 2 { return true }
+  for i in 0..xs.len() - 1 { //~ PROVED overflow
+    if xs[i] > xs[i + 1] { return false } //~ PROVED bounds PROVED overflow
+  }
+  true
+}
+
+// For an array of size 4, 4 stands for its length.
+fn largest(a: array.Array<i64, 4>) -> i64 { //~ ONCE
+  var s = a[0] //~ PROVED bounds
+  for i in 1..4 {
+    s = s.max(a[i]) //~ PROVED bounds
+  }
+  s
+}
+
+// `d` runs from 2 to 9, so it is never zero, nor -1.
+fn smallest_divisor(n: i64) -> i64 { //~ ONCE
+  for d in 2..10 {
+    if n % d == 0 { return d } //~ PROVED divide-by-zero PROVED overflow
+  }
+  n
+}
+
+fn share(total: i64, people: i64) -> i64 { //~ ONCE
+  total / people //~ KEPT divide-by-zero KEPT overflow
+}
+
+// Both are non-negative, so their difference fits; half of it added to `lo` may not, as far as
+// intervals tell.
+fn midpoint(lo: i64, hi: i64) -> i64 { //~ ONCE
+  if lo < 0 || hi < 0 { return 0 }
+  let span = hi - lo //~ PROVED overflow
+  lo + span / 2 //~ PROVED divide-by-zero PROVED overflow KEPT overflow
+}
+
+fn rotated(xs: List<i64>) -> List<i64> { //~ ONCE
+  var ys = xs
+  if ys.len() > 0 {
+    let x = ys.remove(0) //~ PROVED bounds
+    ys.push(x)
+  }
+  ys
+}
+
+fn ends_swapped(xs: List<i64>) -> List<i64> { //~ ONCE
+  var ys = xs
+  if ys.len() > 1 {
+    ys.swap(0, ys.len() - 1) //~ PROVED bounds PROVED overflow
+  }
+  ys
+}
+
+fn appended(xs: List<i64>, x: i64) -> List<i64> { //~ ONCE
+  var ys = xs
+  ys.insert(ys.len(), x) //~ PROVED bounds
+  ys
+}
+
+fn inner(xs: List<i64>) -> List<i64> { //~ ONCE
+  xs.slice(1, 3) //~ KEPT bounds
+}
+
+fn tally(words: List<str>) -> Map<str, i64> { //~ ONCE
+  var m: Map<str, i64> = Map.new()
+  for w in words {
+    if !m.contains(w) { m[w] = 0 }
+    m[w] += 1 //~ PROVED missing-key KEPT overflow
+  }
+  m
+}
+
+fn main() / io { //~ ONCE
+  let xs = [3, 1, 4, 1, 5]
+  let a: array.Array<i64, 4> = array.fill(7)
+  print("{index_of(xs, 4)} {sorted(xs)} {largest(a)} {smallest_divisor(91)} {share(9, 3)}")
+  print("{midpoint(2, 10)} {rotated(xs)} {ends_swapped(xs)} {appended(xs, 9)} {inner(xs)}")
+  print("{tally(["a", "b", "a"])}")
+}

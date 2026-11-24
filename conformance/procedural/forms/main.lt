@@ -1,0 +1,32 @@
+//~ tier: meta
+//~ rule: syntax.macros, syntax.quotes, macros.procedural-declarations, macros.quote, macros.splices, macros.procedural-uses, macros.parts, macros.tokens-and-code, macros.named-files, macros.running
+//~ stdout:
+//~ | 8
+//~ | [1, 2]
+//~ | odd and small
+//~ | hey!
+//~ | 4
+//~ | 3
+//~ | 7
+
+// A macro of each parameter type and of each result form, each built from a
+// quote of its form.
+meta use forms
+
+fn small(n: i64) -> str {
+  match n {
+    forms.either!(1, 3) => "odd and small"
+    _ => "other"
+  }
+}
+
+fn main() / io {
+  let xs: forms.list_of!(i64) = [1, 2]
+  print("{forms.twice!(4)}")
+  print("{xs}")
+  print(small(3))
+  print(forms.shout!("hey"))
+  print("{forms.tokens_in!("words.txt")}")
+  print("{forms.count!(a (b c) [d])}")
+  print("{forms.labelled!(7).label}")
+}

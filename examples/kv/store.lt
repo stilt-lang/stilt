@@ -1,0 +1,86 @@
+// The store and its HTTP interface: what each request does to the keys, and the response it
+// gets. Nothing here touches the world, so every route is tested without a socket, and `handle`
+// is `without panic`, so no request can stop the server.
+
+module store
+
+use std.http
+use std.json
+
+/// The keys and their values, and how many writes the store has taken.
+pub type Store = { entries: Map<str, str>, writes: i64 }
+
+/// An empty store.
+/// ex: new().entries.is_empty()
+pub fn new() -> Store { Store { entries: Map.new(), writes: 0 } }
+
+/// The response to `request`, after the change it makes to `s`:
+///
+/// - `GET /` lists the keys in order, one to a line;
+/// - `GET /stats` gives the number of keys and of writes, as JSON;
+/// - `GET /k/NAME` gives a value, `PUT /k/NAME` sets it to the body and `DELETE /k/NAME`
+///   removes it;
+/// - anything else is 404, or 405 for another method on a key.
+///
+/// ex: { var s = new(); handle(inout s, http.Request.new("GET", "/k/a")).status } == 404
+pub fn handle(inout s: Store, request: http.Request) -> http.Response without panic {
+  let target = request.target.split_once("?").map(|p| p.0) else request.target
+  if target == "/" && request.method == "GET" { return text(200, "".join(s.entries.keys().sorted().map(|k| "{k}\n"))) }
+  if target == "/stats" && request.method == "GET" {
+    let stats = json.Object([("keys", json.Number("{s.entries.len()}")), ("writes", json.Number("{s.writes}"))])
+    return text(200, json.render(stats)).with_header("Content-Type", "application/json")
+  }
+  let name = target.strip_prefix("/k/") else return text(404, "no such route\n")
+  if name.is_empty() || name.contains("/") { return text(404, "no such route\n") }
+  match request.method {
+    "GET" => match s.entries.get(name) {
+      Some(value) => text(200, value),
+      None => text(404, "no key {name}\n"),
+    },
+    "PUT" => {
+      let fresh = !s.entries.contains(name)
+      s.entries.insert(name, request.body)
+      s.writes += 1
+      text(if fresh { 201 } else { 200 }, "")
+    }
+    "DELETE" => {
+      if s.entries.remove(name).is_none() { return text(404, "no key {name}\n") }
+      s.writes += 1
+      text(204, "")
+    }
+    _ => text(405, "{request.method} isn't a method of a key\n").with_header("Allow", "GET, PUT, DELETE"),
+  }
+}
+
+/// The store as JSON text, an object of its keys, to keep in a file.
+/// ex: snapshot(new()) == "\{}"
+pub fn snapshot(s: Store) -> str { json.to_text(s.entries) }
+
+/// The store that `snapshot` wrote, or `None` for text that isn't such an object.
+/// ex: restore("\{\"a\": \"1\"}").map(|s| s.entries.get("a")) == Some(Some("1"))
+/// ex: restore("[1]") == None
+pub fn restore(text: str) -> Option<Store> {
+  let entries: Map<str, str> = Result.of(|| try json.from_text(text)).ok() else return None
+  Some(Store { entries, writes: 0 })
+}
+
+fn text(status: i64, body: str) -> http.Response { http.Response.new(status, body).with_header("Content-Type", "text/plain") }
+
+test "a key is set, read, replaced and removed" {
+  var s = new()
+  assert handle(inout s, http.Request.new("PUT", "/k/a").with_body("1")).status == 201
+  assert handle(inout s, http.Request.new("PUT", "/k/a").with_body("2")).status == 200
+  assert handle(inout s, http.Request.new("GET", "/k/a")).body == "2"
+  assert handle(inout s, http.Request.new("DELETE", "/k/a")).status == 204
+  assert handle(inout s, http.Request.new("DELETE", "/k/a")).status == 404
+  assert s.writes == 3
+}
+
+test "routes that aren't a key's" {
+  var s = new()
+  assert handle(inout s, http.Request.new("GET", "/k/")).status == 404
+  assert handle(inout s, http.Request.new("GET", "/k/a/b")).status == 404
+  assert handle(inout s, http.Request.new("POST", "/k/a")).status == 405
+  assert handle(inout s, http.Request.new("POST", "/k/a")).header("allow") == Some("GET, PUT, DELETE")
+  assert handle(inout s, http.Request.new("GET", "/stats?pretty")).body == "\{\"keys\":0,\"writes\":0}"
+}

@@ -1,0 +1,91 @@
+use std.meta
+
+// Named by the quote of `call_sum`, and linked into the program that uses it.
+fn sum3(a: i64, b: i64, c: i64) -> i64 { a + b + c }
+
+// The expressions of the tokens, separated by commas.
+fn exprs(ts: meta.Tokens) -> List<meta.Expr> / raise<meta.Error> {
+  var c = meta.cursor(ts)
+  var xs: List<meta.Expr> = []
+  while !c.at_end() {
+    xs.push(try c.expr())
+    if !c.at_end() { let _ = try c.punct(",") }
+  }
+  xs
+}
+
+/// A text that holds `{`, `"` and `\`, which the splice escapes.
+pub macro tricky() -> meta.Expr {
+  let s = "\{a} \"b\" \\c"
+  quote { $s }
+}
+
+/// A negative number, written in parentheses.
+pub macro negative() -> meta.Expr {
+  let n = -3
+  quote { [$n, 10 - $n] }
+}
+
+/// A number without a type, which inference types where it lands.
+pub macro big() -> meta.Expr {
+  let n = 200
+  quote { $n }
+}
+
+/// A float, and three times it.
+pub macro half() -> meta.Expr {
+  let f = 0.5
+  quote { $f * 3.0 }
+}
+
+/// A boolean, negated.
+pub macro not() -> meta.Expr {
+  let b = true
+  quote { !$b }
+}
+
+/// The sum of three expressions, spliced among a call's arguments.
+pub macro call_sum(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  let xs = try exprs(ts)
+  quote { sum3($..xs) }
+}
+
+/// The expressions after a `0`, in a list.
+pub macro listed(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  let xs = try exprs(ts)
+  quote { [0, $..xs] }
+}
+
+/// The expressions after a `0`, in a tuple.
+pub macro tupled(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  let xs = try exprs(ts)
+  quote { (0, $..xs) }
+}
+
+/// `record!(a = 1, …)`: a record of the fields, named by the user's names.
+pub macro record(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(ts)
+  var fields: List<meta.FieldInit> = []
+  while !c.at_end() {
+    let n = try c.name()
+    let _ = try c.punct("=")
+    let e = try c.expr()
+    fields.push(quote field { $n: $e })
+    if !c.at_end() { let _ = try c.punct(",") }
+  }
+  quote { { $..fields } }
+}
+
+/// The numbers of the tokens, as written, joined by `-`.
+pub macro digits(ts: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(ts)
+  var parts: List<str> = []
+  while !c.at_end() {
+    match (try c.number()).kind() {
+      Number(s) => parts.push(s)
+      _ => {}
+    }
+  }
+  let s = "-".join(parts)
+  quote { $s }
+}

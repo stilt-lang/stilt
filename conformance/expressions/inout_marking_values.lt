@@ -1,0 +1,13 @@
+//~ rule: expressions.inout-arguments, expressions.consumed-arguments
+
+fn bump(inout n: i64) { n += 1 }
+
+fn take(xs: List<i64>) -> i64 { xs.len() }
+
+fn calls() {
+  var n = 0
+  let f: fn(inout i64) = bump
+  f(n) //~ ERROR E0400
+  var xs = [1]
+  let k = take(inout xs) //~ ERROR E0400
+}

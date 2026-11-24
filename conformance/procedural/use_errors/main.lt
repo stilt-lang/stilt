@@ -1,0 +1,55 @@
+//~ tier: meta
+//~ rule: macros.procedural-uses, macros.parts, macros.part-forms, macros.failed-uses
+
+// Each use that fails stands as a failed use, from which nothing else follows.
+meta use parts
+
+fn none() -> i64 {
+  parts.one!() //~ ERROR E0227
+}
+
+fn empty_part() -> List<i64> {
+  parts.three!(1,, 2) //~ ERROR E0227
+}
+
+fn too_many() -> i64 {
+  parts.one!(1, 2) //~ ERROR E0227
+}
+
+fn too_few() -> List<i64> {
+  parts.three!(1, 2) //~ ERROR E0227
+}
+
+fn unparsed() -> i64 {
+  parts.one!(1 2) //~ ERROR E0227
+}
+
+fn interpolated(n: i64) -> i64 {
+  parts.size!("data{n}.txt") //~ ERROR E0227
+}
+
+fn not_literal() -> i64 {
+  parts.size!(path) //~ ERROR E0227
+}
+
+fn type_as_expr() -> i64 {
+  parts.int!() //~ ERROR E0223
+}
+
+fn pattern_as_expr() -> i64 {
+  parts.any!() //~ ERROR E0223
+}
+
+fn expr_in_pattern(n: i64) -> i64 {
+  match n {
+    parts.one!(1) => 1 //~ ERROR E0223
+    _ => 0
+  }
+}
+
+fn expr_in_type() -> i64 {
+  let x: parts.one!(1) = 1 //~ ERROR E0223
+  x
+}
+
+fn main() {}

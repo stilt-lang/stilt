@@ -1,0 +1,14 @@
+── OPERATION WITH AN `inout` PARAMETER ── E0517_operation_with_an_inout_parameter.lt:2:17  [E0517]
+
+An operation takes `n` by value, not `inout`: take it and return the new value:
+
+  2 │   fn bump(inout n: i64)
+    │                 ^
+
+An operation takes values, not places. Take the value and return the new one,
+which the code that performs it assigns.
+
+To fix it, take `n` by value and return its new value:
+
+  2 │   fn bump(n: i64) -> i64
+    │                  +++++++

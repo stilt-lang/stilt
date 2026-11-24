@@ -1,0 +1,5 @@
+// An `if let` with `else if let` and `else` that doesn't fit in 100 columns puts every branch on
+// lines of its own (expressions.if-let).
+fn label(customer_identifier: i64) -> str {
+  if let Some(name) = lookup(customer_identifier) { name } else if let Some(alias) = aliases.get(customer_identifier) { alias } else { "unknown" }
+}

@@ -1,0 +1,42 @@
+//~ rule: values.passing-values, modes.overlap
+//~ stdout:
+//~ | [1, 9] a
+//~ | [1, 9] Cart { name: "b!", items: [1] } Cart { name: "b", items: [1] }
+//~ | Cart { name: "c!", items: [1] } [1]
+//~ | 2 [1, 2]
+
+type Cart = { name: str, items: List<i64> }
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn renamed(c: Cart) -> Cart {
+  var d = c
+  d.name = "{d.name}!"
+  d
+}
+
+fn bumped(n: i64) -> i64 {
+  var m = n
+  m += 1
+  m
+}
+
+fn main() / io {
+  var a = Cart { name: "a", items: [1] }
+  let r1 = grown(a.items)
+  print("{r1} {a.name}")
+  var b = Cart { name: "b", items: [1] }
+  let r2 = grown(b.items)
+  let n2 = renamed(b)
+  print("{r2} {n2} {b}")
+  var c = Cart { name: "c", items: [1] }
+  let r3 = renamed(c)
+  print("{r3} {c.items}")
+  var xs = [1, 2]
+  let r4 = bumped(xs[0])
+  print("{r4} {xs}")
+}

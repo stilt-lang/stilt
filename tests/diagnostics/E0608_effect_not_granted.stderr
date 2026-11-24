@@ -1,0 +1,16 @@
+── EFFECT THAT THE MANIFEST DOESN'T GRANT ────────────── stilt.toml:5:1  [E0608]
+
+`csv.report` uses `console`, by calling `print` at deps/csv/src/main.lt:1:33,
+but this manifest grants `csv` no effect:
+
+  5 │ csv = { path = "deps/csv" }
+    │ ^^^
+
+A dependency performs only the effects and capabilities that its entry grants
+with `may`, as `may = ["fs"]`, and `unsafe` code only with `unsafe`. Grant what
+it needs, if you trust it with that.
+
+To fix it, grant `console` to `csv`:
+
+  5 │ csv = { path = "deps/csv", may = ["console"] }
+    │                          +++++++++++++++++++

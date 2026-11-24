@@ -1,0 +1,11 @@
+//~ rule: program.prelude-functions, program.panic-detail
+//~ stderr:
+//~ | to stderr
+//~ | panic: explicit: "bad \"x\"\n"
+//~ |   at explicit_panic.lt:10:3
+//~ panic: explicit
+
+fn main() / io {
+  eprint("to stderr")
+  panic("bad \"x\"\n")
+}

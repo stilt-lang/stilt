@@ -1,0 +1,131 @@
+module std.net
+
+// TCP connections and listeners, UDP sockets, and the names of hosts (std.net,
+// std.net-streams, std.net-listeners and std.net-datagrams). Every native here
+// has the capability `net` (facts.capability-natives).
+
+use std.io
+
+/// A TCP connection, which reads and writes a stream of bytes.
+pub type Stream = { id: i64 }
+
+/// A TCP listener, bound to an address, which accepts connections.
+pub type Listener = { id: i64 }
+
+/// A UDP socket, bound to an address, which sends and receives datagrams.
+pub type Socket = { id: i64 }
+
+/// A datagram that a socket received: its bytes, and the address of its sender,
+/// `ip:port`.
+pub type Datagram = { bytes: List<u8>, from: str }
+
+/// The addresses of `host`, a name or an address, as text, in the order that
+/// the system gives them, each once.
+pub fn lookup(host: str) -> List<str> / {io, raise<io.IoError>} = ?
+
+/// Connects to `port` of `host`, trying each of its addresses in turn.
+pub fn connect(host: str, port: i64) -> Stream / {io, raise<io.IoError>} { Stream { id: try open(host, port) } }
+
+/// Listens on `port` of `host`, or on a port that the system picks when `port`
+/// is 0.
+pub fn listen(host: str, port: i64) -> Listener / {io, raise<io.IoError>} { Listener { id: try bind(host, port) } }
+
+impl Listener {
+  /// The port that the listener listens on.
+  pub fn port(self) -> i64 / io { local_port(self.id) }
+
+  /// Waits for a connection, and gives it.
+  pub fn accept(inout self) -> Stream / {io, raise<io.IoError>} { Stream { id: try accepted(self.id) } }
+
+  /// Stops listening.
+  pub fn close(inout self) / io { closed(self.id) }
+}
+
+/// Binds a UDP socket to `port` of `host`, or to a port that the system picks
+/// when `port` is 0.
+pub fn socket(host: str, port: i64) -> Socket / {io, raise<io.IoError>} { Socket { id: try datagrams(host, port) } }
+
+impl Socket {
+  /// The port it is bound to, or 0 once it is closed.
+  pub fn port(self) -> i64 / io { local_port(self.id) }
+
+  /// Sends `bytes` as one datagram to `port` of `host`, trying each of its
+  /// addresses in turn.
+  pub fn send_to(inout self, bytes: List<u8>, host: str, port: i64) / {io, raise<io.IoError>} {
+    try send_datagram(self.id, bytes, host, port)
+  }
+
+  /// Waits for the next datagram, or `None` when the wait gives up, as a
+  /// timeout makes it, or the socket is closed.
+  pub fn receive(inout self) -> Option<Datagram> / io {
+    let bytes = received(self.id) else { return None }
+    Some(Datagram { bytes: bytes, from: sender(self.id) })
+  }
+
+  /// Makes the waits that follow give up after `ms` milliseconds, or wait as
+  /// long as they take when `ms <= 0`.
+  pub fn set_timeout(inout self, ms: i64) / io { timeout(self.id, ms) }
+
+  /// Closes the socket.
+  pub fn close(inout self) / io { closed(self.id) }
+}
+
+impl Stream {
+  /// Writes `text`.
+  pub fn write(inout self, text: str) / {io, raise<io.IoError>} { try send(self.id, text) }
+
+  /// Writes `bytes`.
+  pub fn write_bytes(inout self, bytes: List<u8>) / {io, raise<io.IoError>} { try send_bytes(self.id, bytes) }
+
+  /// The next line that the stream reads, without its `\n` or a `\r` before it,
+  /// or `None` at its end.
+  pub fn read_line(inout self) -> Option<str> / io { next_line(self.id) }
+
+  /// The next `n` bytes that the stream reads, or fewer when it ends first.
+  pub fn read_bytes(inout self, n: i64) -> List<u8> / io { next_bytes(self.id, n) }
+
+  /// The rest of what the stream reads, until its end.
+  pub fn read_all(inout self) -> str / io { rest(self.id) }
+
+  /// Gives up on a read or a write that waits longer than `ms` milliseconds, or
+  /// waits for each as long as it takes when `ms <= 0`.
+  pub fn set_timeout(inout self, ms: i64) / io { timeout(self.id, ms) }
+
+  /// Closes the stream's writing side, so that the other end reads to its end.
+  pub fn close_write(inout self) / io { shut(self.id) }
+
+  /// Closes the stream.
+  pub fn close(inout self) / io { closed(self.id) }
+}
+
+fn open(host: str, port: i64) -> i64 / {io, raise<io.IoError>} = ?
+
+fn bind(host: str, port: i64) -> i64 / {io, raise<io.IoError>} = ?
+
+fn local_port(id: i64) -> i64 / io = ?
+
+fn accepted(id: i64) -> i64 / {io, raise<io.IoError>} = ?
+
+fn send(id: i64, text: str) / {io, raise<io.IoError>} = ?
+
+fn send_bytes(id: i64, bytes: List<u8>) / {io, raise<io.IoError>} = ?
+
+fn next_line(id: i64) -> Option<str> / io = ?
+
+fn next_bytes(id: i64, n: i64) -> List<u8> / io = ?
+
+fn rest(id: i64) -> str / io = ?
+
+fn timeout(id: i64, ms: i64) / io = ?
+
+fn shut(id: i64) / io = ?
+
+fn closed(id: i64) / io = ?
+
+fn datagrams(host: str, port: i64) -> i64 / {io, raise<io.IoError>} = ?
+
+fn send_datagram(id: i64, bytes: List<u8>, host: str, port: i64) / {io, raise<io.IoError>} = ?
+
+fn received(id: i64) -> Option<List<u8>> / io = ?
+
+fn sender(id: i64) -> str / io = ?

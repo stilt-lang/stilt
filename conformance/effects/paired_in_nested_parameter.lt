@@ -1,0 +1,20 @@
+//~ rule: effects.paired-row-variables, effects.catch-around-row-variables
+//~ run-output: "5"
+
+type Box = { v: i64 }
+
+// The only pairing sits in a function type inside a parameter's function
+// type.
+fn run<e>(escaping outer: fn(fn() / {raise<Box>, e}) / e, escaping inner: fn() / e) -> i64 / e {
+  let h: fn() / {raise<Box>, e} = inner
+  try {
+    h()
+    0
+  }
+    catch x because "a Box is the only error" => x.v
+}
+
+fn main() / {io, raise<Box>} {
+  let n = try run(|f| {}, || raise Box { v: 5 })
+  print("{n}")
+}

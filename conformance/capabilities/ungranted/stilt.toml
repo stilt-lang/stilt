@@ -1,0 +1,3 @@
+[dependencies]
+logs = { path = "deps/logs", may = ["console"] } # //~ ERROR E0608
+quit = { path = "deps/quit", may = ["console"] } # //~ ERROR E0608

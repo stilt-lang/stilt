@@ -1,0 +1,3 @@
+//~ tier: meta
+//~ rule: macros.expansion-effects, packages.running-with-ungranted-effect
+//~ run-output: "3"

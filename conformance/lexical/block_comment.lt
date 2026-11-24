@@ -1,0 +1,4 @@
+//~ rule: lexical.no-block-comments
+/* A block comment //~ ERROR E0100
+   over two lines */
+fn main() {}

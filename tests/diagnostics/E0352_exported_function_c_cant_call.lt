@@ -1,0 +1,4 @@
+/// The checksum of a line of text.
+pub extern fn checksum(line: str) -> u32 {
+  line.len().to_u32() else 0
+}

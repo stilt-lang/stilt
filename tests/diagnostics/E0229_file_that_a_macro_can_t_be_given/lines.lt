@@ -1,0 +1,7 @@
+use std.meta
+
+/// The number of lines of the file.
+pub macro count(f: meta.File) -> meta.Expr {
+  let n = f.text.value().lines().len()
+  quote { $n }
+}

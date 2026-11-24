@@ -1,0 +1,22 @@
+// A chain of two or more calls that doesn't fit in 100 columns has each call on a line of its
+// own, after a `.`, a level in. The fields that start the chain stay with its first expression.
+// A chain that fits goes on one line, whatever the source's line breaks. When only the last
+// call's arguments don't fit, they break and the chain stays on one line.
+fn main() / io {
+  let short = parts.map(|p| p * 2).filter(|p| p > 3)
+  let long = orders.items
+    .iter()
+    .map(|item| item.price * item.quantity)
+    .filter(|total| total > 1000)
+    .sum()
+  let single = orders.items.iter_with_a_very_long_name_that_makes_the_line_too_long_for_the_limit(
+    first_argument,
+    2,
+  )
+  let last = orders.filter(|order| order.paid).collect_into_a_list_of_orders(
+    first_argument,
+    second_argument,
+    third,
+  )
+  let text = "{long}"
+}

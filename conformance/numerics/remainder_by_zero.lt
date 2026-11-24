@@ -1,0 +1,12 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ run-output: "1"
+//~ panic: divide-by-zero
+//~ panic-at: remainder_by_zero.lt:11:11
+
+fn main() / io {
+  let n: u32 = 7
+  let three: u32 = 3
+  let zero: u32 = 0
+  print("{n % three}")
+  print("{n % zero}")
+}

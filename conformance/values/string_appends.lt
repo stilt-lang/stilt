@@ -1,0 +1,55 @@
+//~ rule: values.strings, values.independent-copies, traits.show
+//~ stdout:
+//~ | 60000 ab
+//~ | abab abababab
+//~ | kept: ab, s: ab!
+//~ | é日é日
+//~ | ["x?", "y"]
+//~ | inner: a+ outer: a
+//~ | 3 7
+
+// A string built by interpolating it with more text is a new value each time: nothing that
+// held the string before sees the text added after it.
+
+fn grown(s: str) -> str / io {
+  var t = s
+  t = "{t}+"
+  print("inner: {t} outer: {s}")
+  t
+}
+
+fn main() / io {
+  var s = ""
+  for i in 0..30000 { s = "{s}ab" }
+  print("{s.len()} {s.slice(0, 2)}")
+
+  var d = "ab"
+  d = "{d}{d}"
+  let half = d
+  d = "{d}{d}"
+  print("{half} {d}")
+
+  var t = "ab"
+  let kept = t
+  t = "{t}!"
+  print("kept: {kept}, s: {t}")
+
+  var u = "é"
+  u = "{u}日"
+  u = "{u}{u}"
+  print(u)
+
+  var xs = ["x", "y"]
+  xs[0] = "{xs[0]}?"
+  print("{xs}")
+
+  let _ = grown("a")
+
+  var n = ""
+  var lens = []
+  for w in ["abc", "defg"] {
+    n = "{n}{w}"
+    lens.push(n.len())
+  }
+  print("{lens[0]} {lens[1]}")
+}

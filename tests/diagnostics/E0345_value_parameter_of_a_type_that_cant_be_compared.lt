@@ -1,0 +1,1 @@
+type Scaled<k: f64> = { value: f64 }

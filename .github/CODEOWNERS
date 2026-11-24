@@ -1,0 +1,21 @@
+# Each area's maintainers review its changes (GOVERNANCE.md). Until others join, the project's
+# one maintainer is listed for every area. The first line covers what no later one does: the
+# files at the root, the site, the playground and the release notes among them.
+* @eyusd
+/reference/ @eyusd
+/conformance/ @eyusd
+/interpreter/ @eyusd
+/compiler/ @eyusd
+/std/ @eyusd
+/tools/ @eyusd
+/tests/ @eyusd
+/bench/ @eyusd
+/formal/ @eyusd
+/editors/ @eyusd
+/docs/ @eyusd
+/examples/ @eyusd
+/.github/ @eyusd
+/justfile @eyusd
+/site/ @eyusd
+/playground/ @eyusd
+/changes/ @eyusd

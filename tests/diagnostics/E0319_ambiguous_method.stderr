@@ -1,0 +1,21 @@
+── AMBIGUOUS METHOD ─────────────────── E0319_ambiguous_method.lt:19:33  [E0319]
+
+`describe` is a method of `Report` and `Audit`:
+
+  19 │ fn summary(o: Order) -> str { o.describe() }
+     │                                 ^^^^^^^^
+
+Two traits give the type a method of that name, so the call names the trait it
+means, as `Report.describe(o)`.
+
+Two ways to fix it:
+
+  1. Call `Report`'s `describe`:
+
+  19 │ fn summary(o: Order) -> str { Report.describe(o) }
+     │                               ++++++++++++++++ ~
+
+  2. Call `Audit`'s `describe`:
+
+  19 │ fn summary(o: Order) -> str { Audit.describe(o) }
+     │                               +++++++++++++++ ~

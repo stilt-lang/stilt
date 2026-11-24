@@ -1,0 +1,4 @@
+//~ rule: lexical.integer-literals, lexical.digits-after-dot
+fn f(t: (i64, i64)) -> i64 {
+  t.1e3 //~ ERROR E0004
+}

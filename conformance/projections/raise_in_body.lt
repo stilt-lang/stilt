@@ -1,0 +1,16 @@
+//~ tier: advanced
+//~ rule: projections.cannot-raise
+
+type Bad = | Bad
+
+// A `raise` in a projection's body doesn't fit its row, which can't hold `raise<E>`.
+fn checked(inout xs: List<i64>, i: i64) -> inout i64 {
+  if i >= xs.len() { raise Bad } //~ ERROR E0502
+  yield xs[i]
+}
+
+fn main() / io {
+  var xs = [1]
+  checked(inout xs, 0) = 2
+  print("{xs}")
+}

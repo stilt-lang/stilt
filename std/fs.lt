@@ -1,0 +1,98 @@
+module std.fs
+
+// Files, directories and paths (std.fs; std.directories and std.fs-paths).
+
+use std.io
+
+/// The contents of the file at `path`.
+pub fn read(path: str) -> str / {io, raise<io.IoError>} = ?
+
+/// The lines of the file at `path`, split as `str.lines` splits them.
+pub fn read_lines(path: str) -> List<str> / {io, raise<io.IoError>} = ?
+
+/// Creates or replaces the file at `path`, with `text` as its contents.
+pub fn write(path: str, text: str) / {io, raise<io.IoError>} = ?
+
+/// Appends `text` to the file at `path`, creating it when it doesn't exist.
+pub fn append(path: str, text: str) / {io, raise<io.IoError>} = ?
+
+/// The bytes of the file at `path`.
+pub fn read_bytes(path: str) -> List<u8> / {io, raise<io.IoError>} = ?
+
+/// Creates or replaces the file at `path`, with `bytes` as its contents.
+pub fn write_bytes(path: str, bytes: List<u8>) / {io, raise<io.IoError>} = ?
+
+/// Writes the bytes of the file `from` to the file `to`.
+pub fn copy(from: str, to: str) / {io, raise<io.IoError>} { try write_bytes(to, read_bytes(from)) }
+
+/// Whether anything exists at `path`, following symbolic links.
+pub fn exists(path: str) -> bool / io = ?
+
+/// Whether a file exists at `path`, following symbolic links.
+pub fn is_file(path: str) -> bool / io = ?
+
+/// Whether a directory exists at `path`, following symbolic links.
+pub fn is_dir(path: str) -> bool / io = ?
+
+/// The names of the entries of the directory at `path`, sorted by their bytes.
+pub fn list_dir(path: str) -> List<str> / {io, raise<io.IoError>} = ?
+
+/// Creates the directory at `path`, and every missing directory on its path.
+pub fn create_dir(path: str) / {io, raise<io.IoError>} = ?
+
+/// Removes the file at `path`, or the directory when it is empty.
+pub fn remove(path: str) / {io, raise<io.IoError>} = ?
+
+/// Removes the file at `path`, or the directory and everything in it, never
+/// following a symbolic link.
+pub fn remove_all(path: str) / {io, raise<io.IoError>} = ?
+
+/// Moves `from` to `to`, replacing a file at `to`.
+pub fn rename(from: str, to: str) / {io, raise<io.IoError>} = ?
+
+/// `path` relative to `base`: `path` itself when it starts with `/` or `base`
+/// is empty, and otherwise the two with one `/` between them.
+/// ex: join("a", "b.txt") == "a/b.txt"
+/// ex: join("a/", "b") == "a/b"
+/// ex: join("a", "/etc") == "/etc"
+pub fn join(base: str, path: str) -> str {
+  if path.starts_with("/") || base.is_empty() { return path }
+  if base.ends_with("/") { return "{base}{path}" }
+  "{base}/{path}"
+}
+
+/// The text of `path` after its last `/`.
+/// ex: file_name("a/b.txt") == "b.txt"
+/// ex: file_name("a/") == ""
+/// ex: file_name("b") == "b"
+pub fn file_name(path: str) -> str {
+  let (_, name) = path.rsplit_once("/") else return path
+  name
+}
+
+/// The text of `path` up to its last `/`, without the `/`s that end it unless
+/// it is only `/`s, and `""` when it has no `/`.
+/// ex: parent("a/b") == "a"
+/// ex: parent("/a") == "/"
+/// ex: parent("b") == ""
+pub fn parent(path: str) -> str {
+  let (head, _) = path.rsplit_once("/") else return ""
+  if head.replace("/", "").is_empty() { return "{head}/" }
+  var trimmed = head
+  loop {
+    let shorter = trimmed.strip_suffix("/") else break
+    trimmed = shorter
+  }
+  trimmed
+}
+
+/// The text after the last `.` of the file name of `path`, when that `.` isn't
+/// the name's first character.
+/// ex: extension("a/b.tar.gz") == Some("gz")
+/// ex: extension(".profile") == None
+/// ex: extension("notes") == None
+pub fn extension(path: str) -> Option<str> {
+  let (stem, ext) = file_name(path).rsplit_once(".") else return None
+  if stem.is_empty() { return None }
+  Some(ext)
+}

@@ -1,0 +1,14 @@
+── `use` OF AN ITEM ─────────────────────── E0230_use_of_an_item.lt:1:1  [E0230]
+
+`use` names a module: write `use std.sync`, then `sync.Shared`:
+
+  1 │ use std.sync.Shared
+    │ ^^^^^^^^^^^^^^^^^^^
+
+`use` imports a module, never an item: write `use std.sync`, then name the item
+through the module, as `sync.Shared`.
+
+To fix it, import `std.sync`:
+
+  1 │ use std.sync
+    │ ~~~~~~~~~~~~

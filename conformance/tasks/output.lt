@@ -1,0 +1,36 @@
+//~ tier: advanced
+//~ rule: tasks.with-waits, tasks.sequential-run, tasks.same-output-under-every-handler
+//~ stdout:
+//~ | start
+//~ | task a
+//~ | task b
+//~ | after spawns
+//~ | a done
+//~ | never awaited
+//~ | end
+//~ | start
+//~ | task a
+//~ | task b
+//~ | after spawns
+//~ | a done
+//~ | never awaited
+//~ | end
+
+use std.task
+
+// What each task prints appears where the sequential run prints it.
+fn run() / {io, async} {
+  print("start")
+  let a = task.spawn(|| print("task a"))
+  let b = task.spawn(|| print("task b"))
+  print("after spawns")
+  a.await()
+  print("a done")
+  task.spawn(|| print("never awaited"))
+  print("end")
+}
+
+fn main() / io {
+  with task.threads() { run() }
+  with task.sequential() { run() }
+}

@@ -1,0 +1,18 @@
+module pure
+without panic
+
+use lib
+
+pub fn less(x: lib.Odd, y: lib.Odd) -> bool {
+  x < y //~ ERROR E0204
+}
+
+pub fn sorted(xs: List<lib.Odd>) -> List<lib.Odd> {
+  xs.sorted() //~ ERROR E0204
+}
+
+pub fn fine(x: lib.Fine, y: lib.Fine) -> bool { x < y }
+
+pub fn inside(x: (i64, lib.Odd), y: (i64, lib.Odd)) -> bool {
+  x == y //~ ERROR E0204
+}

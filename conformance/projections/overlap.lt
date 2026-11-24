@@ -1,0 +1,23 @@
+//~ tier: advanced
+//~ rule: projections.when-projection-runs
+
+type Grid = { w: i64, cells: List<i64> }
+
+impl Grid {
+  fn at(inout self, x: i64, y: i64) -> inout i64 {
+    yield self.cells[y * self.w + x]
+  }
+}
+
+fn swap(inout a: i64, inout b: i64) {
+  let t = a
+  a = b
+  b = t
+}
+
+fn main() / io {
+  var g = Grid { w: 2, cells: [1, 2, 3, 4] }
+  // Both projections hold `g` for the call.
+  swap(inout g.at(0, 0), inout g.at(1, 1)) //~ ERROR E0402
+  print("{g.cells}")
+}

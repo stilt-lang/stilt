@@ -1,0 +1,5 @@
+//~ rule: numbers.integer-literals, numbers.wrapping, expressions.open-left-operand
+
+fn wrap() -> f64 {
+  1 +% 1.5 //~ ERROR E0317
+}

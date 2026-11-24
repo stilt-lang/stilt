@@ -1,0 +1,13 @@
+//~ rule: program.visibility
+
+use shapes
+
+fn f() -> f64 {
+  shapes.area(shapes.unit()) //~ ERROR E0213
+}
+
+fn g(h: shapes.Hidden) {} //~ ERROR E0213
+
+fn k() {
+  let _ = shapes.Secret //~ ERROR E0213
+}

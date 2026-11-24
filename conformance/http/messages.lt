@@ -1,0 +1,17 @@
+//~ rule: std.http, std.http-messages
+//~ stdout:
+//~ | Request { method: "GET", target: "/", headers: [("Accept", "text/plain")], body: "" }
+//~ | Some("text/plain") None
+//~ | Response { status: 404, headers: [("Content-Type", "text/plain")], body: "gone" }
+//~ | Some("text/plain") OK Not Found Internal Server Error []
+
+use std.http
+
+fn main() / io {
+  let request = http.Request.new("GET", "/").with_header("Accept", "text/plain")
+  print("{request}")
+  print("{request.header("accept")} {request.with_body("x").header("Content-Length")}")
+  let response = http.Response.new(404, "gone").with_header("Content-Type", "text/plain")
+  print("{response}")
+  print("{response.header("CONTENT-TYPE")} {http.reason(200)} {http.reason(404)} {http.reason(500)} [{http.reason(299)}]")
+}

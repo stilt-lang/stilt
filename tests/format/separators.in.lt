@@ -1,0 +1,14 @@
+// The formatter never writes `;`: each statement ends its line instead.
+module main; without panic
+
+use std.cli; use std.fs;
+
+type Item = { name: str }
+
+fn names(items: List<Item>) -> List<str> { let f = 1; items.map(.name) }
+
+fn getter() -> fn(Item) -> str { let unused = 0; .name }
+
+fn adder(k: i64) -> fn(i64) -> i64 { let twice = k * 2; |x| x + twice }
+
+fn main() / io { print("a"); print("b"); }

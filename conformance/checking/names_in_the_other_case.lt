@@ -1,0 +1,12 @@
+//~ rule: errors.broken-parts
+
+// A function named in upper case and a constant named in lower case break their parts at the
+// name, and declare it all the same, so the uses of each have the error type, from which
+// nothing is reported.
+fn Helper() -> i64 { 1 } //~ ERROR E0100
+const total = 5 //~ ERROR E0100
+
+fn main() / io {
+  let sum = Helper() + total
+  print("{sum} {Helper()} {total}")
+}

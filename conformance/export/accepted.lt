@@ -1,0 +1,57 @@
+//~ rule: syntax.extern-functions, c.exported-functions, c.exported-signatures
+//~ stdout:
+//~ | 3
+//~ | 2.5
+//~ | false
+//~ | 255
+//~ | -7
+//~ | true
+//~ | hello
+//~ | 42
+
+// An exported function is a function of the program too, which its own code calls as it calls
+// any other, with each type that C can take.
+
+/// Adds two integers.
+pub extern fn add(a: i64, b: i64) -> i64 {
+  a + b
+}
+
+pub extern fn mean(a: f64, b: f64) -> f64 {
+  (a + b) / 2.0
+}
+
+pub extern fn negate(x: bool) -> bool {
+  !x
+}
+
+pub extern fn same(x: u8) -> u8 {
+  x
+}
+
+pub extern fn diff(a: i32, b: i32) -> i32 {
+  a - b
+}
+
+pub extern fn zeros(a: i8, b: i16, c: u16, d: u32, e: u64, f: f32) -> bool {
+  a == 0 && b == 0 && c == 0 && d == 0 && e == 0 && f == 0.0
+}
+
+pub extern fn greet() -> () / io {
+  print("hello")
+}
+
+pub extern fn answer() -> i64 {
+  42
+}
+
+fn main() / io {
+  print("{add(1, 2)}")
+  print("{mean(2.0, 3.0)}")
+  print("{negate(true)}")
+  print("{same(255)}")
+  print("{diff(3, 10)}")
+  print("{zeros(0, 0, 0, 0, 0, 0.0)}")
+  greet()
+  print("{answer()}")
+}

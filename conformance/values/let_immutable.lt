@@ -1,0 +1,18 @@
+//~ rule: values.value-semantics, values.let-and-var, expressions.mutable-places, modes.what-can-be-modified
+
+type Point = { x: i64, y: i64 }
+type Line = { from: Point, to: Point }
+
+fn parts() {
+  let p = Point { x: 1, y: 2 }
+  p = Point { x: 0, y: 0 } //~ ERROR E0403
+  p.x = 3 //~ ERROR E0403
+  let line = Line { from: p, to: p }
+  line.to.y += 1 //~ ERROR E0403
+  let t = (1, [2])
+  t.0 = 5 //~ ERROR E0403
+  t.1[0] = 6 //~ ERROR E0403
+  let xs = [1, 2]
+  xs[0] = 7 //~ ERROR E0403
+  xs.push(3) //~ ERROR E0403
+}

@@ -1,0 +1,17 @@
+//~ tier: meta
+//~ rule: meta.std-meta, traits.unsatisfied-bounds
+
+use std.meta
+
+type Box = { inner: i64 }
+
+fn shown<T: Show>(x: T) -> str { "{x}" }
+
+// A shape is a native variant type, which has no written representation, so it has none of
+// the prelude's traits: nothing shows, compares or hashes it.
+fn main() / io {
+  let s = i64.shape()
+  print("{Box.shape()}") //~ ERROR E0318
+  print(shown(s)) //~ ERROR E0318
+  print("{s == s}") //~ ERROR E0318
+}

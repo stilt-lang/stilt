@@ -1,0 +1,65 @@
+//~ tier: core
+
+type Table = { slots: List<i64> }
+
+type State = { table: Table, n: i64 }
+
+// `start` consumes `table`, which it stores in a value.
+fn start(table: Table) -> State {
+  State { table, n: 0 } //~ CONSUMES table
+}
+
+// An `inout` parameter that every path from the call assigns before the function returns
+// gives its value up, as a variable that the code assigns after its last use does.
+fn handed(inout table: Table) {
+  var s = start(table)
+  s.table.slots[0] += 1 //~ PANIC OVERFLOW ALLOC
+  table = s.table //~ ESCAPES s
+}
+
+// An `inout` parameter goes back to the caller when the function returns, so a call that
+// consumes it while the function leaves it as it was can't reuse it.
+fn kept(inout table: Table) -> i64 {
+  var s = start(table) //~ LOST-REUSE table
+  s.table.slots[0] += 1 //~ PANIC OVERFLOW ALLOC
+  s.n
+}
+
+// A use of the parameter after the call needs its value too.
+fn read_after(inout table: Table) {
+  var s = start(table) //~ LOST-REUSE table
+  s.n = table.slots.len()
+  table = s.table //~ ESCAPES s
+}
+
+// A raise before the assignment gives the parameter back to the caller as it was.
+fn raised_before(inout table: Table, n: i64) / raise<i64> {
+  var s = start(table) //~ LOST-REUSE table
+  if n < 0 { raise n }
+  table = s.table //~ ESCAPES s
+}
+
+// A panic needs nothing, since nothing runs after it.
+fn panics_before(inout table: Table, n: i64) {
+  var s = start(table)
+  if n < 0 { panic("negative") } //~ PANIC
+  table = s.table //~ ESCAPES s
+}
+
+// A path that doesn't assign the parameter gives it back as it was.
+fn on_one_path(inout table: Table, flag: bool) {
+  var s = start(table) //~ LOST-REUSE table
+  if flag { table = s.table } //~ ESCAPES s
+}
+
+// A variable that a closure's body grows lives in memory too, and gives its value up as one in
+// a function's body does.
+fn in_a_closure() -> fn() -> i64 {
+  || { //~ ALLOC
+    var table = Table { slots: [0] } //~ ALLOC
+    table.slots.push(1) //~ ALLOC
+    var s = start(table) //~ ESCAPES table
+    table = s.table
+    table.slots.len()
+  }
+}

@@ -1,0 +1,12 @@
+//~ rule: numbers.shift-amounts, effects.panic-kinds
+//~ run-output: "-9223372036854775808"
+//~ panic: overflow
+//~ panic-at: shift_by_width.lt:11:11
+
+fn main() / io {
+  let x: i64 = 1
+  let last: i64 = 63
+  let width: i64 = 64
+  print("{x << last}")
+  print("{x << width}")
+}

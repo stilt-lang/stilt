@@ -1,0 +1,9 @@
+//~ rule: errors.registry-phases
+
+type Color = | Red | Green
+
+fn name(c: Color) -> str {
+  match c { //~ ERROR E0329
+    Red => ?
+  }
+}

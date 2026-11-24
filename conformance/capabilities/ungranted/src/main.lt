@@ -1,0 +1,7 @@
+use logs
+use quit
+
+fn main() / io {
+  logs.log("a")
+  quit.stop()
+}

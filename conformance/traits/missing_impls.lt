@@ -1,0 +1,35 @@
+//~ rule: traits.required-traits, traits.structural-impls, traits.floats
+
+type Job = { name: str, run: fn() }
+
+fn earlier(a: Job, b: Job) -> bool {
+  a < b //~ ERROR E0318
+}
+
+fn same(a: fn(), b: fn()) -> bool {
+  a == b //~ ERROR E0318
+}
+
+fn shown(f: fn()) -> str {
+  "{f}" //~ ERROR E0318
+}
+
+fn by_reading() -> Map<(i64, f64), str> {
+  Map.new() //~ ERROR E0318
+}
+
+fn by_map() -> Map<Map<str, i64>, str> {
+  Map.new() //~ ERROR E0318
+}
+
+fn ordered(a: Map<str, i64>, b: Map<str, i64>) -> bool {
+  a < b //~ ERROR E0318
+}
+
+fn equal(a: Map<str, i64>, b: Map<str, i64>) -> bool { a == b }
+
+fn label(a: Job) -> str { "{a.name}" }
+
+fn sorted(xs: List<f64>) -> List<f64> { xs.sorted() }
+
+fn by_name() -> Map<(str, i64), f64> { Map.new() }

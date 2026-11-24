@@ -1,0 +1,9 @@
+── SYNTAX ERROR ──────────────────────────────────── E0100_guard.lt:2:9  [E0100]
+
+Stilt has no `guard`: write `if !(…) { … }`, or `let x = o else …`:
+
+  2 │   guard n % 2 == 0 else { raise "odd" }
+    │         ^
+
+`else` after a pattern of `let` runs when the pattern doesn't match, and must
+leave the block.

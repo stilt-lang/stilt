@@ -1,0 +1,21 @@
+//~ rule: values.passing-values
+//~ run-output: "[1, 9] [1] [1] [1]"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn either(c: bool) -> List<i64> {
+  var xs = [1]
+  if c { grown(xs) } else { xs }
+}
+
+fn after(c: bool) -> List<i64> {
+  var xs = [1]
+  if c { let ys = grown(xs) }
+  xs
+}
+
+fn main() / io { print("{either(true)} {either(false)} {after(true)} {after(false)}") }

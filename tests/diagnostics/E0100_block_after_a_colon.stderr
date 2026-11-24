@@ -1,0 +1,8 @@
+── SYNTAX ERROR ───────────────────── E0100_block_after_a_colon.lt:3:11  [E0100]
+
+Stilt writes a block in braces, as `if c { … }`, not after `:`:
+
+  3 │   if n > 2: print("big")
+    │           ^
+
+Braces mark every block, so a block's indentation is free.

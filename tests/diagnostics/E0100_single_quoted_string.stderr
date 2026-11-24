@@ -1,0 +1,13 @@
+── SYNTAX ERROR ──────────────────── E0100_single_quoted_string.lt:1:24  [E0100]
+
+Stilt writes a string in double quotes, as "hello":
+
+  1 │ fn greeting() -> str { 'hello' }
+    │                        ^
+
+A string holds any text, one character or more, and is written in `"`.
+
+To fix it, write it in double quotes:
+
+  1 │ fn greeting() -> str { "hello" }
+    │                        ~     ~

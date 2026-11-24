@@ -1,0 +1,17 @@
+//~ rule: lexical.digits-after-dot, syntax.expression-parentheses
+//~ stdout:
+//~ | 2 3
+//~ | 0
+//~ | 1
+//~ | 7
+
+fn main() / io {
+  let t = ((1, 2), 3)
+  print("{t.0.1} {t.1}")
+  let n = 2
+  for i in 0..n {
+    print("{i}")
+  }
+  let deep = (((7,),),)
+  print("{deep.0.0.0}")
+}

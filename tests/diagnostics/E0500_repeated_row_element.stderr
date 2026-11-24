@@ -1,0 +1,13 @@
+── REPEATED ROW ELEMENT ──────────── E0500_repeated_row_element.lt:1:29  [E0500]
+
+`io` is already in this row:
+
+  1 │ fn log(message: str) / {io, io} { print(message) }
+    │                             ^^
+
+A row names each effect once. Delete the repeated one.
+
+To fix it, delete the repeated `io`:
+
+  1 │ fn log(message: str) / {io, io} { print(message) }
+    │                           ----

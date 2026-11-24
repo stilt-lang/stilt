@@ -1,0 +1,3 @@
+module util.text
+
+pub fn say(s: str) / io { print(s) }

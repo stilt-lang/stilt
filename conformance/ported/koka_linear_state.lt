@@ -1,0 +1,39 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, shared.when
+//~ run-output: "42"
+
+// Koka, test/algeff/linear1.kk: a state handler whose `put` takes control, sets the state,
+// resumes once, and adds 20 to what the rest of the block gives. `foo` reads 0, puts 1 and 2,
+// and reads 2, so the result is 20 + (20 + 2) = 42. Koka keeps the state in a local `var` that
+// the handler's clauses assign. A Stilt handler captures by copy, so here the state is a
+// `Shared<i64>` that the bodies reach in `when`.
+
+use std.sync
+
+effect State {
+  fn get() -> i64
+  fn put(x: i64)
+}
+
+fn foo() -> i64 / State {
+  let i = State.get()
+  State.put(i + 1)
+  State.put(i + 2)
+  State.get()
+}
+
+fn state(init: i64, action: fn() -> i64 / State) -> i64 {
+  let s = sync.Shared.new(init)
+  let h = handler State -> i64 {
+    fn get() -> i64 { resume(when s { s }) }
+    fn put(x: i64) {
+      when s { s = x }
+      20 + resume()
+    }
+  }
+  with h { action() }
+}
+
+fn main() / io {
+  print("{state(0, foo)}")
+}

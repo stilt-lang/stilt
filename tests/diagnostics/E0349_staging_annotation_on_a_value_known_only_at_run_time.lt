@@ -1,0 +1,3 @@
+fn report(n: i64) / io {
+  comptime if n > 0 { print("positive") }
+}

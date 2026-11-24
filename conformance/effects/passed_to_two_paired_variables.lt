@@ -1,0 +1,12 @@
+//~ rule: effects.passing-reports
+
+type Box = { v: i64 }
+type Tag = { t: i64 }
+
+fn two(f: fn() -> i64 / raise<Box>, g: fn() -> i64 / raise<Tag>) -> i64 {
+  try f() catch q because "a Box gives its value" => q.v
+}
+
+fn both(f: fn() -> i64, g: fn() -> i64) -> i64 {
+  two(f, g) //~ ERROR E0507 ERROR E0507
+}

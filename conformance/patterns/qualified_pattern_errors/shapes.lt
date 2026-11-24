@@ -1,0 +1,5 @@
+pub type Shape = | Circle(f64) | Dot
+
+pub type Point = { x: i64, y: i64 }
+
+pub const HALF: f64 = 0.5

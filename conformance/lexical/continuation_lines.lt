@@ -1,0 +1,47 @@
+//~ rule: lexical.continuation-lines, lexical.continuing-expression
+//~ stdout:
+//~ | 3 3 0 9 big
+//~ | 7 Circle 6
+
+type Shape =
+  | Circle
+  | Square
+
+type Failure = | Failed
+
+fn fails() -> i64 / raise<Failure> { raise Failed }
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  let n = xs
+    .len()
+  let m = xs
+
+    // a comment line between a line and its continuation
+    .len()
+  let empty: List<i64> = []
+  let first = empty.first()
+    else 0
+  let recovered = try fails()
+    catch Failed => 9
+  let size = if n > 2 {
+    "big"
+  }
+  else {
+    "small"
+  }
+  print("{n} {m} {first} {recovered} {size}")
+  let bits = 4
+    | 2
+    | 1
+  let shape = Circle
+  let label = match shape {
+    Circle
+      | Square => "{shape}"
+  }
+  let total = xs
+    .map(|x: i64| x)
+    // a comment between two continuation lines
+    .fold(0, |acc: i64, x: i64| acc + x)
+  print("{bits} {label} {total}")
+}

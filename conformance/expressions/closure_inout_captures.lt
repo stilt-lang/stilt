@@ -1,0 +1,29 @@
+//~ rule: expressions.inout-closure-parameters, expressions.capture, modes.law, modes.overlapping-inout, modes.change-while-iterating, modes.what-can-be-modified
+
+fn swap(inout a: i64, inout b: i64) {
+  let t = a
+  a = b
+  b = t
+}
+
+fn main() {
+  var total = 0
+  let add = |inout n: i64| {
+    n += 1
+    total += n //~ ERROR E0403
+  }
+  let nested = |inout n: i64| {
+    let inner = || {
+      n += 1 //~ ERROR E0403
+    }
+    n += 2
+  }
+  let twice = |inout n: i64| {
+    swap(inout n, inout n) //~ ERROR E0402
+  }
+  let grow = |inout xs: List<i64>| {
+    for x in xs {
+      xs.push(x) //~ ERROR E0404
+    }
+  }
+}

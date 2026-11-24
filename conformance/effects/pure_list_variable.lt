@@ -1,0 +1,31 @@
+//~ rule: effects.function-values
+
+fn quiet() {}
+
+fn run_all(fs: List<fn() / io>) / io { for f in fs { f() } }
+
+fn main() / io {
+  let pure = [quiet, quiet]
+  run_all(pure) //~ ERROR E0311
+}
+
+fn literal() / io { run_all([quiet, quiet]) }
+
+fn annotated_element() / io {
+  let g: fn() = quiet
+  let xs = [g]
+  run_all(xs) //~ ERROR E0311
+}
+
+fn optional(o: Option<fn()>) -> Option<fn() / io> {
+  o //~ ERROR E0311
+}
+
+fn run_first(p: (fn() / io, i64)) / io { (p.0)() }
+
+// A closure's row holds only what its body performs, so a tuple that holds it isn't one with a
+// larger row.
+fn closure_in_a_tuple() / io {
+  let p = (|| {}, 1)
+  run_first(p) //~ ERROR E0311
+}

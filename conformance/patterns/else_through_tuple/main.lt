@@ -1,0 +1,25 @@
+//~ rule: patterns.else-after-pattern, patterns.variants-by-type, patterns.irrefutable-positions, expressions.option-fallback
+//~ run-output: "3 1 5 0"
+
+use cells
+
+// `Cell` here is a variant of `Mine`, a type of two variants, but the bare names of a
+// pattern before `else` are read against the annotation's type. Against
+// `(cells.Cell, i64)`, `Cell` is the one variant of `cells.Cell`, so the pattern is
+// irrefutable, and the statement is the `Option` fallback, whose `else` gives a pair.
+type Mine = | Cell(i64) | Empty
+
+fn first(pair: Option<(cells.Cell, i64)>) -> i64 {
+  let (Cell(n), k): (cells.Cell, i64) = pair else (cells.Cell(0), 1)
+  n + k
+}
+
+// Against `(Mine, i64)`, `Cell` is refutable, so the statement is a let-else.
+fn mine(m: Mine) -> i64 {
+  let (Cell(n), k) = (m, 1) else { return 0 }
+  n + k
+}
+
+fn main() / io {
+  print("{first(Some((cells.Cell(2), 1)))} {first(None)} {mine(Cell(4))} {mine(Empty)}")
+}

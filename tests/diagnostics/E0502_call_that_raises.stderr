@@ -1,0 +1,15 @@
+── EFFECT THAT DOESN'T FIT THE ROW ───── E0502_call_that_raises.lt:5:26  [E0502]
+
+This raises `E`, which the row doesn't declare:
+
+  5 │ fn main() / io { print("{f(1)}") }
+    │                          ^^^^
+
+The error goes on to the function's callers, so its row declares it with
+`raise<E>`, and the call is marked with `try`. A `catch` after the call handles
+the error there instead.
+
+To fix it, declare `raise<E>` in the signature, and mark the call with `try`:
+
+  5 │ fn main() / {io, raise<E>} { print("{try f(1)}") }
+    │             +  +++++++++++           ++++

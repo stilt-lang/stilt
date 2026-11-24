@@ -1,0 +1,20 @@
+//~ rule: records.anonymous-literals, declarations.never
+
+// A literal's type is the anonymous record type of its fields, so a field whose value is of
+// type `Never` has that type, as an element of a list does. Where the record is expected, the
+// field takes the expected type, to which `Never` converts.
+
+fn expected() -> { n: str } { { n: panic("no name") } }
+
+fn bound() -> { n: str } {
+  let b = { n: panic("no name") }
+  b //~ ERROR E0311
+}
+
+fn compared() -> bool {
+  let a = { n: "b" }
+  let b = { n: panic("no name") }
+  a == b //~ ERROR E0311
+}
+
+fn main() {}

@@ -1,0 +1,32 @@
+//~ rule: facts.acceptance-places, facts.guarding-tests, facts.guards
+//~ run-output: "3 0 9 0"
+
+// A test of a field's length gives its fact to the field, which a write of another
+// field of the same record doesn't change.
+
+type Lists = { xs: List<i64>, ys: List<i64> }
+
+fn sibling(i: i64, p0: Lists) -> i64 without panic {
+  var p = p0
+  if i >= 0 && i < p.xs.len() {
+    p.ys = []
+    p.xs[i] + p.ys.len()
+  } else {
+    0
+  }
+}
+
+fn other_way(i: i64, p0: Lists) -> i64 without panic {
+  var p = p0
+  if i >= 0 && i < p.ys.len() {
+    p.xs.push(5)
+    p.ys[i]
+  } else {
+    0
+  }
+}
+
+fn main() / io {
+  let p = Lists { xs: [1, 2, 3], ys: [9] }
+  print("{sibling(2, p)} {sibling(3, p)} {other_way(0, p)} {other_way(1, p)}")
+}

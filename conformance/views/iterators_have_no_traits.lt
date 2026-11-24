@@ -1,0 +1,11 @@
+//~ tier: advanced
+//~ rule: views.iterator-traits
+
+use std.view
+
+fn main() / io {
+  let a = view.range(0, 1)
+  let b = view.range(0, 1)
+  print("{a == b}") //~ ERROR E0318
+  print("{a}") //~ ERROR E0318
+}

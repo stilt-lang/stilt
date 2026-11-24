@@ -1,0 +1,5 @@
+fn main() / io {
+  var done = False
+  done = true
+  print("{done}")
+}

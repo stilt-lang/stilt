@@ -1,0 +1,7 @@
+//~ rule: lexical.terminator-insertion, declarations.typed-holes
+//~ run-output: "ran"
+
+fn later() -> i64 = ? //~ WARN W0300
+fn main() / io {
+  print("ran")
+}

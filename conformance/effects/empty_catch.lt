@@ -1,0 +1,9 @@
+//~ rule: patterns.empty-matches, patterns.non-exhaustive-matches, effects.catch
+
+type Failure = | Missing
+
+fn fetch(key: str) -> i64 / raise<Failure> { raise Missing }
+
+fn nothing_handled(key: str) -> i64 {
+  try fetch(key) catch {} //~ ERROR E0329
+}

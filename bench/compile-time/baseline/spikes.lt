@@ -1,0 +1,25 @@
+// Spikes: requests far slower than those just before them on the same service.
+
+use window
+use events.entry
+
+/// How many times slower than the window's mean a request must be to be a spike.
+pub const FACTOR: i64 = 3
+
+/// A line for each request slower than `FACTOR` times the mean of the requests before it on its
+/// service, once a full window of them came before it.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  var out = ["== spikes =="]
+  var windows: Map<str, window.Window> = Map.new()
+  for e in es {
+    let Http(r) = e.event else continue
+    let service = r.service()
+    var w = windows.get(service) else window.new(6)
+    if w.full() && r.millis > FACTOR * w.mean() {
+      out.push("{e.at.clock()} {e.source.text()} {r.text()}: {w.mean()}ms on average before, {w.most()}ms at most")
+    }
+    w.add(r.millis)
+    windows.insert(service, w)
+  }
+  out
+}

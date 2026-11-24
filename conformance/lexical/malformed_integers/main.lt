@@ -1,0 +1,2 @@
+//~ rule: lexical.integer-literals, syntax.lexical-errors, errors.syntax-errors
+const A: i64 = 1__0 //~ ERROR E0004

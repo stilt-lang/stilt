@@ -1,0 +1,10 @@
+── OPERATION THAT MAY RESUME TWICE ── E0514_operation_that_may_resume_twice.lt:9:11  [E0514]
+
+This may resume a second time, but a handler resumes at most once on each path,
+so that no continuation is copied:
+
+  9 │       a + resume(2)
+    │           ^^^^^^^^^
+
+A handler resumes at most once on every path. Resume once, and combine the
+values after.

@@ -1,0 +1,13 @@
+//~ rule: program.panic-detail, effects.panic-kinds, std.option-result-and-ordering
+//~ stderr:
+//~ | panic: unwrap: "the config is valid"
+//~ |   at panic_expect_err.lt:11:14
+//~ panic: unwrap
+
+type ConfigError = | Missing(str)
+
+fn main() / io {
+  let config: Result<i64, ConfigError> = Err(Missing("port"))
+  let port = config.expect("the config is valid")
+  print("{port}")
+}

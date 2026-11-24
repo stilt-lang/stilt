@@ -1,0 +1,28 @@
+//~ rule: patterns.non-exhaustive-matches, effects.marking, modes.change-while-iterating, errors.phases
+
+type Color = | Red | Green
+
+fn two_later_errors(c: Color) {
+  var xs = [1]
+  for x in xs {
+    xs.push(x) //~ ERROR E0404
+  }
+  match c { //~ ERROR E0329
+    Red => ()
+  }
+}
+
+fn earlier_error(c: Color) {
+  let n: i64 = "one" //~ ERROR E0311
+  match c {
+    Red => ()
+  }
+  let t = try 1
+}
+
+fn later_error_hides_warnings(c: Color) -> i64 {
+  let t = try 2
+  match c { //~ ERROR E0329
+    Red => t
+  }
+}

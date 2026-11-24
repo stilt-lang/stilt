@@ -1,0 +1,15 @@
+//~ tier: meta
+//~ rule: meta.shape-and-name, expressions.arguments
+
+use std.meta
+
+// `T.shape` takes no arguments, so a call that gives one is E0315; it still reads the shape, so
+// the arms that name its cases resolve.
+fn count<T>(value: T) -> i64 {
+  match T.shape(1) { //~ ERROR E0315
+    Record(fields) => fields.len()
+    _ => 0
+  }
+}
+
+fn main() {}

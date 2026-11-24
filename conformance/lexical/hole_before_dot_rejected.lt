@@ -1,0 +1,5 @@
+//~ rule: syntax.holes-before-dots, types.hole-before-dot, declarations.typed-holes
+
+fn later() -> i64 {
+  ?.len() //~ ERROR E0312
+}

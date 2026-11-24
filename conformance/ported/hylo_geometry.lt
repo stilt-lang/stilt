@@ -1,0 +1,43 @@
+//~ tier: advanced
+//~ rule: projections.declaring-projection, projections.call-is-place, values.independent-copies
+//~ stdout:
+//~ | true
+//~ | true
+//~ | true
+
+// Hylo, Tests/EndToEndTests/TestCases/Geometry.hylo: an angle stores radians, and its `degrees`
+// projection yields the angle in degrees and writes back the radians of what the caller left
+// there. An angle of π reads 180 degrees, setting its degrees to 0 sets its radians to 0, and
+// an angle of 2π wraps to 0 in a copy. The original states these in preconditions, whose truth
+// this port prints. Hylo binds the projection to an `inout` local; Stilt has none, so the port
+// reads the projection, and then assigns to it.
+
+type Angle = { radians: f64 }
+
+impl Angle {
+  fn degrees(inout self) -> inout f64 {
+    var d = self.radians * 180.0 / f64.PI
+    yield d
+    self.radians = d * f64.PI / 180.0
+  }
+
+  // A copy of `self` wrapped within the interval [0, 2π).
+  fn wrapped(self) -> Angle {
+    var r = self.radians
+    if r < 0.0 {
+      while r < 0.0 { r = r + 2.0 * f64.PI }
+    } else {
+      while r >= 2.0 * f64.PI { r = r - 2.0 * f64.PI }
+    }
+    Angle { radians: r }
+  }
+}
+
+fn main() / io {
+  var a = Angle { radians: f64.PI }
+  print("{a.degrees() == 180.0}")
+  a.degrees() = 0.0
+  print("{a.radians == 0.0}")
+  a.radians = 2.0 * f64.PI
+  print("{a.wrapped().radians == 0.0}")
+}

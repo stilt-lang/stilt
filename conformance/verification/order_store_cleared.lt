@@ -1,0 +1,12 @@
+//~ rule: values.assignment-order, facts.analysis-order
+//~ panic: bounds
+//~ panic-at: order_store_cleared.lt:8:3
+
+// The store happens after the right side, which empties the list.
+fn store_cleared() -> List<i64> {
+  var xs = [1, 2]
+  xs[0] = { xs.clear(); 1 }
+  xs
+}
+
+fn main() / io { print("{store_cleared()}") }

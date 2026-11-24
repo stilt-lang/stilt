@@ -1,0 +1,14 @@
+//~ tier: meta
+//~ rule: macros.procedural-bodies, macros.expansion-effects
+
+// The expansion's effects are the using function's: the macro performs
+// nothing, and the function that uses it prints.
+meta use say
+
+fn loud() / io { say.say!("hi") }
+
+fn quiet() {
+  say.say!("hi") //~ ERROR E0502
+}
+
+fn main() / io { loud() }

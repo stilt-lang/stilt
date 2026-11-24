@@ -1,0 +1,20 @@
+//~ rule: types.no-type-arguments
+//~ stdout:
+//~ | 7 7
+
+fn pairing<A, B>(a: A, b: B) -> (A, B) { (a, b) }
+
+// `pairing` named as a value is instantiated at `i64` and at the type parameter of its user,
+// and the value is copied and called.
+fn first_of<T>(x: T) -> i64 {
+  let f: fn(i64, T) -> (i64, T) = pairing
+  let g = f
+  let r = g(7, x)
+  r.0
+}
+
+fn main() / io {
+  let a = first_of([1, 2])
+  let b = first_of("a")
+  print("{a} {b}")
+}

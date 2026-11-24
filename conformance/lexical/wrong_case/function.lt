@@ -1,0 +1,1 @@
+fn Parse() {} //~ ERROR E0100

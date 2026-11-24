@@ -1,0 +1,6 @@
+//~ rule: packages.modules-of-dependencies, packages.imports
+//~ stdout:
+//~ | 1.4
+//~ | parsed 'a'
+//~ | 'b'
+//~ | 'c'

@@ -1,0 +1,43 @@
+//~ tier: advanced
+//~ rule: traits.constructor-parameters
+//~ stdout:
+//~ | Some(3)
+//~ | [10, 20, 30]
+//~ | [2, 3]
+//~ | Some(50)
+
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+}
+
+impl Mappable for Option {
+  fn transform<A, B>(self: Option<A>, f: fn(A) -> B) -> Option<B> {
+    match self {
+      Some(x) => Some(f(x))
+      None => None
+    }
+  }
+}
+
+impl Mappable for List {
+  fn transform<A, B>(self: List<A>, f: fn(A) -> B) -> List<B> {
+    var out: List<B> = []
+    for x in self { out.push(f(x)) }
+    out
+  }
+}
+
+// Each constructor parameter is inferred from the head of its own argument's type, so the two
+// parameters of one function are two different constructors.
+fn both<F: Mappable, G: Mappable>(a: F<i64>, b: G<i64>) -> (F<i64>, G<i64>) {
+  (a.transform(|x| x + 1), b.transform(|x| x * 10))
+}
+
+fn main() / io {
+  let (a, b) = both(Some(2), [1, 2, 3])
+  print("{a}")
+  print("{b}")
+  let (c, d) = both([1, 2], Some(5))
+  print("{c}")
+  print("{d}")
+}

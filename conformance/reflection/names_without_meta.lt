@@ -1,0 +1,14 @@
+//~ rule: meta.shape-and-name
+
+// A module that doesn't name `std.meta` has no `shape` or `name` of a type
+// but its own.
+fn kind<T>(value: T) -> str {
+  T.name() //~ ERROR E0314
+}
+
+fn size() -> i64 {
+  let s = i64.shape() //~ ERROR E0314
+  0
+}
+
+fn main() {}

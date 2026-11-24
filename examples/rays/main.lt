@@ -1,0 +1,49 @@
+// rays: renders a scene of spheres on a checkered floor, with shadows and reflections, and
+// prints it as a PPM image. Its rows are rendered in parallel.
+
+use std.cli
+use std.par
+use scene
+use trace
+use vec
+
+/// A component of a color, from 0 to 1, as a byte, after the gamma of 2.
+/// ex: byte(1.0) == 255
+/// ex: byte(0.25) == 128
+/// ex: byte(-1.0) == 0
+fn byte(c: f64) -> i64 { (c.clamp(0.0, 1.0).sqrt() * 255.0 + 0.5).floor().to_i64() else 0 }
+
+/// The colors of row `y`.
+fn row(sc: scene.Scene, width: i64, height: i64, y: i64) -> List<vec.Vec3> {
+  var colors = []
+  for x in 0..width { colors.push(trace.pixel(sc, width, height, x, y)) }
+  colors
+}
+
+/// The argument at `i`, a positive number, or `default`.
+fn size(i: i64, default: i64) -> i64 / {io, raise<str>} {
+  let n = (cli.arg(i) else "{default}").to_i64() else raise "the image's size is two numbers"
+  if n <= 0 { raise "the image's size is two positive numbers" }
+  n
+}
+
+fn main() / {io, raise<str>} {
+  let width = try size(0, 320)
+  let height = try size(1, 180)
+  let sc = scene.demo()
+  var ys = []
+  for y in 0..height { ys.push(y) }
+  let rows = par.map(ys, |y| row(sc, width, height, y))
+  print("P3\n{width} {height}\n255")
+  for r in rows { print(" ".join(r.map(|c| "{byte(c.x)} {byte(c.y)} {byte(c.z)}"))) }
+}
+
+test "the image's center sees the large sphere" {
+  let c = trace.pixel(scene.demo(), 64, 36, 32, 18)
+  assert c.x > 0.3 && c.y > 0.3
+}
+
+test "the sky is above" {
+  let c = trace.pixel(scene.demo(), 64, 36, 32, 0)
+  assert c.z > c.x
+}

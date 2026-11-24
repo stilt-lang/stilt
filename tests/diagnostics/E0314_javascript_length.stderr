@@ -1,0 +1,15 @@
+── NO SUCH METHOD OR MEMBER ─────────── E0314_javascript_length.lt:3:17  [E0314]
+
+`List<str>` has no method `length`; Stilt calls it `len`:
+
+  3 │   print("{names.length()} names")
+    │                 ^^^^^^
+
+Check the method's name and the receiver's type. A function without `self` is
+named on its type, as `List.new()`, and a trait's method needs an impl of the
+trait for the type.
+
+To fix it, write `len`:
+
+  3 │   print("{names.len()} names")
+    │                 ~~~

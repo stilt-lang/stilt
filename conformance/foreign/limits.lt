@@ -1,0 +1,24 @@
+//~ tier: systems
+//~ rule: c.without-unsafe
+
+// `without unsafe` makes each `unsafe` block of the function's own code an error. A caller of a
+// function that holds one has no `unsafe` of its own, nor has a call of a native, and a test
+// body is exempt.
+
+extern fn abs(n: i32) -> i32
+
+fn checked(n: i32) -> i32 without unsafe {
+  unsafe because "abs takes any i32 but the least" { abs(n) } //~ ERROR E0204
+}
+
+fn wrapper(n: i32) -> i32 {
+  unsafe because "abs takes any i32 but the least" { abs(n) }
+}
+
+fn caller(n: i32) -> i32 without unsafe {
+  wrapper(n)
+}
+
+fn counted(xs: List<i32>) -> i64 without unsafe { xs.len() }
+
+fn main() {}

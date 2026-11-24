@@ -1,0 +1,5 @@
+type Config = { port: i64 }
+
+pub fn default_config() -> Config { Config { port: 8080 } }
+
+fn main() {}

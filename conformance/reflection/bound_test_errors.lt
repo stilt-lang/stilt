@@ -1,0 +1,16 @@
+//~ tier: meta
+//~ rule: meta.bound-tests
+
+type Point = { x: i64 }
+
+// The `else` branch knows nothing more of `T`.
+fn shown<T>(value: T) -> str {
+  if T: Show { value.show() } else { value.show() } //~ ERROR E0314
+}
+
+// A bound test names a type parameter in scope.
+fn declared(p: Point) -> bool {
+  if Point: Show { true } else { false } //~ ERROR E0212
+}
+
+fn main() {}

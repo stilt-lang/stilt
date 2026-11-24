@@ -1,0 +1,39 @@
+// Closures, whose bodies read copies of the variables in scope.
+
+use code
+use context
+use ty
+
+/// `xs.fold(init, |acc, x| body)`, whose accumulator has type `t`.
+pub fn fold(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  t: ty.Ty,
+) -> code.Code {
+  let d = depth - 1
+  let elem = context.random_ty(inout b.p, false, 1)
+  let xs = ex.make(inout b, sc, d, true, ty.ListOf(elem))
+  let init = ex.make(inout b, sc, d, true, t)
+  let acc = context.Var { name: context.fresh(inout b.p, "acc"), ty: t, mutable: false }
+  let x = context.Var { name: context.fresh(inout b.p, "x"), ty: elem, mutable: false }
+  let body = ex.make(inout b, context.closure_scope(sc, [acc, x]), d, false, t)
+  code.atom("{code.operand(xs)}.fold({init.text}, |{acc.name}, {x.name}| {body.text})")
+}
+
+/// A closure of one parameter of type `param`, whose body has type `t`. A
+/// body whose type nothing else fixes, as `map`'s, is `known`.
+pub fn closure(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  param: ty.Ty,
+  t: ty.Ty,
+) -> str {
+  let x = context.Var { name: context.fresh(inout b.p, "x"), ty: param, mutable: false }
+  let body = ex.make(inout b, context.closure_scope(sc, [x]), depth, known, t)
+  "|{x.name}| {body.text}"
+}

@@ -1,0 +1,20 @@
+//~ tier: meta
+//~ rule: numbers.negative-literals, macros.literal-splices
+//~ stdout:
+//~ | -128
+//~ | [-9223372036854775808, -9223372036854775807]
+//~ | -32768
+
+// A negative integer is spliced in parentheses, and its `-` is part of the
+// literal, so the least value of a type fits it where the splice lands, as
+// it does where a quote writes it.
+meta use least
+
+fn main() / io {
+  let a: i8 = least.least_i8!()
+  let b: List<i64> = least.least_i64!()
+  let c: i16 = least.least_i16!()
+  print("{a}")
+  print("{b}")
+  print("{c}")
+}

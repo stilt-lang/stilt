@@ -1,0 +1,15 @@
+//~ rule: docs.body-size
+//~ run-output: "25 25 17 17"
+
+// Each body of `small` holds 19 tokens, and each of `large` 20.
+fn small(a: i64, b: i64) -> i64 { a * 2 + b * 3 + a * b - b + a - 1 }
+
+fn small_again(a: i64, b: i64) -> i64 { a * 2 + b * 3 + a * b - b + a - 1 }
+
+fn large(a: i64, b: i64) -> i64 { -a * 2 + b * 3 + a * b - b + a - 1 }
+
+fn large_again(a: i64, b: i64) -> i64 { -a * 2 + b * 3 + a * b - b + a - 1 } //~ WARN W0302
+
+fn main() / io {
+  print("{small(2, 5)} {small_again(2, 5)} {large(2, 5)} {large_again(2, 5)}")
+}

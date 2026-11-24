@@ -1,0 +1,26 @@
+//~ rule: traits.map-equality, std.maps
+//~ stdout:
+//~ | {"b": 2, "a": 1}
+//~ | 0 None false 2
+//~ | {"a": 1, "b": 2} true
+//~ | {"x": 1.5, "y": -0.5} 0.0
+//~ | {"k": [1]} [] {"k": [1]}
+
+fn main() / io {
+  var counts = Map.with_default(0)
+  for word in ["b", "a", "b"] { counts[word] += 1 }
+  print("{counts}")
+  print("{counts["z"]} {counts.get("z")} {counts.contains("z")} {counts.len()}")
+  var plain = Map.new()
+  plain["a"] = 1
+  plain["b"] = 2
+  print("{plain} {counts == plain}")
+  var totals = Map.with_default(0.0)
+  totals["x"] += 1.5
+  totals["y"] -= 0.5
+  print("{totals} {totals["q"]}")
+  let none: List<i64> = []
+  var lists = Map.with_default(none)
+  lists["k"] = lists["k"].concat([1])
+  print("{lists} {lists["j"]} {lists}")
+}

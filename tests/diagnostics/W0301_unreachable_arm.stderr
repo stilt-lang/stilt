@@ -1,0 +1,14 @@
+── UNREACHABLE ARM ─────────────────────── W0301_unreachable_arm.lt:4:5  [W0301]
+
+The arms before this one match everything it matches:
+
+  4 │     0 => "zero"
+    │     ^
+
+An earlier arm already matches every value that this one matches, so it never
+runs. Move it before that arm, or delete it.
+
+To fix it, delete the arm:
+
+  4 │     0 => "zero"
+    │     -----------

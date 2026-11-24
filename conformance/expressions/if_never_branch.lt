@@ -1,0 +1,11 @@
+//~ rule: expressions.if, declarations.never
+//~ run-output: "1 -1 2"
+
+fn sign(n: i64) -> i64 {
+  let s = if n > 0 { 1 } else { return -1 }
+  s
+}
+
+fn checked(n: i64) -> i64 { if n < 0 { panic("negative") } else { n } }
+
+fn main() / io { print("{sign(5)} {sign(-5)} {checked(2)}") }

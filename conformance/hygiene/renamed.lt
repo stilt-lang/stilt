@@ -1,0 +1,18 @@
+//~ rule: docs.same-body
+//~ run-output: "8 8"
+
+fn energy(xs: List<i64>) -> i64 {
+  let squares = xs.fold(0, |acc, x| acc + x * x)
+  let total = xs.fold(0, |acc, x| acc + x)
+  squares - total
+}
+
+fn spread(values: List<i64>) -> i64 { //~ WARN W0302
+  let s = values.fold(0, |sum, v| sum + v * v)
+  let t = values.fold(0, |sum, v| sum + v)
+  s - t
+}
+
+fn main() / io {
+  print("{energy([1, 2, 3])} {spread([1, 2, 3])}")
+}

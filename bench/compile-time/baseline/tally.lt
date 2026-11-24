@@ -1,0 +1,112 @@
+// What the analyzer gathers from the log as it reads it, a line at a time.
+
+use charts
+use codec
+use parse
+use query
+use events.entry
+
+/// An entry, the number of the line that held it, and whether that line was JSON.
+pub type Seen = { line: i64, entry: entry.Entry, json: bool }
+
+/// The first entry of a kind, written as JSON and read back: the number of its line, its kind,
+/// the JSON, and what reading it gave.
+pub type Trip = { line: i64, kind: str, text: str, back: entry.Entry }
+
+/// What the log held: how many lines, the entries the query kept, how many it left out, and the
+/// lines that held none, with the reason, the histograms of the entries kept, how many of them
+/// read back from their JSON equal, and the first of each kind as it read back.
+pub type Tally = {
+  query: query.Query,
+  lines: i64,
+  blank: i64,
+  left_out: i64,
+  seen: List<Seen>,
+  skipped: List<(i64, str)>,
+  charts: charts.Charts,
+  equal: i64,
+  trips: List<Trip>,
+}
+
+/// A tally of no line, which keeps the entries that `q` keeps.
+pub fn new(q: query.Query) -> Tally {
+  Tally {
+    query: q,
+    lines: 0,
+    blank: 0,
+    left_out: 0,
+    seen: [],
+    skipped: [],
+    charts: charts.new(),
+    equal: 0,
+    trips: [],
+  }
+}
+
+impl Tally {
+  /// Reads the line `text`, whose number is `n`: a line of JSON when it starts with `{`, and a
+  /// line of text otherwise.
+  /// ex: { var t = new(query.EVERYTHING); t.read(1, "nonsense"); t.skipped == [(1, "no head")] }
+  /// ex: { var t = new(query.EVERYTHING); t.read(1, " "); t.blank == 1 && t.lines == 1 }
+  pub fn read(inout self, n: i64, text: str) {
+    self.lines += 1
+    if text.trim().is_empty() {
+      self.blank += 1
+      return
+    }
+    let json = text.starts_with("\{")
+    let read = if json {
+      Result.of(|| try codec.read(text)).map_err(|e| "{e}")
+    } else {
+      Result.of(|| try parse.line(text))
+    }
+    match read {
+      Ok(e) => self.add(Seen { line: n, entry: e, json })
+      Err(why) => self.skipped.push((n, why))
+    }
+  }
+
+  // Counts an entry that the query keeps, and writes it as JSON and reads it back.
+  fn add(inout self, s: Seen) {
+    if !self.query.keeps(s.entry) {
+      self.left_out += 1
+      return
+    }
+    self.seen.push(s)
+    self.charts.add(s.entry)
+    let text = codec.write(s.entry)
+    let back = Result.of(|| try codec.read(text)).ok() else return
+    if back == s.entry { self.equal += 1 }
+    let kind = s.entry.event.kind()
+    if !self.trips.any(|t| t.kind == kind) {
+      self.trips.push(Trip { line: s.line, kind, text, back })
+    }
+  }
+
+  /// The entries read, in the order of their lines.
+  pub fn entries(self) -> List<entry.Entry> { self.seen.map(.entry) }
+
+  /// How many entries came from lines of JSON.
+  pub fn from_json(self) -> i64 { self.seen.count(.json) }
+}
+
+test "a line of JSON reads into its entry, and one that doesn't fit its type says why" {
+  var t = new(query.EVERYTHING)
+  let ok = "\{\"at\":\{\"date\":\{\"year\":2026,\"month\":11,\"day\":3},\"hour\":8,\"minute\":0,\"second\":0},\"source\":\{\"host\":\"ops\",\"index\":1},\"level\":\"Info\",\"event\":\{\"Disk\":[\{\"mount\":\"/\",\"percent\":5}]}}"
+  t.read(1, ok)
+  t.read(2, ok.replace("\"Info\"", "\"Loud\""))
+  t.read(3, ok.replace("\"percent\":5", "\"percent\":-5.5"))
+  assert t.from_json() == 1 && t.equal == 1
+  assert t.skipped ==
+    [
+      (2, "Mismatch(\"$.level\", \"Level\", \"\\\"Loud\\\"\")"),
+      (3, "Mismatch(\"$.event.Disk[0].percent\", \"i64\", \"-5.5\")"),
+    ]
+}
+
+test "the query leaves out the entries it doesn't keep, and counts them" {
+  var t = new(query.Query { ..query.EVERYTHING, hosts: ["web-2"] })
+  t.read(1, "2026-11-03T08:00:00Z web-1 INFO disk: /var at 1%")
+  t.read(2, "2026-11-03T08:00:00Z web-2 INFO disk: /var at 2%")
+  assert t.left_out == 1 && t.seen.map(|s| s.line) == [2]
+}

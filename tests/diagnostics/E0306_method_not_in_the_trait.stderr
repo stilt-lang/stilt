@@ -1,0 +1,9 @@
+── MEMBER NOT IN THE TRAIT ─────── E0306_method_not_in_the_trait.lt:9:6  [E0306]
+
+`perimeter` is not a member of `Shape`:
+
+  9 │   fn perimeter(self) -> f64 { 6.28 * self.radius }
+    │      ^^^^^^^^^
+
+A trait impl holds only the trait's members. Move the other methods to an
+inherent `impl` block of the type.

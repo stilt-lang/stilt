@@ -1,0 +1,24 @@
+//~ tier: meta
+//~ rule: errors.broken-parts, errors.error-type, generics.constant-arguments
+
+// A constant whose part breaks after its `=` has the type written before it and no
+// value. A value argument that names it gives the error type, so the type it makes
+// is equal to every type, and its use reports nothing more, even where its type isn't
+// the parameter's.
+
+type Mod<p: u64> = { value: u64 }
+
+const PRIME: u64 = 1_000_000_007
+@ //~ ERROR E0100
+
+const SIGNED: i64 = 7
+@ //~ ERROR E0100
+
+fn moduli() -> u64 {
+  let a: Mod<7> = Mod { value: 1 }
+  let b: Mod<PRIME> = a
+  let c: Mod<SIGNED> = a
+  b.value + c.value
+}
+
+fn main() {}

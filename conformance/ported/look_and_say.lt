@@ -1,0 +1,39 @@
+//~ rule: std.str, std.str-building, values.let-and-var
+//~ stdout:
+//~ | 1
+//~ | 11
+//~ | 21
+//~ | 1211
+//~ | 111221
+//~ | 312211
+//~ | 13112221
+//~ | 1113213211
+//~ | 31131211131221
+//~ | 13211311123113112211
+
+// Rosetta Code, Look-and-say sequence: each term reads the one before it aloud, as runs of
+// equal digits, so 1211 is "one 1, one 2, two 1s", 111221. The first ten terms are printed.
+
+fn next_term(term: str) -> str {
+  var out = []
+  var run = ""
+  var count = 0
+  for c in term.chars() {
+    if c != run && count > 0 {
+      out.push("{count}{run}")
+      count = 0
+    }
+    run = c
+    count += 1
+  }
+  out.push("{count}{run}")
+  "".join(out)
+}
+
+fn main() / io {
+  var term = "1"
+  for _ in 0..10 {
+    print(term)
+    term = next_term(term)
+  }
+}

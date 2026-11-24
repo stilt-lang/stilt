@@ -1,0 +1,72 @@
+//~ rule: effects.catch-syntax, effects.catch-alls-need-reason
+//~ stdout:
+//~ | Err(Bad("x")) Ok(2)
+//~ | wrapped Bad("y")
+//~ | 1 10 0 2
+//~ stderr:
+//~ | failed: Worse
+//~ exit: 3
+
+type Failure = | Bad(str) | Worse
+
+type Wrapped = | Wrapped(Failure)
+
+fn fetch(key: str) -> i64 / raise<Failure> {
+  if key == "" { raise Worse }
+  key.to_i64() else raise Bad(key)
+}
+
+fn returned(key: str) -> Result<i64, Failure> {
+  let n = try fetch(key) catch e => return Err(e)
+  Ok(n)
+}
+
+fn wrapped(key: str) -> Result<i64, Wrapped> {
+  Ok(try fetch(key) catch e => return Err(Wrapped(e)))
+}
+
+fn counted(keys: List<str>) -> i64 {
+  var bad = 0
+  for k in keys {
+    let _ = try fetch(k) catch {
+      e => {
+        let count = || match e {
+          Bad(_) => 1
+          Worse => 0
+        }
+        bad += count()
+        0
+      }
+    }
+  }
+  bad
+}
+
+fn interpolated(key: str) -> i64 { try fetch(key) catch e => "{e}".len() }
+
+fn shadowed(key: str) -> i64 {
+  try fetch(key)
+    catch e => { //~ WARN W0501
+    let e = 0
+    e
+  }
+}
+
+fn closure_parameter(key: str) -> i64 {
+  try fetch(key) catch e => [1, 2].map(|e| e * 2).len() //~ WARN W0501
+}
+
+fn main() / io {
+  print("{returned("x")} {returned("2")}")
+  match wrapped("y") {
+    Ok(n) => print("ok {n}")
+    Err(Wrapped(f)) => print("wrapped {f}")
+  }
+  print("{counted(["a", "", "7"])} {interpolated("bad")} {shadowed("q")} {closure_parameter("")}")
+  let n = try fetch("")
+    catch e => {
+    eprint("failed: {e}")
+    exit(3)
+  }
+  print("{n}")
+}

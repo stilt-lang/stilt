@@ -1,0 +1,28 @@
+//~ rule: patterns.guards-and-constants, patterns.non-exhaustive-matches
+
+type Color = | Red | Green
+
+const RED: Color = Red
+const GREEN: Color = Green
+const ZERO: i64 = 0
+
+fn guarded(n: i64) -> i64 {
+  match n { //~ ERROR E0329
+    x if x > 0 => 1
+    x if x <= 0 => 0
+  }
+}
+
+fn constants_only(c: Color) -> i64 {
+  match c { //~ ERROR E0329
+    RED => 1
+    GREEN => 2
+  }
+}
+
+fn constant_then_rest(n: i64) -> i64 {
+  match n {
+    ZERO => 0
+    _ => 1
+  }
+}

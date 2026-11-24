@@ -1,0 +1,114 @@
+//! n-body: simulates the orbits of the Jovian planets with a symplectic integrator, as the
+//! Benchmarks Game's program does.
+
+#[derive(Clone, Copy)]
+struct Body {
+    x: f64,
+    y: f64,
+    z: f64,
+    vx: f64,
+    vy: f64,
+    vz: f64,
+    mass: f64,
+}
+
+fn solar_mass() -> f64 {
+    4.0 * std::f64::consts::PI * std::f64::consts::PI
+}
+
+fn body(x: f64, y: f64, z: f64, vx: f64, vy: f64, vz: f64, mass: f64) -> Body {
+    let year = 365.24;
+    Body { x, y, z, vx: vx * year, vy: vy * year, vz: vz * year, mass: mass * solar_mass() }
+}
+
+fn system() -> Vec<Body> {
+    vec![
+        body(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+        body(
+            4.84143144246472090, -1.16032004402742839, -0.103622044471123109,
+            0.00166007664274403694, 0.00769901118419740425, -0.0000690460016972063023,
+            0.000954791938424326609,
+        ),
+        body(
+            8.34336671824457987, 4.12479856412430479, -0.403523417114321381,
+            -0.00276742510726862411, 0.00499852801234917238, 0.0000230417297573763929,
+            0.000285885980666130812,
+        ),
+        body(
+            12.8943695621391310, -15.1111514016986312, -0.223307578892655734,
+            0.00296460137564761618, 0.00237847173959480950, -0.0000296589568540237556,
+            0.0000436624404335156298,
+        ),
+        body(
+            15.3796971148509165, -25.9193146099879641, 0.179258772950371181,
+            0.00268067772490389322, 0.00162824170038242295, -0.0000951592254519715870,
+            0.0000515138902046611451,
+        ),
+    ]
+}
+
+fn offset_momentum(bodies: &mut [Body]) {
+    let (mut px, mut py, mut pz) = (0.0, 0.0, 0.0);
+    for b in bodies.iter() {
+        px += b.vx * b.mass;
+        py += b.vy * b.mass;
+        pz += b.vz * b.mass;
+    }
+    bodies[0].vx = -px / solar_mass();
+    bodies[0].vy = -py / solar_mass();
+    bodies[0].vz = -pz / solar_mass();
+}
+
+fn energy(bodies: &[Body]) -> f64 {
+    let mut e = 0.0;
+    let n = bodies.len();
+    for i in 0..n {
+        let b = bodies[i];
+        e += 0.5 * b.mass * (b.vx * b.vx + b.vy * b.vy + b.vz * b.vz);
+        for j in i + 1..n {
+            let c = bodies[j];
+            let dx = b.x - c.x;
+            let dy = b.y - c.y;
+            let dz = b.z - c.z;
+            e -= b.mass * c.mass / (dx * dx + dy * dy + dz * dz).sqrt();
+        }
+    }
+    e
+}
+
+fn advance(bodies: &mut [Body], dt: f64) {
+    let n = bodies.len();
+    for i in 0..n {
+        for j in i + 1..n {
+            let dx = bodies[i].x - bodies[j].x;
+            let dy = bodies[i].y - bodies[j].y;
+            let dz = bodies[i].z - bodies[j].z;
+            let d2 = dx * dx + dy * dy + dz * dz;
+            let mag = dt / (d2 * d2.sqrt());
+            let mi = bodies[i].mass * mag;
+            let mj = bodies[j].mass * mag;
+            bodies[i].vx -= dx * mj;
+            bodies[i].vy -= dy * mj;
+            bodies[i].vz -= dz * mj;
+            bodies[j].vx += dx * mi;
+            bodies[j].vy += dy * mi;
+            bodies[j].vz += dz * mi;
+        }
+    }
+    for b in bodies.iter_mut() {
+        b.x += dt * b.vx;
+        b.y += dt * b.vy;
+        b.z += dt * b.vz;
+    }
+}
+
+fn main() {
+    let size = std::env::args().nth(1).and_then(|a| a.parse().ok()).unwrap_or(1000000);
+    let mut bodies = system();
+    offset_momentum(&mut bodies);
+    println!("{:.9}", energy(&bodies));
+    for _ in 0..size {
+        advance(&mut bodies, 0.01);
+    }
+    println!("{:.9}", energy(&bodies));
+}

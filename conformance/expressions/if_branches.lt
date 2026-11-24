@@ -1,0 +1,23 @@
+//~ rule: types.expected-types, expressions.if
+
+fn pick(c: bool) -> i64 {
+  let v = if c { 1 } else {
+    "one" //~ ERROR E0311
+  }
+  v
+}
+
+fn no_value(c: bool) -> i64 {
+  let v: i64 = if c { //~ ERROR E0311
+    let a = 1
+  } else { 2 }
+  v
+}
+
+fn unit_only(c: bool) / io {
+  if c { print("yes") }
+  if c { //~ ERROR E0323
+    1
+  }
+  if c { return }
+}

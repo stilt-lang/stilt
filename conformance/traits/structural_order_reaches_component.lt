@@ -1,0 +1,23 @@
+//~ rule: traits.structural-calls
+//~ run-output: "start"
+//~ panic: unreachable
+//~ panic-at: structural_order_reaches_component.lt:13:47
+
+type Bomb = { id: i64 }
+
+impl Eq for Bomb {
+  fn eq(self, other: Bomb) -> bool { panic("eq was called") }
+}
+
+impl Ord for Bomb {
+  fn compare(self, other: Bomb) -> Ordering { unreachable() }
+}
+
+type Pair = { first: i64, second: Bomb }
+
+fn main() / io {
+  let x = Bomb { id: 1 }
+  let a = Pair { first: 1, second: x }
+  print("start")
+  print("{a < a}")
+}

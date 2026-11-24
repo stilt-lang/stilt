@@ -1,0 +1,16 @@
+use std.sync
+
+type Account = { balance: i64 }
+
+fn both(inout x: i64, inout y: i64) {
+  x += 1
+  y += 10
+}
+
+fn pay(a: sync.Shared<Account>, b: sync.Shared<Account>) {
+  when a, b {
+    both(inout a.balance, inout b.balance)
+  }
+}
+
+fn main() {}

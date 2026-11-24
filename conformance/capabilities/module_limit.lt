@@ -1,0 +1,21 @@
+//~ rule: facts.without
+//~ run-output: "4"
+
+module main
+without fs
+
+use std.fs
+use std.io
+
+fn size(s: str) -> i64 { s.len() }
+
+fn sneaky(path: str) -> bool / io {
+  fs.exists(path) //~ ERROR E0204
+}
+
+// Tests are exempt from the module's limits.
+test "tests may read files" {
+  assert !fs.exists("no/such/file")
+}
+
+fn main() / io { print("{size("four")}") }

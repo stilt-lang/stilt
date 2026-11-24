@@ -1,0 +1,45 @@
+// Rolling windows over the last values seen, whose size is part of their type, a value parameter
+// (generics.value-parameters), which the loops over them read at compile time (meta.staged-loops).
+
+use std.array
+
+/// The last `n` values added, in the slots they were written to, and how many were added.
+pub type Window<n: i64> = { values: array.Array<i64, n>, added: i64 }
+
+/// An empty window.
+/// ex: { let w: Window<4> = new(); w.mean() == 0 }
+pub fn new<n: i64>() -> Window<n> { Window { values: array.fill(0), added: 0 } }
+
+impl<n: i64> Window<n> {
+  /// Adds `x`, in place of the oldest value once the window holds `n`.
+  /// ex: { var w: Window<2> = new(); w.add(1); w.add(2); w.add(3); w.values == [3, 2] }
+  pub fn add(inout self, x: i64) {
+    self.values[self.added % n] = x
+    self.added += 1
+  }
+
+  /// How many values it holds.
+  /// ex: { var w: Window<2> = new(); w.add(1); w.held() == 1 }
+  pub fn held(self) -> i64 { self.added.min(n) }
+
+  /// Whether it holds `n` values.
+  pub fn full(self) -> bool { self.added >= n }
+
+  /// The mean of the values it holds, rounded down, or 0 when it holds none.
+  /// ex: { var w: Window<3> = new(); w.add(1); w.add(2); w.mean() == 1 }
+  pub fn mean(self) -> i64 {
+    let held = self.held()
+    if held == 0 { return 0 }
+    var sum = 0
+    comptime for i in 0..n { if i < held { sum += self.values[i] } }
+    sum / held
+  }
+
+  /// The largest value it holds, or 0 when it holds none.
+  /// ex: { var w: Window<2> = new(); w.add(4); w.add(9); w.add(1); w.most() == 9 }
+  pub fn most(self) -> i64 {
+    var most = 0
+    comptime for i in 0..n { if i < self.held() { most = most.max(self.values[i]) } }
+    most
+  }
+}

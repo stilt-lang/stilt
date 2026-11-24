@@ -1,0 +1,35 @@
+// A brace opens on the line of its construct.
+type Point =
+{ x: i64, y: i64 }
+
+fn sign(n: i64) -> i64 {
+  let m = n
+  if m < 0 { -1 } else
+  {
+    let z = m == 0
+    if z { 0 } else
+    { 1 }
+  }
+}
+
+fn count() -> i64 {
+  var n = 0
+  loop
+  {
+    n += 1
+    if n == 3 { break }
+  }
+  n
+}
+
+fn parse(text: str) -> i64 / raise<str> { text.to_i64() else raise "not a number" }
+
+fn or_zero(text: str) -> i64 {
+  let n = try parse(text) catch
+  {
+    _ => 0
+  }
+  let [first, ..] = [n] else
+  { return 0 }
+  first
+}

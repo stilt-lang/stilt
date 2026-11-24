@@ -1,0 +1,9 @@
+//~ rule: syntax.limit-clauses, program.header-limits, declarations.limits
+
+fn half(n: i64) -> i64 without panic, panic { //~ ERROR E0202
+  n / 2
+}
+
+fn share(a: i64, b: i64) -> i64 without alloc, panic, alloc { //~ ERROR E0202
+  a / b //~ ERROR E0204
+}

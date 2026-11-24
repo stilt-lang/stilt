@@ -1,0 +1,14 @@
+── SYNTAX ERROR ────────────────── E0100_rust_mutable_reference.lt:1:12  [E0100]
+
+Stilt has no references: a parameter that the function changes is `inout`:
+
+  1 │ fn bump(n: &mut i64) { n += 1 }
+    │            ^
+
+A parameter takes a value, which the function can't change. One written `inout`
+changes the caller's variable, which the call marks `inout` too.
+
+To fix it, write `inout n`:
+
+  1 │ fn bump(inout n: i64) { n += 1 }
+    │         ++++++

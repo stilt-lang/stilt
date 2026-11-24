@@ -1,0 +1,190 @@
+// Tables of rows, each kind of row naming its columns and giving its cells by hand: a column of
+// integers aligns right, and any other aligns left.
+
+use rows
+
+/// A row of a table: the names of its columns, and its cells, each with whether it holds an
+/// integer.
+pub trait Row {
+  fn names() -> List<str>
+  fn cells(self) -> List<(str, bool)>
+}
+
+/// The lines of a table of `found`: a head that names each column, a rule under it, and a line
+/// for each row, its columns two spaces apart and as wide as their widest cell.
+/// ex: render([rows.LevelRow { level: "WARN", entries: 12, share: 5 }]) == ["level  entries  share", "-----  -------  -----", "WARN        12      5"]
+pub fn render<T: Row>(found: List<T>) -> List<str> {
+  let names = T.names()
+  let grid = found.map(|r| r.cells())
+  var widths = names.map(.len())
+  for row in grid {
+    for (i, (text, _)) in row.enumerate(0) { widths[i] = widths[i].max(text.char_count()) }
+  }
+  let right = List.generate(names.len(), |i| !grid.is_empty() && grid.all(|row| row[i].1))
+  var out = [line(names, widths, right), line(widths.map(|w| "-".repeat(w)), widths, right)]
+  for row in grid { out.push(line(row.map(.0), widths, right)) }
+  out
+}
+
+// A line of the table: each text padded to its column's width, on the side its column aligns
+// to, without the spaces at its end.
+fn line(texts: List<str>, widths: List<i64>, right: List<bool>) -> str {
+  let padded = texts.enumerate(0).map(
+    |(i, t)| if right[i] { t.pad_start(widths[i], " ") } else { t.pad_end(widths[i], " ") },
+  )
+  "  ".join(padded).trim_end()
+}
+
+// The cells of the kinds of values that rows hold.
+
+fn int(n: i64) -> (str, bool) { ("{n}", true) }
+
+fn text(s: str) -> (str, bool) { (s, false) }
+
+fn maybe_int(n: Option<i64>) -> (str, bool) {
+  match n {
+    Some(x) => int(x)
+    None => ("-", false)
+  }
+}
+
+fn maybe_text(s: Option<str>) -> (str, bool) {
+  match s {
+    Some(x) => text(x)
+    None => ("-", false)
+  }
+}
+
+fn texts(xs: List<str>) -> (str, bool) { (",".join(xs), false) }
+
+impl Row for rows.TopicRow {
+  fn names() -> List<str> { ["topic", "entries", "share"] }
+  fn cells(self) -> List<(str, bool)> { [text(self.topic), int(self.entries), int(self.share)] }
+}
+
+impl Row for rows.LevelRow {
+  fn names() -> List<str> { ["level", "entries", "share"] }
+  fn cells(self) -> List<(str, bool)> { [text(self.level), int(self.entries), int(self.share)] }
+}
+
+impl Row for rows.HostRow {
+  fn names() -> List<str> { ["host", "entries", "notable", "last"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.host), int(self.entries), int(self.notable), text(self.last)]
+  }
+}
+
+impl Row for rows.ServiceRow {
+  fn names() -> List<str> { ["service", "requests", "mean", "slowest", "failed"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.service), int(self.requests), int(self.mean), int(self.slowest), int(self.failed)]
+  }
+}
+
+impl Row for rows.ObjectiveRow {
+  fn names() -> List<str> { ["service", "requests", "in_time", "served", "missed"] }
+  fn cells(self) -> List<(str, bool)> {
+    [
+      text(self.service),
+      int(self.requests),
+      int(self.in_time),
+      int(self.served),
+      texts(self.missed),
+    ]
+  }
+}
+
+impl Row for rows.UserRow {
+  fn names() -> List<str> { ["user", "ok", "failed", "attempts", "addresses"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.user), int(self.ok), int(self.failed), int(self.attempts), texts(self.addresses)]
+  }
+}
+
+impl Row for rows.SpaceRow {
+  fn names() -> List<str> { ["space", "hits", "misses", "evictions", "freed"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.space), int(self.hits), int(self.misses), int(self.evictions), int(self.freed)]
+  }
+}
+
+impl Row for rows.JobRow {
+  fn names() -> List<str> { ["job", "started", "finished", "failed", "mean", "reason"] }
+  fn cells(self) -> List<(str, bool)> {
+    [
+      text(self.job),
+      int(self.started),
+      int(self.finished),
+      int(self.failed),
+      maybe_int(self.mean),
+      maybe_text(self.reason),
+    ]
+  }
+}
+
+impl Row for rows.RetryRow {
+  fn names() -> List<str> { ["op", "attempts", "runs", "gave_up", "waited"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.op), int(self.attempts), int(self.runs), int(self.gave_up), int(self.waited)]
+  }
+}
+
+impl Row for rows.DeployRow {
+  fn names() -> List<str> { ["version", "at", "before", "mean_before", "after", "mean_after"] }
+  fn cells(self) -> List<(str, bool)> {
+    [
+      text(self.version),
+      text(self.at),
+      int(self.before),
+      int(self.mean_before),
+      int(self.after),
+      int(self.mean_after),
+    ]
+  }
+}
+
+impl Row for rows.RouteRow {
+  fn names() -> List<str> { ["route", "requests", "bytes", "mean", "failed"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.route), int(self.requests), int(self.bytes), int(self.mean), int(self.failed)]
+  }
+}
+
+impl Row for rows.StatusRow {
+  fn names() -> List<str> { ["status", "requests", "share"] }
+  fn cells(self) -> List<(str, bool)> { [int(self.status), int(self.requests), int(self.share)] }
+}
+
+impl Row for rows.AddressRow {
+  fn names() -> List<str> { ["address", "logins", "failed", "users", "outside"] }
+  fn cells(self) -> List<(str, bool)> {
+    [
+      text(self.address),
+      int(self.logins),
+      int(self.failed),
+      texts(self.users),
+      ("{self.outside}", false),
+    ]
+  }
+}
+
+impl Row for rows.ErrorRow {
+  fn names() -> List<str> { ["error", "count", "first", "last"] }
+  fn cells(self) -> List<(str, bool)> {
+    [text(self.error), int(self.count), text(self.first), text(self.last)]
+  }
+}
+
+impl Row for rows.PaceRow {
+  fn names() -> List<str> { ["at", "entries", "requests", "mean", "slowest", "errors"] }
+  fn cells(self) -> List<(str, bool)> {
+    [
+      text(self.at),
+      int(self.entries),
+      int(self.requests),
+      int(self.mean),
+      int(self.slowest),
+      int(self.errors),
+    ]
+  }
+}

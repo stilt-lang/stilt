@@ -1,0 +1,50 @@
+module pure
+without panic
+
+use lib
+
+pub fn smaller<T: Ord>(a: T, b: T) -> bool { a < b }
+
+pub fn less(a: lib.Fragile, b: lib.Fragile) -> bool {
+  a < b //~ ERROR E0204
+}
+
+pub fn sorted(xs: List<lib.Fragile>) -> List<lib.Fragile> {
+  xs.sorted() //~ ERROR E0204
+}
+
+pub fn instantiated(a: lib.Fragile, b: lib.Fragile) -> bool {
+  smaller(a, b) //~ ERROR E0204
+}
+
+pub fn equal(a: lib.Fragile, b: lib.Fragile) -> bool {
+  a == b //~ ERROR E0204
+}
+
+pub fn found(xs: List<lib.Fragile>, x: lib.Fragile) -> bool {
+  xs.contains(x) //~ ERROR E0204
+}
+
+pub fn shown(x: lib.Fragile) -> str {
+  "value: {x}" //~ ERROR E0204
+}
+
+pub fn stored(inout m: Map<lib.Fragile, i64>, k: lib.Fragile) {
+  m[k] = 1 //~ ERROR E0204
+}
+
+pub fn sturdy(a: lib.Sturdy, b: lib.Sturdy) -> bool { a < b && a == b }
+
+pub fn sturdy_sorted(xs: List<lib.Sturdy>) -> List<lib.Sturdy> { xs.sorted() }
+
+pub fn sturdy_shown(x: lib.Sturdy) -> str { "{x}" }
+
+type Local = { n: i64 }
+
+impl Ord for Local {
+  fn compare(self, other: Local) -> Ordering {
+    unreachable() //~ ERROR E0204
+  }
+}
+
+pub fn local_less(a: i64, b: i64) -> bool { Local { n: a } < Local { n: b } }

@@ -1,0 +1,14 @@
+//~ tier: systems
+//~ rule: c.lending-buffer, c.lending-methods, c.both-implementations
+//~ run-output: "before"
+//~ panic: nul-in-string
+//~ panic-at: nul.lt:12:14
+
+// A string that holds a NUL can't be lent to C as one that a NUL ends.
+
+fn main() / io {
+  print("before")
+  let s = "a\0b"
+  let none = s.with_c_str(|p| p.is_null())
+  print("{none}")
+}

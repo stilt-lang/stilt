@@ -1,0 +1,13 @@
+── UNKNOWN NAME ───────────────────── E0211_rust_assert_eq_macro.lt:4:3  [E0211]
+
+Stilt has no `assert_eq!`: an assertion is written `assert a == b`:
+
+  4 │   assert_eq!(2 + 2, 4)
+    │   ^^^^^^^^^
+
+`assert` is a statement, which checks a `bool`.
+
+To fix it, write an `assert`:
+
+  4 │   assert 2 + 2 == 4
+    │   ~~~~~~~~~~~~~~~~~

@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: handlers.handler-literals, handlers.handler-types
+//~ stdout:
+//~ | asked
+//~ | 1
+
+// A handler's body prints, which its operation's row doesn't declare: the handler's type
+// holds `io`, and `main`, whose `with` installs it, performs it.
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn main() / io {
+  let h = handler Ask { fn ask() -> i64 { print("asked"); 1 } }
+  print("{with h { Ask.ask() }}")
+}

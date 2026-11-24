@@ -1,0 +1,46 @@
+//~ tier: advanced
+//~ rule: views.view-types, views.viewable-types, handlers.handler-types, errors.root-causes
+
+// A view type may be a parameter's type or a result's, in a function type, an operation of an
+// effect and a handler's answer too; an error type, a constant's type and an effect's argument
+// are none of the places views.view-types allows. A stored view of a type that can't be viewed
+// is two mistakes, each reported (errors.root-causes).
+
+use std.view
+
+effect Spans {
+  fn span(s: str) -> view.View<str>
+  fn give(v: view.View<str>) -> i64
+}
+
+effect Holds<T> {
+  fn held() -> T
+}
+
+const EMPTY: Option<view.View<str>> = None //~ ERROR E0421
+
+type Held = { v: view.View<i64> } //~ ERROR E0421 ERROR E0420
+
+fn apply(f: fn(view.View<str>) -> view.View<str>, s: str) -> i64 { f(view.View.all(s)).len() }
+
+fn failing(f: fn() -> i64 / raise<view.View<str>>) -> i64 { 0 } //~ ERROR E0421
+
+fn answer(h: handler Spans -> view.View<str>) -> i64 { 0 }
+
+fn holding(h: handler Holds<view.View<str>> -> i64) -> i64 { 0 } //~ ERROR E0421
+
+fn raising(h: handler Spans / raise<view.View<str>>) -> i64 { 0 } //~ ERROR E0421
+
+fn fields(r: { v: view.View<str> }) -> i64 { 0 } //~ ERROR E0421
+
+// A view of a type that names nothing is the error type's, which reports nothing more.
+fn unknown(v: view.View<Nope>) -> i64 { 0 } //~ ERROR E0211
+
+// A generic function's result that holds its type argument in a record stores a view there.
+fn boxed<T>(x: T) -> { item: T } { { item: x } }
+
+fn main() / io {
+  print("{apply(|v| v.view(0, 1), "ab")}")
+  let b = boxed(view.View.all("ab")) //~ ERROR E0421
+  print("{b.item.len()}")
+}

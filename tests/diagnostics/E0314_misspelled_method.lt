@@ -1,0 +1,1 @@
+fn has_ana(names: List<str>) -> bool { names.contians("ana") }

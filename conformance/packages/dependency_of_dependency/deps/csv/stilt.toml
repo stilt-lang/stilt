@@ -1,0 +1,5 @@
+[package]
+name = "csv"
+
+[dependencies]
+bytes = { path = "../bytes" }

@@ -1,0 +1,11 @@
+// A bound test's `:` follows its type parameter and has one space after it, and its bounds are
+// joined by ` + `, as a generic's are (syntax.format; meta.bound-tests).
+fn label<T>(value: T) -> str {
+  if T :Show+Eq { "{value}" } else if   T:Convert<i64> { "converted" } else { "none" }
+}
+
+fn quick<T>(value: T) -> bool {
+  comptime if T:Hash {
+    true
+  } else { false }
+}

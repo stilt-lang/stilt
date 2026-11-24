@@ -1,0 +1,41 @@
+//~ tier: meta
+//~ rule: meta.shape-and-name
+//~ stdout:
+//~ | Point List<i64> i64 (str, bool) Option<Point> Array<u8, 2>
+//~ | own shape own name
+//~ | inner { a: i64 }
+
+use std.meta
+use std.array
+
+type Point = { x: i64, y: i64 }
+
+// A type with a `shape` and a `name` of its own, found before `std.meta`'s.
+type Box = { inner: { a: i64 } }
+
+impl Box {
+  fn shape() -> str { "own shape" }
+  fn name() -> str { "own name" }
+}
+
+// A type's name, as a diagnostic writes it.
+fn name_of<T>(value: T) -> str { T.name() }
+
+fn field_types<T>(value: T) -> str {
+  var out: List<str> = []
+  match T.shape() {
+    Record(fields) => {
+      for f in fields { out.push("{f.name()} {name_of(f.get(value))}") }
+    }
+    _ => {}
+  }
+  " ".join(out)
+}
+
+fn main() / io {
+  let a: array.Array<u8, 2> = [1, 2]
+  let p = Point { x: 1, y: 2 }
+  print("{name_of(p)} {name_of([1])} {name_of(3)} {name_of(("a", true))} {name_of(Some(p))} {name_of(a)}")
+  print("{Box.shape()} {Box.name()}")
+  print(field_types(Box { inner: { a: 1 } }))
+}

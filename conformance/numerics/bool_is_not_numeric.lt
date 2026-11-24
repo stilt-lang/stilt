@@ -1,0 +1,23 @@
+//~ rule: numbers.numeric-types, numbers.integer-literals, numbers.float-literals
+
+fn count(flag: bool) -> i64 { if flag { 1 } else { 0 } }
+
+fn sum(a: bool, b: bool) -> bool {
+  a + b //~ ERROR E0317
+}
+
+fn product(a: bool, b: bool) -> bool {
+  a * b //~ ERROR E0317
+}
+
+fn negated(a: bool) -> bool {
+  -a //~ ERROR E0317
+}
+
+fn one() -> bool {
+  1 //~ ERROR E0311
+}
+
+fn half() -> bool {
+  0.5 //~ ERROR E0311
+}

@@ -1,0 +1,37 @@
+//~ rule: std.children
+//~ stdout:
+//~ | Some("one")
+//~ | ["two\nthree"]
+//~ | None [""]
+//~ | 0 0
+//~ | 0 Some("kept") Some("last") None
+//~ | -9 -9
+//~ | Other("true")
+
+use std.io
+use std.process
+
+fn main() / {io, raise<io.IoError>} {
+  var cat = try process.Command.new("cat").spawn()
+  try cat.write("one\ntwo\nthree")
+  print("{cat.read_line()}")
+  cat.close_input()
+  print("{[cat.read_all()]}")
+  print("{cat.read_line()} {[cat.read_all()]}")
+  print("{cat.wait()} {cat.wait()}")
+  var lines = try process.Command.new("sh").with_args(["-c", "printf 'kept\\r\\nlast'"]).spawn()
+  print("{lines.wait()} {lines.read_line()} {lines.read_line()} {lines.read_line()}")
+  var sleeper = try process.Command.new("sleep").with_arg("30").spawn()
+  sleeper.kill()
+  let first = sleeper.wait()
+  sleeper.kill()
+  print("{first} {sleeper.wait()}")
+  var done = try process.Command.new("true").spawn()
+  let _ = done.wait()
+  let wrote = try {
+    done.write("x")
+    "wrote"
+  }
+    catch e because "the test prints the error" => "{e}"
+  print(wrote)
+}

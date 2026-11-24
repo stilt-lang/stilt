@@ -1,0 +1,15 @@
+── AMBIGUOUS MEMBER TYPE ────────── E0335_ambiguous_member_type.lt:9:50  [E0335]
+
+`C.Item` could be `Collection`'s `Item` or `Stream`'s; name it with a generic,
+as `C: Collection<T>`:
+
+  9 │ fn first<C: Collection + Stream>(c: C) -> Option<C.Item> { None }
+    │                                                  ^^^^^^
+
+Two bounds give the type parameter a member of that name. Name the one you mean
+with a generic, as `C: Collection<T>`, and write `T`.
+
+To fix it, name `Collection`'s `Item` as `T`:
+
+  9 │ fn first<C: Collection<T> + Stream, T>(c: C) -> Option<T> { None }
+    │                       +++         +++                  ~

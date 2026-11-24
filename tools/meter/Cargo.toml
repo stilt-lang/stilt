@@ -1,0 +1,25 @@
+[package]
+name = "stilt-meter"
+description = "What a process costs, counted by the processor: the instructions it retires, the cycles it runs and its CPU time"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+libc = "0.2.191"
+
+[lints.rust]
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+# The meter reads the counts that the system keeps of a process, which only a C call gives (goal
+# visible-unsafe allows it: it is no part of the compiler or what it ships, and `just lint` counts
+# its blocks with the others').
+unsafe_code = "allow"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+mod_module_files = "warn"
+undocumented_unsafe_blocks = "warn"

@@ -1,0 +1,50 @@
+// An impl's own type parameters (meta.types-without-shape and meta.unseen-instantiations): a method
+// that gives one to a function that reflects, and one that names it, reached by a method call,
+// through a bound, and through a function that meets the bound with its own type parameter, which
+// reflects on it instead, so that its caller passes the descriptor.
+
+use std.meta
+
+trait Describe {
+  fn describe(self) -> str
+}
+
+trait Named {
+  fn kind(self) -> str
+}
+
+type Holder<X> = { inner: X }
+
+type Point = { x: i64, y: i64 }
+
+fn count<T>(value: T) -> i64 {
+  match T.shape() {
+    Record(fields) => fields.len()
+    Tuple(fields) => fields.len()
+    _ => 0
+  }
+}
+
+impl<X> Describe for Holder<X> {
+  fn describe(self) -> str { "{count(self.inner)} fields" }
+}
+
+impl<X> Named for Holder<X> {
+  fn kind(self) -> str { X.name() }
+}
+
+fn through<T: Describe + Named>(value: T) -> str {
+  "{value.describe()}, {value.kind()}"
+}
+
+fn held<X>(x: X) -> str {
+  through(Holder { inner: x })
+}
+
+fn main() / io {
+  let h = Holder { inner: Point { x: 1, y: 2 } }
+  print(h.describe())
+  print(h.kind())
+  print(through(h))
+  print(held((1, true, "s")))
+}

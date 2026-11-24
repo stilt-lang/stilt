@@ -1,0 +1,6 @@
+//~ rule: lexical.commented-out-code.single-token, lexical.tokens, lexical.separators
+// x; //~ WARN W0001
+// ;x //~ WARN W0001
+// ;
+
+fn main() {}

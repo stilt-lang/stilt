@@ -1,0 +1,8 @@
+//~ tier: systems
+//~ rule: syntax.extern-functions, c.foreign-functions
+
+// A foreign function's head ends the item: no `where` follows it.
+
+extern fn abs(n: i32) -> i32 where T: Eq //~ ERROR E0100
+
+fn main() {}

@@ -1,0 +1,49 @@
+//~ rule: std.regex, std.regex-syntax, std.regex-replacing
+//~ stdout:
+//~ | a(b Err(Unclosed(1))
+//~ | a)b Err(Unexpected(1))
+//~ | *a Err(Unexpected(0))
+//~ | a** Err(Unexpected(2))
+//~ | a|* Err(Unexpected(2))
+//~ | a{3,2} Err(Order(1))
+//~ | a{1001} Err(Order(1))
+//~ | a{2 Err(Unclosed(1))
+//~ | a{ Err(Unclosed(1))
+//~ | a{2, Err(Unclosed(1))
+//~ | a{x} Err(Unexpected(2))
+//~ | a{,3} Err(Unexpected(2))
+//~ | [abc Err(Unclosed(0))
+//~ | [z-a] Err(Order(1))
+//~ | \q Err(Escape(0))
+//~ | a\ Err(Escape(1))
+//~ | [\b] Err(Escape(1))
+//~ | é( Err(Unclosed(2))
+//~ | 250 deep: true
+//~ | 251 deep: Err(TooLarge)
+//~ | Err(TooLarge)
+//~ | true true true
+//~ | a\+b\{2\}
+//~ | true
+
+use std.regex
+
+fn compiled(source: str) -> Result<i64, regex.Error> {
+  Result.of(|| (try regex.compile(source)).groups)
+}
+
+fn main() / io {
+  for source in ["a(b", "a)b", "*a", "a**", "a|*", "a\{3,2}", "a\{1001}", "a\{2", "a\{", "a\{2,", "a\{x}", "a\{,3}", "[abc", "[z-a]", "\\q", "a\\", "[\\b]", "é("] {
+    print("{source} {compiled(source)}")
+  }
+  print("250 deep: {compiled("{"(".repeat(250)}a{")".repeat(250)}") == Ok(250)}")
+  print("251 deep: {compiled("{"(".repeat(251)}a{")".repeat(251)}")}")
+  // A program above 100,000 instructions.
+  print("{compiled("(a\{1000})\{1000}")}")
+  // The empty pattern, an empty group and a count of 1,000 are patterns.
+  print("{compiled("") == Ok(0)} {compiled("()") == Ok(1)} {compiled("a\{1000}").is_ok()}")
+  // escape gives a pattern that matches the text itself.
+  let text = "a+b\{2}"
+  print(regex.escape(text))
+  let re = try regex.compile(regex.escape(text)) catch e => { print("error {e}"); return }
+  print("{re.find("xa+b\{2}y").map(|m| m.text) == Some(text)}")
+}

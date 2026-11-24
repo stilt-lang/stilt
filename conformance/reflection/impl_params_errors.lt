@@ -1,0 +1,37 @@
+//~ tier: meta
+//~ rule: meta.unseen-instantiations
+
+use std.meta
+
+trait Describe {
+  fn describe(self) -> str
+}
+
+type Holder<X> = { inner: X }
+
+// Reflects on `T`.
+fn kind<T>(value: T) -> str {
+  match T.shape() {
+    Record(_) => "record"
+    _ => "other"
+  }
+}
+
+// An impl whose method reflects on the impl's own type parameter, which is
+// checked where a `Holder<X>` meets `Describe`.
+impl<X> Describe for Holder<X> {
+  fn describe(self) -> str { kind(self.inner) }
+}
+
+fn told<T: Describe>(value: T) -> str { value.describe() }
+
+// Meets the bound with its own parameter, so it reflects on `Y` instead,
+// and the error is where a type without a shape is first written.
+fn passed<Y>(value: Y) -> str { told(Holder { inner: value }) }
+
+fn main() / io {
+  print(told(Holder { inner: 1 }))
+  print(told(Holder { inner: || 2 })) //~ ERROR E0350
+  print(passed(|| 3)) //~ ERROR E0350
+  print(passed("fine"))
+}

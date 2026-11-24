@@ -1,0 +1,5 @@
+//~ rule: program.module-names
+
+use util
+
+fn f() { util.Text.g() }

@@ -1,0 +1,5 @@
+//~ rule: lexical.string-literals, errors.syntax-errors
+fn f() -> str {
+  "first line //~ ERROR E0005
+  second line"
+}

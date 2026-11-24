@@ -1,0 +1,72 @@
+//~ rule: program.qualified-names, patterns.unknown-variants, patterns.irrefutable-positions, declarations.unknown-names, errors.unknown-names
+
+use ebnf
+
+fn misspelled(e: ebnf.Expr) -> i64 {
+  match e {
+    Sq(items) => items.len() //~ ERROR E0211
+    _ => 0
+  }
+}
+
+fn twice(e: ebnf.Expr) -> i64 {
+  match e {
+    Sq(a) => 1 //~ ERROR E0211
+    Sq(b) => 2
+    _ => 0
+  }
+}
+
+fn constructed(e: ebnf.Expr) -> ebnf.Expr {
+  match e {
+    Seq(items) => Seq(items) //~ ERROR E0211
+    _ => e
+  }
+}
+
+fn pattern_first(e: ebnf.Expr) -> ebnf.Expr {
+  match e {
+    Sq(a) => e //~ ERROR E0211
+    _ => Sq([])
+  }
+}
+
+fn expression_first(e: ebnf.Expr) -> ebnf.Expr {
+  let made = Sq([]) //~ ERROR E0211
+  match e {
+    Sq(a) => made
+    _ => e
+  }
+}
+
+fn refutable(es: List<ebnf.Expr>) -> i64 {
+  var n = 0
+  for Lit(s) in es { n += s.len() } //~ ERROR E0321
+  n
+}
+
+fn unknown_type() -> i64 {
+  let length = |Lit(s)| s.len() //~ ERROR E0211
+  0
+}
+
+fn missing(e: ebnf.Expr) -> i64 {
+  match e { //~ ERROR E0329
+    Seq(_) | Alt(_) => 1
+    Opt(_) | Lit(_) => 2
+  }
+}
+
+fn dead_arm(e: ebnf.Expr) -> i64 {
+  match e {
+    Seq(_) => 1
+    Seq([]) => 2 //~ WARN W0301
+    _ => 0
+  }
+}
+
+fn tested(e: ebnf.Expr) -> i64 {
+  if let Seq(items) = e { items.len() } else if let Opt(Lt(s)) = e { //~ ERROR E0211
+    s.len()
+  } else { 0 }
+}

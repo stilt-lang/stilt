@@ -1,0 +1,19 @@
+//~ rule: program.bodies-with-errors
+//~ stdout:
+//~ | before
+//~ panic: check-error
+//~ panic-at: limit_error_in_a_body.lt:9:4
+
+// A body whose only error is a fact beyond its `without` limit has an error like any other, so
+// calling it panics with `check-error` at its name.
+fn captured() -> i64 without copy {
+  var a = [1]
+  let f = || a.len()
+  a.push(2) //~ ERROR E0204
+  f()
+}
+
+fn main() / io {
+  print("before")
+  print("{captured()}")
+}

@@ -1,0 +1,11 @@
+//~ rule: traits.unsatisfied-bounds, std.map-key-bounds
+//~ run-output: "1"
+
+fn lookup<K: Eq + Hash, V>(m: Map<K, V>, k: K) -> V { m[k] }
+
+fn main() / io {
+  var m = Map.new()
+  m["a"] = 1
+  let n = lookup(m, "a")
+  print("{n}")
+}

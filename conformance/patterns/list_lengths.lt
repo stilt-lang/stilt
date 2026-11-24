@@ -1,0 +1,48 @@
+//~ rule: patterns.algorithm, patterns.non-exhaustive-matches
+
+fn sum_two(xs: List<i64>) -> i64 {
+  match xs {
+    [] => 0
+    [x] => x
+    [x, y, ..] => x + y
+  }
+}
+
+fn missing_one(xs: List<i64>) -> i64 {
+  match xs { //~ ERROR E0329
+    [] => 0
+    [x, y, ..] => x + y
+  }
+}
+
+fn head_or_zero(xs: List<i64>) -> i64 {
+  match xs {
+    [x, ..rest] => x
+    [] => 0
+  }
+}
+
+fn exact_lengths(xs: List<i64>) -> i64 {
+  match xs { //~ ERROR E0329
+    [_] => 1
+    [_, _] => 2
+  }
+}
+
+// A list pattern's columns line up with the columns beside it.
+fn describe(xs: List<i64>, loud: bool) -> i64 {
+  match (xs, loud) {
+    ([first, ..], true) => first
+    ([first, ..], false) => 0 - first
+    ([], _) => 0
+  }
+}
+
+// `[x, ..]` covers the lists of exactly one element, which no arm before it matches.
+fn only_one(xs: List<i64>) -> i64 {
+  match xs {
+    [] => 0
+    [x, y, ..] => x + y
+    [x, ..] => x
+  }
+}

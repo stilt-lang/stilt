@@ -1,0 +1,24 @@
+//~ tier: advanced
+//~ rule: shared.when-order
+//~ stdout:
+//~ | [0, 1, 2, 3]
+//~ | [0, 1, 2, 3]
+
+use std.sync
+use std.task
+
+// Each task appends in a `when`; the blocks run in the sequential order.
+fn appended(h: handler async) -> List<i64> / io {
+  let log = sync.Shared.new([])
+  with h {
+    for i in 0..4 {
+      task.spawn(|| when log { log.push(i) })
+    }
+  }
+  when log { log }
+}
+
+fn main() / io {
+  print("{appended(task.threads())}")
+  print("{appended(task.sequential())}")
+}

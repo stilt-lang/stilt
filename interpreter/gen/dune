@@ -1,0 +1,8 @@
+(executable
+ (name embed)
+ (modules embed))
+
+(executable
+ (name snapshot)
+ (modules snapshot)
+ (libraries stilt))

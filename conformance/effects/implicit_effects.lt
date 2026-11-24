@@ -1,0 +1,16 @@
+//~ rule: effects.other-effects, effects.panic-kinds, facts.inferred-facts, facts.implicit-effects, facts.calls-through-function-values
+//~ run-output: "[5, 2] 3 [10, 20]"
+
+fn apply(xs: List<i64>, f: fn(i64) -> i64) -> List<i64> { xs.map(f) }
+
+fn shares(xs: List<i64>) -> List<i64> { apply(xs, |x| 10 / x) }
+
+fn second(xs: List<i64>) -> i64 { xs[1] }
+
+fn doubled(xs: List<i64>) -> List<i64> {
+  var out: List<i64> = []
+  for x in xs { out.push(x * 2) }
+  out
+}
+
+fn main() / io { print("{shares([2, 5])} {second([1, 3])} {doubled([5, 10])}") }

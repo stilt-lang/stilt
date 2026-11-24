@@ -1,0 +1,18 @@
+[package]
+name = "stilt-edit"
+description = "The parts of a module, their paths and hashes, and the edits that replace them"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-fmt = { path = "../stilt-fmt" }
+stilt-syntax = { path = "../stilt-syntax" }
+# BLAKE3 of a part's canonical text (edits.hash), in portable Rust so that every target builds
+# it without a C compiler.
+blake3.workspace = true
+
+[lints]
+workspace = true

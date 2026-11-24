@@ -1,0 +1,24 @@
+//~ rule: values.compound-assignment-order, std.finding-keys
+//~ stdout:
+//~ | key
+//~ | value
+//~ | key
+//~ | value
+//~ | {"a": 7}
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn key(s: str) -> str / io {
+  print("key")
+  s
+}
+
+fn main() / io {
+  var m = Map.with_default(0)
+  m[key("a")] += note("value", 5)
+  m[key("a")] += note("value", 2)
+  print("{m}")
+}

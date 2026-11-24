@@ -1,0 +1,3 @@
+fn greet(name: String) -> str { "hello, {name}" }
+
+fn main() {}

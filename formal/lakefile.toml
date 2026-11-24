@@ -1,0 +1,14 @@
+name = "stilt"
+version = "0.1.0"
+defaultTargets = ["Stilt"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "Stilt"
+
+[[lean_exe]]
+name = "stilt-model"
+root = "Main"

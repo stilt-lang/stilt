@@ -1,0 +1,6 @@
+//~ rule: effects.result
+
+fn unwrap(r: Result<i64, str>) -> i64 {
+  let x: i64 = try r //~ ERROR E0311
+  x
+}

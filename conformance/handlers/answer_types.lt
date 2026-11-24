@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: handlers.handler-types, types.mismatch
+
+effect Ask {
+  fn ask() -> i64
+}
+
+fn install(h: handler Ask -> i64) -> i64 {
+  with h { Ask.ask() }
+}
+
+// A handler type with an answer type isn't one without.
+fn plain_for_answer() -> i64 {
+  let plain = handler Ask { fn ask() -> i64 { 1 } }
+  install(plain) //~ ERROR E0311
+}
+
+fn main() {}

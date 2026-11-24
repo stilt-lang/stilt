@@ -1,0 +1,35 @@
+//~ tier: advanced
+//~ rule: syntax.effect-forms, handlers.declaring-effect, handlers.performing-operation, handlers.rows-pass-effects-on, handlers.handler-literals, handlers.with
+//~ stdout:
+//~ | 4
+//~ | 5
+//~ | log: a
+//~ | log: b
+
+effect Prices {
+  fn price(sku: str) -> i64
+}
+
+effect Log {
+  fn log(msg: str)
+}
+
+// `fold`'s closure performs `Prices`, which passes through to `total`.
+fn total(skus: List<str>) -> i64 / Prices {
+  skus.fold(0, |sum, s| sum + Prices.price(s))
+}
+
+fn main() / io {
+  let flat = handler Prices { fn price(sku: str) -> i64 { 2 } }
+  with flat {
+    print("{total(["a", "bc"])}")
+  }
+  let extra = 1
+  let by_length = handler Prices { fn price(sku: str) -> i64 { sku.len() + extra } }
+  let shown = handler Log { fn log(msg: str) { print("log: {msg}") } }
+  with by_length, shown {
+    print("{total(["a", "bc"])}")
+    Log.log("a")
+    Log.log("b")
+  }
+}

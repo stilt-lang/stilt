@@ -1,0 +1,1 @@
+fn describe<T>(x: T) -> str { "{x}" }

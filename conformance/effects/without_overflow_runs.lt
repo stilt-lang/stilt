@@ -1,0 +1,27 @@
+//~ rule: effects.panic-kinds, effects.without-overflow
+//~ panic: overflow
+//~ panic-at: without_overflow_runs.lt:20:17
+//~ stdout:
+//~ | 6
+
+// A function limited by `without panic, overflow` neither panics nor overflows; one limited by
+// `without panic` alone still panics with `overflow` at run time.
+
+fn largest(xs: List<i64>) -> i64 without panic, overflow {
+  var best = 0
+  for x in xs {
+    if x > best { best = x }
+  }
+  best
+}
+
+fn total(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for x in xs { s += x }
+  s
+}
+
+fn main() / io {
+  print("{largest([3, 6, 2])}")
+  print("{total([9223372036854775807, 1])}")
+}

@@ -1,0 +1,11 @@
+//~ rule: tests.property-io
+
+fn say(s: str) / io { print(s) }
+
+fn add(a: i64, b: i64) -> i64 { a +% b }
+
+/// prop: |a: i64, b: i64| { print("{a} {b}"); add(a, b) == add(b, a) } //~ ERROR E0510
+/// prop: |a: i64| { say("{a}"); say("again"); add(a, 0) == a } //~ ERROR E0510
+/// prop: |a: i64, b: i64| add(a, b) == add(b, a)
+/// ex: { say("examples may print"); true }
+fn documented() {}

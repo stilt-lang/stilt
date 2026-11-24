@@ -1,0 +1,19 @@
+//~ rule: docs.bodies-compared
+
+fn checks() {
+  assert 1 + 1 == 2
+  assert 2 * 2 == 4
+  assert 3 - 1 == 2
+}
+
+test "repeats checks" { //~ PASS
+  assert 1 + 1 == 2
+  assert 2 * 2 == 4
+  assert 3 - 1 == 2
+}
+
+fn checks_again() { //~ WARN W0302
+  assert 1 + 1 == 2
+  assert 2 * 2 == 4
+  assert 3 - 1 == 2
+}

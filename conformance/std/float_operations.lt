@@ -1,0 +1,23 @@
+//~ rule: numbers.ieee-754, numbers.printing-floats, std.floats
+//~ stdout:
+//~ | 1.4142135623730951 1.4142135 nan -0.0 inf 3.0
+//~ | -1.0 -0.0 -0.0 -1.0 1.0 2.0 -2.0 inf nan
+//~ | 3.0 -3.0 1.0 -1.0 -0.0 0.0 2.0 4503599627370497.0 3.0
+//~ | 0.0 inf 2.5 1.5
+//~ | nan nan -0.0 0.0 -0.0 0.0 1.0 2.0 -inf inf
+//~ | true false false true
+
+fn main() / io {
+  let zero = 0.0
+  let nan = zero / zero
+  let inf = 1.0 / zero
+  let two: f32 = 2.0
+  print("{(2.0).sqrt()} {two.sqrt()} {(-1.0).sqrt()} {(-0.0).sqrt()} {inf.sqrt()} {(9.0).sqrt()}")
+  print("{(-0.5).floor()} {(-0.5).ceil()} {(-0.7).trunc()} {(-1.0).floor()} {(0.2).ceil()} {(2.9).trunc()} {(-2.9).trunc()} {inf.floor()} {nan.ceil()}")
+  let half: f32 = 2.5
+  print("{(2.5).round()} {(-2.5).round()} {(0.5).round()} {(-0.5).round()} {(-0.4).round()} {(0.49999999999999994).round()} {(1.5).round()} {(4503599627370497.0).round()} {half.round()}")
+  let minus: f32 = -1.5
+  print("{(-0.0).abs()} {(-inf).abs()} {(-2.5).abs()} {minus.abs()}")
+  print("{nan.min(1.0)} {(1.0).max(nan)} {(-0.0).min(0.0)} {(-0.0).max(0.0)} {zero.min(-0.0)} {zero.max(-0.0)} {(1.0).min(2.0)} {(1.0).max(2.0)} {(-inf).min(inf)} {inf.max(-inf)}")
+  print("{nan.is_nan()} {inf.is_nan()} {zero.is_nan()} {f32.NAN.is_nan()}")
+}

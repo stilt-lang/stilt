@@ -1,0 +1,11 @@
+//~ tier: core
+
+// Calling a method of a trait with a parameter doesn't make a module advanced (traits.advanced-tier, rule
+// 10).
+
+use measures
+
+fn main() / io {
+  let c = measures.celsius(4)
+  print("{c.convert()}") //~ PANIC OVERFLOW ALLOC CONSOLE
+}

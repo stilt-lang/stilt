@@ -1,0 +1,15 @@
+//~ rule: values.passing-values, modes.kinds-of-access, modes.durations
+//~ run-output: "12 [1, 2, 3]"
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(0)
+  ys
+}
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  var total = 0
+  for x in xs { total += grown(xs).len() }
+  print("{total} {xs}")
+}

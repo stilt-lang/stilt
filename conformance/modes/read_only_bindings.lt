@@ -1,0 +1,30 @@
+//~ rule: values.let-and-var, expressions.capture, expressions.mutable-places, patterns.var-bindings, modes.what-can-be-modified
+
+fn bindings(n: i64, xs: List<i64>, inout ys: List<i64>) {
+  n = 1 //~ ERROR E0403
+  xs.push(1) //~ ERROR E0403
+  ys.push(1)
+  let k = 1
+  k += 1 //~ ERROR E0403
+  for y in ys {
+    y = 2 //~ ERROR E0403
+  }
+  match n {
+    m => {
+      m = 3 //~ ERROR E0403
+    }
+  }
+  var v = 1
+  let change = || {
+    v = 2 //~ ERROR E0403
+  }
+  let grow = || {
+    ys.push(2) //~ ERROR E0403
+  }
+}
+
+fn rebound(xs: List<i64>) -> List<i64> {
+  var xs = xs
+  xs.push(2)
+  xs
+}

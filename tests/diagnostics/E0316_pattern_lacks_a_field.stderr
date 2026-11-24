@@ -1,0 +1,14 @@
+── FIELD GIVEN TWICE OR LEFT OUT ─── E0316_pattern_lacks_a_field.lt:4:7  [E0316]
+
+This pattern lacks the field `total`:
+
+  4 │   let Order { id } = o
+    │       ^^^^^
+
+A record literal gives every field once, and a record pattern names every field,
+or ends with `..` to leave the others out.
+
+To fix it, ignore the other field:
+
+  4 │   let Order { id, .. } = o
+    │                 ++++

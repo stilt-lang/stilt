@@ -1,0 +1,8 @@
+//~ tier: advanced
+
+// A polymorphic function type puts the module that writes it in the advanced tier (polymorphism.advanced-tier,
+// traits.receiver-types).
+
+pub fn both(f: fn<T: Show>(T) -> str, n: i64, s: str) -> str {
+  "{f(n)} and {f(s)}" //~ ALLOC
+}

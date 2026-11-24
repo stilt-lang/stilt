@@ -1,0 +1,2 @@
+//~ rule: lexical.commented-out-code, syntax.doc-examples, syntax.grammar-errors, syntax.lexical-errors, syntax.first-error, errors.parts, errors.breaks, errors.resuming, errors.part-reports
+fn main() {}

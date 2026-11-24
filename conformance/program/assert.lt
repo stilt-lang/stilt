@@ -1,0 +1,12 @@
+//~ rule: program.assert-expr
+//~ run-output: "checked"
+//~ panic: assert
+//~ panic-at: assert.lt:10:3
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  assert xs.len() == 3
+  print("checked")
+  assert xs.len() == 4
+  print("unreachable")
+}

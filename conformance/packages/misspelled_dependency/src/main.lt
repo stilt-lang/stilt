@@ -1,0 +1,3 @@
+use jsn.decode //~ ERROR E0205
+
+fn main() / io { print("{decode.parse()}") }

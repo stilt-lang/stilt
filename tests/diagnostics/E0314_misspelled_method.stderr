@@ -1,0 +1,15 @@
+── NO SUCH METHOD OR MEMBER ─────────── E0314_misspelled_method.lt:1:46  [E0314]
+
+`List<str>` has no method `contians`:
+
+  1 │ fn has_ana(names: List<str>) -> bool { names.contians("ana") }
+    │                                              ^^^^^^^^
+
+Check the method's name and the receiver's type. A function without `self` is
+named on its type, as `List.new()`, and a trait's method needs an impl of the
+trait for the type.
+
+To fix it, write `contains`:
+
+  1 │ fn has_ana(names: List<str>) -> bool { names.contains("ana") }
+    │                                              ~~~~~~~~

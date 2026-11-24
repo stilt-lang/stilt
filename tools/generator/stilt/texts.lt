@@ -1,0 +1,138 @@
+// The forms that make a `str`: interpolations, with their format specs, and
+// the methods of strings.
+
+use code
+use context
+use lit
+use pick
+use ty
+
+const ALIGNS: List<str> = ["", "<", ">", "^", "*<", "*>", "-^", "0>", ".<", "_>"]
+
+/// A fill and an alignment with a width, or nothing. The width is drawn
+/// before the alignment.
+fn padding(inout r: pick.Rng) -> str {
+  if !pick.chance(inout r, 0.5) { return "" }
+  let width = pick.between(inout r, 0, 12)
+  let align = pick.one(inout r, ALIGNS)
+  "{align}{width}"
+}
+
+/// A format spec for a value of type `t` that std.invalid-specs allows, or none.
+pub fn spec(inout r: pick.Rng, t: ty.Ty) -> str {
+  let int = match t {
+    Int(_) => 2
+    _ => 0
+  }
+  let float = match t {
+    Float(_) => 3
+    _ => 0
+  }
+  pick.run(
+    inout r,
+    [
+      (3, |inout r| ""),
+      (2, |inout r| padding(inout r)),
+      (
+        int,
+        |inout r| {
+          let kind = pick.one(inout r, ["x", "X", "o", "b"])
+          let pad = padding(inout r)
+          "{pad}{kind}"
+        },
+      ),
+      (
+        float,
+        |inout r| {
+          let precision = if pick.chance(inout r, 0.7) { ".{pick.below(inout r, 7)}" } else { "" }
+          let e = if pick.chance(inout r, 0.3) { "e" } else { "" }
+          let pad = padding(inout r)
+          "{pad}{precision}{e}"
+        },
+      ),
+    ],
+  )
+}
+
+/// An interpolated string, whose splices have types fixed in their body
+/// (std.invalid-specs). Each part draws its splice before its text.
+pub fn interpolation(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+) -> code.Code {
+  let n = pick.between(inout b.p.r, 1, 3)
+  var parts = []
+  for _ in 0..n {
+    let s = splice(ex, inout b, sc, depth)
+    let text = lit.string_body(inout b.p.r)
+    parts.push("{text}{s}")
+  }
+  let last = lit.string_body(inout b.p.r)
+  code.atom("\"{"".join(parts)}{last}\"")
+}
+
+fn splice(ex: context.Expr, inout b: context.Body, sc: context.Scope, depth: i64) -> str {
+  let decls = b.p.decls
+  let shown = sc.vars.filter(|v| !ty.has_map(decls, v.ty))
+  let t = if !shown.is_empty() && pick.chance(inout b.p.r, 0.5) {
+    pick.one(inout b.p.r, shown).ty
+  } else {
+    context.random_ty(inout b.p, false, 2)
+  }
+  let e = ex.make(inout b, sc, depth, true, t)
+  let s = spec(inout b.p.r, t)
+  let suffix = if s.is_empty() { "" } else { ":{s}" }
+  "\{{code.operand(e)}{suffix}}"
+}
+
+/// The forms that make a `str`, each with its weight.
+pub fn ops(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let strs = context.typed(sc.vars, ty.Str)
+  [
+    (4, |inout b| interpolation(ex, inout b, sc, d)),
+    (
+      2,
+      |inout b| {
+        let m = pick.one(
+          inout b.p.r,
+          ["trim", "ascii_upper", "ascii_lower", "trim_start", "trim_end", "reversed"],
+        )
+        code.method_on(ex.make(inout b, sc, d, true, ty.Str), m, [])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        // The replacement is a literal, so that a string can't grow faster
+        // than linearly in a loop or a fold.
+        let from = if pick.chance(inout b.p.r, 0.1) { "\"\"" } else { lit.string(inout b.p.r) }
+        let to = lit.string(inout b.p.r)
+        let m = pick.one(inout b.p.r, ["replace", "replace_first"])
+        code.method_on(ex.make(inout b, sc, d, true, ty.Str), m, [from, to])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let parts = ex.make(inout b, sc, d, false, ty.ListOf(ty.Str))
+        code.method_on(ex.make(inout b, sc, d, true, ty.Str), "join", [parts.text])
+      },
+    ),
+    (
+      if strs.is_empty() { 0 } else { 1 },
+      |inout b| {
+        // Every string is ASCII, so every offset is on a UTF-8 boundary.
+        let v = pick.one(inout b.p.r, strs).name
+        let n = pick.between(inout b.p.r, 0, 4)
+        code.atom("{v}.slice(0, {v}.len().min({n}))")
+      },
+    ),
+  ]
+}

@@ -1,0 +1,11 @@
+//~ tier: advanced
+//~ rule: traits.receiver-types
+
+type Point = { x: i64 }
+
+// Only a constructor trait and its impls write a receiver's type.
+impl Point {
+  fn get(self: Point) -> i64 { //~ ERROR E0338
+    self.x
+  }
+}

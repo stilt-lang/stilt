@@ -1,0 +1,15 @@
+//~ rule: std.read-line
+//~ stdin: "a\xe2\x82b\r\n\xc0\x80\nlast\r"
+//~ stdout:
+//~ | ["a�b"] 5
+//~ | ["��"] 6
+//~ | ["last"] 4
+
+use std.io
+
+fn main() / io {
+  loop {
+    let line = io.read_line() else break
+    print("{[line]} {line.len()}")
+  }
+}

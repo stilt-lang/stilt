@@ -1,0 +1,11 @@
+── `resume` OUTSIDE A HANDLER'S OPERATION ── E0513_resume_outside_a_handler_s_operation.lt:6:43  [E0513]
+
+`resume` belongs in an operation of a handler that takes control, written
+`handler E -> R { … }`:
+
+  6 │   let h = handler Ask { fn ask() -> i64 { resume(1) } }
+    │                                           ^^^^^^^^^
+
+`resume` stands only in an operation of a handler written `handler Name -> R`,
+which takes control. An operation of any other handler gives its value, which
+resumes the code.

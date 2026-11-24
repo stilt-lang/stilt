@@ -1,0 +1,4 @@
+//~ rule: packages.own-effects, packages.ungranted-effects
+//~ stdout:
+//~ | a
+//~ | b

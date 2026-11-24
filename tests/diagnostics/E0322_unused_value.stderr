@@ -1,0 +1,15 @@
+── UNUSED VALUE ───────────────────────────── E0322_unused_value.lt:2:3  [E0322]
+
+This value of type `i64` is unused:
+
+  2 │   prices.len()
+    │   ^^^^^^^^^^^^
+
+A value that a statement computes and drops is usually a mistake, such as
+calling a method that returns a new list instead of changing the old one. Use
+the value, or write `let _ = …` to drop it on purpose.
+
+To fix it, discard it on purpose:
+
+  2 │   let _ = prices.len()
+    │   ++++++++

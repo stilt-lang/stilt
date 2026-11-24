@@ -1,0 +1,16 @@
+//~ rule: facts.conditions
+//~ panic: bounds
+//~ panic-at: order_emptied.lt:13:44
+
+fn empties(inout xs: List<i64>) -> bool {
+  xs.clear()
+  true
+}
+
+// The right operand of `&&` empties the list after the left finds it full.
+fn emptied(xs: List<i64>) -> i64 {
+  var ys = xs
+  if !ys.is_empty() && empties(inout ys) { ys[0] } else { 0 }
+}
+
+fn main() / io { print("{emptied([1])}") }

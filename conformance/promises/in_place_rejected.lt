@@ -1,0 +1,110 @@
+//~ rule: facts.own-storage, facts.last-use, facts.writes-in-place, facts.in-place-parameters, facts.copy-at-call
+
+fn bump_all(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs
+  ys[0] += 1
+  ys
+}
+
+// `xs` is used after `ys` takes it, so `ys` doesn't hold its own storage.
+fn used_again(xs: List<i64>) -> i64 without alloc {
+  var ys = xs
+  ys[0] = 1 //~ ERROR E0204
+  xs[0] + ys[0]
+}
+
+// A copy of `ys` lasts at the write, which modes.shared-writes makes shared.
+fn copied(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs
+  let keep = ys
+  ys[0] = 1 //~ ERROR E0204
+  keep
+}
+
+// A store into a map may insert.
+fn into_map(inout m: Map<str, i64>) without alloc {
+  m["a"] = 1 //~ ERROR E0204
+}
+
+// An element of a list may share its storage with another element.
+fn nested(inout g: List<List<i64>>) without alloc {
+  g[0][0] = 1 //~ ERROR E0204
+}
+
+fn bump(inout n: List<i64>) without alloc { n[0] += 1 }
+
+// An `inout` argument through an index hands an element on.
+fn hand_on(inout g: List<List<i64>>) without alloc {
+  bump(inout g[0]) //~ ERROR E0204
+}
+
+// `xs` is used after the call, so the call copies it.
+fn caller_keeps(xs: List<i64>) -> i64 without alloc {
+  let ys = bump_all(xs) //~ ERROR E0204
+  xs.len() + ys.len()
+}
+
+// A function without the limit holds no `let` parameter's storage, so its call copies.
+fn unlimited(xs: List<i64>) -> List<i64> { bump_all(xs) }
+
+fn calls_unlimited(xs: List<i64>) -> List<i64> without alloc {
+  unlimited(xs) //~ ERROR E0204
+}
+
+// A copy of the `inout` parameter lasts at the call, so the call copies it.
+fn passes_shared(inout xs: List<i64>) -> List<i64> without alloc {
+  let keep = xs
+  bump(inout xs) //~ ERROR E0204
+  keep
+}
+
+// Without the limit, an `inout` parameter holds no storage of its own (facts.own-storage).
+fn unlimited_store(inout xs: List<i64>) {
+  xs[0] = 1
+}
+
+fn store_limited_caller(inout xs: List<i64>) without alloc {
+  unlimited_store(inout xs) //~ ERROR E0204
+}
+
+const ZERO: List<i64> = [0, 0]
+
+// Both assignments of `ys` are before the write: the one the `if` may skip gives it a constant's
+// value, which isn't storage of its own.
+fn skipped_branch(xs: List<i64>, c: bool) -> i64 without alloc {
+  var ys = ZERO
+  if c { ys = xs }
+  ys[0] = 1 //~ ERROR E0204
+  ys[0]
+}
+
+// An assignment after the write in a loop's body is before it, for the next turn.
+fn next_turn(xs: List<i64>) -> i64 without alloc {
+  var ys = xs
+  var i = 0
+  while i < 2 {
+    ys[0] = 1 //~ ERROR E0204
+    ys = ZERO
+    i += 1
+  }
+  ys[0]
+}
+
+// So is one that a `break` skips.
+fn skipped_by_break(xs: List<i64>) -> i64 without alloc {
+  var ys = xs
+  loop {
+    ys[0] = 1 //~ ERROR E0204
+    if ys[1] == 0 { break }
+    ys = ZERO
+  }
+  ys[0]
+}
+
+// An `inout` parameter assigned whole holds what the assignment gives it.
+fn reset_to_constant(inout xs: List<i64>) without alloc {
+  xs = ZERO
+  xs[0] = 1 //~ ERROR E0204
+}
+
+fn main() / io {}

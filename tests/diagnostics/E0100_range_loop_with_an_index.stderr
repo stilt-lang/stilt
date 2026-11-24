@@ -1,0 +1,13 @@
+── SYNTAX ERROR ───────────────── E0100_range_loop_with_an_index.lt:3:8  [E0100]
+
+Stilt loops with each index as `for (i, x) in xs.enumerate(0)`:
+
+  3 │   for i, x := range xs { print("{i} {x}") }
+    │        ^
+
+A `for` takes one pattern, here a tuple of the index and the element.
+
+To fix it, write `enumerate`:
+
+  3 │   for (i, x) in xs.enumerate(0) { print("{i} {x}") }
+    │       ~~~~~~~~~~~~~~~~~~~~~~~~~

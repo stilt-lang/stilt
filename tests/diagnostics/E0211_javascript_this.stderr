@@ -1,0 +1,14 @@
+── UNKNOWN NAME ───────────────────────── E0211_javascript_this.lt:4:26  [E0211]
+
+Stilt names the receiver `self`, not `this`:
+
+  4 │   fn next(self) -> i64 { this.count + 1 }
+    │                          ^^^^
+
+A method takes its receiver as its first parameter, `self`, and reads its fields
+as `self.x`.
+
+To fix it, write `self`:
+
+  4 │   fn next(self) -> i64 { self.count + 1 }
+    │                          ~~~~

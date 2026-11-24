@@ -1,0 +1,24 @@
+//~ rule: expressions.closure-parameter-types, expressions.arguments, patterns.pattern-types, declarations.constructors
+
+fn area(w: f64, h: f64) -> f64 { w * h }
+
+fn square(side: f64) -> f64 {
+  area(side) //~ ERROR E0315
+}
+
+fn apply(f: fn(i64) -> i64) -> i64 { f(1) }
+
+fn sum() -> i64 {
+  apply(|a, b| a + b) //~ ERROR E0315
+}
+
+fn payload(o: Option<i64>) -> i64 {
+  match o {
+    Some(a, b) => a //~ ERROR E0315
+    None => 0
+  }
+}
+
+fn construct() -> Option<i64> {
+  Some(1, 2) //~ ERROR E0315
+}

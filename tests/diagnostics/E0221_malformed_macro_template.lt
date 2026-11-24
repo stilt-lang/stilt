@@ -1,0 +1,7 @@
+syntax double {
+  ($number: expr) => $numbr * 2
+}
+
+fn main() / io {
+  print("{double!(3)}")
+}

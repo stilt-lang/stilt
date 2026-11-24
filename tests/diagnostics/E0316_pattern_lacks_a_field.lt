@@ -1,0 +1,6 @@
+type Order = { id: i64, total: i64 }
+
+fn id(o: Order) -> i64 {
+  let Order { id } = o
+  id
+}

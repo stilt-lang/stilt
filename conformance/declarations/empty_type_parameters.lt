@@ -1,0 +1,3 @@
+//~ rule: syntax.generic-lists, declarations.generic-lists
+
+type P<> = { x: i64 } //~ ERROR E0100

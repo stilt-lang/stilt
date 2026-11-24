@@ -1,0 +1,27 @@
+//~ tier: meta
+//~ rule: macros.procedural-bodies, macros.running
+//~ stdout:
+//~ | 42 1<2<1121>>
+//~ | 3: 1, a, true (1, "a", true, 4)
+//~ | Point x=1 y=2; Shade of 2: Dark#1(5,); Point { x: 2, y: 3 }
+//~ | 31
+//~ | [30, 42, 3] 3
+//~ | 3 true false [3, 2, 5] | [8, 8, 8] 3 true | ..A-BB-CCC desserts Some(2) x_y 5
+//~ | [5, 9, 4, 2] [0, 4, 16] 42 [1, 4, 9] 10 3 5.0
+
+// A macro's body runs every form and every native that performs nothing, as a
+// program's run does: handled effects, packs, reflection, `when`,
+// projections, writable views, iterators, lazy values, tasks, and the natives
+// of `str`, `Set`, `std.array`, `std.par` and `std.math`. Each expansion is
+// the text its helper computes.
+meta use tools
+
+fn main() / io {
+  print(tools.effects!())
+  print(tools.packs!())
+  print(tools.reflection!())
+  print(tools.shared!())
+  print(tools.projection!())
+  print(tools.natives!())
+  print(tools.modules!())
+}

@@ -1,0 +1,2 @@
+[dependencies]
+mid = { path = "deps/mid" }

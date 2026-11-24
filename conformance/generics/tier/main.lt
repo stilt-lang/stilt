@@ -1,0 +1,15 @@
+//~ tier: meta
+//~ rule: generics.meta-tier
+//~ run-output: "3 [1, 2, 3]"
+
+// This module names types with value arguments and calls a function with a
+// value parameter, which leaves it in the core tier; `modular` declares value
+// parameters, which makes it a meta module.
+use std.array
+use modular
+
+fn main() / io {
+  let a: modular.Mod<5> = modular.Mod { value: 4 }
+  let v: array.Array<i64, 3> = [1, 2, 3]
+  print("{modular.add(a, a).value} {v}")
+}

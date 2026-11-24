@@ -1,0 +1,25 @@
+//~ rule: std.width-fill-and-alignment, std.precision, std.scientific-notation, std.format-special-values
+//~ stdout:
+//~ | nan nan nan nan nan
+//~ | inf inf inf inf inf
+//~ | -inf -inf -inf -inf -inf
+//~ | 0.0 0.00 0e0 0.0e0 0
+//~ | -0.0 -0.00 -0e0 -0.0e0 -0
+//~ | [  nan] [inf**] [ -inf ] [nan] [*inf*] [   -0.00]
+//~ | nan -inf -0e0 0.000
+
+fn main() / io {
+  let zero = 0.0
+  let nan = zero / zero
+  let inf = 1.0 / zero
+  let negative = -inf
+  let minus = -zero
+  print("{nan} {nan:.2} {nan:e} {nan:.1e} {nan:.0}")
+  print("{inf} {inf:.2} {inf:e} {inf:.1e} {inf:.0}")
+  print("{negative} {negative:.2} {negative:e} {negative:.1e} {negative:.0}")
+  print("{zero} {zero:.2} {zero:e} {zero:.1e} {zero:.0}")
+  print("{minus} {minus:.2} {minus:e} {minus:.1e} {minus:.0}")
+  print("[{nan:5}] [{inf:*<5}] [{negative:^6}] [{nan:2}] [{inf:*^5.3e}] [{minus:8.2}]")
+  let single: f32 = 0.0
+  print("{f32.NAN:.2} {-f32.INFINITY:e} {-single:e} {single:.3}")
+}

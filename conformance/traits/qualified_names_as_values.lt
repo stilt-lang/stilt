@@ -1,0 +1,13 @@
+//~ rule: traits.qualified-calls
+//~ run-output: "[1, 2] [\"1\", \"2\"] [\"Counter { n: 1 }\"]"
+
+type Counter = { n: i64 }
+
+impl Counter {
+  fn get(self) -> i64 { self.n }
+}
+
+fn main() / io {
+  let cs = [Counter { n: 1 }, Counter { n: 2 }]
+  print("{cs.map(Counter.get)} {[1, 2].map(Show.show)} {cs.take(1).map(Show.show)}")
+}

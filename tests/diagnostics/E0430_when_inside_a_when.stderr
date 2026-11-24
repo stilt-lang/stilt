@@ -1,0 +1,13 @@
+── `when` INSIDE A `when` ───────────── E0430_when_inside_a_when.lt:8:5  [E0430]
+
+This `when` waits for its values while the `when` around it holds others, which
+could deadlock:
+
+  6 │   when a {
+    │   ──────── this `when` holds its values for its whole block
+  7 │     a.balance -= n
+  8 │     when b { b.balance += n }
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Holding one shared value while waiting for another could deadlock. Hold both in
+one `when`, as `when a, b { … }`.

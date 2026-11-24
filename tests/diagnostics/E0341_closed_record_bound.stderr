@@ -1,0 +1,15 @@
+── OPEN RECORD TYPE OUT OF PLACE ──── E0341_closed_record_bound.lt:1:15  [E0341]
+
+A record bound ends with `..`, since one that named every field would be a type:
+
+  1 │ fn name_of<P: { name: str }>(p: P) -> str { p.name }
+    │               ^^^^^^^^^^^^^
+
+A record bound ends with `..`, as `P: { name: str, .. }`, and an open record
+type is only a parameter's type. Elsewhere, name a type parameter with that
+bound.
+
+To fix it, add `..`:
+
+  1 │ fn name_of<P: { name: str, .. }>(p: P) -> str { p.name }
+    │                          ++++

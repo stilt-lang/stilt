@@ -1,0 +1,39 @@
+//~ rule: std.list-functions, std.list-slicing, std.list-searching, std.list-changes
+//~ stdout:
+//~ | ["a", "a"] [] [0, 1, 4] [] [1, 2, 3] [] ([1, 2], ["a", "b"]) ([], [])
+//~ | Some(1) None 2 0 [1, 10, 2, 20] []
+//~ | [0, 1, 3, 6] [0] Some(3) None ([3, 4], [1, 2]) ([], [])
+//~ | [(1, [1, 3]), (0, [2, 4])] [(1, 2), (2, 1)] 0
+//~ | [[1, 2], [3, 4], [5]] [[1, 2, 3]] [] [[1, 2, 3], [2, 3, 4]] [] []
+//~ | [1, 2] [5, 1] [] [] ([1], [2, 3]) ([], [1, 2]) ([1, 2], [])
+//~ | [2, 3] [] [1, 2, 3] [1] [1, 2, 3] []
+//~ | Some("a") Some("bb") None None
+//~ | [3, 1, 2] 2 0 4
+//~ | [1, 2, 3] [3, 2, 1] [] [1]
+//~ | Some(0) None [1, 2, 1] [] true true true false
+//~ | [3, 1, 2] []
+
+fn main() / io {
+  let none: List<i64> = []
+  print("{List.repeat("a", 2)} {List.repeat("a", -1)} {List.generate(3, |i| i * i)} {List.generate(0, |i| i)} {List.flatten([[1], [], [2, 3]])} {List.flatten(List.repeat(none, 2))} {List.unzip([(1, "a"), (2, "b")])} {List.unzip(List.repeat((0, ""), 0))}")
+  print("{[3, 8, 5].find_index(|x| x > 4)} {none.find_index(|x| x > 4)} {[1, 2, 3, 4].count(|x| x % 2 == 0)} {none.count(|x| x > 0)} {[1, 2].flat_map(|x| [x, x * 10])} {none.flat_map(|x| [x])}")
+  print("{[1, 2, 3].scan(0, |a, x| a + x)} {none.scan(0, |a, x| a + x)} {[3, 1, 2].reduce(|a, b| a.max(b))} {none.reduce(|a, b| a + b)} {[1, 2, 3, 4].partition(|x| x > 2)} {none.partition(|x| x > 2)}")
+  print("{[1, 2, 3, 4].group_by(|x| x % 2).entries()} {["a", "bb", "c"].count_by(.len()).entries()} {none.group_by(|x| x).len()}")
+  print("{[1, 2, 3, 4, 5].chunks(2)} {[1, 2, 3].chunks(5)} {none.chunks(3)} {[1, 2, 3, 4].windows(3)} {[1, 2].windows(3)} {none.windows(1)}")
+  print("{[1, 2, 5, 1].take_while(|x| x < 3)} {[1, 2, 5, 1].skip_while(|x| x < 3)} {none.take_while(|x| x > 0)} {none.skip_while(|x| x > 0)} {[1, 2, 3].split_at(1)} {[1, 2].split_at(-1)} {[1, 2].split_at(9)}")
+  print("{[1, 2, 3].take_last(2)} {[1, 2, 3].take_last(-2)} {[1, 2, 3].take_last(9)} {[1, 2, 3].skip_last(2)} {[1, 2, 3].skip_last(-1)} {[1, 2, 3].skip_last(9)}")
+  print("{["bb", "a", "c"].min_by(.len())} {["a", "bb", "cc"].max_by(.len())} {List.repeat("x", 0).min_by(.len())} {List.repeat("x", 0).max_by(.len())}")
+  var xs = [1, 2, 3]
+  xs.swap(0, 2)
+  xs.swap(1, 1)
+  print("{[3, 1, 2]} {[1, 3, 5, 7].partition_point(|x| x < 4)} {[1, 3].partition_point(|x| x < 0)} {[1, 2, 3, 4].partition_point(|x| x < 9)}")
+  var ys = [1]
+  ys.extend([2, 3])
+  var zs = [3, 2, 1]
+  zs.clear()
+  var ws = [1, 2]
+  ws.truncate(1)
+  print("{ys} {xs} {zs} {ws}")
+  print("{["a", "b", "a"].index_of("a")} {["a"].index_of("b")} {[1, 1, 2, 1, 1].deduped()} {none.deduped()} {[1, 2, 3].starts_with([1, 2])} {[1, 2, 3].ends_with([3])} {none.starts_with([])} {[1].ends_with([1, 1])}")
+  print("{[3, 1, 3, 2, 1].distinct()} {none.distinct()}")
+}

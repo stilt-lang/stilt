@@ -1,0 +1,20 @@
+// A record field whose value is a variable with the field's name is written punned, in literals
+// and in patterns alike.
+type Order = { customer: str, qty: i64, price: f64 }
+
+fn order(customer: str, qty: i64, price: f64) -> Order { Order { customer, qty, price } }
+
+fn renamed(customer: str, o: Order) -> Order { Order { customer, qty: o.qty, price: 1.0 } }
+
+fn total(o: Order) -> f64 {
+  let Order { customer, qty, price } = o
+  let Order { qty: count, .. } = o
+  price * qty.to_f64()
+}
+
+fn buyer(o: Option<Order>) -> str {
+  match o {
+    Some(Order { customer, .. }) => customer
+    None => "nobody"
+  }
+}

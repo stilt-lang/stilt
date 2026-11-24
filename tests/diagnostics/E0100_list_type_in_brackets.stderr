@@ -1,0 +1,13 @@
+── SYNTAX ERROR ─────────────────── E0100_list_type_in_brackets.lt:1:14  [E0100]
+
+Stilt writes a list type as `List<T>`:
+
+  1 │ fn total(xs: [i64]) -> i64 {
+    │              ^
+
+Brackets build a list value, as `[1, 2]`; a type names its kind, as `List<i64>`.
+
+To fix it, write the type:
+
+  1 │ fn total(xs: List<i64>) -> i64 {
+    │              ~~~~~~~~~

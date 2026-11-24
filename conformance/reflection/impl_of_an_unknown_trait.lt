@@ -1,0 +1,23 @@
+//~ rule: meta.unseen-instantiations
+
+// An impl of a trait that fails to resolve: no caller reaches its methods
+// through a bound of that trait, so a method that reflects on its own type
+// parameter is reported nowhere, as a function that does is. A type without
+// a shape given to a function that reflects is still E0350.
+use std.meta
+
+type Point = { x: i64 }
+
+fn kind<T>(value: T) -> str {
+  match T.shape() {
+    Record(_) => "record"
+    _ => "other"
+  }
+}
+
+impl Describe for Point { //~ ERROR E0211
+  fn describe<U>(self, u: U) -> str { kind(u) }
+  fn shapeless(self) -> str { kind(|| 1) } //~ ERROR E0350
+}
+
+fn main() / io { print("{kind(Point { x: 1 })}") }

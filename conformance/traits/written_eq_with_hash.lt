@@ -1,0 +1,20 @@
+//~ rule: traits.hash-follows-written-eq, std.finding-keys
+//~ run-output: "1 2"
+
+type Name = { text: str }
+
+impl Eq for Name {
+  fn eq(self, other: Name) -> bool { self.text.ascii_lower() == other.text.ascii_lower() }
+}
+
+impl Hash for Name {
+  fn hash(self) -> u64 { self.text.ascii_lower().hash() }
+}
+
+fn main() / io {
+  var m = Map.new()
+  m[Name { text: "Ana" }] = 1
+  m[Name { text: "ANA" }] = 2
+  let k = Name { text: "ana" }
+  print("{m.len()} {m[k]}")
+}

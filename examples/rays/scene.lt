@@ -1,0 +1,39 @@
+// What a scene holds: spheres, a floor, lights and a camera.
+
+use vec
+
+/// How a surface sends light back: its color, how much it reflects, and how sharp its
+/// highlights are, as the power of the cosine, which is a power of two.
+pub type Material = { color: vec.Vec3, mirror: f64, shine: i64 }
+
+/// A sphere.
+pub type Sphere = { center: vec.Vec3, radius: f64, material: Material }
+
+/// A point light.
+pub type Light = { at: vec.Vec3, color: vec.Vec3 }
+
+/// A scene: its spheres above a checkered floor at height 0, its lights and its sky.
+pub type Scene = { spheres: List<Sphere>, lights: List<Light>, sky: vec.Vec3, ambient: f64 }
+
+/// The scene the program draws.
+pub fn demo() -> Scene {
+  let matte = |r: f64, g: f64, b: f64| Material { color: vec.v(r, g, b), mirror: 0.05, shine: 16 }
+  Scene {
+    spheres: [
+      Sphere {
+        center: vec.v(0.0, 1.0, 5.0),
+        radius: 1.0,
+        material: Material { color: vec.v(0.9, 0.9, 0.95), mirror: 0.6, shine: 64 },
+      },
+      Sphere { center: vec.v(-2.2, 0.7, 6.0), radius: 0.7, material: matte(0.9, 0.3, 0.2) },
+      Sphere { center: vec.v(2.0, 0.5, 4.2), radius: 0.5, material: matte(0.2, 0.5, 0.9) },
+      Sphere { center: vec.v(0.9, 0.3, 3.2), radius: 0.3, material: matte(0.3, 0.8, 0.3) },
+    ],
+    lights: [
+      Light { at: vec.v(-4.0, 6.0, 0.0), color: vec.v(0.8, 0.8, 0.8) },
+      Light { at: vec.v(5.0, 4.0, 2.0), color: vec.v(0.4, 0.4, 0.5) },
+    ],
+    sky: vec.v(0.55, 0.7, 0.95),
+    ambient: 0.12,
+  }
+}

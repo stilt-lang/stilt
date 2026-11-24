@@ -1,0 +1,13 @@
+//~ rule: lexical.line-comments, lexical.no-block-comments
+//~ stdout:
+//~ | http://example.com
+//~ | /* not a comment */
+//~ | it's after
+
+fn main() / io {
+  print("http://example.com") // a comment after code
+  // /* this doesn't open a block comment
+  print("/* not a comment */")
+  // */
+  print("it's after") // a comment may hold anything: { " \q ~ ` é
+}

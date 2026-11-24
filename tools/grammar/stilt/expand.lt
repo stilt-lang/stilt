@@ -1,0 +1,124 @@
+// Expands the macros of the notation (`list`, `list1` and rules with parameters), and names the
+// classes of tokens, so that every rule is plain EBNF.
+
+use ebnf
+use lexicon
+
+/// The rules of the grammar in order, each with its body.
+pub type Grammar = { rules: List<(str, ebnf.Expr)> }
+
+impl Grammar {
+  pub fn get(self, name: str) -> Option<ebnf.Expr> {
+    self.rules.find(|rule| rule.0 == name).map(.1)
+  }
+
+  /// Replaces the body of the rule `name`, or adds the rule at the end.
+  pub fn set(inout self, name: str, body: ebnf.Expr) {
+    match self.rules.find_index(|rule| rule.0 == name) {
+      Some(at) => { self.rules[at] = (name, body) }
+      None => self.rules.push((name, body))
+    }
+  }
+}
+
+type Expander = {
+  params: Map<str, ebnf.RuleDef>,
+  made: Set<str>,
+  instances: List<(str, ebnf.Expr)>,
+}
+
+/// The grammar of the rules without parameters, with the uses of macros replaced by rules of
+/// their own.
+pub fn expand(defs: List<ebnf.RuleDef>) -> Grammar / raise<str> {
+  let macros = defs.filter(|d| !d.params.is_empty())
+  var expander = Expander {
+    params: Map.from_entries(macros.map(|d| (d.name, d))),
+    made: Set.new(),
+    instances: [],
+  }
+  var grammar = Grammar { rules: [] }
+  for def in defs.filter(|d| d.params.is_empty()) {
+    grammar.rules.push((def.name, try expander.resolve(def.body)))
+  }
+  grammar.rules.extend(expander.instances)
+  grammar
+}
+
+/// What a name stands for when it names a class of tokens: the rule of the class, or nothing
+/// for `DOC`, which is read as a comment.
+/// ex: token_class("DOC") == Some(ebnf.Empty)
+/// ex: token_class("STRING_HEAD") == Some(ebnf.Ref("string_head"))
+/// ex: token_class("expr") == None
+fn token_class(name: str) -> Option<ebnf.Expr> {
+  if name == "DOC" {
+    Some(ebnf.Empty)
+  } else if lexicon.is_class(name) {
+    Some(ebnf.Ref(name.ascii_lower()))
+  } else {
+    None
+  }
+}
+
+/// `a { "," a } [ "," ]` (expressions.trailing-commas).
+fn list1(item: ebnf.Expr) -> ebnf.Expr {
+  let comma = ebnf.Lit(",")
+  ebnf.Seq([item, ebnf.Star(ebnf.Seq([comma, item])), ebnf.Opt(comma)])
+}
+
+/// `expr` with the rule `param` replaced by `arg`.
+/// ex: substitute(ebnf.Seq([ebnf.Ref("a"), ebnf.Ref("b")]), "a", ebnf.Lit("x")) == ebnf.Seq([ebnf.Lit("x"), ebnf.Ref("b")])
+fn substitute(expr: ebnf.Expr, param: str, arg: ebnf.Expr) -> ebnf.Expr {
+  let again = |items: List<ebnf.Expr>| items.map(|e| substitute(e, param, arg))
+  match expr {
+    Ref(name) if name == param => arg
+    Call(name, args) => ebnf.Call(name, again(args))
+    Seq(items) => ebnf.Seq(again(items))
+    Alt(items) => ebnf.Alt(again(items))
+    Opt(inner) => ebnf.Opt(substitute(inner, param, arg))
+    Star(inner) => ebnf.Star(substitute(inner, param, arg))
+    _ => expr
+  }
+}
+
+impl Expander {
+  fn resolve(inout self, expr: ebnf.Expr) -> ebnf.Expr / raise<str> {
+    match expr {
+      Ref(name) => token_class(name) else expr
+      Call(name, args) => try self.instance(name, args)
+      Seq(items) => ebnf.Seq(try self.all(items))
+      Alt(items) => ebnf.Alt(try self.all(items))
+      Opt(inner) => ebnf.Opt(try self.resolve(inner))
+      Star(inner) => ebnf.Star(try self.resolve(inner))
+      Lit(_) | Empty => expr
+    }
+  }
+
+  fn all(inout self, items: List<ebnf.Expr>) -> List<ebnf.Expr> / raise<str> {
+    var out = []
+    for item in items { out.push(try self.resolve(item)) }
+    out
+  }
+
+  /// The rule that stands for `name(args)`, made the first time it is used.
+  fn instance(inout self, name: str, args: List<ebnf.Expr>) -> ebnf.Expr / raise<str> {
+    let one = "`{name}` takes the name of one rule"
+    let [ebnf.Ref(written)] = args else raise one
+    let arg = token_class(written) else ebnf.Ref(written)
+    let Ref(arg_name) = arg else raise one
+    let rule = "{name}_{arg_name}"
+    if !self.made.contains(rule) {
+      self.made.insert(rule)
+      let body = match name {
+        "list" => ebnf.Opt(ebnf.Ref("list1_{arg_name}"))
+        "list1" => list1(arg)
+        _ => {
+          let def = self.params.get(name) else raise "unknown macro `{name}`"
+          try self.resolve(substitute(def.body, def.params[0], arg))
+        }
+      }
+      self.instances.push((rule, body))
+      if name == "list" { let _ = try self.instance("list1", args) }
+    }
+    ebnf.Ref(rule)
+  }
+}

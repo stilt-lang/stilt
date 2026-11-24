@@ -1,0 +1,6 @@
+//~ rule: lexical.float-literals
+//~ run-output: "0.01 1000.5 1000.0 0.5"
+
+fn main() / io {
+  print("{0.0_1} {1_000.5} {1_0e2} {5_0e-02}")
+}

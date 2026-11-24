@@ -1,0 +1,9 @@
+//~ rule: conformance.annotations, conformance.header-region, conformance.header-annotations, lexical.annotations, lexical.commented-out-code
+//~ stdout:
+//~ | |x| x
+//~ | f(x)
+
+fn main() / io {
+  print("|x| x")
+  print("f(x)")
+}

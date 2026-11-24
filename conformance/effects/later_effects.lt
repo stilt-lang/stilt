@@ -1,0 +1,26 @@
+//~ rule: types.inferred-per-body, effects.inference, effects.closure-parameters
+
+fn twice(f: fn()) {
+  f()
+  f()
+}
+
+fn quiet() {
+  let call = |g| g()
+  call(|| print("hello")) //~ ERROR E0502
+}
+
+fn wrapped() {
+  let call = |g| g()
+  twice(|| call(|| print("hello"))) //~ ERROR E0502
+}
+
+fn caught() -> str {
+  let attempt = |g| try g() catch e because "any failure is the value" => e
+  attempt(|| raise 5) //~ ERROR E0311
+}
+
+fn loud() / io {
+  let call = |g| g()
+  call(|| print("hello"))
+}

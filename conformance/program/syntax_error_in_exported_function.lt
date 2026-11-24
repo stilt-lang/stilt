@@ -1,0 +1,20 @@
+//~ rule: program.syntax-errors-at-run, program.check-error-report, errors.broken-parts, errors.running, c.exported-functions, c.foreign-functions
+//~ run-output: "3"
+//~ panic: check-error
+//~ panic-at: syntax_error_in_exported_function.lt:13:15
+
+// `add` is exported to C. `zeros` would be too, but its part breaks after the `{` that opens its
+// body: it is declared with the signature written before it, as a function with an error, and
+// not as a function that C gives, so calling it needs no `unsafe`.
+pub extern fn add(a: i64, b: i64) -> i64 {
+  a + b
+}
+
+pub extern fn zeros(a: i64, b: i64) -> bool {
+  a == 0 && b match 0 //~ ERROR E0100
+}
+
+fn main() / io {
+  print("{add(1, 2)}")
+  print("{zeros(0, 0)}")
+}

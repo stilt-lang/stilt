@@ -1,0 +1,10 @@
+── MACRO THAT DIDN'T FINISH ────────────────────────────── main.lt:4:15  [E0226]
+
+`rows.padded!` didn't finish: it took more than 10,000,000 steps; running
+`padded`, then `count_down`:
+
+  4 │   let width = rows.padded!(4)
+    │               ^^^^^^^^^^^^^^^
+
+The macro's code ran too long, ran out of memory or panicked, so it was stopped.
+Look in the macro for a loop that doesn't end on this input.

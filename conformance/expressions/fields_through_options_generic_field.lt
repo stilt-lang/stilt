@@ -1,0 +1,13 @@
+//~ rule: types.option-field-known
+//~ run-output: "Some(Some(1)) Some(None) None"
+
+type Box<T> = { v: T }
+
+fn inner<T>(o: Option<Box<T>>) -> Option<T> { o.v }
+
+fn main() / io {
+  let a: Option<Option<i64>> = inner(Some(Box { v: Some(1) }))
+  let b: Option<Option<i64>> = inner(Some(Box { v: None }))
+  let c: Option<Option<i64>> = inner(None)
+  print("{a} {b} {c}")
+}

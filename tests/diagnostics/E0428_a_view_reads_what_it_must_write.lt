@@ -1,0 +1,8 @@
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var head = view.View.of(xs, 0, 2)
+  head[0] = 9
+  print("{head}")
+}

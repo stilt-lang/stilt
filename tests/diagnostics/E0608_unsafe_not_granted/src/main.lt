@@ -1,0 +1,3 @@
+use zip
+
+fn main() / io { print("{zip.checksum([104, 105])}") }

@@ -1,0 +1,301 @@
+module std.clock
+
+// Clocks and waiting (std.clock), durations and instants (std.durations and
+// std.instants), and dates and times in UTC (std.date-times and std.rfc-3339).
+
+/// Milliseconds since 1970-01-01T00:00:00Z, by the system's clock.
+pub fn unix_ms() -> i64 / io = ?
+
+/// Nanoseconds since an unspecified start, which never decrease while the
+/// program runs.
+pub fn monotonic_ns() -> i64 / io = ?
+
+/// Waits at least `ms` milliseconds, or returns at once when `ms <= 0`.
+pub fn sleep_ms(ms: i64) / io = ?
+
+/// A length of time, in nanoseconds, which may be negative.
+pub type Duration = { ns: i64 }
+
+/// A reading of the monotonic clock, in nanoseconds since its start.
+pub type Instant = { ns: i64 }
+
+/// A date and a time of day in UTC, in the Gregorian calendar.
+pub type DateTime = { year: i64, month: i64, day: i64, hour: i64, minute: i64, second: i64, nanosecond: i64 }
+
+impl Duration {
+  /// The duration of `n` nanoseconds.
+  /// ex: Duration.from_ns(5).ns == 5
+  pub fn from_ns(n: i64) -> Duration { Duration { ns: n } }
+
+  /// The duration of `n` microseconds.
+  /// ex: Duration.from_us(5).ns == 5000
+  pub fn from_us(n: i64) -> Duration { Duration { ns: n * 1000 } }
+
+  /// The duration of `n` milliseconds.
+  /// ex: Duration.from_ms(-5).ns == -5000000
+  pub fn from_ms(n: i64) -> Duration { Duration { ns: n * 1000000 } }
+
+  /// The duration of `n` seconds.
+  /// ex: Duration.from_seconds(2) == Duration.from_ms(2000)
+  pub fn from_seconds(n: i64) -> Duration { Duration { ns: n * 1000000000 } }
+
+  /// The duration of `n` minutes.
+  /// ex: Duration.from_minutes(2) == Duration.from_seconds(120)
+  pub fn from_minutes(n: i64) -> Duration { Duration.from_seconds(n * 60) }
+
+  /// The duration of `n` hours.
+  /// ex: Duration.from_hours(1) == Duration.from_minutes(60)
+  pub fn from_hours(n: i64) -> Duration { Duration.from_seconds(n * 3600) }
+
+  /// The whole milliseconds in the duration, rounded toward zero.
+  /// ex: Duration.from_us(2500).whole_ms() == 2 && Duration.from_us(-2500).whole_ms() == -2
+  pub fn whole_ms(self) -> i64 { self.ns / 1000000 }
+
+  /// The whole seconds in the duration, rounded toward zero.
+  /// ex: Duration.from_ms(2500).whole_seconds() == 2
+  pub fn whole_seconds(self) -> i64 { self.ns / 1000000000 }
+
+  /// The length of the duration in seconds.
+  /// ex: Duration.from_ms(2500).seconds() == 2.5
+  pub fn seconds(self) -> f64 { self.ns.to_f64() / 1000000000.0 }
+
+  /// The duration that is this one and `other` together.
+  /// ex: Duration.from_ms(1).plus(Duration.from_us(500)) == Duration.from_us(1500)
+  pub fn plus(self, other: Duration) -> Duration { Duration { ns: self.ns + other.ns } }
+
+  /// The duration that is this one less `other`.
+  /// ex: Duration.from_ms(1).minus(Duration.from_ms(3)) == Duration.from_ms(-2)
+  pub fn minus(self, other: Duration) -> Duration { Duration { ns: self.ns - other.ns } }
+}
+
+impl Show for Duration {
+  fn show(self) -> str {
+    let n = self.ns
+    let size = if n < 0 { (0 -% n).wrap_to_u64() } else { n.wrap_to_u64() }
+    let sign = if n < 0 { "-" } else { "" }
+    if size >= 1000000000 { return "{sign}{decimal(size, 1000000000, 9)}s" }
+    if size >= 1000000 { return "{sign}{decimal(size, 1000000, 6)}ms" }
+    if size >= 1000 { return "{sign}{decimal(size, 1000, 3)}µs" }
+    "{sign}{size}ns"
+  }
+}
+
+// `n` divided by `scale`, which has `digits` zeros, as a decimal whose fraction
+// has no trailing zeros.
+fn decimal(n: u64, scale: u64, digits: i64) -> str {
+  let rest = n % scale
+  if rest == 0 { return "{n / scale}" }
+  var fraction = "{rest}".pad_start(digits, "0")
+  loop {
+    let shorter = fraction.strip_suffix("0") else break
+    fraction = shorter
+  }
+  "{n / scale}.{fraction}"
+}
+
+/// The reading of the monotonic clock now.
+pub fn now() -> Instant / io { Instant { ns: monotonic_ns() } }
+
+/// Waits at least `d`, or returns at once when `d` isn't positive.
+pub fn sleep(d: Duration) / io {
+  let ms = d.ns / 1000000
+  sleep_ms(if d.ns % 1000000 > 0 { ms + 1 } else { ms })
+}
+
+impl Instant {
+  /// The duration from this instant to now.
+  pub fn elapsed(self) -> Duration / io { now().since(self) }
+
+  /// The duration from `earlier` to this instant.
+  /// ex: Instant { ns: 50 }.since(Instant { ns: 20 }) == Duration.from_ns(30)
+  pub fn since(self, earlier: Instant) -> Duration { Duration { ns: self.ns - earlier.ns } }
+
+  /// The instant `d` after this one.
+  /// ex: Instant { ns: 50 }.plus(Duration.from_ns(-20)) == Instant { ns: 30 }
+  pub fn plus(self, d: Duration) -> Instant { Instant { ns: self.ns + d.ns } }
+}
+
+impl DateTime {
+  /// The time now, by the system's clock.
+  pub fn now() -> DateTime / io { DateTime.from_unix_ms(unix_ms()) }
+
+  /// The time `s` seconds after 1970-01-01T00:00:00Z, before it when negative.
+  /// ex: DateTime.from_unix_seconds(0) == DateTime { year: 1970, month: 1, day: 1, hour: 0, minute: 0, second: 0, nanosecond: 0 }
+  /// ex: DateTime.from_unix_seconds(-1).to_rfc3339() == "1969-12-31T23:59:59Z"
+  pub fn from_unix_seconds(s: i64) -> DateTime { at(s, 0) }
+
+  /// The time `ms` milliseconds after 1970-01-01T00:00:00Z, before it when
+  /// negative.
+  /// ex: DateTime.from_unix_ms(1763199000250).to_rfc3339() == "2025-11-15T09:30:00.25Z"
+  pub fn from_unix_ms(ms: i64) -> DateTime { at(ms.div_euclid(1000), ms.rem_euclid(1000) * 1000000) }
+
+  /// The time of the date and time given, or `None` unless each is in its
+  /// range: `month` from 1 to 12, `day` a day of that month, `hour` from 0 to
+  /// 23 and `minute` and `second` from 0 to 59.
+  /// ex: DateTime.of(2024, 2, 29, 12, 0, 0).is_some() && DateTime.of(2023, 2, 29, 12, 0, 0).is_none()
+  /// ex: DateTime.of(2024, 1, 1, 24, 0, 0) == None
+  pub fn of(year: i64, month: i64, day: i64, hour: i64, minute: i64, second: i64) -> Option<DateTime> {
+    if month < 1 || month > 12 || day < 1 || day > days_in_month(year, month) { return None }
+    if hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 { return None }
+    Some(DateTime { year: year, month: month, day: day, hour: hour, minute: minute, second: second, nanosecond: 0 })
+  }
+
+  /// The seconds from 1970-01-01T00:00:00Z to this time, rounded down.
+  /// ex: DateTime.from_unix_ms(-1).unix_seconds() == -1
+  pub fn unix_seconds(self) -> i64 {
+    days_from_civil(self.year, self.month, self.day) * 86400 + self.hour * 3600 + self.minute * 60 + self.second
+  }
+
+  /// The milliseconds from 1970-01-01T00:00:00Z to this time, rounded down.
+  /// ex: DateTime.from_unix_ms(1763199000250).unix_ms() == 1763199000250
+  pub fn unix_ms(self) -> i64 { self.unix_seconds() * 1000 + self.nanosecond / 1000000 }
+
+  /// The day of the week, from 1 for Monday to 7 for Sunday.
+  /// ex: DateTime.from_unix_seconds(0).weekday() == 4
+  pub fn weekday(self) -> i64 { (days_from_civil(self.year, self.month, self.day) + 3).rem_euclid(7) + 1 }
+
+  /// The time `d` after this one.
+  /// ex: DateTime.from_unix_seconds(0).plus(Duration.from_ms(-500)).to_rfc3339() == "1969-12-31T23:59:59.5Z"
+  pub fn plus(self, d: Duration) -> DateTime {
+    let ns = self.nanosecond + d.ns.rem_euclid(1000000000)
+    at(self.unix_seconds() + d.ns.div_euclid(1000000000) + ns / 1000000000, ns % 1000000000)
+  }
+
+  /// The duration from `earlier` to this time.
+  /// ex: DateTime.from_unix_seconds(90).since(DateTime.from_unix_ms(500)) == Duration.from_ms(89500)
+  pub fn since(self, earlier: DateTime) -> Duration {
+    Duration { ns: (self.unix_seconds() - earlier.unix_seconds()) * 1000000000 + self.nanosecond - earlier.nanosecond }
+  }
+
+  /// The time as RFC 3339 writes it in UTC, with a fraction of a second only
+  /// when it has one.
+  /// ex: DateTime.from_unix_seconds(1763199000).to_rfc3339() == "2025-11-15T09:30:00Z"
+  /// ex: DateTime.from_unix_seconds(0).plus(Duration.from_us(1)).to_rfc3339() == "1970-01-01T00:00:00.000001Z"
+  pub fn to_rfc3339(self) -> str {
+    let date = "{year_text(self.year)}-{self.month:0>2}-{self.day:0>2}"
+    let time = "{self.hour:0>2}:{self.minute:0>2}:{self.second:0>2}"
+    if self.nanosecond == 0 { return "{date}T{time}Z" }
+    let fraction = decimal(self.nanosecond.wrap_to_u64(), 1000000000, 9).strip_prefix("0") else ""
+    "{date}T{time}{fraction}Z"
+  }
+
+  /// The time that `text` writes as RFC 3339 does, with `T` or `t` before the
+  /// time, and `Z`, `z` or an offset from UTC after it, or `None`.
+  /// ex: DateTime.from_rfc3339("2025-11-15T10:30:00.250+01:00") == Some(DateTime.from_unix_ms(1763199000250))
+  /// ex: DateTime.from_rfc3339("2025-11-15t09:30:00z") == Some(DateTime.from_unix_seconds(1763199000))
+  /// ex: DateTime.from_rfc3339("2025-11-15T09:30:60Z") == None
+  /// ex: DateTime.from_rfc3339("2025-11-15 09:30:00Z") == None
+  pub fn from_rfc3339(text: str) -> Option<DateTime> {
+    let b = text.bytes()
+    if b.get(4) != Some(45) || b.get(7) != Some(45) || b.get(13) != Some(58) || b.get(16) != Some(58) { return None }
+    if b.get(10) != Some(84) && b.get(10) != Some(116) { return None }
+    let year = number(b, 0, 4) else return None
+    let month = number(b, 5, 2) else return None
+    let day = number(b, 8, 2) else return None
+    let hour = number(b, 11, 2) else return None
+    let minute = number(b, 14, 2) else return None
+    let second = number(b, 17, 2) else return None
+    let (ns, after) = fraction(b, 19) else return None
+    let (offset, end) = zone(b, after) else return None
+    if end != b.len() { return None }
+    let local = DateTime.of(year, month, day, hour, minute, second) else return None
+    Some(local.plus(Duration.from_ns(ns)).plus(Duration.from_seconds(0 - offset)))
+  }
+}
+
+impl Show for DateTime {
+  fn show(self) -> str { self.to_rfc3339() }
+}
+
+// The time `s` seconds and `ns` nanoseconds after 1970-01-01T00:00:00Z, for
+// `ns` from 0 to 999,999,999.
+fn at(s: i64, ns: i64) -> DateTime {
+  let (year, month, day) = civil_from_days(s.div_euclid(86400))
+  let rest = s.rem_euclid(86400)
+  DateTime { year: year, month: month, day: day, hour: rest / 3600, minute: rest % 3600 / 60, second: rest % 60, nanosecond: ns }
+}
+
+// A year as RFC 3339 writes it, with four digits, and as many as it needs, with
+// a `-` before them, outside 0 to 9999.
+fn year_text(y: i64) -> str {
+  if y >= 0 && y <= 9999 { return "{y:0>4}" }
+  "{y}"
+}
+
+fn is_leap(y: i64) -> bool { y.rem_euclid(4) == 0 && (y.rem_euclid(100) != 0 || y.rem_euclid(400) == 0) }
+
+fn days_in_month(y: i64, m: i64) -> i64 {
+  if m == 2 { return if is_leap(y) { 29 } else { 28 } }
+  if m == 4 || m == 6 || m == 9 || m == 11 { 30 } else { 31 }
+}
+
+// The days from 1970-01-01 to a date of the Gregorian calendar, as Howard
+// Hinnant's `days_from_civil` counts them, in eras of 400 years that start on
+// March 1.
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+  let year = if m <= 2 { y - 1 } else { y }
+  let era = year.div_euclid(400)
+  let yoe = year - era * 400
+  let doy = (153 * ((m + 9) % 12) + 2) / 5 + d - 1
+  let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+  era * 146097 + doe - 719468
+}
+
+// The date of the day `z` days after 1970-01-01, as `civil_from_days` gives it.
+fn civil_from_days(z: i64) -> (i64, i64, i64) {
+  let days = z + 719468
+  let era = days.div_euclid(146097)
+  let doe = days - era * 146097
+  let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+  let doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+  let mp = (5 * doy + 2) / 153
+  let d = doy - (153 * mp + 2) / 5 + 1
+  let m = if mp < 10 { mp + 3 } else { mp - 9 }
+  (yoe + era * 400 + (if m <= 2 { 1 } else { 0 }), m, d)
+}
+
+// The number that the `n` ASCII digits of `b` at offset `at` write, or `None`
+// unless each of them is a digit.
+fn number(b: List<u8>, at: i64, n: i64) -> Option<i64> {
+  var value = 0
+  for i in at..at + n {
+    let digit = b.get(i) else return None
+    if digit < 48 || digit > 57 { return None }
+    value = value * 10 + digit.to_i64() - 48
+  }
+  Some(value)
+}
+
+// The nanoseconds of the fraction of a second at offset `i` of `b`, where the
+// first nine of its digits count, and the offset after it: `(0, i)` when none
+// is there, and `None` for a `.` without a digit.
+fn fraction(b: List<u8>, i: i64) -> Option<(i64, i64)> {
+  if b.get(i) != Some(46) { return Some((0, i)) }
+  var at = i + 1
+  var ns = 0
+  var digits = 0
+  loop {
+    let digit = b.get(at) else break
+    if digit < 48 || digit > 57 { break }
+    if digits < 9 { ns = ns * 10 + digit.to_i64() - 48 }
+    digits += 1
+    at += 1
+  }
+  if digits == 0 { return None }
+  for _ in digits..9 { ns = ns * 10 }
+  Some((ns, at))
+}
+
+// The offset from UTC, in seconds, of the zone at offset `i` of `b`, `Z`, `z`,
+// `+HH:MM` or `-HH:MM`, and the offset after it.
+fn zone(b: List<u8>, i: i64) -> Option<(i64, i64)> {
+  let sign = b.get(i) else return None
+  if sign == 90 || sign == 122 { return Some((0, i + 1)) }
+  if sign != 43 && sign != 45 { return None }
+  if b.get(i + 3) != Some(58) { return None }
+  let hours = number(b, i + 1, 2) else return None
+  let minutes = number(b, i + 4, 2) else return None
+  if hours > 23 || minutes > 59 { return None }
+  let seconds = (hours * 60 + minutes) * 60
+  Some((if sign == 45 { 0 - seconds } else { seconds }, i + 6))
+}

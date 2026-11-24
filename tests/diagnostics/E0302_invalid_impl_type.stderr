@@ -1,0 +1,10 @@
+── INVALID IMPL TYPE ─────────────────── E0302_invalid_impl_type.lt:3:6  [E0302]
+
+An impl's type must be a type applied to the impl's own type parameters, each
+once:
+
+  3 │ impl Pair<i64, i64> {
+    │      ^^^^^^^^^^^^^^
+
+An impl block applies to the whole generic type, as `impl<A, B> Pair<A, B>`. For
+one instantiation alone, write a function that takes it.

@@ -1,0 +1,9 @@
+fn first_even(xs: List<i64>) -> Option<i64> {
+  var found: Option<i64> = null
+  for x in xs {
+    if found.is_none() && x % 2 == 0 { found = Some(x) }
+  }
+  found
+}
+
+fn main() {}

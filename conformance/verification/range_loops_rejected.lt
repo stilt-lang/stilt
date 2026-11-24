@@ -1,0 +1,142 @@
+//~ rule: effects.without-panic, facts.rules-of-acceptance, facts.acceptance-places, facts.range-loops, facts.closest-rule
+
+// Each index names the variable of a `for` over a range, so the error says
+// what the range loop needs.
+
+fn upto(xs: List<i64>, n: i64) -> i64 without panic {
+  var s = 0
+  for i in 0..n { s += xs[i] } //~ ERROR E0204
+  s
+}
+
+fn from(xs: List<i64>, a: i64) -> i64 without panic {
+  var s = 0
+  for i in a..xs.len() { s += xs[i] } //~ ERROR E0204
+  s
+}
+
+fn ahead(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() - 1 { s += xs[i + 2] } //~ ERROR E0204
+  s
+}
+
+fn back(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 1..xs.len() { s += xs[i - 2] } //~ ERROR E0204
+  s
+}
+
+fn evens(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() { s += xs[2 * i] } //~ ERROR E0204
+  s
+}
+
+fn through(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..=xs.len() { s += xs[i] } //~ ERROR E0204
+  s
+}
+
+fn other(xs: List<i64>, ys: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() { s += ys[i] } //~ ERROR E0204
+  s
+}
+
+// A closure literal's body is a body of its own.
+fn inside(xs: List<i64>) -> List<i64> without panic {
+  var ys = []
+  for i in 0..xs.len() {
+    let at = || xs[i] //~ ERROR E0204
+    ys.push(at())
+  }
+  ys
+}
+
+// The body changes the length, whether before the index or after it.
+fn pushed_before(xs: List<i64>) -> List<i64> without panic {
+  var ys = xs
+  for i in 0..ys.len() {
+    ys.push(0)
+    ys[i] = 1 //~ ERROR E0204
+  }
+  ys
+}
+
+fn pushed_after(xs: List<i64>) -> List<i64> without panic {
+  var ys = xs
+  for i in 0..ys.len() {
+    ys[i] = 1 //~ ERROR E0204
+    ys.push(0)
+  }
+  ys
+}
+
+// A start below zero isn't known non-negative.
+fn from_minus_one(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in -1..xs.len() { s += xs[i] } //~ ERROR E0204
+  s
+}
+
+// A closure literal's body is a body of its own, which no range loop around it gives
+// facts to, whether a closure comes before it or holds the loop.
+fn second_closure(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() {
+    let first = || 0
+    let second = || xs[i] //~ ERROR E0204
+    s += first() + second()
+  }
+  s
+}
+
+fn closure_in_closure(xs: List<i64>) -> i64 without panic {
+  let outer = || {
+    var s = 0
+    for i in 0..xs.len() {
+      let inner = || xs[i] //~ ERROR E0204
+      s += inner()
+    }
+    s
+  }
+  outer()
+}
+
+// Only `i + k` and `i - k` of the loop's variable are its forms, and `k` is a literal.
+fn scaled(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() - 1 { s += xs[1 * i + 1] } //~ ERROR E0204
+  s
+}
+
+fn by_name(xs: List<i64>, j: i64) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() { s += xs[i + j] } //~ ERROR E0204
+  s
+}
+
+// The end subtracts a name, not a literal at least the offset.
+fn end_by_name(xs: List<i64>, c: i64) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() - c { s += xs[i + 1] } //~ ERROR E0204
+  s
+}
+
+// `i - k` needs a start written as a literal at least `k`.
+fn start_by_name(xs: List<i64>, a: i64) -> i64 without panic {
+  var s = 0
+  for i in a..xs.len() { s += xs[i - 1] } //~ ERROR E0204
+  s
+}
+
+// The list indexed is no place: the loop's end says nothing of its length.
+fn copied(xs: List<i64>) -> List<i64> { xs }
+
+fn no_place(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() { s += copied(xs)[i] } //~ ERROR E0204
+  s
+}

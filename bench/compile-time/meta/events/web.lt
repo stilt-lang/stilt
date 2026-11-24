@@ -1,0 +1,84 @@
+// What the web servers and the database log: requests, and queries that took too long.
+
+/// The method of a request.
+pub type Method = | Get | Post | Put | Delete
+
+/// A request a web server answered: what was asked, the status of the answer, the time it took
+/// and the size of the answer's body.
+pub type Request = {
+  method: Method,
+  path: str,
+  query: Option<str>,
+  status: i64,
+  millis: i64,
+  bytes: i64,
+}
+
+/// A query that took longer than the database's threshold, and the rows it read.
+pub type Query = { table: str, millis: i64, rows: i64 }
+
+impl Method {
+  /// The method that a line writes.
+  /// ex: Method.parse("PUT") == Some(Put)
+  pub fn parse(text: str) -> Option<Method> {
+    match text {
+      "GET" => Some(Get)
+      "POST" => Some(Post)
+      "PUT" => Some(Put)
+      "DELETE" => Some(Delete)
+      _ => None
+    }
+  }
+
+  /// The method as a line writes it.
+  /// ex: Delete.label() == "DELETE"
+  pub fn label(self) -> str {
+    match self {
+      Get => "GET"
+      Post => "POST"
+      Put => "PUT"
+      Delete => "DELETE"
+    }
+  }
+
+  /// Whether a request of this method changes what the server holds.
+  /// ex: Post.writes() && !Get.writes()
+  pub fn writes(self) -> bool { self != Get }
+}
+
+impl Request {
+  /// The class of the status: 2 for a success, 4 for the client's error, 5 for the server's.
+  /// ex: Request { method: Get, path: "/", query: None, status: 404, millis: 1, bytes: 0 }.class() == 4
+  pub fn class(self) -> i64 { self.status / 100 }
+
+  /// Whether the server failed to answer.
+  pub fn failed(self) -> bool { self.class() == 5 }
+
+  /// The first segment of the path, which names the service that answered.
+  /// ex: Request { method: Get, path: "/api/users/7", query: None, status: 200, millis: 1, bytes: 0 }.service() == "/api"
+  /// ex: Request { method: Get, path: "/", query: None, status: 200, millis: 1, bytes: 0 }.service() == "/"
+  pub fn service(self) -> str {
+    match self.path.split("/") {
+      ["", first, ..] if first != "" => "/{first}"
+      _ => "/"
+    }
+  }
+
+  /// The request as a line writes it.
+  /// ex: Request { method: Get, path: "/a", query: Some("b=1"), status: 200, millis: 3, bytes: 9 }.text() == "GET /a?b=1 200 3ms 9B"
+  pub fn text(self) -> str {
+    let query = match self.query {
+      Some(q) => "?{q}"
+      None => ""
+    }
+    "{self.method.label()} {self.path}{query} {self.status} {self.millis}ms {self.bytes}B"
+  }
+}
+
+impl Query {
+  /// The time each row took, in microseconds, or the whole time when there were none.
+  /// ex: Query { table: "t", millis: 300, rows: 1000 }.per_row() == 300
+  pub fn per_row(self) -> i64 {
+    if self.rows == 0 { self.millis * 1000 } else { self.millis * 1000 / self.rows }
+  }
+}

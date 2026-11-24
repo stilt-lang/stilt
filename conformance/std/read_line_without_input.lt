@@ -1,0 +1,6 @@
+//~ rule: std.read-line
+//~ run-output: "None"
+
+use std.io
+
+fn main() / io { print("{io.read_line()}") }

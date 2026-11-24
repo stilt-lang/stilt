@@ -1,0 +1,25 @@
+//~ rule: lexical.terminator-insertion, lexical.continuing-expression, syntax.closing-angle-brackets, traits.declaring-trait
+//~ run-output: "point Point { x: 1, y: 2 } None [[\"a\"]] 2"
+
+type Point = { x: i64, y: i64 }
+
+trait Shape {
+  fn name(self) -> str
+  fn same(self) -> Self
+  fn tag(self) -> Option<str>
+  fn tags(self) -> List<List<str>>
+  fn area(self) -> i64
+}
+
+impl Shape for Point {
+  fn name(self) -> str { "point" }
+  fn same(self) -> Self { self }
+  fn tag(self) -> Option<str> { None }
+  fn tags(self) -> List<List<str>> { [["a"]] }
+  fn area(self) -> i64 { self.x * self.y }
+}
+
+fn main() / io {
+  let p = Point { x: 1, y: 2 }
+  print("{p.name()} {p.same()} {p.tag()} {p.tags()} {p.area()}")
+}

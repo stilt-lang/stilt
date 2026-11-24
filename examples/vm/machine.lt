@@ -1,0 +1,166 @@
+// The machine: a stack of integers, the slots of each call's frame, and a loop that runs one
+// instruction at a time. Every mistake a program can make is a fault that `run` raises, and
+// `without panic` makes the check prove it: each index below is guarded by a test the machine
+// needs anyway, to report the fault.
+
+/// An instruction. A jump's or a call's target is the index of an instruction.
+pub type Op =
+  | Push(i64)
+  | Load(i64)
+  | Store(i64)
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Mod
+  | Lt
+  | Le
+  | Eq
+  | Not
+  | Jump(i64)
+  | JumpIfZero(i64)
+  | Call(i64, i64)
+  | Enter(i64)
+  | Ret
+  | Print
+  | Dup
+  | Drop
+  | Halt
+
+/// A program: its instructions, the source line of each, and where `main` starts and how many
+/// parameters it takes.
+pub type Program = { code: List<Op>, lines: List<i64>, main: i64, params: i64 }
+
+/// What a run gives: the values it printed, and the value `main` returned.
+pub type Ran = { printed: List<i64>, value: i64 }
+
+/// A fault: the index of the instruction that made it, and what went wrong.
+pub type Fault = { at: i64, message: str }
+
+/// Where a call goes back to, and where its caller's slots begin.
+type Frame = { back: i64, base: i64 }
+
+/// The most frames a run holds at once.
+const DEPTH: i64 = 10000
+
+/// Runs `p`, with `args` as `main`'s parameters.
+/// ex: try run(Program { code: [Push(6), Push(7), Mul, Ret], lines: [], main: 0, params: 0 }, []) == Ran { printed: [], value: 42 }
+/// ex: try run(Program { code: [Load(0), Print, Push(0), Ret], lines: [], main: 0, params: 1 }, [5]).printed == [5]
+pub fn run(p: Program, args: List<i64>) -> Ran / raise<Fault>
+  without panic {
+  var (stack, slots, frames, printed) = ([], args, [], [])
+  var (pc, base) = (p.main, 0)
+  while pc >= 0 && pc < p.code.len() {
+    let (op, at) = (p.code[pc], pc)
+    pc += 1
+    match op {
+      Push(n) => stack.push(n)
+      Load(k) => stack.push(try slot(slots, base + k) catch m => raise Fault { at, message: m })
+      Store(k) => {
+        let v = try pop(inout stack, at)
+        try set(inout slots, base + k, v) catch m => raise Fault { at, message: m }
+      }
+      Add | Sub | Mul | Div | Mod | Lt | Le | Eq => {
+        let b = try pop(inout stack, at)
+        let a = try pop(inout stack, at)
+        stack.push(try arithmetic(op, a, b) catch m => raise Fault { at, message: m })
+      }
+      Not => stack.push(if try pop(inout stack, at) == 0 { 1 } else { 0 })
+      Jump(to) => { pc = to }
+      JumpIfZero(to) => if try pop(inout stack, at) == 0 { pc = to }
+      Call(to, n) => {
+        if n > stack.len() {
+          raise Fault { at, message: "a call of {n} arguments, with {stack.len()} on the stack" }
+        }
+        if frames.len() == DEPTH {
+          raise Fault { at, message: "calls nested more than {DEPTH} deep" }
+        }
+        frames.push(Frame { back: pc, base })
+        base = slots.len()
+        slots.extend(stack.take_last(n))
+        stack = stack.skip_last(n)
+        pc = to
+      }
+      Enter(size) => { while slots.len() < base + size { slots.push(0) } }
+      Ret => {
+        let v = try pop(inout stack, at)
+        let f = frames.pop() else return Ran { printed, value: v }
+        slots = slots.take(base)
+        pc = f.back
+        base = f.base
+        stack.push(v)
+      }
+      Print => printed.push(try pop(inout stack, at))
+      Dup => stack.push(stack.last() else raise Fault { at, message: "dup of an empty stack" })
+      Drop => { let _ = try pop(inout stack, at) }
+      Halt => return Ran { printed, value: 0 }
+    }
+  }
+  raise Fault { at: pc, message: "a jump to {pc}, outside the program" }
+}
+
+/// The value on top of the stack, which it takes off, for the instruction at `at`.
+fn pop(inout stack: List<i64>, at: i64) -> i64 / raise<Fault>
+  without panic {
+  stack.pop() else raise Fault { at, message: "a value taken from an empty stack" }
+}
+
+/// The value of slot `at`, which must be in the frame that `enter` made.
+fn slot(slots: List<i64>, at: i64) -> i64 / raise<str>
+  without panic {
+  if at < 0 || at >= slots.len() { raise "slot {at} is outside the frame" }
+  slots[at]
+}
+
+fn set(inout slots: List<i64>, at: i64, v: i64) / raise<str> without panic {
+  if at < 0 || at >= slots.len() { raise "slot {at} is outside the frame" }
+  slots[at] = v
+}
+
+/// `a op b`, with each overflow and each division by zero a fault.
+/// ex: try arithmetic(Mod, -7, 3) == -1
+/// ex: Result.of(|| try arithmetic(Div, 1, 0)) == Err("a division by zero")
+fn arithmetic(op: Op, a: i64, b: i64) -> i64 / raise<str>
+  without panic {
+  let result = match op {
+    Add => a.checked_add(b)
+    Sub => a.checked_sub(b)
+    Mul => a.checked_mul(b)
+    Div | Mod => try divide(op, a, b)
+    Lt => Some(if a < b { 1 } else { 0 })
+    Le => Some(if a <= b { 1 } else { 0 })
+    _ => Some(if a == b { 1 } else { 0 })
+  }
+  result else raise "{a} {sign(op)} {b} overflows"
+}
+
+/// `a / b` or `a % b`, the only quotient that overflows, `i64.MIN / -1`, as `None`.
+fn divide(op: Op, a: i64, b: i64) -> Option<i64> / raise<str>
+  without panic {
+  if b == 0 { raise "a division by zero" }
+  if b == -1 { return if op == Div { (0).checked_sub(a) } else { Some(0) } }
+  Some(if op == Div { a / b } else { a % b })
+}
+
+fn sign(op: Op) -> str {
+  match op {
+    Add => "+"
+    Sub => "-"
+    Mul => "*"
+    _ => "/"
+  }
+}
+
+test "a program's mistakes are faults at the instruction that makes them" {
+  let program = |code| Program { code, lines: [], main: 0, params: 0 }
+  assert Result.of(|| try run(program([Push(1), Push(0), Div]), [])) ==
+    Err(Fault { at: 2, message: "a division by zero" })
+  assert Result.of(|| try run(program([Add]), [])) ==
+    Err(Fault { at: 0, message: "a value taken from an empty stack" })
+  assert Result.of(|| try run(program([Load(3)]), [1])) ==
+    Err(Fault { at: 0, message: "slot 3 is outside the frame" })
+  assert Result.of(|| try run(program([Jump(9)]), [])) ==
+    Err(Fault { at: 9, message: "a jump to 9, outside the program" })
+  assert Result.of(|| try run(program([Call(0, 0)]), [])) ==
+    Err(Fault { at: 0, message: "calls nested more than 10000 deep" })
+}

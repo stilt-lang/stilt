@@ -1,0 +1,4 @@
+module main
+without panic
+
+pub fn first(prices: List<i64>) -> i64 { prices[0] }

@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────────────── E0100_rust_path_separator.lt:1:31  [E0100]
+
+Stilt writes a path with `.`, as `List.new()`:
+
+  1 │ fn empty() -> List<i64> { List::new() }
+    │                               ^
+
+A module's items, a type's functions and a trait's members are all named with
+`.`.
+
+To fix it, write `.`:
+
+  1 │ fn empty() -> List<i64> { List.new() }
+    │                               ~

@@ -1,0 +1,43 @@
+//~ tier: advanced
+//~ rule: values.inout-arguments, records.anonymous-types, records.anonymous-literals
+//~ stdout:
+//~ | (lo=4, hi=6)
+//~ | (lo=4, hi=6)
+//~ | (lo=1, hi=3)
+//~ | (lo=4, hi=6)
+
+// Swift, test/Interpreter/tuples.swift: an interval is a tuple with the labels `lo` and `hi`.
+// Intervals add and subtract, and a compound assignment changes its left operand in place
+// through `inout`. A tuple written with its labels in the other order, `(hi: 2, lo: 1)`, is the
+// same interval. Here an interval is an anonymous record, `{ lo: i64, hi: i64 }`, whose
+// written field order isn't part of its type; Stilt has no type aliases, so the type is
+// written out where Swift names its alias. Swift's operators are functions. The original's
+// variadic `printInts` has no counterpart and is left out.
+
+fn add(a: { lo: i64, hi: i64 }, b: { lo: i64, hi: i64 }) -> { lo: i64, hi: i64 } {
+  { lo: a.lo + b.lo, hi: a.hi + b.hi }
+}
+
+fn sub(a: { lo: i64, hi: i64 }, b: { lo: i64, hi: i64 }) -> { lo: i64, hi: i64 } {
+  { lo: a.lo - b.hi, hi: a.hi - b.lo }
+}
+
+fn add_assign(inout a: { lo: i64, hi: i64 }, b: { lo: i64, hi: i64 }) {
+  a.lo += b.lo
+  a.hi += b.hi
+}
+
+fn show(x: { lo: i64, hi: i64 }) -> str { "(lo={x.lo}, hi={x.hi})" }
+
+fn mutate() / io {
+  var x = { lo: 1, hi: 2 }
+  add_assign(inout x, { lo: 3, hi: 4 })
+  print(show(x))
+}
+
+fn main() / io {
+  print(show(add({ lo: 1, hi: 2 }, { lo: 3, hi: 4 })))
+  print(show(add({ hi: 2, lo: 1 }, { lo: 3, hi: 4 })))
+  print(show(sub({ lo: 3, hi: 4 }, { lo: 1, hi: 2 })))
+  mutate()
+}

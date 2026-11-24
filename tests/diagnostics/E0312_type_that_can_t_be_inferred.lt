@@ -1,0 +1,4 @@
+fn main() / io {
+  let orders = []
+  print("{orders.len()} orders")
+}

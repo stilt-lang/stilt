@@ -1,0 +1,12 @@
+//~ rule: std.no-panics-by-default, std.random-numbers
+//~ stderr:
+//~ | panic: explicit: "range needs lo < hi, not 3 and 3"
+//~ |   at random_range_panic.lt:11:11
+//~ panic: explicit
+
+use std.random
+
+fn main() {
+  var r = random.Rng.seeded(1)
+  let _ = r.range(3, 3)
+}

@@ -1,0 +1,5 @@
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn total(lines: List<str>) -> i64 / raise<ParseError> { parse(lines[0]) }

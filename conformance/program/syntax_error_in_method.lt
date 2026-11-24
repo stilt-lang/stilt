@@ -1,0 +1,26 @@
+//~ rule: program.syntax-errors-at-run, program.check-error-report, errors.broken-blocks, errors.running
+//~ run-output: "number 1"
+//~ panic: check-error
+//~ panic-at: syntax_error_in_method.lt:20:6
+
+trait Store {
+  fn put(self, x: i64) -> str
+}
+
+type Shelf = {}
+
+type Both = {}
+
+impl Store for Shelf {
+  fn put(self, x: i64) -> str { "number {x}" }
+}
+
+// The part of the block breaks before the method's body, so the method is declared with an error.
+impl Store for Both {
+  fn put(self, x: i64) const -> str { "number {x}" } //~ ERROR E0100
+}
+
+fn main() / io {
+  print(Shelf {}.put(1))
+  print(Store.put(Both {}, 2))
+}

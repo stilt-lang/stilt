@@ -1,0 +1,3 @@
+pub extern fn total() -> i64 { //~ ERROR E0219
+  2
+}

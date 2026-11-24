@@ -1,0 +1,17 @@
+── FACT BEYOND A `without` LIMIT ──────────── E0204_missing_key.lt:4:57  [E0204]
+
+This index can panic, but the module's header says `without panic`:
+
+  2 │ without panic
+    │         ───── the limit
+  3 │ 
+  4 │ pub fn stock(counts: Map<str, i64>, item: str) -> i64 { counts[item] }
+    │                                                         ^^^^^^^^^^^^
+
+A key needs a test that gives `counts.contains(item)`, or a store of `item`
+before it.
+
+To fix it, use `get`, with `0` for a missing key:
+
+  4 │ pub fn stock(counts: Map<str, i64>, item: str) -> i64 { counts.get(item) else 0 }
+    │                                                               ~~~~~    ~~~~~~~~

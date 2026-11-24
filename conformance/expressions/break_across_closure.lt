@@ -1,0 +1,16 @@
+//~ rule: expressions.closure-boundaries, expressions.break-and-continue
+
+fn each(xs: List<i64>) {
+  for x in xs {
+    let stop = || break //~ ERROR E0216
+  }
+  loop {
+    let ys = xs.map(|x| {
+      if x > 0 {
+        continue //~ ERROR E0216
+      }
+      x
+    })
+    break
+  }
+}

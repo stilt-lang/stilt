@@ -1,0 +1,13 @@
+//~ rule: program.panic-detail, effects.panic-kinds, std.option-result-and-ordering
+//~ run-output: "8080"
+//~ stderr:
+//~ | panic: unwrap: "no \"port\" given"
+//~ |   at panic_expect.lt:11:15
+//~ panic: unwrap
+
+fn main() / io {
+  let port = "8080".to_i64().expect("a port")
+  print("{port}")
+  let other = "".to_i64().expect("no \"port\" given")
+  print("{other}")
+}

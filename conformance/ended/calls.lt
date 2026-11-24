@@ -1,0 +1,64 @@
+//~ tier: advanced
+//~ rule: handlers.call-that-handler-ends, handlers.when-place-is-seen
+//~ stdout:
+//~ | 2 0
+//~ | 12 20 0
+//~ | 3 4 0
+//~ | 109
+
+effect Ask {
+  fn ask() -> i64
+}
+
+// Each write before the performance stays, and none after it runs.
+fn bump(inout n: i64) / Ask {
+  n += 1
+  n += Ask.ask()
+  n += 100
+}
+
+// Two calls deep: the outer call's own writes before the inner one stay too.
+fn outer(inout n: i64, inout m: i64) / Ask {
+  n += 10
+  m += 20
+  bump(inout n)
+  m += 1000
+}
+
+// Two `inout` arguments of one call.
+fn pair(inout a: i64, inout b: i64) / Ask {
+  a += 2
+  b += 3
+  let _ = Ask.ask()
+  a += 100
+  b += 100
+}
+
+fn main() / io {
+  let ended = handler Ask -> i64 { fn ask() -> i64 { 0 } }
+  var x = 1
+  let r = with ended {
+    bump(inout x)
+    5
+  }
+  print("{x} {r}")
+  var n = 1
+  var m = 0
+  let s = with ended {
+    outer(inout n, inout m)
+    5
+  }
+  print("{n} {m} {s}")
+  var a = 1
+  var b = 1
+  let t = with ended {
+    pair(inout a, inout b)
+    5
+  }
+  print("{a} {b} {t}")
+  // A handler that resumes: every write is made.
+  let resumed = handler Ask { fn ask() -> i64 { 7 } }
+  var y = 1
+  with resumed { bump(inout y) }
+  print("{y}")
+}

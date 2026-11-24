@@ -1,0 +1,27 @@
+//~ rule: syntax.key-paths, expressions.key-paths
+//~ stdout:
+//~ | [1, 2] [1]
+//~ | ["a", "b"] ["tea", "cake"]
+//~ | [1, 2] [[2.5], [4.0, 1.5]]
+//~ | 2 [2, 4] [2, 1]
+
+type Line = { name: str, price: f64 }
+type Order = { id: i64, lines: List<Line>, pair: (i64, (str, bool)), paid: bool }
+
+fn main() / io {
+  let orders = [
+    Order { id: 1, lines: [Line { name: "tea", price: 2.5 }], pair: (1, ("a", true)), paid: true },
+    Order {
+      id: 2,
+      lines: [Line { name: "cake", price: 4.0 }, Line { name: "jam", price: 1.5 }],
+      pair: (2, ("b", false)),
+      paid: false,
+    },
+  ]
+  print("{orders.map(.id)} {orders.filter(.paid).map(.id)}")
+  print("{orders.map(.pair.1.0)} {orders.map(.lines[0].name)}")
+  print("{orders.map(.lines.len())} {orders.map(.lines.map(.price))}")
+  let get: fn(Order) -> i64 = .id
+  let pairs: List<(i64, i64)> = [(1, 2), (3, 4)]
+  print("{get(orders[1])} {pairs.map(.1)} {["ab", "c"].map(.len())}")
+}

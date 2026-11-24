@@ -1,0 +1,14 @@
+── UNKNOWN NAME ────────────────────────── E0211_append_function.lt:3:8  [E0211]
+
+Stilt has no `append` function: a list grows with a method, as `xs.push(x)`:
+
+  3 │   xs = append(xs, 2)
+    │        ^^^^^^
+
+`push` adds an element at the end of a list that a `var` holds, and changes it
+in place.
+
+To fix it, call the method `push`:
+
+  3 │   xs.push(2)
+    │   ~~~~~~~~~~

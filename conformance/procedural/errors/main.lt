@@ -1,0 +1,69 @@
+//~ tier: meta
+//~ rule: macros.tokens-and-code, macros.cursor, macros.named-files, macros.raised-errors, macros.failed-uses, macros.errors-in-expansions
+
+// A macro's error is at its span, among the user's tokens; a diagnostic in
+// an expansion is at the part that holds it, or at the use.
+meta use checks
+
+fn word() -> i64 {
+  checks.go!(
+    stop //~ ERROR E0225
+  )
+}
+
+fn escaped() -> str {
+  checks.no_b!(
+    "a\tb" //~ ERROR E0225
+  )
+}
+
+fn in_file() -> str {
+  checks.first_name!(
+    "bad.txt" //~ ERROR E0225
+  )
+}
+
+fn failed_expr() -> i64 {
+  let n = checks.fail_expr!(x) //~ ERROR E0225
+  n + true
+}
+
+fn failed_pattern(n: i64) -> str {
+  match n {
+    checks.fail_pattern!(x) => "never" //~ ERROR E0225
+    _ => "other"
+  }
+}
+
+fn failed_type() -> i64 {
+  let n: checks.fail_type!(x) = "not checked" //~ ERROR E0225
+  n
+}
+
+// The failed use binds nothing, so `y` names nothing in the guard and the
+// body, which reports nothing.
+fn failed_binding(n: i64) -> i64 {
+  match n {
+    checks.fail_pattern!(y) if y > 0 => y + 1 //~ ERROR E0225
+    _ => 0
+  }
+}
+
+// A literal whose expected type is the error type isn't range-checked.
+fn failed_range() -> i64 {
+  let n: checks.fail_type!(x) = 99999999999999999999 //~ ERROR E0225
+  let m: checks.fail_type!(x) = -99999999999999999999 //~ ERROR E0225
+  n + m
+}
+
+fn user_type_error() -> i64 {
+  checks.needs_int!(
+    "one" //~ ERROR E0311
+  )
+}
+
+fn own_type_error() -> i64 {
+  checks.wrong!() //~ ERROR E0311
+}
+
+fn main() {}

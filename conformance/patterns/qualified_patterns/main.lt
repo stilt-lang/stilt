@@ -1,0 +1,32 @@
+//~ rule: patterns.pattern-forms, declarations.qualified-variants
+//~ stdout:
+//~ | circle 1.5
+//~ | dot
+//~ | origin
+//~ | unit
+//~ | x is 4
+
+use shapes
+
+fn shape(s: shapes.Shape) -> str {
+  match s {
+    shapes.Circle(r) => "circle {r}"
+    shapes.Dot => "dot"
+  }
+}
+
+fn point(p: shapes.Point) -> str {
+  match p {
+    shapes.ORIGIN => "origin"
+    shapes.Point.UNIT => "unit"
+    shapes.Point { x, .. } => "x is {x}"
+  }
+}
+
+fn main() / io {
+  print(shape(shapes.Circle(1.5)))
+  print(shape(shapes.Dot))
+  print(point(shapes.ORIGIN))
+  print(point(shapes.Point { x: 1, y: 1 }))
+  print(point(shapes.Point { x: 4, y: 0 }))
+}

@@ -1,0 +1,6 @@
+fn label(n: Option<i64>) -> str {
+  match n {
+    Some(v) -> "some {v}"
+    None -> "none"
+  }
+}

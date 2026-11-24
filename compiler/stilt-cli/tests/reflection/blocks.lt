@@ -1,0 +1,187 @@
+// The building blocks of `std.json` (std.json) on `std.meta` (meta.std-meta): a writer that follows
+// each case of a shape, guarded by a trait whose impl it uses where a type has one
+// (meta.bound-tests); a reader that makes a value of every case, raising through
+// `fields.build` (meta.building); a recursive type, whose descriptor is cyclic; and a
+// bound test whose branch calls a trait function without `self` on the type parameter.
+
+use std.meta
+use std.array
+
+trait Out {
+  fn out(self) -> str
+}
+
+trait Blank {
+  fn blank() -> Self
+}
+
+type Money = { cents: i64 }
+
+impl Out for Money {
+  fn out(self) -> str { "${self.cents}" }
+}
+
+impl Blank for Money {
+  fn blank() -> Money { Money { cents: 0 } }
+}
+
+type Role = | Admin | Guest(str)
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type User = { name: str, age: u8, roles: List<Role>, email: Option<str>, pay: Money }
+
+type Pair = { left: i64, right: i64 }
+
+type Error = | Bad(str)
+
+fn is_unit<P>(p: P) -> bool {
+  match P.shape() {
+    Unit(_) => true
+    _ => false
+  }
+}
+
+fn joined<E>(xs: List<E>) -> str {
+  var parts: List<str> = []
+  for x in xs { parts.push(write(x)) }
+  "[{",".join(parts)}]"
+}
+
+fn write<T>(value: T) -> str {
+  if T: Out { return value.out() }
+  match T.shape() {
+    Int(n) => n.text(value)
+    Float(x) => "{x.get(value)}"
+    Bool(b) => "{b.get(value)}"
+    Str(s) => "\"{s.get(value)}\""
+    Unit(_) => "null"
+    Option(o) => match o.get(value) {
+      Some(x) => write(x)
+      None => "null"
+    }
+    List(l) => joined(l.get(value))
+    Set(s) => joined(s.get(value))
+    Map(m) => joined(m.get(value))
+    Array(a) => joined(a.get(value))
+    Tuple(fields) => {
+      var parts: List<str> = []
+      for f in fields { parts.push(write(f.get(value))) }
+      "[{",".join(parts)}]"
+    }
+    Record(fields) => {
+      var parts: List<str> = []
+      for f in fields { parts.push("\"{f.name()}\":{write(f.get(value))}") }
+      "\{{",".join(parts)}}"
+    }
+    Variants(cases) => {
+      var out = ""
+      for c in cases {
+        if let Some(p) = c.get(value) {
+          out = if is_unit(p) { "\"{c.name()}\"" } else { "\{\"{c.name()}\":{write(p)}}" }
+        }
+      }
+      out
+    }
+  }
+}
+
+fn remade<E>(x: Option<E>) -> Option<E> / raise<Error> {
+  match x {
+    Some(y) => Some(try remake(y))
+    None => None
+  }
+}
+
+fn each<E>(xs: List<E>) -> List<E> / raise<Error> {
+  var out: List<E> = []
+  for x in xs { out.push(try remake(x)) }
+  out
+}
+
+fn remake<T>(value: T) -> T / raise<Error> {
+  match T.shape() {
+    Int(n) => match n.parse(n.text(value)) {
+      Some(v) => v
+      None => raise Bad("int")
+    }
+    Float(x) => x.make(x.get(value))
+    Bool(b) => b.make(!b.get(value))
+    Str(s) => s.make("{s.get(value)}!")
+    Unit(u) => u.make(u.get(value))
+    Option(o) => o.make(try remade(o.get(value)))
+    List(l) => l.make(try each(l.get(value)))
+    Set(s) => s.make(try each(s.get(value)))
+    Map(m) => m.make(try each(m.get(value)))
+    Array(a) => match a.make(try each(a.get(value))) {
+      Some(v) => v
+      None => raise Bad("array")
+    }
+    Tuple(fields) => try fields.build(|f| try remake(f.get(value)))
+    Record(fields) => try fields.build(|f| try remake(f.get(value)))
+    Variants(cases) => {
+      var out = value
+      for c in cases {
+        if let Some(p) = c.get(value) { out = c.make(try remake(p)) }
+      }
+      out
+    }
+  }
+}
+
+fn doubled<T>(value: T) -> T {
+  match T.shape() {
+    Set(s) => {
+      let xs = s.get(value)
+      var twice = xs
+      for x in xs { twice.push(x) }
+      s.make(twice)
+    }
+    _ => value
+  }
+}
+
+fn checked<T>(value: T) -> T / {io, raise<Error>} {
+  match T.shape() {
+    Int(n) => {
+      if n.text(value) == "13" { raise Bad("unlucky") }
+      value
+    }
+    Record(fields) => try fields.build(|f| {
+      print("field {f.name()}")
+      try checked(f.get(value))
+    })
+    _ => value
+  }
+}
+
+fn fresh<T>(value: T) -> T {
+  if T: Blank { T.blank() } else { value }
+}
+
+fn main() / {io, raise<Error>} {
+  let ana = User { name: "ana", age: 31, roles: [Admin, Guest("lab")], email: None, pay: Money { cents: 250 } }
+  print(write(ana))
+  print(write(Node(Node(Leaf, 1, Leaf), 2, Leaf)))
+  let s = Set.from_list([3, 1, 3])
+  let m = Map.from_entries([("a", 1), ("b", 2)])
+  let a: array.Array<i64, 2> = [4, 5]
+  print(write((s, m, a, (true, 0.5), ())))
+  print(write(try remake(ana)))
+  print(write(try remake((s, m, a, (true, 0.5), ()))))
+  print(write(try remake(Node(Leaf, 7, Leaf))))
+  print(write(doubled(s)))
+  let ok = try checked(Pair { left: 1, right: 2 })
+  print("{ok.left} {ok.right}")
+  let p = try checked(Pair { left: 13, right: 2 }) catch {
+    Bad(why) => {
+      print("raised {why}")
+      Pair { left: 0, right: 0 }
+    }
+  }
+  print("{p.left} {p.right}")
+  print(write(fresh(Money { cents: 9 })))
+  print(write(fresh(5)))
+  print(Pair.name())
+  print(write(Some(Some(3))))
+}

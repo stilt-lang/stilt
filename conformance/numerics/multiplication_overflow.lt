@@ -1,0 +1,8 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ panic: overflow
+//~ panic-at: multiplication_overflow.lt:7:11
+
+fn main() / io {
+  let x = i64.MAX
+  print("{x * 2}")
+}

@@ -1,0 +1,29 @@
+//~ rule: syntax.record-literal-braces, records.update, records.update-fields
+//~ stdout:
+//~ | Person { name: "Ada", age: 37 }
+//~ | Person { name: "Ada", age: 36 }
+//~ | base
+//~ | field
+//~ | 1
+
+type Person = { name: str, age: i64 }
+
+fn base(p: Person) -> Person / io {
+  print("base")
+  p
+}
+
+fn age(n: i64) -> i64 / io {
+  print("field")
+  n
+}
+
+fn main() / io {
+  let ada = Person { name: "Ada", age: 36 }
+  print("{Person { ..ada, age: 37 }}")
+  // With no field, a copy.
+  print("{Person { ..ada }}")
+  // The base is evaluated before the fields.
+  let p = Person { ..base(ada), age: age(1) }
+  print("{p.age}")
+}

@@ -1,0 +1,8 @@
+//~ rule: program.visibility, traits.traits-in-scope
+
+use geo
+use shapes
+
+fn measure(s: shapes.Square) -> i64 {
+  s.area() //~ ERROR E0314
+}

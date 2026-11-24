@@ -1,0 +1,15 @@
+//~ rule: facts.writes-through-calls, facts.joins, facts.paths-that-leave, facts.match-arms
+//~ panic: bounds
+//~ panic-at: order_matched_pop.lt:12:9
+
+// The scrutinee pops the list, which keeps one element.
+fn matched_pop() -> i64 {
+  var xs = [1, 2]
+  let got = match xs.pop() {
+    Some(x) => x
+    None => 0
+  }
+  got + xs[1]
+}
+
+fn main() / io { print("{matched_pop()}") }

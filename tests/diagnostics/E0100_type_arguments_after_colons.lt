@@ -1,0 +1,4 @@
+fn main() / io {
+  let ys = [1, 2].map::<i64>(|x| x * 2)
+  print("{ys}")
+}

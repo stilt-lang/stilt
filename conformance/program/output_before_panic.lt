@@ -1,0 +1,12 @@
+//~ rule: program.output-flushing, program.panic-report, effects.panic-kinds
+//~ stdout:
+//~ | before
+//~ panic: bounds
+//~ panic-at: output_before_panic.lt:11:11
+
+fn main() / io {
+  print("before")
+  let xs = [1, 2]
+  let i = 5
+  print("{xs[i]}")
+}

@@ -1,0 +1,1 @@
+fn doubled(xs: List<i64>) -> List<i64> { xs.map(|x| => x * 2) }

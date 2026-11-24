@@ -1,0 +1,13 @@
+//~ rule: syntax.grammar-errors, program.syntax-errors-at-run
+//~ run-output: "8"
+//~ panic: check-error
+//~ panic-at: syntax_error_in_function.lt:6:4
+
+fn half(x: i64) -> i64 { x / } //~ ERROR E0100
+
+fn twice(x: i64) -> i64 { x * 2 }
+
+fn main() / io {
+  print("{twice(4)}")
+  print("{half(4)}")
+}

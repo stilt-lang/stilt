@@ -1,0 +1,13 @@
+//~ rule: lexical.identifiers, lexical.keywords, lexical.reserved-words
+//~ run-output: "3 true 4"
+
+type Cell = { ref: i64, mut: bool }
+
+fn as(dyn: i64, move: i64) -> i64 { dyn + move }
+
+fn main() / io {
+  let static = Cell { ref: as(1, 2), mut: true }
+  var move = static.ref
+  move += 1
+  print("{static.ref} {static.mut} {move}")
+}

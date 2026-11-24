@@ -1,0 +1,13 @@
+── UNKNOWN NAME ──────────────── E0211_python_capitalized_false.lt:2:14  [E0211]
+
+Stilt writes `false` in lower case:
+
+  2 │   var done = False
+    │              ^^^^^
+
+Stilt's booleans are `true` and `false`.
+
+To fix it, write `false`:
+
+  2 │   var done = false
+    │              ~~~~~

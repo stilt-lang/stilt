@@ -1,0 +1,1 @@
+Options { width: 640, height: None, quality: 85, scale: 1.0, fit: Contain, keep_metadata: true, tags: [], rest: ["photo.jpg"] }

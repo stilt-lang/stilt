@@ -1,0 +1,5 @@
+[package]
+name = "app"
+
+[dependencies]
+zip = { path = "deps/zip", may = ["io"] }

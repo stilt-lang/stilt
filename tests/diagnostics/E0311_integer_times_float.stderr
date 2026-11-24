@@ -1,0 +1,15 @@
+── MISMATCHED TYPES ───────────────── E0311_integer_times_float.lt:4:19  [E0311]
+
+Expected `i64`, found `f64`:
+
+  4 │   print("{count * price}")
+    │                   ^^^^^
+
+Stilt never converts a value to another type on its own. Give a value of the
+expected type, convert it with a method such as `to_f64()`, or change what
+expects it.
+
+To fix it, convert it with `.to_f64()`:
+
+  4 │   print("{count.to_f64() * price}")
+    │                +++++++++

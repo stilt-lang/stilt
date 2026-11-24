@@ -1,0 +1,6 @@
+//~ rule: syntax.range-precedence, expressions.ranges
+
+fn digits() -> i64 {
+  let r = 0..10 //~ ERROR E0100
+  0
+}

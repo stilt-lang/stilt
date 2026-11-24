@@ -1,0 +1,17 @@
+//~ rule: program.test-declarations, program.doc-examples
+
+type Failure = { retry: fn() }
+
+fn flaky() / raise<Failure> { raise Failure { retry: || () } }
+
+fn steady() / raise<str> { raise "steady" }
+
+test "flaky fails" { //~ ERROR E0318
+  try flaky()
+}
+
+test "steady fails" { try steady() }
+
+/// ex: double(2) == 4
+/// ex: double(2) //~ ERROR E0311
+fn double(x: i64) -> i64 { x * 2 }

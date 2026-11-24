@@ -1,0 +1,15 @@
+//~ rule: declarations.namespaces, errors.several-places
+
+type Color = | Red | Green
+
+const Red: Color = Green //~ ERROR E0208
+
+type Area = { size: i64 }
+
+trait Area {} //~ ERROR E0208
+
+type Wrapped = | Wrapped(i64)
+
+type Blue = { level: i64 }
+
+const Blue: Color = Green

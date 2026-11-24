@@ -1,0 +1,7 @@
+//~ rule: facts.spelling
+
+fn twice(n: i64) -> i64 without div, div { //~ ERROR E0202
+  n * 2
+}
+
+fn main() / io {}

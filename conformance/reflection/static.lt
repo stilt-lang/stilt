@@ -1,0 +1,56 @@
+//~ tier: meta
+//~ rule: meta.static-expressions, meta.static-reflection
+//~ stdout:
+//~ | {x=1, y=2}
+//~ | Circle({x=0, y=3}, 1.5)
+//~ | Dot()
+//~ | Point has 2 fields
+
+use std.meta
+
+type Point = { x: i64, y: i64 }
+type Shape = | Dot | Circle(Point, f64)
+
+// A type's shape, its name, the fields and cases its accessors give, a
+// field's or a case's name and index, and `len()` are static, so `comptime
+// match` and `comptime for` take them.
+fn describe<T>(value: T) -> str {
+  comptime match T.shape() {
+    Int(n) => n.text(value)
+    Float(x) => "{x.get(value)}"
+    Record(fields) => {
+      var parts: List<str> = []
+      comptime for f in fields { parts.push("{f.name()}={describe(f.get(value))}") }
+      "\{{", ".join(parts)}}"
+    }
+    Tuple(fields) => {
+      var parts: List<str> = []
+      comptime for f in fields { parts.push(describe(f.get(value))) }
+      "({", ".join(parts)})"
+    }
+    Variants(cases) => {
+      var text = ""
+      comptime for c in cases {
+        if let Some(payload) = c.get(value) { text = "{c.name()}{describe(payload)}" }
+      }
+      text
+    }
+    _ => T.name()
+  }
+}
+
+fn count<T>(value: T) -> str {
+  comptime match T.shape() {
+    Record(fields) => {
+      comptime if fields.len() == 2 { "{T.name()} has 2 fields" } else { "{T.name()} has others" }
+    }
+    _ => "no record"
+  }
+}
+
+fn main() / io {
+  print(describe(Point { x: 1, y: 2 }))
+  print(describe(Circle(Point { x: 0, y: 3 }, 1.5)))
+  print(describe(Dot))
+  print(count(Point { x: 1, y: 2 }))
+}

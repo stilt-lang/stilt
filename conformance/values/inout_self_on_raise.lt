@@ -1,0 +1,22 @@
+//~ rule: values.inout-arguments, traits.methods
+//~ run-output: "Bag { items: [1, 2] } failed"
+
+type Failure = | Full
+type Bag = { items: List<i64> }
+
+impl Bag {
+  fn add(inout self, x: i64) / raise<Failure> {
+    self.items.push(x)
+    if self.items.len() > 1 { raise Full }
+  }
+}
+
+fn main() / io {
+  var b = Bag { items: [1] }
+  let status = try {
+    b.add(2)
+    "added"
+  }
+    catch Full => "failed"
+  print("{b} {status}")
+}

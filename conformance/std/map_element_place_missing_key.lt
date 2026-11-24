@@ -1,0 +1,14 @@
+//~ rule: std.map-element-places
+//~ run-output: "before"
+//~ panic: missing-key
+//~ panic-at: map_element_place_missing_key.lt:12:3
+
+type Count = { n: i64 }
+
+fn main() / io {
+  var m = Map.new()
+  m["a"] = Count { n: 1 }
+  print("before")
+  m["b"].n = 2
+  print("after")
+}

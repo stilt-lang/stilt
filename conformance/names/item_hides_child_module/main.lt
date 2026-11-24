@@ -1,0 +1,7 @@
+//~ rule: program.child-modules
+
+use shapes
+
+fn f(c: shapes.circle.Circle) {} //~ ERROR E0212
+
+fn g() { shapes.circle() }

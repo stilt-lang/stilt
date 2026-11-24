@@ -1,0 +1,9 @@
+main.largest: line 13: 2 operations, 0 copies
+main.swap: none
+main.width: none
+main.unused: none
+main.total: none
+main.depth: none
+main.both: none
+main.quoted: line 41: 1 operation, 0 copies
+main.main: line 46: 5 operations, 0 copies; line 47: 3 operations, 0 copies; line 48: 9 operations, 0 copies

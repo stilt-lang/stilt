@@ -1,0 +1,9 @@
+//~ rule: effects.missing-effects, effects.raise
+
+fn noisy(s: str) -> i64 {
+  print(s) //~ ERROR E0502
+  let n = s.to_i64() else raise "not a number" //~ ERROR E0502
+  print("parsed")
+  let m = s.to_i64() else raise "still not a number"
+  n + m
+}

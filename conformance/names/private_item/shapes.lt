@@ -1,0 +1,11 @@
+pub type Shape = | Circle(f64)
+
+type Hidden = | Secret
+
+pub fn unit() -> Shape { Circle(1.0) }
+
+fn area(s: Shape) -> f64 {
+  match s {
+    Circle(r) => r * r
+  }
+}

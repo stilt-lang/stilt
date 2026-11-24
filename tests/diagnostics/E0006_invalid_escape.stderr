@@ -1,0 +1,14 @@
+── INVALID ESCAPE ───────────────────────── E0006_invalid_escape.lt:2:4  [E0006]
+
+A brace is written `\{`, not `{{`:
+
+  2 │   "{{x}}"
+    │    ^
+
+Inside a string, `{` starts an interpolation, so a brace is written `\{`. The
+other escapes are `\n`, `\t`, `\r`, `\0`, `\\`, `\"` and `\u{…}`.
+
+To fix it, write a brace as `\{`:
+
+  2 │   "\{x}"
+    │    ~~ ~

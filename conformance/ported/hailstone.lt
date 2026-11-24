@@ -1,0 +1,29 @@
+//~ rule: expressions.loops, std.list-slicing, std.list-searching
+//~ stdout:
+//~ | hailstone(27) has 112 elements
+//~ | starts [27, 82, 41, 124]
+//~ | ends [8, 4, 2, 1]
+//~ | longest below 100: 97, with 119 elements
+
+// Rosetta Code, Hailstone sequence: from n, the next element is n / 2 when n is even and
+// 3n + 1 when it is odd, until 1. The task shows the sequence for 27 has 112 elements, starting
+// 27, 82, 41, 124 and ending 8, 4, 2, 1. Of the starts below 100, 97 has the longest sequence.
+
+fn hailstone(start: i64) -> List<i64> {
+  var n = start
+  var seq = [n]
+  while n != 1 {
+    n = if n % 2 == 0 { n / 2 } else { 3 * n + 1 }
+    seq.push(n)
+  }
+  seq
+}
+
+fn main() / io {
+  let seq = hailstone(27)
+  print("hailstone(27) has {seq.len()} elements")
+  print("starts {seq.take(4)}")
+  print("ends {seq.take_last(4)}")
+  let longest = List.generate(99, |i| i + 1).max_by(|n| hailstone(n).len()) else 0
+  print("longest below 100: {longest}, with {hailstone(longest).len()} elements")
+}

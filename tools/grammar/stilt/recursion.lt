@@ -1,0 +1,155 @@
+// Removes left recursion, which GBNF cannot express, by the standard substitution: a rule
+// `A = A a | b` becomes `A = b { a }`, and in a cycle of rules that begin with one another,
+// each rule first begins with the alternatives of the rules before it. Only the productions
+// of `reference/03-syntax.md` that recurse on the left change, among them the binary operators and
+// the postfix forms.
+
+use ebnf
+use expand
+
+/// Rewrites every cycle of rules that begin with one another, and fails if one remains.
+pub fn eliminate(inout grammar: expand.Grammar) / raise<str> {
+  for cycle in left_cycles(grammar) {
+    for (at, rule) in cycle.enumerate(0) {
+      for earlier in cycle.take(at) { substitute(inout grammar, rule, earlier) }
+      try remove_immediate(inout grammar, rule)
+    }
+  }
+  if let Some(cycle) = left_cycles(grammar).first() {
+    raise "left recursion remains in {", ".join(cycle)}"
+  }
+}
+
+/// The elements of a branch.
+/// ex: items(ebnf.Ref("a")) == [ebnf.Ref("a")]
+/// ex: items(ebnf.Seq([ebnf.Ref("a"), ebnf.Ref("b")])) == [ebnf.Ref("a"), ebnf.Ref("b")]
+fn items(branch: ebnf.Expr) -> List<ebnf.Expr> {
+  match branch {
+    Seq(parts) => parts
+    other => [other]
+  }
+}
+
+fn branches(body: ebnf.Expr) -> List<ebnf.Expr> {
+  match body {
+    Alt(parts) => parts
+    other => [other]
+  }
+}
+
+fn one_or_alt(branches: List<ebnf.Expr>) -> ebnf.Expr {
+  match branches {
+    [only] => only
+    _ => ebnf.Alt(branches)
+  }
+}
+
+/// ex: begins_with(ebnf.Seq([ebnf.Ref("a"), ebnf.Lit("x")]), "a")
+/// ex: !begins_with(ebnf.Seq([ebnf.Lit("x"), ebnf.Ref("a")]), "a")
+fn begins_with(branch: ebnf.Expr, rule: str) -> bool {
+  match items(branch).first() {
+    Some(Ref(name)) => name == rule
+    _ => false
+  }
+}
+
+/// Replaces each branch of `rule` that begins with `earlier` by the branches of `earlier`,
+/// each followed by the rest of the branch.
+fn substitute(inout grammar: expand.Grammar, rule: str, earlier: str) {
+  let inner = branches(grammar.get(earlier) else return)
+  let body = branches(grammar.get(rule) else ebnf.Alt([]))
+  var out = []
+  for branch in body {
+    if begins_with(branch, earlier) {
+      let rest = items(branch).skip(1)
+      for start in inner { out.push(ebnf.Seq(items(start).concat(rest))) }
+    } else {
+      out.push(branch)
+    }
+  }
+  grammar.set(rule, one_or_alt(out))
+}
+
+/// Rewrites `A = A a | b` to `A = b { a }`.
+fn remove_immediate(inout grammar: expand.Grammar, rule: str) / raise<str> {
+  let body = branches(grammar.get(rule) else ebnf.Alt([]))
+  let (recursive, others) = body.partition(|b| begins_with(b, rule))
+  if recursive.is_empty() { return }
+  if others.is_empty() { raise "`{rule}` has no alternative that doesn't begin with itself" }
+  var tails = []
+  for branch in recursive {
+    let rest = items(branch).skip(1)
+    if rest.is_empty() { raise "`{rule}` is defined as itself" }
+    tails.push(ebnf.Seq(rest))
+  }
+  grammar.set(rule, ebnf.Seq([one_or_alt(others), ebnf.Star(one_or_alt(tails))]))
+}
+
+/// The rules that `from` can begin with, directly or through others.
+fn reach(leading: Map<str, Set<str>>, from: str) -> Set<str> {
+  var seen = Set.new()
+  var todo = (leading.get(from) else Set.new()).to_list()
+  while true {
+    let next = todo.pop() else break
+    if !seen.contains(next) {
+      seen.insert(next)
+      todo.extend((leading.get(next) else Set.new()).to_list())
+    }
+  }
+  seen
+}
+
+/// The groups of rules that can each begin with the others, in grammar order.
+fn left_cycles(grammar: expand.Grammar) -> List<List<str>> {
+  let nullable = nullable_rules(grammar)
+  let leading = Map.from_entries(grammar.rules.map(|rule| (rule.0, leading_refs(rule.1, nullable))))
+  let reaches = Map.from_entries(grammar.rules.map(|rule| (rule.0, reach(leading, rule.0))))
+  var done: Set<str> = Set.new()
+  var cycles = []
+  for (name, _) in grammar.rules {
+    if done.contains(name) || !reaches[name].contains(name) { continue }
+    let cycle = grammar.rules.map(.0).filter(
+      |other| reaches[name].contains(other) && reaches[other].contains(name),
+    )
+    for member in cycle { done.insert(member) }
+    cycles.push(cycle)
+  }
+  cycles
+}
+
+fn nullable_rules(grammar: expand.Grammar) -> Set<str> {
+  var nullable = Set.new()
+  loop {
+    let before = nullable.len()
+    for (name, body) in grammar.rules { if is_nullable(body, nullable) { nullable.insert(name) } }
+    if nullable.len() == before { return nullable }
+  }
+}
+
+fn is_nullable(expr: ebnf.Expr, nullable: Set<str>) -> bool {
+  match expr {
+    Ref(name) => nullable.contains(name)
+    Lit(_) | Call(_, _) => false
+    Empty | Opt(_) | Star(_) => true
+    Seq(parts) => parts.all(|e| is_nullable(e, nullable))
+    Alt(parts) => parts.any(|e| is_nullable(e, nullable))
+  }
+}
+
+/// The rules that a derivation of `expr` can begin with.
+fn leading_refs(expr: ebnf.Expr, nullable: Set<str>) -> Set<str> {
+  match expr {
+    Ref(name) => Set.from_list([name])
+    Seq(parts) => {
+      var out = Set.new()
+      for part in parts {
+        out = out.union(leading_refs(part, nullable))
+        if !is_nullable(part, nullable) { break }
+      }
+      out
+    }
+    Alt(parts) => parts.fold(Set.new(), |out, e| out.union(leading_refs(e, nullable)))
+    Opt(inner) | Star(inner) => leading_refs(inner, nullable)
+    Lit(_) | Empty | Call(_, _) => Set.new()
+  }
+}

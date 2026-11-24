@@ -1,0 +1,5 @@
+//~ rule: effects.catch-around-row-variables
+
+fn later<e>(escaping g: fn() -> i64 / e) -> fn() -> i64 / e {
+  || try g() catch _ because "a failure counts as zero" => 0 //~ ERROR E0506
+}

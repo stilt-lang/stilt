@@ -1,0 +1,13 @@
+//~ rule: program.meeting-the-error-type, program.errors-outside-bodies, program.check-error-report
+//~ run-output: "before"
+//~ panic: check-error
+//~ panic-at: error_through_import.lt:8:4
+
+use std.nothing //~ ERROR E0205
+
+fn f() -> i64 { nothing.g() }
+
+fn main() / io {
+  print("before")
+  print("{f()}")
+}

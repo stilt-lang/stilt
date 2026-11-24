@@ -1,0 +1,48 @@
+//~ tier: meta
+//~ rule: std.json, std.json-writing, std.json-rendering
+//~ stdout:
+//~ | -5 18446744073709551615
+//~ | [0.5,1e21,-0.0,0.1,1.5e-7]
+//~ | [true,false,"a\"b"]
+//~ | [null,null,3]
+//~ | [[1,2],[3,1],[4,5],[6,"x",null]]
+//~ | {"b":1,"a":2} [[2,"two"],[1,"one"]]
+//~ | {"title":"t","tags":["#x","#y"],"size":2}
+//~ | {"a":1,"b":"z"}
+//~ | ["Off",{"Dim":[3]},{"Mix":[1,true]},{"Ok":[1]},{"Err":["e"]}]
+
+use std.json
+use std.array
+
+type Light = | Off | Dim(i64) | Mix(i64, bool)
+
+// A type with JSON of its own, inside a list of a record.
+type Tag = { name: str }
+
+impl json.ToJson for Tag {
+  fn to_json(self) -> json.Value { json.Text("#{self.name}") }
+}
+
+type Note = { title: str, tags: List<Tag>, size: u8 }
+
+fn main() / io {
+  print("{json.to_text(-5)} {json.to_text(u64.MAX)}")
+  print(json.to_text((0.5, 1e21, -0.0, 0.1.to_f32(), 1.5e-7.to_f32())))
+  print(json.to_text((true, false, "a\"b")))
+  let none: Option<i64> = None
+  print(json.to_text(((), none, Some(3))))
+  let a: array.Array<i64, 2> = [4, 5]
+  print(json.to_text(([1, 2], Set.from_list([3, 1, 3]), a, (6, "x", ()))))
+  var named = Map.new()
+  named.insert("b", 1)
+  named.insert("a", 2)
+  var numbered = Map.new()
+  numbered.insert(2, "two")
+  numbered.insert(1, "one")
+  print("{json.to_text(named)} {json.to_text(numbered)}")
+  print(json.to_text(Note { title: "t", tags: [Tag { name: "x" }, Tag { name: "y" }], size: 2 }))
+  print(json.to_text({ b: "z", a: 1 }))
+  let ok: Result<i64, str> = Ok(1)
+  let err: Result<i64, str> = Err("e")
+  print(json.to_text((Off, Dim(3), Mix(1, true), ok, err)))
+}

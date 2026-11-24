@@ -1,0 +1,20 @@
+//~ rule: patterns.guards
+//~ stdout:
+//~ | try 1 10
+//~ | try 1 20
+//~ | try 2 10
+//~ | matched 2 10
+
+fn check(x: i64, y: i64) -> bool / io {
+  print("try {x} {y}")
+  x + y == 12
+}
+
+fn pick(a: List<i64>, b: List<i64>) -> str / io {
+  match (a, b) {
+    ([x, ..] | [_, x, ..], [y, ..] | [_, y, ..]) if check(x, y) => "matched {x} {y}"
+    _ => "none"
+  }
+}
+
+fn main() / io { print(pick([1, 2], [10, 20])) }

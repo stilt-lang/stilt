@@ -1,0 +1,10 @@
+//~ rule: program.panic-detail
+//~ stderr:
+//~ | panic: explicit: "tab\there \\ \u{1b} é \r\0 {3}"
+//~ |   at panic_message_escapes.lt:9:3
+//~ panic: explicit
+
+fn main() {
+  let n = 3
+  panic("tab\there \\ \u{1b} é \r\0 \{{n}}")
+}

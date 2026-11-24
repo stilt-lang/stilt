@@ -1,0 +1,14 @@
+── INVALID SOURCE TEXT ─────────────── E0001_invalid_source_text.lt:1:1  [E0001]
+
+A source file can't begin with a byte-order mark:
+
+  1 │ ﻿fn main() / io {
+    │ ^
+
+Save the file as UTF-8, without a byte-order mark and with `\n` or `\r\n` line
+endings; editors offer these in their encoding settings.
+
+To fix it, delete the byte-order mark:
+
+  1 │ ﻿fn main() / io {
+    │ -

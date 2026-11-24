@@ -1,0 +1,10 @@
+── UNKNOWN NAME ──────────── E0211_null_where_a_type_is_written.lt:2:20  [E0211]
+
+Stilt has no `null`: a value that may be missing has the type `Option<i64>`:
+
+  2 │   let count: i64 = null
+    │                    ^^^^
+
+A value that may be missing has the type `Option<T>`: it is `None` when the
+value is missing and `Some(x)` when it is there, and a `match` or an `else`
+reads it.

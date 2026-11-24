@@ -1,0 +1,60 @@
+---
+// The footer: the name and what it means, a row of links, and the licences.
+import Mark from "./Mark.astro";
+
+interface Props {
+  wide: boolean;
+}
+const { wide } = Astro.props;
+const links = [
+  { name: "Goals", href: "/design/goals/" },
+  { name: "Known limitations", href: "/design/known-limitations/" },
+  { name: "Design sketch", href: "/design/design-sketch/" },
+  { name: "The command line", href: "/learn/commands/" },
+  { name: "GitHub", href: "https://github.com/stilt-lang/stilt" },
+];
+---
+
+<footer class="footer">
+  <div class:list={["shell", wide && "shell-wide"]}>
+    <div class="top">
+      <a href="/" class="name"><Mark /> Stilt</a>
+      <p class="meaning"><em>stilt</em>, Latin for the sky, and for the engraver's chisel.</p>
+    </div>
+    <div class="bottom">
+      <nav aria-label="More">
+        {links.map((l) => <a href={l.href}>{l.name}</a>)}
+      </nav>
+      <p>Code under MIT or Apache 2.0. Prose under CC BY 4.0.</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer { margin-top: 6rem; border-top: 1px solid var(--rule); font-size: 0.875rem; color: var(--muted); }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 2rem; padding-block: 2rem 1.5rem; }
+  .name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 2rem;
+    padding-block: 1.5rem 2rem;
+    border-top: 1px solid var(--rule);
+  }
+  nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+  nav a { text-decoration: none; transition: color 0.15s ease; }
+  nav a:hover { color: var(--ink); }
+</style>

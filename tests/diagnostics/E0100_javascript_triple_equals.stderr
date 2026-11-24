@@ -1,0 +1,13 @@
+── SYNTAX ERROR ──────────────── E0100_javascript_triple_equals.lt:1:39  [E0100]
+
+Stilt compares with `==`, which never converts its operands:
+
+  1 │ fn same(a: i64, b: i64) -> bool { a === b }
+    │                                       ^
+
+Two values compare only when they have the same type, so one `==` says it all.
+
+To fix it, write `==`:
+
+  1 │ fn same(a: i64, b: i64) -> bool { a === b }
+    │                                       -

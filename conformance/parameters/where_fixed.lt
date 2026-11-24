@@ -1,0 +1,89 @@
+//~ tier: advanced
+//~ rule: traits.where
+
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+impl<T> Collection<T> for List<T> {
+  fn at(self, i: i64) -> Option<T> { self.get(i) }
+}
+
+// The bound's argument fixes `C.Item` to `f64`, which is `Show`.
+fn shown<C: Collection<f64>>(c: C) -> str where C.Item: Show { "" }
+
+// `f64` has no `Hash`.
+fn hashed<C: Collection<f64>>(c: C) -> i64 where C.Item: Hash { 0 } //~ ERROR E0318
+
+type Shelf<C> = { books: C }
+
+impl<C: Collection> Shelf<C> {
+  // A function of an inherent impl bounds the block's member type.
+  fn ordered(self) -> bool where C.Item: Ord {
+    match (self.books.at(0), self.books.at(1)) {
+      (Some(a), Some(b)) => a < b
+      _ => true
+    }
+  }
+}
+
+fn sorted() -> bool {
+  let shelf = Shelf { books: [1, 2] }
+  shelf.ordered()
+}
+
+// A function has no `Ord`.
+fn unsorted() -> bool {
+  let shelf = Shelf { books: [|x: i64| x] }
+  shelf.ordered() //~ ERROR E0318
+}
+
+// An impl's `where` clause is checked as a function's is: `f64` has no `Hash`.
+type Rack<C> = { items: C }
+
+impl<C: Collection<f64>> Show for Rack<C> where C.Item: Hash { //~ ERROR E0318
+  fn show(self) -> str { "rack" }
+}
+
+trait Holder<T> {
+  fn held(self) -> T
+}
+
+type Coin = { cents: i64 }
+
+impl Holder<i64> for Coin {
+  fn held(self) -> i64 { self.cents }
+}
+
+impl<C: Collection> Shelf<C> {
+  // The bound on the block's member type gives `Holder` its argument, `i64`.
+  fn first(self) -> i64 where C.Item: Holder<i64> {
+    match self.books.at(0) {
+      Some(x) => x.held() + 1
+      None => 0
+    }
+  }
+
+  fn wrong(self) -> bool where C.Item: Holder<i64> {
+    match self.books.at(0) {
+      Some(x) => x.held() //~ ERROR E0311
+      None => false
+    }
+  }
+}
+
+fn coins() -> i64 {
+  let shelf = Shelf { books: [Coin { cents: 5 }] }
+  shelf.first()
+}
+
+// The bound's argument fixes `C.Item` to `Coin`, whose impl of `Holder` gives it `i64`, not
+// `str`.
+fn held_text<C: Collection<Coin>>(c: C) -> i64 where C.Item: Holder<str> { 0 } //~ ERROR E0318
+
+// So is an impl's.
+type Tray<C> = { coins: C }
+
+impl<C: Collection<Coin>> Tray<C> where C.Item: Holder<str> { //~ ERROR E0318
+  fn size(self) -> i64 { 0 }
+}

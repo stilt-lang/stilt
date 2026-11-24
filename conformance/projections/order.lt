@@ -1,0 +1,45 @@
+//~ tier: advanced
+//~ rule: projections.when-projection-runs
+//~ stdout:
+//~ | idx 0
+//~ | rhs
+//~ | enter 0
+//~ | leave 0
+//~ | enter 1
+//~ | enter 0
+//~ | leave 0
+//~ | leave 1
+//~ | [7, 4, 3] [2, 5]
+
+fn idx(i: i64) -> i64 / io {
+  print("idx {i}")
+  i
+}
+
+fn rhs() -> i64 / io {
+  print("rhs")
+  7
+}
+
+fn at(inout xs: List<i64>, i: i64) -> inout i64 / io {
+  print("enter {i}")
+  yield xs[i]
+  print("leave {i}")
+}
+
+fn swap(inout a: i64, inout b: i64) {
+  let t = a
+  a = b
+  b = t
+}
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  var ys = [4, 5]
+  // The projection's arguments are evaluated before the right-hand side, and the call starts
+  // at the store.
+  at(inout xs, idx(0)) = rhs()
+  // Two projections as one call's arguments start left to right and resume right to left.
+  swap(inout at(inout xs, 1), inout at(inout ys, 0))
+  print("{xs} {ys}")
+}

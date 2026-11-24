@@ -1,0 +1,14 @@
+── RAISING CALL WITHOUT `try` ── E0505_raising_call_without_try.lt:5:57  [E0505]
+
+This call can raise, but no `try` marks it:
+
+  5 │ fn total(lines: List<str>) -> i64 / raise<ParseError> { parse(lines[0]) }
+    │                                                         ^^^^^^^^^^^^^^^
+
+A call that can raise is marked, so the places where a function can stop are
+visible: write `try` before it, and `catch` after it to handle the error here.
+
+To fix it, mark it with `try`:
+
+  5 │ fn total(lines: List<str>) -> i64 / raise<ParseError> { try parse(lines[0]) }
+    │                                                         ++++

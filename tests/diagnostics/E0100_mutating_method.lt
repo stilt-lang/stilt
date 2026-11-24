@@ -1,0 +1,7 @@
+type Counter = { n: i64 }
+
+impl Counter {
+  mutating fn bump(self) { self.n += 1 }
+}
+
+fn main() {}

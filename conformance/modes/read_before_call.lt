@@ -1,0 +1,13 @@
+//~ rule: values.independent-copies, modes.durations, modes.overlapping-inout
+//~ run-output: "1 3 2"
+
+fn set(inout a: i64, b: i64) { a = b + 1 }
+
+fn main() / io {
+  var xs = [1]
+  xs.push(xs.len())
+  xs.push(xs[0])
+  var a = 1
+  set(inout a, a)
+  print("{xs[0]} {xs.len()} {a}")
+}

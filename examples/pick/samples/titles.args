@@ -1,0 +1,3 @@
+-r
+.books[] | .title
+samples/books.json

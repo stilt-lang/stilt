@@ -1,0 +1,1 @@
+fn count(s: Shared<i64>) -> i64 { 0 }

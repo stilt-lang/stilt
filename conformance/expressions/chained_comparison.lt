@@ -1,0 +1,5 @@
+//~ rule: syntax.ambiguities, syntax.operator-precedence, expressions.precedence
+
+fn ordered(a: i64, b: i64, c: i64) -> bool {
+  a < b < c //~ ERROR E0100
+}

@@ -1,0 +1,20 @@
+//~ rule: effects.catch-syntax, effects.reasons-only-on-catch-alls
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> { raise Missing }
+
+fn lookup(key: str) -> i64 {
+  try fetch(key) catch {
+    Missing because "absent keys count as zero" => 0 //~ ERROR E0504
+    Invalid(_) => -1
+  }
+}
+
+fn lookup_any(key: str) -> i64 {
+  try fetch(key) catch _ because "every failure counts as zero" => 0
+}
+
+fn lookup_named(key: str) -> i64 {
+  try fetch(key) catch failure because "failures are logged by fetch" => 0
+}

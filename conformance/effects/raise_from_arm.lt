@@ -1,0 +1,19 @@
+//~ rule: effects.inference, effects.catch
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> { raise Missing }
+
+fn swallow(key: str) -> i64 {
+  try fetch(key) catch {
+    Missing => 0
+    Invalid(text) => raise text //~ ERROR E0502
+  }
+}
+
+fn forward(key: str) -> i64 / raise<str> {
+  try fetch(key) catch {
+    Missing => 0
+    Invalid(text) => raise text
+  }
+}

@@ -1,0 +1,25 @@
+//~ rule: patterns.empty-matches, patterns.types-without-values, patterns.unreachable-arms
+//~ run-output: "0 0"
+
+type Stuck = { n: Never, m: i64 }
+
+type Maybe = | Nothing | Something(Stuck)
+
+fn stuck(s: Stuck) -> i64 { match s {} }
+
+fn pair(t: (i64, Never)) -> i64 { match t {} }
+
+fn maybe(m: Maybe) -> i64 {
+  match m {
+    Nothing => 0
+  }
+}
+
+fn nested(o: Option<(i64, Never)>) -> i64 {
+  match o {
+    None => 0
+    Some((n, _)) => n //~ WARN W0301
+  }
+}
+
+fn main() / io { print("{maybe(Nothing)} {nested(None)}") }

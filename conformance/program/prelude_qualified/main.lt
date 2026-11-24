@@ -1,0 +1,10 @@
+//~ rule: program.prelude-names, errors.declarations-with-errors
+
+use lib
+use other
+
+fn f() / io {
+  print("the prelude's print")
+  let n: i64 = lib.print(2)
+  let m: i64 = lib.print("two") //~ ERROR E0311
+}

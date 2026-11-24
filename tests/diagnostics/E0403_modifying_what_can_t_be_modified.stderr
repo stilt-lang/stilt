@@ -1,0 +1,16 @@
+── MODIFYING WHAT CAN'T BE MODIFIED ── E0403_modifying_what_can_t_be_modified.lt:3:21  [E0403]
+
+`sum` can't be modified here; only `var` bindings and `inout` parameters of this
+body can:
+
+  3 │   for p in prices { sum += p }
+    │                     ^^^
+
+A `let` binding or a parameter never changes. Declare the binding with `var`, or
+copy the parameter into one, as `var x = x`; a closure can't change what it
+captures.
+
+To fix it, declare `sum` with `var`:
+
+  2 │   var sum = 0
+    │   ~~~

@@ -1,0 +1,6 @@
+module pure
+without panic
+
+use lib
+
+pub fn first(xs: List<i64>) -> i64 { lib.broken(xs) }

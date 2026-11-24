@@ -1,0 +1,42 @@
+//~ tier: meta
+//~ rule: generics.array-patterns, generics.array-exhaustiveness
+//~ stdout:
+//~ | 1 2 3
+//~ | 1 7
+//~ | zero other
+//~ | 4 -4
+
+use std.array
+
+fn head(v: array.Array<i64, 3>) -> str {
+  match v {
+    [0, ..] => "zero",
+    [_, ..] => "other",
+  }
+}
+
+// A list pattern against an array lines up with the columns beside it.
+fn signed(v: array.Array<i64, 3>, positive: bool) -> i64 {
+  match (v, positive) {
+    ([first, ..], true) => first
+    ([first, ..], false) => 0 - first
+  }
+}
+
+fn main() / io {
+  let v: array.Array<i64, 3> = [1, 2, 3]
+  // A list pattern of the array's length can't fail, so it needs no `else`.
+  let [x, y, z] = v
+  print("{x} {y} {z}")
+  let [a, ..] = v
+  let [..] = v
+  // With `else`, the `else` takes the array's place, as for every pattern
+  // that can't fail.
+  let o: Option<array.Array<i64, 2>> = None
+  let [_, b] = o else [6, 7]
+  print("{a} {b}")
+  let zero: array.Array<i64, 3> = [0, 1, 1]
+  print("{head(zero)} {head(v)}")
+  let w: array.Array<i64, 3> = [4, 5, 6]
+  print("{signed(w, true)} {signed(w, false)}")
+}

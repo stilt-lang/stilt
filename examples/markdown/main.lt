@@ -1,0 +1,31 @@
+// markdown: writes the HTML of a Markdown document, read from the file that its argument
+// names or from standard input.
+
+use std.cli
+use std.fs
+use std.io
+use blocks
+use render
+
+fn main() / {io, raise<str>} {
+  let lines = match cli.arg(0) {
+    Some(path) => try fs.read_lines(path) catch _ => raise "cannot read {path}"
+    None => io.read_lines()
+  }
+  io.write(convert(lines))
+}
+
+/// The HTML of a document's lines.
+/// ex: convert(["# Title", "", "Some *text*."]) == "<h1>Title</h1>\n<p>Some <em>text</em>.</p>\n"
+pub fn convert(lines: List<str>) -> str { render.html(blocks.parse(lines)) }
+
+test "lists render tight and loose" {
+  assert convert(["- a", "- b"]) == "<ul>\n<li>a</li>\n<li>b</li>\n</ul>\n"
+  assert convert(["3. a", "", "4. b"]) ==
+    "<ol start=\"3\">\n<li>\n<p>a</p>\n</li>\n<li>\n<p>b</p>\n</li>\n</ol>\n"
+  assert convert(["- a", "  - b"]) == "<ul>\n<li>a\n<ul>\n<li>b</li>\n</ul>\n</li>\n</ul>\n"
+}
+
+test "quotes hold blocks and continue lazily" {
+  assert convert(["> # T", "> a", "b"]) == "<blockquote>\n<h1>T</h1>\n<p>a\nb</p>\n</blockquote>\n"
+}

@@ -1,0 +1,11 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ run-output: "120"
+//~ panic: overflow
+//~ panic-at: panic_overflow.lt:6:26
+
+fn double(n: i8) -> i8 { n * 2 }
+
+fn main() / io {
+  print("{double(60)}")
+  print("{double(70)}")
+}

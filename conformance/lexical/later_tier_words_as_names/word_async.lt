@@ -1,0 +1,3 @@
+fn f() {
+  let async = 1 //~ ERROR E0100
+}

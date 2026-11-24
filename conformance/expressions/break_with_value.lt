@@ -1,0 +1,10 @@
+//~ rule: expressions.break-and-continue
+
+fn first_big(xs: List<i64>) -> i64 {
+  for x in xs {
+    if x > 10 {
+      break x //~ ERROR E0100
+    }
+  }
+  0
+}

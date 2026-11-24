@@ -1,0 +1,15 @@
+── FACT BEYOND A `without` LIMIT ── E0204_argument_copied_for_an_in_place_callee.lt:8:21  [E0204]
+
+Passing `xs` to `bump_all` copies it, which allocates, but `total` says `without
+alloc`:
+
+  7 │ fn total(xs: List<i64>) -> i64 without alloc {
+    │                                        ───── the limit
+  8 │   let ys = bump_all(xs)
+    │                     ^^
+  9 │   xs.len() + ys.len()
+    │   ── `xs` is used again here
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

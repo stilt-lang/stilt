@@ -1,0 +1,18 @@
+//~ rule: modes.shared-writes, modes.copies, facts.copy
+//~ run-output: "[[2, 3], [9]]"
+
+// A write of an element copies only when a copy of the modified part lasts. `xs[0] = xs[1]`
+// copies `xs[1]` into `xs` itself, at the write: no copy of `xs[0]` lasts there, and the copy
+// that `xs` holds of `xs[1]` is part of `xs`, so the write of `xs[1]` after it shares nothing.
+fn shift(inout xs: List<List<i64>>) without copy {
+  if xs.len() > 1 {
+    xs[0] = xs[1]
+    xs[1] = [9]
+  }
+}
+
+fn main() / io {
+  var xs = [[1], [2, 3]]
+  shift(inout xs)
+  print("{xs}")
+}

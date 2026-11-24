@@ -1,0 +1,39 @@
+//~ tier: advanced
+//~ rule: macros.hygiene
+//~ stdout:
+//~ | 2 1
+//~ | 3
+//~ | 101
+
+syntax swap {
+  ($a: name, $b: name) => {
+    let tmp = $a
+    $a = $b
+    $b = tmp
+  }
+}
+
+// The template's `tmp` is its own; the fragment's `tmp` is the user's.
+syntax with_tmp {
+  ($body: expr) => {
+    let tmp = 100
+    $body
+  }
+}
+
+// The template's own `tmp` is the one it bound.
+syntax tmp_plus {
+  ($x: expr) => {
+    let tmp = 100
+    tmp + $x
+  }
+}
+
+fn main() / io {
+  var tmp = 1
+  var y = 2
+  swap!(tmp, y)
+  print("{tmp} {y}")
+  print("{with_tmp!(tmp + 1)}")
+  print("{tmp_plus!(1)}")
+}

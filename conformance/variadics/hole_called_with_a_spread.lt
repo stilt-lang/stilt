@@ -1,0 +1,14 @@
+//~ tier: advanced
+//~ rule: declarations.typed-holes, variadics.spread-expressions
+
+// A hole takes the type its context expects, so a hole called with a spread is a
+// function whose parameters spread the pack, and the call is no mistake.
+fn heads<..Ts>(lists: (..List<Ts>)) -> (..Ts) {
+  ?(..lists) //~ WARN W0300
+}
+
+fn count<..Ts>(lists: (..List<Ts>)) -> i64 {
+  ?(1, ..lists) //~ WARN W0300
+}
+
+fn main() {}

@@ -1,0 +1,68 @@
+//~ tier: core
+
+fn first(xs: List<i64>) -> i64 {
+  xs[0] //~ PANIC
+}
+
+fn ratio(a: i64, b: i64) -> i64 {
+  a / b //~ PANIC OVERFLOW
+}
+
+fn rest(a: i64, b: i64) -> i64 {
+  a % b //~ PANIC OVERFLOW
+}
+
+// A divisor written as a literal other than zero can't make a division panic, and
+// overflow adds nothing.
+fn halve(n: i64) -> i64 { n / 2 + n * n } //~ OVERFLOW
+
+fn count(m: Map<str, i64>, k: str) -> i64 {
+  m[k] //~ PANIC
+}
+
+fn checked(n: i64) -> i64 {
+  assert n > 0 //~ PANIC
+  n
+}
+
+fn fail() -> i64 {
+  panic("no") //~ PANIC
+}
+
+fn later(n: i64) -> i64 = ? //~ PANIC
+
+// Calling a function that can panic can panic.
+fn caller(xs: List<i64>) -> i64 {
+  first(xs) + later(1) //~ PANIC OVERFLOW
+}
+
+// `get` gives an `Option`, so it can't panic.
+fn safe(xs: List<i64>) -> i64 { xs.get(0) else 0 }
+
+// `unwrap` and `expect` panic with `unwrap` on a missing value.
+fn port(s: str) -> i64 {
+  s.to_i64().unwrap() //~ PANIC
+}
+
+fn known(s: str) -> i64 {
+  s.to_i64().ok_or("not a number").expect("a number") //~ PANIC
+}
+
+// Recursive functions are solved together.
+fn even(n: i64, xs: List<i64>) -> i64 {
+  if n == 0 { return xs[0] } //~ PANIC
+  odd(n - 1, xs) //~ PANIC OVERFLOW DIV
+}
+
+fn odd(n: i64, xs: List<i64>) -> i64 {
+  if n == 0 { return 0 }
+  even(n - 1, xs) //~ PANIC OVERFLOW DIV
+}
+
+// A closure's panics are those of the function that writes it, and a call through a function
+// value adds nothing.
+fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) } //~ ONCE f
+
+fn indexer(xs: List<i64>) -> i64 {
+  apply(|i| xs[i], 0) //~ ONCE CONSUMES xs PANIC ALLOC
+}

@@ -1,0 +1,34 @@
+//~ rule: std.list-slicing, std.str-building, expressions.key-paths
+//~ stdout:
+//~ | 1
+//~ | 1 1
+//~ | 1 2 1
+//~ | 1 3 3 1
+//~ | 1 4 6 4 1
+//~ | 1 5 10 10 5 1
+//~ |       1
+//~ |      1 1
+//~ |     1 2 1
+//~ |    1 3 3 1
+//~ |   1 4 6 4 1
+//~ | 1 5 10 10 5 1
+
+// Rosetta Code, Pascal's triangle: each row starts and ends with 1, and each other number is the
+// sum of the two above it. Rows 0 to 5 are printed flush left, and then centred.
+
+fn rows(count: i64) -> List<List<i64>> {
+  var out = [[1]]
+  while out.len() < count {
+    let last = out[out.len() - 1]
+    let middle = last.windows(2).map(|pair| pair[0] + pair[1])
+    out.push([1].concat(middle).concat([1]))
+  }
+  out
+}
+
+fn main() / io {
+  let triangle = rows(6).map(|row| " ".join(row.map(|n| "{n}")))
+  for line in triangle { print(line) }
+  let width = triangle.map(.len()).max() else 0
+  for line in triangle { print(line.pad_start((width + line.len()) / 2, " ")) }
+}

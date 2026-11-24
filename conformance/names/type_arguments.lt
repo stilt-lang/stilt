@@ -1,0 +1,13 @@
+//~ rule: declarations.type-arguments
+
+type Wrapper<T> = { inner: T }
+
+fn f(xs: List) {} //~ ERROR E0300
+fn g(o: Option<i64, str>) {} //~ ERROR E0300
+fn h<T>(x: T<i64>) {} //~ ERROR E0300
+
+impl<T> Wrapper<T> {
+  fn get(self) -> Self<T> { //~ ERROR E0300
+    self
+  }
+}

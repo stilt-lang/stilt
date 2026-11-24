@@ -1,0 +1,10 @@
+fn median(xs: List<i64>) -> i64 {
+  let sorted = xs.sorted()
+  sorted[sorted.len() / 2]
+}
+
+fn count_above(xs: List<i64>, limit: i64) -> i64 without alloc {
+  var n = 0
+  for x in xs { if x > limit { n += 1 } }
+  n
+}

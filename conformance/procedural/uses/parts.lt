@@ -1,0 +1,16 @@
+use std.meta
+
+/// A list of three expressions.
+pub macro three(a: meta.Expr, b: meta.Expr, c: meta.Expr) -> meta.Expr { quote { [$a, $b, $c] } }
+
+/// The first part, plus the number of tokens of the parts after it.
+pub macro rest(first: meta.Expr, ts: meta.Tokens) -> meta.Expr {
+  let n = ts.items.len()
+  quote { $first + $n }
+}
+
+/// The expression times 100, plus the number of tokens of the trailing block.
+pub macro block(e: meta.Expr, ts: meta.Tokens) -> meta.Expr {
+  let n = ts.items.len()
+  quote { $e * 100 + $n }
+}

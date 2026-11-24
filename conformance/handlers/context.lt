@@ -1,0 +1,44 @@
+//~ tier: advanced
+//~ rule: handlers.with, handlers.resuming
+//~ stdout:
+//~ | outer in ask
+//~ | 1
+//~ | outer in take
+//~ | 2
+
+effect Log {
+  fn log(msg: str)
+}
+
+effect Ask {
+  fn ask() -> i64 / Log
+}
+
+// An operation's body runs with the handlers outside its `with`, so the
+// `inner` handler, installed between the performance and the `with`, isn't
+// the one its `Log` reaches.
+fn main() / io {
+  let outer = handler Log { fn log(msg: str) { print("outer {msg}") } }
+  let inner = handler Log { fn log(msg: str) { print("inner {msg}") } }
+  let asks = handler Ask {
+    fn ask() -> i64 / Log {
+      Log.log("in ask")
+      1
+    }
+  }
+  let takes = handler Ask -> i64 {
+    fn ask() -> i64 / Log {
+      Log.log("in take")
+      resume(2)
+    }
+  }
+  with outer {
+    with asks {
+      with inner { print("{Ask.ask()}") }
+    }
+    let n = with takes {
+      with inner { Ask.ask() }
+    }
+    print("{n}")
+  }
+}

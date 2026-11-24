@@ -1,0 +1,14 @@
+── UNKNOWN NAME ─────────────────────── E0211_rust_hashmap_type.lt:1:16  [E0211]
+
+Stilt's map is `Map`, not `HashMap`:
+
+  1 │ fn count(ages: HashMap<str, i64>) -> i64 { ages.len() }
+    │                ^^^^^^^
+
+Stilt's collections are `List`, `Map` and `Set`, which every module sees without
+a `use`.
+
+To fix it, write `Map`:
+
+  1 │ fn count(ages: Map<str, i64>) -> i64 { ages.len() }
+    │                ~~~

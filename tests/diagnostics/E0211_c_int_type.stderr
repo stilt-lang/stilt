@@ -1,0 +1,14 @@
+── UNKNOWN NAME ────────────────────────────── E0211_c_int_type.lt:1:13  [E0211]
+
+Stilt's integer type is `i64`, not `int`:
+
+  1 │ fn twice(n: int) -> i64 { n * 2 }
+    │             ^^^
+
+Stilt's primitive types are written in lower case, as `i64`, `f64`, `bool` and
+`str`.
+
+To fix it, write `i64`:
+
+  1 │ fn twice(n: i64) -> i64 { n * 2 }
+    │             ~~~

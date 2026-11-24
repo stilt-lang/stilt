@@ -1,0 +1,11 @@
+//~ rule: syntax.if-let-heads, expressions.option-fallback
+//~ stdout:
+//~ | 7
+
+// An `else` before the `{` of an `if let` is the fallback inside its head.
+fn main() / io {
+  let a: Option<Option<i64>> = None
+  if let Some(x) = a else Some(7) {
+    print("{x}")
+  }
+}

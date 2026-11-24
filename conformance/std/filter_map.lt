@@ -1,0 +1,22 @@
+//~ rule: expressions.key-paths, std.list-functions, std.option-result-and-ordering
+//~ stdout:
+//~ | f 4
+//~ | f 3
+//~ | f 2
+//~ | f 1
+//~ | [2, 1]
+//~ | [3, 1] [] []
+//~ | ["n4", "n3", "n1"]
+
+fn main() / io {
+  let numbers: List<i64> = [4, 3, 2, 1]
+  let halves = numbers.filter_map(|n| {
+    print("f {n}")
+    if n % 2 == 0 { Some(n / 2) } else { None }
+  })
+  print("{halves}")
+  let none: List<str> = []
+  print("{["3", "x", "1"].filter_map(.to_i64())} {["a", "b"].filter_map(.to_i64())} {none.filter_map(.to_i64())}")
+  let labels = numbers.filter_map(|n| if n != 2 { Some("n{n}") } else { None })
+  print("{labels}")
+}

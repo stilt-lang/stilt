@@ -1,0 +1,27 @@
+[package]
+name = "stilt-latency"
+description = "The latency harness: replays an edit script against a warm query database"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+stilt-meter = { path = "../meter" }
+stilt-codegen-clif = { path = "../../compiler/stilt-codegen-clif" }
+stilt-db = { path = "../../compiler/stilt-db" }
+stilt-diag = { path = "../../compiler/stilt-diag" }
+stilt-hir = { path = "../../compiler/stilt-hir" }
+stilt-lsp = { path = "../../compiler/stilt-lsp" }
+stilt-mir = { path = "../../compiler/stilt-mir" }
+stilt-rc = { path = "../../compiler/stilt-rc" }
+stilt-syntax = { path = "../../compiler/stilt-syntax" }
+stilt-types = { path = "../../compiler/stilt-types" }
+clap.workspace = true
+rowan.workspace = true
+salsa.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

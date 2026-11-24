@@ -1,0 +1,19 @@
+//~ rule: effects.escaping-parameters, effects.paired-row-variables, effects.catch-around-row-variables
+//~ stdout:
+//~ | 7
+//~ | 3
+
+type Box = { v: i64 }
+
+// The parameter is kept, so its row is exactly the one written, and its
+// signature pairs `e` with `Box`.
+fn guard<e>(escaping f: fn() -> i64 / {raise<Box>, e}) -> fn() -> i64 / e {
+  || try f() catch b because "a Box gives its value" => b.v
+}
+
+fn main() / io {
+  let a = guard(|| 7)
+  let b = guard(|| raise Box { v: 3 })
+  print("{a()}")
+  print("{b()}")
+}

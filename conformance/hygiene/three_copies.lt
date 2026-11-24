@@ -1,0 +1,12 @@
+//~ rule: docs.duplicate-bodies
+//~ run-output: "-2 -2 -2"
+
+fn one(a: i64, b: i64) -> i64 { a * b + a * 2 + b * 3 - a - b - 9 * 1 }
+
+fn two(a: i64, b: i64) -> i64 { a * b + a * 2 + b * 3 - a - b - 9 * 1 } //~ WARN W0302
+
+fn three(a: i64, b: i64) -> i64 { a * b + a * 2 + b * 3 - a - b - 9 * 1 } //~ WARN W0302
+
+fn main() / io {
+  print("{one(1, 2)} {two(1, 2)} {three(1, 2)}")
+}

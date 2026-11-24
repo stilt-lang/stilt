@@ -1,0 +1,17 @@
+//~ rule: traits.impl-members, errors.broken-blocks
+
+// A trait whose head breaks before its block's `{` declares only its name, so an
+// impl of it is checked against no member.
+trait Chooser` { //~ ERROR E0002
+  fn choose(self) -> i64
+}
+
+type Wallet = { cents: i64 }
+
+impl Chooser for Wallet {
+  fn choose(self) -> i64 { self.cents }
+
+  fn other(self) -> i64 { 2 }
+}
+
+fn main() {}

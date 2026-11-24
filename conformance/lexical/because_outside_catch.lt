@@ -1,0 +1,6 @@
+//~ rule: lexical.contextual-keywords, syntax.contextual-keywords
+fn sign(x: i64) -> i64 {
+  match x {
+    _ because "every value is fine" => 0 //~ ERROR E0100
+  }
+}

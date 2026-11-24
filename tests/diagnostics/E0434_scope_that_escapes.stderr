@@ -1,0 +1,10 @@
+── SCOPE THAT ESCAPES ──────────────── E0434_scope_that_escapes.lt:5:25  [E0434]
+
+This closure is kept, but it captures the scope `s`, which ends when
+`task.scope` returns:
+
+  5 │     let t = try s.spawn(|| try s.spawn(|| 1).await())
+    │                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ passed to a parameter that keeps it here
+
+A scope ends when its `task.scope` call returns, so it is used there to start
+tasks, as `s.spawn(f)`, and never kept or captured by a task.

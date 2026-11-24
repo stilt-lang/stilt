@@ -1,0 +1,3 @@
+-c
+.books[-1] | keys, has("note"), .note, (.tags | first, last), ([.title, .year, .missing] | map(type))
+samples/books.json

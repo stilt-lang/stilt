@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: syntax.closing-angle-brackets, cycles.through-shared-values, cycles.freeing, cycles.check-at-exit
+//~ stdout:
+//~ | 7
+
+// A handle whose value holds a task, whose value is the handle: a cycle through a task's
+// handle, freed once `main` lets go of both.
+
+use std.sync
+use std.task
+
+type Job = { n: i64, done: Option<task.Task<sync.Shared<Job>>> }
+
+fn main() / io {
+  let job = sync.Shared.new(Job { n: 7, done: None })
+  let mine = job
+  let t = task.spawn(|| mine)
+  when job { job.done = Some(t) }
+  let back = t.await()
+  when back { print("{back.n}") }
+}

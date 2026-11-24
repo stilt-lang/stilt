@@ -1,0 +1,15 @@
+── REFUTABLE PATTERN ─────────────────── E0321_else_inside_a_try.lt:7:7  [E0321]
+
+This pattern can fail to match: the `else` is part of the operand of `try`, so
+this isn't a let-else:
+
+  7 │   let Some(n) = try cell(text) else raise "missing"
+    │       ^^^^^^^
+
+This pattern can fail to match, so the code needs a way out: write `let Some(n)
+= name else return …`, or use `match` or `if let`.
+
+To fix it, put the `try` in parentheses:
+
+  7 │   let Some(n) = (try cell(text)) else raise "missing"
+    │                 +              +

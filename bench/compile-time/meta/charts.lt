@@ -1,0 +1,59 @@
+// The histograms of the report, each of a number of buckets that its type gives.
+
+use histogram
+use events.entry
+
+/// The histograms: the time requests took and the size of their answers, the time slow
+/// queries took, the entries in each five minutes of the hour, and the requests' statuses.
+pub type Charts = {
+  latency: histogram.Histogram<8>,
+  sizes: histogram.Histogram<6>,
+  queries: histogram.Histogram<5>,
+  minutes: histogram.Histogram<12>,
+  statuses: histogram.Histogram<5>,
+}
+
+/// Empty histograms.
+pub fn new() -> Charts {
+  Charts {
+    latency: histogram.new(0, 50),
+    sizes: histogram.new(0, 4096),
+    queries: histogram.new(200, 200),
+    minutes: histogram.new(0, 5),
+    statuses: histogram.new(100, 100),
+  }
+}
+
+impl Charts {
+  /// Counts the entry in the histograms it belongs to.
+  pub fn add(inout self, e: entry.Entry) {
+    self.minutes.add(e.at.minute.to_i64())
+    match e.event {
+      Http(r) => {
+        self.latency.add(r.millis)
+        self.sizes.add(r.bytes)
+        self.statuses.add(r.status)
+      }
+      Sql(q) => self.queries.add(q.millis)
+      _ => {}
+    }
+  }
+
+  /// The histograms, each under its title, with the bucket that holds its middle value.
+  pub fn lines(self) -> List<str> {
+    var out: List<str> = []
+    out.extend(titled("request time, in ms", self.latency.median(), self.latency.lines()))
+    out.extend(titled("response size, in bytes", self.sizes.median(), self.sizes.lines()))
+    out.extend(titled("slow queries, in ms", self.queries.median(), self.queries.lines()))
+    out.extend(
+      titled("entries per five minutes of the hour", self.minutes.median(), self.minutes.lines()),
+    )
+    out.extend(titled("statuses", self.statuses.median(), self.statuses.lines()))
+    out
+  }
+}
+
+// A histogram's lines under its title.
+fn titled(title: str, median: str, rows: List<str>) -> List<str> {
+  ["== {title} ==", "median in {median}"].concat(rows)
+}

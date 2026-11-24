@@ -1,0 +1,1 @@
+fn by_price(prices: Map<f64, str>, price: f64) -> str { prices[price] }

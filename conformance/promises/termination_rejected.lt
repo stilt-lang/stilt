@@ -1,0 +1,86 @@
+//~ rule: facts.div, facts.descending-self-calls, facts.without-div, facts.counting-loops, facts.shrinking-recursion
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Ops = { run: fn(i64) -> i64 }
+
+// A head of `!=` is no comparison of a counting loop.
+fn spin(n: i64) -> i64 without div {
+  var i = n
+  while i != 0 { //~ ERROR E0204
+    i -= 1
+  }
+  i
+}
+
+fn forever() without div {
+  loop { //~ ERROR E0204
+    break
+  }
+}
+
+// Recursion on an integer that no `n - s` shrinks.
+fn steps(n: i64) -> i64 without div {
+  if n <= 1 { 0 } else { 1 + steps(n / 2) } //~ ERROR E0204
+}
+
+// Mutual recursion: each call into the group is a site.
+fn even(n: i64) -> bool without div {
+  if n == 0 { true } else { odd(n - 1) } //~ ERROR E0204
+}
+
+fn odd(n: i64) -> bool without div {
+  if n == 0 { false } else { even(n - 1) } //~ ERROR E0204
+}
+
+fn through_field(o: Ops, x: i64) -> i64 without div {
+  o.run(x) //~ ERROR E0204
+}
+
+fn through_local(x: i64) -> i64 without div {
+  let g = |n: i64| n + 1
+  g(x) //~ ERROR E0204
+}
+
+fn through_escaping(escaping f: fn(i64) -> i64, x: i64) -> i64 without div {
+  f(x) //~ ERROR E0204
+}
+
+fn make() -> fn(i64) -> i64 { |n| n + 1 }
+
+// A function value that a call gives is stored somewhere too.
+fn through_result(x: i64) -> i64 without div {
+  make()(x) //~ ERROR E0204
+}
+
+fn names_itself(x: i64) -> i64 without div {
+  let me = names_itself //~ ERROR E0204
+  x
+}
+
+// The whole parameter isn't a part of it.
+fn whole(t: Tree) -> i64 without div {
+  match t {
+    Leaf => 0
+    Node(_, v, _) => v + whole(t) //~ ERROR E0204
+  }
+}
+
+// One self-call doesn't descend, so none does.
+fn mixed(t: Tree) -> i64 without div {
+  match t {
+    Leaf => 0
+    Node(l, v, _) => mixed(l) + v + mixed(t) //~ ERROR E0204
+  }
+}
+
+// `steps` is limited, so it counts as ending here: its own site is its error.
+fn uses_steps(n: i64) -> i64 without div { steps(n) }
+
+fn unlimited(n: i64) -> i64 { if n <= 0 { 0 } else { unlimited(n / 2) } }
+
+fn calls_unlimited(n: i64) -> i64 without div {
+  unlimited(n) //~ ERROR E0204
+}
+
+fn main() / io {}

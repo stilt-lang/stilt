@@ -1,0 +1,24 @@
+//~ rule: std.lists
+//~ stdout:
+//~ | Some(200) None None
+//~ | Some(-5) Some(7) None
+//~ | Some(-2.25) Some(true) Some(false) None
+//~ | Some("b") None
+//~ | 204
+
+// `get(i)` is `None` unless `0 ≤ i < len`, for elements of every width and sign, and for
+// elements that are references.
+fn main() / io {
+  let bytes: List<u8> = [1, 200, 3]
+  let small: List<i8> = [-5, 7]
+  let floats = [1.5, -2.25]
+  let flags = [true, false]
+  let words = ["a", "b"]
+  print("{bytes.get(1)} {bytes.get(3)} {bytes.get(-1)}")
+  print("{small.get(0)} {small.get(1)} {small.get(2)}")
+  print("{floats.get(1)} {flags.get(0)} {flags.get(1)} {flags.get(9)}")
+  print("{words.get(1)} {words.get(2)}")
+  var total = 0
+  for i in 0..5 { total += (bytes.get(i) else 0).to_i64() }
+  print("{total}")
+}

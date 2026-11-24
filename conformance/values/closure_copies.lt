@@ -1,0 +1,12 @@
+//~ rule: values.independent-copies, expressions.closures, expressions.capture
+//~ run-output: "2 7 101"
+
+fn adder(n: i64) -> fn(i64) -> i64 { |x| x + n }
+
+fn main() / io {
+  var count = 1
+  let f = |x| x + count
+  count = 100
+  let g = |x| x + count
+  print("{f(1)} {adder(2)(5)} {g(1)}")
+}

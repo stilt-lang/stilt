@@ -1,0 +1,38 @@
+// What code at a hole may perform: its function's row, passed through the closures that a
+// non-escaping parameter takes, but bounded by the type of one an escaping parameter takes,
+// and `{io, raise<E: Show>}` in a test.
+
+type Problem = Missing | Invalid(str)
+
+type Box = { run: fn() -> i64 }
+
+fn keep(escaping f: fn() -> i64) -> Box { Box { run: f } }
+
+fn noisy(xs: List<i64>) -> List<i64> / io {
+  let kept = keep(|| ?) //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ in scope: xs: List<i64>
+  xs.map(|x| ?) //~ HOLE
+  //~ expects: i64
+  //~ effects: io
+  //~ in scope: xs: List<i64>
+  //~ in scope: kept: Box
+  //~ in scope: x: i64
+}
+
+fn need(x: Option<i64>) -> i64 / raise<Problem> {
+  x else ? //~ HOLE
+  //~ expects: i64
+  //~ effects: raise<Problem>
+  //~ type: type Problem = Missing | Invalid(str)
+  //~ in scope: x: Option<i64>
+}
+
+test "counts words" {
+  let words = ["a", "b"]
+  assert(words.len() == ?) //~ HOLE
+  //~ expects: i64
+  //~ effects: io, raise<E: Show>
+  //~ in scope: words: List<str>
+}

@@ -1,0 +1,5 @@
+fn main() / io {
+  let count: i64 = 3
+  let price: f64 = 2.5
+  print("{count * price}")
+}

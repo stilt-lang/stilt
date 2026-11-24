@@ -1,0 +1,31 @@
+//~ tier: advanced
+//~ rule: records.record-bounds, records.bound-fields, records.open-parameter-types
+
+type Person = { name: str, age: i64 }
+type Box<T> = { v: T }
+
+fn value<B: { v: i64, .. }>(b: B) -> i64 { b.v }
+
+fn greet(p: { name: str, .. }) -> str { p.name }
+
+// `Person` has no field `v`.
+fn a() -> i64 { value(Person { name: "x", age: 1 }) } //~ ERROR E0318
+
+// `Box<str>`'s `v` is a `str`.
+fn b() -> i64 { value(Box { v: "s" }) } //~ ERROR E0318
+
+// An `i64` isn't a record.
+fn c() -> str { greet(3) } //~ ERROR E0318
+
+// A record bound names some fields, so it ends with `..`.
+fn closed<P: { v: i64 }>(p: P) -> i64 { 0 } //~ ERROR E0341
+
+// An open type stands for a type the caller gives.
+fn made() -> { name: str, .. } { { name: "a" } } //~ ERROR E0341
+
+type Holder = { inner: { name: str, .. } } //~ ERROR E0341
+
+fn local(p: Person) -> str {
+  let q: { name: str, .. } = p //~ ERROR E0341
+  q.name
+}

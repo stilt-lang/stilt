@@ -1,0 +1,11 @@
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise Empty }
+
+fn safe(text: str, fallback: fn() -> i64) -> i64 {
+  try {
+    let n = parse(text)
+    n + fallback()
+  }
+    catch _ because "a failure counts as zero" => 0
+}

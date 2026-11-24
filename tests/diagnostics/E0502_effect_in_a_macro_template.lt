@@ -1,0 +1,12 @@
+syntax log {
+  ($message: expr) => print("log: {$message}")
+}
+
+fn record(count: i64) -> i64 {
+  log!(count)
+  count + 1
+}
+
+fn main() / io {
+  print("{record(1)}")
+}

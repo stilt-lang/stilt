@@ -1,0 +1,6 @@
+//~ rule: conformance.test-objects, conformance.paths, conformance.inline-annotations, conformance.kinds-of-test, conformance.directory-tests
+use util.math
+
+test "uses math" { //~ PASS
+  assert math.double(2) == 4
+}

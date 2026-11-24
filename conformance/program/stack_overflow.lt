@@ -1,0 +1,6 @@
+//~ rule: program.exit-statuses, program.recursion-depth
+//~ exit: 134
+
+fn forever(n: i64) -> i64 { 1 + forever(n + 1) }
+
+fn main() / io { print("{forever(0)}") }

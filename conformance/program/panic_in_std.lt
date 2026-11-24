@@ -1,0 +1,14 @@
+//~ rule: program.panic-location
+//~ stdout:
+//~ | start
+//~ stderr:
+//~ | panic: explicit: "in callback"
+//~ |   at panic_in_std.lt:12:34
+//~ panic: explicit
+
+fn main() / io {
+  print("start")
+  let xs = [1, 2]
+  let ys = xs.map(|x| if x > 1 { panic("in callback") } else { x })
+  print("{ys}")
+}

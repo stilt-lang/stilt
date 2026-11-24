@@ -1,0 +1,13 @@
+//~ rule: traits.impl-blocks, traits.orphan-rule
+
+impl<T> List<T> { //~ ERROR E0301
+  fn len(self) -> str { "" }
+}
+
+impl<T> Show for List<T> { //~ ERROR E0303
+  fn show(self) -> str { "" }
+}
+
+fn count(xs: List<i64>) -> i64 { xs.len() }
+
+fn describe(xs: List<i64>) -> str { "{xs}" }

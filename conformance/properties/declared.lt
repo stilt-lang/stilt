@@ -1,0 +1,24 @@
+//~ rule: tests.prop-lines, tests.property-form, tests.property-checking, tests.property-results
+
+/// Reverses a list.
+/// prop: |xs: List<i64>| reverse(reverse(xs)) == xs //~ PASS
+/// prop: |xs: List<i64>| reverse(xs) == xs //~ FAIL
+fn reverse(xs: List<i64>) -> List<i64> { xs.fold([], |acc, x| [x].concat(acc)) }
+
+/// A point on the grid.
+/// prop: |p: Point| p.moved(1).x > p.x //~ FAIL
+/// prop:   |p: Point| p.y == p.y //~ PASS
+type Point = { x: i64, y: i64 }
+
+impl Point {
+  /// Moves right.
+  /// prop: |p: Point| p.moved(0) == p //~ PASS
+  pub fn moved(self, by: i64) -> Point { Point { x: self.x +% by, y: self.y } }
+}
+
+/// A pair is the same both ways round.
+/// prop: |(a, b): (i64, str)| (b, a).1 == a //~ PASS
+/// prop: |(a, b): (i64, i64)| a <= b //~ FAIL
+test "pairs" { //~ PASS
+  assert reverse([1, 2]) == [2, 1]
+}

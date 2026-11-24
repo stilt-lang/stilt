@@ -1,0 +1,5 @@
+//~ rule: lexical.wildcard
+fn main() {
+  let _ = 1
+  let x = _ //~ ERROR E0100
+}

@@ -1,0 +1,253 @@
+// The queries of pick, a part of jq's language, and parsing them by recursive descent.
+//
+//   pipe     = comma { "|" comma }
+//   comma    = or { "," or }
+//   or       = and { "or" and }
+//   and      = compare { "and" compare }
+//   compare  = postfix [ ( "==" | "!=" | "<" | "<=" | ">" | ">=" ) postfix ]
+//   postfix  = term { "." [ NAME | STRING ] | "[" [ part ] "]" }
+//   term     = "." [ NAME | STRING | "[" [ part ] "]" ] | "(" pipe ")" | "[" [ pipe ] "]"
+//            | "{" [ entry { "," entry } ] "}" | STRING | NUMBER | NAME [ "(" pipe ")" ]
+//   entry    = ( NAME | STRING ) [ ":" postfix { "|" postfix } ]
+//   part     = INDEX | [ INDEX ] ":" [ INDEX ]
+
+use std.json
+use lexer
+
+/// A query: from one value it makes a list of values.
+pub type Query =
+  | Identity
+  | Field(str)
+  | Index(i64)
+  | Slice(Option<i64>, Option<i64>)
+  | Each
+  | Pipe(Query, Query)
+  | Comma(Query, Query)
+  | Literal(json.Value)
+  | Collect(Query)
+  | Build(List<(str, Query)>)
+  | Compare(str, Query, Query)
+  | And(Query, Query)
+  | Or(Query, Query)
+  | Call(str, Option<Query>)
+
+/// The tokens of a query, and the index of the next one.
+type Parser = { tokens: List<lexer.Token>, pos: i64 }
+
+/// The query that `text` writes.
+/// ex: try parse(".a") == Field("a")
+/// ex: try parse(".[] | .n") == Pipe(Each, Field("n"))
+/// ex: try parse(".a.b[0]") == Pipe(Pipe(Field("a"), Field("b")), Index(0))
+/// ex: try parse("\{n: .x}") == Build([("n", Field("x"))])
+pub fn parse(text: str) -> Query / raise<lexer.SyntaxError> {
+  var p = Parser { tokens: try lexer.tokens(text), pos: 0 }
+  let q = try pipe(inout p)
+  if peek(p) != lexer.End { raise error(p, "unexpected {lexer.shown(peek(p))}") }
+  q
+}
+
+fn peek(p: Parser) -> lexer.Kind { p.tokens[p.pos].kind }
+
+fn advance(inout p: Parser) { if p.pos < p.tokens.len() - 1 { p.pos += 1 } }
+
+fn error(p: Parser, message: str) -> lexer.SyntaxError {
+  lexer.SyntaxError { column: p.tokens[p.pos].column, message }
+}
+
+fn error_at(p: Parser, pos: i64, message: str) -> lexer.SyntaxError {
+  lexer.SyntaxError { column: p.tokens[pos].column, message }
+}
+
+fn expect(inout p: Parser, symbol: str) / raise<lexer.SyntaxError> {
+  if peek(p) != lexer.Symbol(symbol) {
+    raise error(p, "expected {symbol}, found {lexer.shown(peek(p))}")
+  }
+  advance(inout p)
+}
+
+/// Whether the next token is `symbol`, which it then moves past.
+fn eat(inout p: Parser, symbol: str) -> bool {
+  if peek(p) != lexer.Symbol(symbol) { return false }
+  advance(inout p)
+  true
+}
+
+fn pipe(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var q = try comma(inout p)
+  while eat(inout p, "|") { q = Pipe(q, try comma(inout p)) }
+  q
+}
+
+fn comma(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var q = try either(inout p)
+  while eat(inout p, ",") { q = Comma(q, try either(inout p)) }
+  q
+}
+
+fn either(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var q = try both(inout p)
+  while peek(p) == lexer.Name("or") {
+    advance(inout p)
+    q = Or(q, try both(inout p))
+  }
+  q
+}
+
+fn both(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var q = try compare(inout p)
+  while peek(p) == lexer.Name("and") {
+    advance(inout p)
+    q = And(q, try compare(inout p))
+  }
+  q
+}
+
+/// The functions a query can call: with no argument, and with one.
+const PLAIN: List<str> = [
+  "length", "keys", "type", "not", "empty", "first", "last", "reverse", "sort", "unique", "min",
+  "max", "to_entries",
+]
+
+const UNARY: List<str> = ["select", "map", "sort_by", "has", "join", "first", "last"]
+
+const COMPARISONS: List<str> = ["==", "!=", "<", "<=", ">", ">="]
+
+fn compare(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  let left = try postfix(inout p)
+  match peek(p) {
+    Symbol(op) if COMPARISONS.contains(op) => {
+      advance(inout p)
+      Compare(op, left, try postfix(inout p))
+    }
+    _ => left
+  }
+}
+
+/// A term, then the paths after it, as `.a.b[0]` or `(.x).y`.
+fn postfix(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var q = try term(inout p)
+  loop {
+    if eat(inout p, ".") {
+      q = Pipe(q, try step(inout p))
+    } else if eat(inout p, "[") {
+      q = Pipe(q, try bracket(inout p))
+    } else {
+      return q
+    }
+  }
+}
+
+/// What follows a `.`: a name, a string, a bracket, or nothing, which is the value itself.
+fn step(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  match peek(p) {
+    Name(n) | Text(n) => {
+      advance(inout p)
+      Field(n)
+    }
+    Symbol("[") => {
+      advance(inout p)
+      try bracket(inout p)
+    }
+    _ => Identity
+  }
+}
+
+/// What follows a `[` after a value: `]`, an index and `]`, or a slice and `]`: two indexes
+/// with `:` between them, either of which may be left out.
+/// ex: try parse(".[1:]") == Slice(Some(1), None)
+/// ex: try parse(".[:-2]") == Slice(None, Some(-2))
+fn bracket(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  if eat(inout p, "]") { return Each }
+  let from = try index(inout p)
+  if !eat(inout p, ":") {
+    let Some(i) = from else raise error(p, "expected an index, found {lexer.shown(peek(p))}")
+    try expect(inout p, "]")
+    return Index(i)
+  }
+  let to = try index(inout p)
+  if from == None && to == None {
+    raise error(p, "expected an index, found {lexer.shown(peek(p))}")
+  }
+  try expect(inout p, "]")
+  Slice(from, to)
+}
+
+/// The index that the next token writes, if it writes one, which moves past it.
+fn index(inout p: Parser) -> Option<i64> / raise<lexer.SyntaxError> {
+  let Number(text) = peek(p) else return None
+  let i = text.to_i64() else raise error(p, "{text} isn't an index")
+  advance(inout p)
+  Some(i)
+}
+
+fn term(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  let (at, start) = (peek(p), p.pos)
+  advance(inout p)
+  match at {
+    Symbol(".") => try step(inout p)
+    Symbol("(") => {
+      let q = try pipe(inout p)
+      try expect(inout p, ")")
+      q
+    }
+    Symbol("[") if eat(inout p, "]") => Literal(json.Array([]))
+    Symbol("[") => {
+      let q = try pipe(inout p)
+      try expect(inout p, "]")
+      Collect(q)
+    }
+    Symbol("\{") => try object(inout p)
+    Text(t) => Literal(json.Text(t))
+    Number(n) => Literal(json.Number(n))
+    Name("true") => Literal(json.Bool(true))
+    Name("false") => Literal(json.Bool(false))
+    Name("null") => Literal(json.Null)
+    Name(name) if eat(inout p, "(") => {
+      if !UNARY.contains(name) {
+        raise error_at(p, start, "{name} takes no argument, or is no function")
+      }
+      let argument = try pipe(inout p)
+      try expect(inout p, ")")
+      Call(name, Some(argument))
+    }
+    Name(name) if PLAIN.contains(name) => Call(name, None)
+    Name(name) if UNARY.contains(name) => raise error_at(p, start, "{name} takes an argument")
+    Name(name) => raise error_at(p, start, "{name} is no function")
+    _ => raise error_at(p, start, "expected a query, found {lexer.shown(at)}")
+  }
+}
+
+/// The entries of an object, after its `{`: a key alone takes the field of that name.
+fn object(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var entries = []
+  if eat(inout p, "}") { return Build(entries) }
+  loop {
+    let key = match peek(p) {
+      Name(n) | Text(n) => n
+      k => raise error(p, "expected a key, found {lexer.shown(k)}")
+    }
+    advance(inout p)
+    let value = if eat(inout p, ":") { try entry(inout p) } else { Field(key) }
+    entries.push((key, value))
+    if eat(inout p, "}") { return Build(entries) }
+    try expect(inout p, ",")
+  }
+}
+
+/// The value of an entry: paths joined by `|`, which a `,` ends.
+fn entry(inout p: Parser) -> Query / raise<lexer.SyntaxError> {
+  var q = try postfix(inout p)
+  while eat(inout p, "|") { q = Pipe(q, try postfix(inout p)) }
+  q
+}
+
+test "a mistake is reported at its column" {
+  assert Result.of(|| try parse(".a |")) ==
+    Err(lexer.SyntaxError { column: 5, message: "expected a query, found the end" })
+  assert Result.of(|| try parse(".[x]")) ==
+    Err(lexer.SyntaxError { column: 3, message: "expected an index, found `x`" })
+  assert Result.of(|| try parse(".a | lenght")) ==
+    Err(lexer.SyntaxError { column: 6, message: "lenght is no function" })
+  assert Result.of(|| try parse("\{a: 1")) ==
+    Err(lexer.SyntaxError { column: 6, message: "expected ,, found the end" })
+}

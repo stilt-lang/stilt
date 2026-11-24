@@ -1,0 +1,15 @@
+//~ rule: traits.inherent-names, errors.declarations-with-errors
+
+// A method that a type declares twice, in two impl blocks, is E0208 at the second, which still
+// declares it (errors.declarations-with-errors): checking ends, whatever each body consumes.
+type Pair = { a: List<i64>, b: List<i64> }
+
+impl Pair {
+  fn first(self) -> List<i64> { self.a }
+}
+
+impl Pair {
+  fn first(self) -> List<i64> { [] } //~ ERROR E0208
+}
+
+fn main() {}

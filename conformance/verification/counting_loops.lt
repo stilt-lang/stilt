@@ -1,0 +1,95 @@
+//~ rule: facts.div, facts.without-div, facts.what-proofs-change, facts.rules-of-acceptance, facts.counting-loops
+//~ run-output: "6 3 4 4 4 4 0 2 7"
+
+// Each `while` compares a `var` with a bound that the loop doesn't change, and
+// steps the `var` toward it once per iteration, by a statement of the loop's
+// own block.
+
+fn up(n: i64) -> i64 without div {
+  var i = 0
+  var s = 0
+  while i < n {
+    s += i
+    i += 1
+  }
+  s
+}
+
+fn down(lo: i64, top: i64) -> i64 without div {
+  var hi = top
+  var count = 0
+  while hi > lo {
+    count += 1
+    hi -= 1
+  }
+  count
+}
+
+// The primes up to `m`: `k` grows by `i`, a `for` variable from 2.
+fn primes(m: i64) -> i64 without div {
+  var flags = []
+  for _ in 0..m + 1 { flags.push(true) }
+  var count = 0
+  for i in 2..flags.len() {
+    if flags[i] { count += 1 }
+    var k = i + i
+    while k < flags.len() {
+      flags[k] = false
+      k += i
+    }
+  }
+  count
+}
+
+fn small(i: i64) -> bool { i * i < 10 }
+
+// The comparison is the first conjunct of the `&&` chain.
+fn while_small(n: i64) -> i64 without div {
+  var i = 0
+  while i < n && small(i) { i += 1 }
+  i
+}
+
+// A `break` may come before the step, and a `continue` after it.
+fn find(xs: List<i64>, x: i64) -> i64 without div {
+  var i = 0
+  while i < xs.len() {
+    if xs[i] == x { break }
+    i += 1
+  }
+  i
+}
+
+fn odd(n: i64) -> i64 without div {
+  var i = 0
+  var count = 0
+  while i < n {
+    i += 1
+    if i % 2 == 0 { continue }
+    count += 1
+  }
+  count
+}
+
+// The literal 0 is the bound.
+fn spin(n: i64) -> i64 without div {
+  var i = n
+  while i > 0 { i -= 1 }
+  i
+}
+
+const STEP: i64 = 3
+
+fn strides(n: i64) -> i64 without div {
+  var i = 0
+  var count = 0
+  while i <= n {
+    count += 1
+    i += STEP
+  }
+  count
+}
+
+fn main() / io {
+  print("{up(4)} {down(2, 5)} {primes(10)} {find([5, 6, 7, 8], 9)} {while_small(10)} {odd(7)} {spin(3)} {strides(5)} {up(4) + 1}")
+}

@@ -1,0 +1,16 @@
+//~ rule: effects.rows-that-meet, effects.what-paired-variable-may-raise
+
+// The function's own row pairs the implicit row variable of `g` with `str`.
+fn f(g: fn() -> i64) -> i64 / raise<str> {
+  let n = g()
+  if n > 0 { raise "positive" }
+  n
+}
+
+fn flag() -> i64 / raise<bool> { raise true }
+
+fn main() / io {
+  let k = flag
+  let n = try f(k) catch s because "a str" => s.len() //~ ERROR E0311
+  print("{n}")
+}

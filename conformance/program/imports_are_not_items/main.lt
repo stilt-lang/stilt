@@ -1,0 +1,8 @@
+//~ rule: program.child-modules
+
+use lib
+
+fn f() / io {
+  lib.greet()
+  let _ = lib.fs.read("notes.txt") //~ ERROR E0211
+}

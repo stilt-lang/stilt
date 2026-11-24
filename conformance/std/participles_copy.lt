@@ -1,0 +1,26 @@
+//~ rule: std.method-names, std.str-building, std.list-changes, std.map-functions, std.option-result-functions
+//~ stdout:
+//~ | [3, 1, 2, 2] [1, 2, 2, 3] [3, 2, 2, 1] [2, 2, 1, 3] [3, 1, 2]
+//~ | [3, 2, 2, 1] [1, 2, 2, 3] [3, 1, 2, 2]
+//~ | [2, 1] [1, 2] cba abc Greater
+//~ | {"a": 1} {"a": 1, "b": 2}
+
+// The participles return new values and leave their receivers as they were, a `var` included.
+fn main() / io {
+  let xs = [3, 1, 2, 2]
+  let sorted = xs.sorted()
+  let desc = xs.sorted_desc()
+  let reversed = xs.reversed()
+  let deduped = xs.deduped()
+  print("{xs} {sorted} {desc} {reversed} {deduped}")
+  let by = xs.sorted_by(|x| -x)
+  let compared = xs.sorted_with(|a, b| Ord.compare(a, b))
+  print("{by} {compared} {xs}")
+  var ys = [2, 1]
+  let zs = ys.sorted()
+  let s = "abc"
+  print("{ys} {zs} {s.reversed()} {s} {Less.reversed()}")
+  let m = Map.from_entries([("a", 1)])
+  let n = m.merged(Map.from_entries([("b", 2)]))
+  print("{m} {n}")
+}

@@ -1,0 +1,26 @@
+//~ rule: patterns.non-exhaustive-matches, patterns.unreachable-arms, errors.error-type-raises
+
+type T = | A(Unknown) | B //~ ERROR E0211
+type R = { a: Unknown, b: bool } //~ ERROR E0211
+
+fn specific(t: T) -> i64 {
+  match t {
+    A(Some(_)) => 0
+    A(x) => 1
+    B => 2
+  }
+}
+
+fn records(r: R) -> i64 {
+  match r {
+    R { a: 1, b: true } => 0
+    R { a: _, b: false } => 1
+  }
+}
+
+fn partial(t: T) -> i64 {
+  match t {
+    A(Some(_)) => 0
+    B => 1
+  }
+}

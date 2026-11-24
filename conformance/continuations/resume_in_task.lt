@@ -1,0 +1,20 @@
+//~ tier: advanced
+//~ rule: tasks.continuations-stay-in-task
+
+use std.task
+
+// The operation's row lets its body start tasks, but no task holds its `resume`.
+effect Ask {
+  fn ask() -> i64 / async
+}
+
+fn main() / {io, async} {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 / async {
+      let t = task.spawn(|| resume(1)) //~ ERROR E0514
+      t.await()
+    }
+  }
+  let r = with h { Ask.ask() }
+  print("{r}")
+}

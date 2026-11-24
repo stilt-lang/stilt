@@ -1,0 +1,10 @@
+//~ tier: meta
+//~ rule: macros.meta-use
+
+// `meta use` gives the procedural macros of `tools`, and nothing else of it.
+meta use tools
+
+fn main() / io {
+  print("{tools.one!()}")
+  print("{tools.two()}") //~ ERROR E0211
+}

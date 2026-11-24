@@ -1,0 +1,11 @@
+//~ rule: effects.catch-around-row-variables, effects.passing-reports
+
+type Box = { v: i64 }
+
+fn guarded(g: fn() -> i64 / raise<Box>) -> i64 {
+  try g() catch b because "a Box gives its value" => b.v
+}
+
+fn caller(g: fn() -> i64) -> i64 {
+  try guarded(g) catch _ because "a failure counts as zero" => 0 //~ ERROR E0506
+}

@@ -1,0 +1,9 @@
+── `unsafe` WITH NO REASON ──────── E0437_unsafe_with_no_reason.lt:6:18  [E0437]
+
+This `unsafe` block gives no reason; say why its code is sound:
+
+  6 │   unsafe because " " { text.with_c_str(|s| strlen(s)) }
+    │                  ^^^
+
+An `unsafe` block's reason says why its code is sound, and `stilt show` prints
+it beside the block. Write the reason.

@@ -1,0 +1,10 @@
+//~ rule: numbers.negative-literals, numbers.printing-floats
+//~ run-output: "-0.0 -0.0 0.0 nan nan"
+
+fn main() / io {
+  let z: f64 = -0
+  let w: f32 = -0
+  let nan = f64.NAN
+  let negative = -nan
+  print("{z} {w} {z + 0.0} {nan} {negative}")
+}

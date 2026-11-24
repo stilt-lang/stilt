@@ -1,0 +1,17 @@
+//~ rule: std.str-splitting, std.show-names-and-escapes, std.io-errors, std.fs
+//~ stdout:
+//~ | ["first\r\nsecond\n"]
+//~ | ["first", "second"]
+//~ | NotFound("absent.txt")
+
+use std.fs
+use std.io
+
+fn main() / {io, raise<io.IoError>} {
+  let text = try fs.read("notes.txt")
+  print("{[text]}")
+  print("{try fs.read_lines("notes.txt")}")
+  let missing = try fs.read("absent.txt")
+    catch error because "the test shows the error" => "{error}"
+  print(missing)
+}

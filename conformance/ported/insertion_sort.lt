@@ -1,0 +1,61 @@
+//~ rule: values.inout-arguments, std.list-changes, modes.law
+//~ stdout:
+//~ | [5, 2, 4, 6, 1, 3]
+//~ | [2, 5, 4, 6, 1, 3]
+//~ | [2, 4, 5, 6, 1, 3]
+//~ | [2, 4, 5, 6, 1, 3]
+//~ | [1, 2, 4, 5, 6, 3]
+//~ | [1, 2, 3, 4, 5, 6]
+//~ | insertion [26, 31, 41, 41, 58, 59]
+//~ | bubble [26, 31, 41, 41, 58, 59]
+//~ | true
+
+// Rosetta Code, Sorting algorithms/Insertion sort and Bubble sort. The trace is that of Cormen,
+// Leiserson, Rivest and Stein's Introduction to Algorithms, Figure 2.2, insertion sort on
+// [5, 2, 4, 6, 1, 3], printed before each element is inserted and at the end; the second list
+// is that of its Exercise 2.1-1.
+
+fn insertion_sort(inout xs: List<i64>, inout trace: List<List<i64>>) {
+  for j in 1..xs.len() {
+    trace.push(xs)
+    let key = xs[j]
+    var i = j - 1
+    while i >= 0 && xs[i] > key {
+      xs[i + 1] = xs[i]
+      i -= 1
+    }
+    xs[i + 1] = key
+  }
+  trace.push(xs)
+}
+
+fn bubble_sort(inout xs: List<i64>) {
+  var swapped = true
+  var end = xs.len()
+  while swapped {
+    swapped = false
+    for i in 1..end {
+      if xs[i - 1] > xs[i] {
+        xs.swap(i - 1, i)
+        swapped = true
+      }
+    }
+    end -= 1
+  }
+}
+
+fn main() / io {
+  var figure = [5, 2, 4, 6, 1, 3]
+  var trace = []
+  insertion_sort(inout figure, inout trace)
+  for step in trace { print("{step}") }
+  let exercise = [31, 41, 59, 26, 41, 58]
+  var a = exercise
+  var ignored = []
+  insertion_sort(inout a, inout ignored)
+  var b = exercise
+  bubble_sort(inout b)
+  print("insertion {a}")
+  print("bubble {b}")
+  print("{a == exercise.sorted() && b == a}")
+}

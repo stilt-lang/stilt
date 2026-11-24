@@ -1,0 +1,15 @@
+[package]
+name = "stilt-lsp"
+description = "The language server: the Language Server Protocol over stdio, answered by the program's engine (goal one-engine)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

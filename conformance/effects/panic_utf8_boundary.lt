@@ -1,0 +1,11 @@
+//~ rule: effects.panic-kinds, std.str
+//~ run-output: "h"
+//~ panic: utf8-boundary
+//~ panic-at: panic_utf8_boundary.lt:6:33
+
+fn cut(s: str, n: i64) -> str { s.slice(0, n) }
+
+fn main() / io {
+  print(cut("héllo", 1))
+  print(cut("héllo", 2))
+}

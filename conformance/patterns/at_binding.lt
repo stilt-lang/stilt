@@ -1,0 +1,8 @@
+//~ rule: lexical.reserved-tokens, patterns.no-other-forms
+
+fn keep(o: Option<i64>) -> Option<i64> {
+  match o {
+    kept @ Some(_) => kept, //~ ERROR E0100
+    None => None,
+  }
+}

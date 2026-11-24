@@ -1,0 +1,15 @@
+//~ rule: values.assignment-order, facts.analysis-order, facts.map-keys
+//~ panic: missing-key
+//~ panic-at: order_field_cleared.lt:11:3
+
+type Count = { n: i64 }
+
+// The place `m["a"]` is reached after the right side, which clears the map.
+fn field_cleared() -> Map<str, Count> {
+  var m: Map<str, Count> = Map.new()
+  m["a"] = Count { n: 1 }
+  m["a"].n = { m.clear(); 0 }
+  m
+}
+
+fn main() / io { print("{field_cleared()}") }

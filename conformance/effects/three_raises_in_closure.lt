@@ -1,0 +1,13 @@
+//~ rule: effects.one-error-type
+
+type A = | A1
+type B = | B1
+type C = | C1
+
+fn f() {
+  let g = || {
+    raise A1
+    raise B1 //~ ERROR E0503
+    raise C1
+  }
+}

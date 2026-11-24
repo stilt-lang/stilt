@@ -1,0 +1,2 @@
+[dependencies]
+a = { path = "deps/a" } # //~ ERROR E0609

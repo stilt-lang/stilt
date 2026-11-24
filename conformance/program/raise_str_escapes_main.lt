@@ -1,0 +1,11 @@
+//~ rule: program.main, program.exit-statuses
+//~ stdout:
+//~ | checking
+//~ stderr:
+//~ | error: no "input"
+//~ exit: 1
+
+fn main() / {io, raise<str>} {
+  print("checking")
+  raise "no \"input\""
+}

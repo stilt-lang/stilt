@@ -1,0 +1,9 @@
+//~ rule: syntax.paths, program.what-use-binds, program.namespaces
+//~ run-output: "0 arguments"
+
+use std
+
+fn main() / io {
+  let args = std.cli.args()
+  print("{args.len()} arguments")
+}

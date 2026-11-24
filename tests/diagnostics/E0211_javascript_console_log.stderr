@@ -1,0 +1,14 @@
+── UNKNOWN NAME ─────────────────── E0211_javascript_console_log.lt:2:3  [E0211]
+
+Stilt prints a line with `print`, not `console.log`:
+
+  2 │   console.log("hello")
+    │   ^^^^^^^^^^^
+
+`print` writes its string and a newline, and the function that calls it has `io`
+in its row, as `fn main() / io`.
+
+To fix it, write `print`:
+
+  2 │   print("hello")
+    │   ~~~~~

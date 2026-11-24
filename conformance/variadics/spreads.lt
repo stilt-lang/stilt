@@ -1,0 +1,36 @@
+//~ tier: advanced
+//~ rule: variadics.packs, variadics.type-spreads, variadics.pack-inference, variadics.spread-expressions, variadics.empty-pack
+//~ stdout:
+//~ | [(1, "a", true), (2, "b", false)]
+//~ | [(1,)]
+//~ | []
+//~ | 5 hi
+//~ | ((1, 2), ("a", "b")) (1, true, "end") ("end",)
+//~ | [3, 1]
+
+fn zip<..Ts>(lists: (..List<Ts>)) -> List<(..Ts)> {
+  let n = [..lists.len()].min() else 0
+  var out: List<(..Ts)> = []
+  for i in 0..n { out.push((..lists[i])) }
+  out
+}
+
+fn apply<..Ts, R>(f: fn(..Ts) -> R, args: (..Ts)) -> R { f(..args) }
+
+// Two pack tuples of one pack, mapped together.
+fn pairs<..Ts>(a: (..Ts), b: (..Ts)) -> (..(Ts, Ts)) { (..(a, b)) }
+
+// A plain element beside the spread.
+fn tagged<..Ts>(xs: (..Ts)) -> (..Ts, str) { (..xs, "end") }
+
+fn lengths<..Ts>(lists: (..List<Ts>)) -> List<i64> { [..lists.len()] }
+
+fn main() / io {
+  print("{zip(([1, 2], ["a", "b"], [true, false]))}")
+  print("{zip(([1],))}")
+  let none: List<()> = zip(())
+  print("{none}")
+  print("{apply(|a, b| a + b, (2, 3))} {apply(|| "hi", ())}")
+  print("{pairs((1, "a"), (2, "b"))} {tagged((1, true))} {tagged(())}")
+  print("{lengths(([1, 2, 3], ["a"]))}")
+}

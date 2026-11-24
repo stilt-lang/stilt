@@ -1,0 +1,9 @@
+//~ rule: values.strings, expressions.mutable-places
+
+fn edit(s: str) -> str {
+  var t = s
+  t[0] = "x" //~ ERROR E0317
+  t.push("!") //~ ERROR E0314
+  t = "x{t}"
+  t
+}

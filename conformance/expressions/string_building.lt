@@ -1,0 +1,12 @@
+//~ rule: values.strings, expressions.no-string-plus
+//~ run-output: "ab a-b 3 true"
+
+fn main() / io {
+  let a = "a"
+  let b = "b"
+  let joined = "{a}{b}"
+  let dashed = "-".join([a, b])
+  var built = ""
+  for part in [a, b, "c"] { built = "{built}{part}" }
+  print("{joined} {dashed} {built.len()} {built == "abc"}")
+}

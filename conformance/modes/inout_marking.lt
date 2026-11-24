@@ -1,0 +1,14 @@
+//~ rule: expressions.inout-arguments, traits.methods
+
+fn bump(inout n: i64) { n += 1 }
+
+fn describe(n: i64) -> str { "{n}" }
+
+fn main() / io {
+  var count = 0
+  bump(inout count)
+  bump(count) //~ ERROR E0400
+  print(describe(inout count)) //~ ERROR E0400
+  var xs = [1, 2]
+  xs.push(3)
+}

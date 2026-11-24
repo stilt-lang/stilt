@@ -1,0 +1,73 @@
+// Values as flat `path=value` pairs, read from their types' shapes (meta.shapes), so that any
+// entry, whatever its event, prints the same way.
+
+use std.meta
+
+/// The leaves of `value`, each as its path from the value and its text: a record's fields by
+/// name, a list's elements and a tuple's fields by index, a variant's payload under its name,
+/// and an option's value where the option is, or nothing for `None`.
+/// ex: pairs(Pair { left: 1, right: Some("b") }) == ["left=1", "right=b"]
+/// ex: pairs(Wrap(Pair { left: 2, right: None })) == ["Wrap.left=2"]
+/// ex: pairs([Blank, Two(3, true)]) == ["[0]=Blank", "[1].Two[0]=3", "[1].Two[1]=true"]
+pub fn pairs<T>(value: T) -> List<str> { leaves(value, "") }
+
+fn leaves<T>(value: T, path: str) -> List<str> {
+  comptime match T.shape() {
+    Int(n) => ["{path}={n.text(value)}"]
+    Float(x) => ["{path}={x.get(value)}"]
+    Bool(b) => ["{path}={b.get(value)}"]
+    Str(s) => ["{path}={s.get(value)}"]
+    Unit(_) => []
+    Option(o) => match o.get(value) {
+      Some(x) => leaves(x, path)
+      None => []
+    }
+    List(l) => {
+      var out: List<str> = []
+      for (i, x) in l.get(value).enumerate(0) { out.extend(leaves(x, "{path}[{i}]")) }
+      out
+    }
+    Record(fields) => {
+      var out: List<str> = []
+      comptime for f in fields { out.extend(leaves(f.get(value), joined(path, f.name()))) }
+      out
+    }
+    Tuple(fields) => {
+      var out: List<str> = []
+      comptime for f in fields { out.extend(leaves(f.get(value), "{path}[{f.index()}]")) }
+      out
+    }
+    Variants(cases) => {
+      var out: List<str> = []
+      comptime for c in cases {
+        if let Some(p) = c.get(value) { out = payload(p, joined(path, c.name()), path, c.name()) }
+      }
+      out
+    }
+    _ => ["{path}={T.name()}"]
+  }
+}
+
+// The leaves of a variant's payload: its name alone when it has none, its one value under its
+// name, or each of its values under its name and its index.
+fn payload<P>(p: P, under: str, path: str, name: str) -> List<str> {
+  comptime match P.shape() {
+    Tuple(fields) => {
+      var out: List<str> = []
+      comptime for f in fields {
+        let at = if fields.len() == 1 { under } else { "{under}[{f.index()}]" }
+        out.extend(leaves(f.get(p), at))
+      }
+      out
+    }
+    _ => ["{path}={name}"]
+  }
+}
+
+// A field's path under `path`.
+fn joined(path: str, name: str) -> str { if path == "" { name } else { "{path}.{name}" } }
+
+// The types the examples above flatten.
+type Pair = { left: i64, right: Option<str> }
+
+type Shape = | Blank | Wrap(Pair) | Two(i64, bool)

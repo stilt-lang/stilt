@@ -1,0 +1,70 @@
+//~ rule: syntax.catch-attachment, effects.one-error-type, effects.raise, effects.marking, effects.catch, effects.innermost-catch
+//~ stdout:
+//~ | total 3
+//~ | line 2: not a number: x
+//~ | parsed 5
+//~ | outer got empty
+//~ | outer got inner saw z
+//~ | 8 -1
+//~ | [1, 2] []
+
+type ParseError = | Empty | NotANumber(str)
+
+type LoadError = { line: i64, reason: str }
+
+fn parse(s: str) -> i64 / raise<ParseError> {
+  if s == "" { raise Empty }
+  s.to_i64() else raise NotANumber(s)
+}
+
+fn load(lines: List<str>) -> i64 / raise<LoadError> {
+  var sum = 0
+  var line = 1
+  for text in lines {
+    sum += try parse(text) catch {
+      Empty => 0
+      NotANumber(t) => raise LoadError { line, reason: "not a number: {t}" }
+    }
+    line += 1
+  }
+  sum
+}
+
+fn describe(lines: List<str>) -> str {
+  try "total {load(lines)}"
+    catch e because "the error is the description" => "line {e.line}: {e.reason}"
+}
+
+fn nested(s: str) -> str {
+  try {
+    let inner = try parse(s) catch {
+      Empty => raise NotANumber("empty")
+      NotANumber(t) => raise NotANumber("inner saw {t}")
+    }
+    "parsed {inner}"
+  } catch {
+    Empty => "outer empty"
+    NotANumber(t) => "outer got {t}"
+  }
+}
+
+fn checked(n: i64) -> i64 / raise<str> {
+  let doubled: i64 = if n < 0 { raise "negative" } else { n * 2 }
+  doubled
+}
+
+fn all_parsed(xs: List<str>) -> List<i64> {
+  try xs.map(|s| parse(s)) catch _ because "a list with a bad entry counts as empty" => []
+}
+
+fn main() / io {
+  print(describe(["1", "", "2"]))
+  print(describe(["1", "x"]))
+  print(nested("5"))
+  print(nested(""))
+  print(nested("z"))
+  let a = try checked(4) catch _ because "a negative number counts as minus one" => -1
+  let b = try checked(-1) catch _ because "a negative number counts as minus one" => -1
+  print("{a} {b}")
+  print("{all_parsed(["1", "2"])} {all_parsed(["1", "?"])}")
+}

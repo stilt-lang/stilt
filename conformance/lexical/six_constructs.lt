@@ -1,0 +1,20 @@
+//~ rule: syntax.one-syntax, syntax.format
+
+type Order = { customer: str, qty: i64 }
+
+/// Parses an order written as `name,qty`.
+/// ex: parse("ana,3").qty == 3 //~ PASS
+fn parse(line: str) -> Order {
+  let [customer, q] = line.split(",") else panic("bad line")
+  let qty = q.to_i64() else 0
+  if qty <= 0 { panic("no quantity") }
+  Order { customer, qty }
+}
+
+test "constructs" { //~ PASS
+  let orders = [parse("ana,3"), parse("bo,1")]
+  let names = orders.map(.customer)
+  assert names == ["ana", "bo"]
+  let Order { customer, qty } = orders[1]
+  assert customer == "bo" && qty == 1
+}

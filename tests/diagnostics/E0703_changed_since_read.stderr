@@ -1,0 +1,14 @@
+── STALE ADDRESS ───────────────────── E0703_changed_since_read.lt:2:37  [E0703]
+
+`main.totals/body` changed since #a91f, and is now #45bc:
+
+  2 │ fn totals(orders: List<i64>) -> i64 {
+    │                                     ^ the body, as it is now
+
+The code changed after the edit's author read it, so the edit isn't applied.
+Read it again with `stilt show`, and write the edit against what it is now.
+Nothing was written.
+
+To fix it, read the body again, and write the edit against what it is now:
+
+  stilt show main.totals/body --json

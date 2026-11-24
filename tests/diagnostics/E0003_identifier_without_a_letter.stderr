@@ -1,0 +1,9 @@
+── IDENTIFIER WITHOUT A LETTER ── E0003_identifier_without_a_letter.lt:2:7  [E0003]
+
+`_1` has no letter:
+
+  2 │   let _1 = 5
+    │       ^^
+
+A name needs a letter, since the case of its first letter says whether it names
+a value or a type: write `first`, not `_1`.

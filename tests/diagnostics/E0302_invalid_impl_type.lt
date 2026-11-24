@@ -1,0 +1,7 @@
+type Pair<A, B> = { first: A, second: B }
+
+impl Pair<i64, i64> {
+  fn sum(self) -> i64 { self.first + self.second }
+}
+
+fn main() {}

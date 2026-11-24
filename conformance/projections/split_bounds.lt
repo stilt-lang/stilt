@@ -1,0 +1,13 @@
+//~ tier: advanced
+//~ rule: projections.writable-views
+//~ run-output: "0 2"
+//~ panic: bounds
+//~ panic-at: split_bounds.lt:12:3
+
+use std.view
+
+fn main() / io {
+  var xs = [1, 2]
+  view.split(inout xs, 2, |inout a, inout b| print("{b.len()} {a.len()}"))
+  view.split(inout xs, 3, |inout a, inout b| print("{a.len()} {b.len()}"))
+}

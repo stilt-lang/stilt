@@ -1,0 +1,3 @@
+use stamp
+
+fn main() / io { print("{stamp.rows()}") }

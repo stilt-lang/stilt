@@ -1,0 +1,43 @@
+//~ tier: systems
+//~ rule: c.effects, facts.inference
+
+// A call of C adds `panic`, `alloc` and `div`, and every capability when the foreign function
+// performs `io`, unless its declaration's `without` clause says its code doesn't. A function that
+// wraps the call has them, and so has each of its callers.
+
+use std.c
+
+extern fn malloc(n: u64) -> c.Ptr<()>
+extern fn getpid() -> i32 / io
+extern fn labs(n: i64) -> i64 without panic, alloc, div
+extern fn getppid() -> i32 / io without panic, alloc, div, fs, net, clock, env, console, rand, spawn, exec
+
+fn grab() -> c.Ptr<()> without alloc {
+  unsafe because "the caller frees the block" { malloc(16) } //~ ERROR E0204
+}
+
+fn wrapped() -> c.Ptr<()> {
+  unsafe because "the caller frees the block" { malloc(16) }
+}
+
+fn through() -> c.Ptr<()> without alloc {
+  wrapped() //~ ERROR E0204
+}
+
+fn ends() -> c.Ptr<()> without div {
+  wrapped() //~ ERROR E0204
+}
+
+fn pid() -> i32 / io without net {
+  unsafe because "getpid only reads the process's id" { getpid() } //~ ERROR E0204
+}
+
+fn magnitude(n: i64) -> i64 without panic, alloc, div {
+  unsafe because "labs takes any i64 but the least" { labs(n) }
+}
+
+fn parent() -> i32 / io without panic, alloc, div, net, fs {
+  unsafe because "getppid only reads the parent's id" { getppid() }
+}
+
+fn main() {}

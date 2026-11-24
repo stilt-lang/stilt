@@ -1,0 +1,9 @@
+//~ rule: expressions.arguments
+
+fn area(w: f64, h: f64) -> f64 {
+  w * h
+}
+
+fn square() -> f64 {
+  area(w: 2.0, h: 2.0) //~ ERROR E0100
+}

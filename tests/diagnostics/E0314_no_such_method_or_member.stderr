@@ -1,0 +1,15 @@
+── NO SUCH METHOD OR MEMBER ──── E0314_no_such_method_or_member.lt:1:43  [E0314]
+
+`List<str>` has no method `size`; Stilt calls it `len`:
+
+  1 │ fn count(names: List<str>) -> i64 { names.size() }
+    │                                           ^^^^
+
+Check the method's name and the receiver's type. A function without `self` is
+named on its type, as `List.new()`, and a trait's method needs an impl of the
+trait for the type.
+
+To fix it, write `len`:
+
+  1 │ fn count(names: List<str>) -> i64 { names.len() }
+    │                                           ~~~

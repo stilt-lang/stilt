@@ -1,0 +1,29 @@
+//~ tier: advanced
+//~ rule: cycles.freeing, cycles.check-at-exit
+//~ stdout:
+//~ | kept'
+
+// A cycle that a binding still references keeps its values while 5,000 others are let go.
+
+use std.sync
+
+type Node = { name: str, next: Option<sync.Shared<Node>> }
+
+fn pair(name: str) -> sync.Shared<Node> {
+  let a = sync.Shared.new(Node { name, next: None })
+  let b = sync.Shared.new(Node { name: "{name}'", next: Some(a) })
+  when a { a.next = Some(b) }
+  a
+}
+
+fn main() / io {
+  let kept = pair("kept")
+  for i in 0..5000 {
+    let _ = pair("{i}")
+  }
+  let next = when kept { kept.next }
+  match next {
+    Some(b) => when b { print(b.name) },
+    None => print("none"),
+  }
+}

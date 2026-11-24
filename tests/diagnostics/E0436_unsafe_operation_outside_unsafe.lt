@@ -1,0 +1,7 @@
+use std.c
+
+extern fn strlen(s: c.Str) -> u64
+
+pub fn length(text: str) -> u64 {
+  text.with_c_str(|s| strlen(s))
+}

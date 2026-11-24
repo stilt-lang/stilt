@@ -1,0 +1,3 @@
+//~ rule: program.forms, program.module-header
+
+module orders //~ ERROR E0201

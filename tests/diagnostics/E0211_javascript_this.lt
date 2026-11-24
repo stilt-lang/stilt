@@ -1,0 +1,9 @@
+type Counter = { count: i64 }
+
+impl Counter {
+  fn next(self) -> i64 { this.count + 1 }
+}
+
+fn main() / io {
+  print("{Counter { count: 1 }.next()}")
+}

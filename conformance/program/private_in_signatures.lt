@@ -1,0 +1,45 @@
+//~ rule: program.private-in-signatures
+
+type Hidden = { n: i64 }
+
+trait Secret {
+  fn reveal(self) -> i64
+}
+
+pub type Shape = { side: f64 }
+
+pub type Slot = | Empty | Full(Hidden) //~ ERROR E0214
+
+pub fn make() -> Hidden { //~ ERROR E0214
+  Hidden { n: 1 }
+}
+
+pub fn fail() / raise<Hidden> { //~ ERROR E0214
+  raise Hidden { n: 2 }
+}
+
+pub fn apply(f: fn(Hidden) -> i64) -> i64 { //~ ERROR E0214
+  f(Hidden { n: 3 })
+}
+
+pub trait Exposed {
+  fn get(self) -> Hidden //~ ERROR E0214
+}
+
+impl Shape {
+  pub const NOTHING: Option<Hidden> = None //~ ERROR E0214
+
+  pub fn hidden(self) -> Hidden { //~ ERROR E0214
+    Hidden { n: 4 }
+  }
+
+  fn inner(self) -> Hidden { Hidden { n: 5 } }
+}
+
+impl Hidden {
+  pub fn twice(self) -> Hidden { Hidden { n: self.n * 2 } }
+}
+
+fn private(h: Hidden) -> Hidden { h }
+
+fn bounded<T: Secret>(x: T) -> i64 { x.reveal() }

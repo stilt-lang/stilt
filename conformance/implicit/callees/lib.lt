@@ -1,0 +1,7 @@
+pub fn first(xs: List<i64>) -> i64 { xs[0] }
+
+pub fn via(xs: List<i64>) -> i64 { first(xs) + 1 }
+
+pub fn length(xs: List<i64>) -> i64 { xs.len() }
+
+pub fn chooser() -> fn(List<i64>) -> i64 { first }

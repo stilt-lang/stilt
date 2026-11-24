@@ -1,0 +1,1 @@
+pub fn printer() -> fn(str) / io { print }

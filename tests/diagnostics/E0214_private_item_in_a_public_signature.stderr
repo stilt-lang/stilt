@@ -1,0 +1,14 @@
+── PRIVATE ITEM IN A PUBLIC SIGNATURE ── E0214_private_item_in_a_public_signature.lt:3:28  [E0214]
+
+`Config` is private, but appears in a signature that other modules see:
+
+  3 │ pub fn default_config() -> Config { Config { port: 8080 } }
+    │                            ^^^^^^
+
+Code outside the module couldn't name a type that a `pub` signature mentions.
+Mark the type `pub` too, or keep the function private.
+
+To fix it, make `Config` public:
+
+  1 │ pub type Config = { port: i64 }
+    │ ++++

@@ -1,0 +1,2 @@
+//~ rule: program.no-cycles, errors.several-places
+fn main() {}

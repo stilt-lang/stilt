@@ -1,0 +1,11 @@
+date        city   customer           product  qty  price
+----------  -----  -----------------  -------  ---  -----
+2026-01-03  Lyon   Ana                tea        3   4.50
+2026-01-04  Nice   Bo                 jam        1   6.00
+2026-01-04  Lyon   Cy, Jr.            jam        2   6.00
+2026-01-05  Paris  Dee                tea       10   4.50
+2026-01-07  Nice   Ana                honey      4   9.25
+2026-01-08  Paris  Ed "the bee" Ross  honey      1   9.25
+2026-01-09  Lyon   Bo                 tea        6   4.50
+2026-01-11  Paris  Ana                jam        2   6.00
+2026-01-12  Lyon   Dee                honey          9.25

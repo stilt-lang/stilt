@@ -1,0 +1,14 @@
+── SYNTAX ERROR ─────────────────────────── E0100_async_function.lt:1:1  [E0100]
+
+Stilt has no `async fn`: a function that runs tasks has `async` in its row:
+
+  1 │ async fn fetch(n: i64) -> i64 { n }
+    │ ^^^^^
+
+A function whose row holds `async` starts tasks or waits for them, as `fn f() ->
+i64 / async`.
+
+To fix it, delete `async`:
+
+  1 │ async fn fetch(n: i64) -> i64 { n }
+    │ ------

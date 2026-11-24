@@ -1,0 +1,9 @@
+//~ tier: meta
+//~ rule: syntax.macro-checks
+
+use std.meta
+
+// A procedural macro's result type is written, so the `{` below is a syntax error.
+macro m(e: meta.Expr) { e } //~ ERROR E0100
+
+fn main() {}

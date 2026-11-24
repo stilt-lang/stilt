@@ -1,0 +1,2 @@
+//~ rule: lexical.case, lexical.wildcard
+fn __() {} //~ ERROR E0003

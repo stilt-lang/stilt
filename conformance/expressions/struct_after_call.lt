@@ -1,0 +1,9 @@
+//~ rule: syntax.expression-paths, expressions.struct-literals
+
+fn make() -> i64 {
+  0
+}
+
+fn build() {
+  let p = make() { x: 1 } //~ ERROR E0100
+}

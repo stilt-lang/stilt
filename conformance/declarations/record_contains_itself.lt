@@ -1,0 +1,22 @@
+//~ rule: declarations.recursive-types, errors.several-places
+
+type Node = { next: Node } //~ ERROR E0309
+
+type Left = { right: (i64, Right) }
+type Right = { left: Left } //~ ERROR E0309
+
+type Chain = { next: Option<Chain> }
+type Tree = { children: List<Tree> }
+type Lazy = { make: fn() -> Lazy }
+
+type Holder<T> = { item: T, count: i64 }
+type Shelf = { first: Holder<i64>, second: Holder<Shelf> } //~ ERROR E0309
+
+type Box<T> = { item: T }
+type Crate = { inner: Box<Box<Crate>> } //~ ERROR E0309
+
+// A group that contains another group is still a group of its own.
+type Inner = { outer: Outer }
+type Outer = { inner: Inner } //~ ERROR E0309
+type Wrapper = { wrapped: Wrapped, inner: Inner }
+type Wrapped = { wrapper: Wrapper } //~ ERROR E0309

@@ -1,0 +1,14 @@
+── REASON ON AN ARM THAT ISN'T A CATCH-ALL ── E0504_reason_on_an_arm_that_isn_t_a_catch_all.lt:7:19  [E0504]
+
+Only a catch-all arm gives a reason with `because`:
+
+  7 │     Empty because "an empty line counts zero" => 0
+    │                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Only a catch-all arm, `_` or a binding, gives a reason with `because`, saying
+why dropping every error is right. Delete the reason from this arm.
+
+To fix it, delete the reason:
+
+  7 │     Empty because "an empty line counts zero" => 0
+    │          ------------------------------------

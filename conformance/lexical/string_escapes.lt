@@ -1,0 +1,13 @@
+//~ rule: lexical.escapes, lexical.nested-interpolation
+//~ stdout:
+//~ | ["\n", "\t", "\r", "\0", "\\", "\"", "{", "\u{1b}"]
+//~ | "quoted" \ {braces} a}b
+//~ | Hi é 😀 A
+//~ | 1 4 1
+
+fn main() / io {
+  print("{["\n", "\t", "\r", "\0", "\\", "\"", "\{", "\u{1b}"]}")
+  print("\"quoted\" \\ \{braces} a}b")
+  print("\u{48}\u{69} \u{e9} \u{1F600} \u{000041}")
+  print("{"\u{7f}".len()} {"\u{10FFFF}".len()} {"\0".len()}")
+}

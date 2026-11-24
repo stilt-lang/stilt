@@ -1,0 +1,92 @@
+//~ tier: meta
+//~ rule: meta.fresh-types, meta.leaving-arm, meta.fields
+
+use std.meta
+
+// An arm's value that decides the type of its `match`.
+fn arm_value<T>(value: T) {
+  let r = match T.shape() {
+    Option(c) => c.get(value) //~ ERROR E0351
+    _ => None
+  }
+}
+
+// A value assigned to a variable declared outside the arm.
+fn assigned<T>(value: T) {
+  var out = None
+  match T.shape() {
+    Option(c) => { out = c.get(value) } //~ ERROR E0351
+    _ => {}
+  }
+}
+
+// A value that decides a type that inference left open outside the arm.
+fn pushed<T>(value: T) {
+  var acc = []
+  match T.shape() {
+    List(c) => { for x in c.get(value) { acc.push(x) } } //~ ERROR E0351
+    _ => {}
+  }
+}
+
+// A value returned from a closure whose result type is inferred outside
+// the arm.
+fn returned<T>(value: T) {
+  let f = || {
+    match T.shape() {
+      Option(c) => return c.get(value) //~ ERROR E0351
+      _ => {}
+    }
+    Some(1)
+  }
+}
+
+// A value raised from the arm.
+fn raised<T>(value: T) / raise<str> {
+  match T.shape() {
+    Option(c) => raise c.get(value) //~ ERROR E0351
+    _ => {}
+  }
+}
+
+// A value raised from the arm, even where a `try` in the arm catches it.
+// The `try` and its catch-all report nothing, which would follow from the
+// error (errors.error-type).
+fn caught<T>(value: T) {
+  match T.shape() {
+    Option(c) => try { raise c.get(value) } catch _ => {} //~ ERROR E0351
+    _ => {}
+  }
+}
+
+// A variable declared in the arm around a loop is outside the loop's body.
+fn looped<T>(value: T) {
+  match T.shape() {
+    Record(fields) => {
+      var last = None
+      for f in fields { last = Some(f.get(value)) } //~ ERROR E0351
+    }
+    _ => {}
+  }
+}
+
+// Against a type known outside the arm, a fresh type is a mismatch.
+fn known<T>(value: T) -> str {
+  match T.shape() {
+    Option(c) => c.get(value) //~ ERROR E0311
+    _ => ""
+  }
+}
+
+// A fresh type has no `Eq`, as a type parameter without a bound has none.
+fn compared<T>(value: T) -> bool {
+  match T.shape() {
+    List(c) => {
+      let xs = c.get(value)
+      xs[0] == xs[1] //~ ERROR E0318
+    }
+    _ => false
+  }
+}
+
+fn main() {}

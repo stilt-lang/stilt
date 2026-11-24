@@ -1,0 +1,9 @@
+pub type Shape = { side: f64 }
+
+impl Shape {
+  pub fn unit() -> Shape { Shape { side: 1.0 } }
+
+  pub fn area(self) -> f64 { self.side * self.side }
+
+  fn scale(self) -> f64 { self.side }
+}

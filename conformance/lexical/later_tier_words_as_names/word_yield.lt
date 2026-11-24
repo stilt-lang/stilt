@@ -1,0 +1,3 @@
+fn f() {
+  let yield = 1 //~ ERROR E0100
+}

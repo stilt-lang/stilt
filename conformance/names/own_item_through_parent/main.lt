@@ -1,0 +1,6 @@
+//~ rule: program.child-modules, program.no-cycles
+//~ run-output: "hello"
+
+use app.greet
+
+fn main() / io { greet.hello() }

@@ -1,0 +1,50 @@
+//~ rule: expressions.for-iterables, std.lists
+//~ stdout:
+//~ | 1a
+//~ | 2b
+//~ | a1
+//~ | b2
+//~ | p (1, 2.5) 10 0.5
+//~ | q (3, 4.5) 20 1.5
+//~ | 0 a
+//~ | 1 b
+//~ | 5 P { name: "p", at: (1, 2.5) }
+//~ | 6 P { name: "q", at: (3, 4.5) }
+//~ | 0 1 5
+//~ | 1 2 6
+//~ | [1, 2, 3, 4, 10, 20, 30]
+//~ | 1 3
+//~ | 2 2
+//~ | 3 1
+//~ | 9223372036854775806 7
+//~ | 9223372036854775807 8
+
+// Loops over the pairs of `zip` and `enumerate`: as many as the shorter list has, from the
+// lists as they were when the loop started, with elements of every layout, nested, and from
+// a start near the largest `i64`.
+type P = { name: str, at: (i64, f64) }
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  let ys = ["a", "b"]
+  for (x, y) in xs.zip(ys) { print("{x}{y}") }
+  for (y, x) in ys.zip(xs) { print("{y}{x}") }
+  let none: List<str> = []
+  for (x, y) in xs.zip(none) { print("never {x} {y}") }
+  let ps = [P { name: "p", at: (1, 2.5) }, P { name: "q", at: (3, 4.5) }]
+  for (p, (i, f)) in ps.zip([(10, 0.5), (20, 1.5)]) { print("{p.name} {p.at} {i} {f}") }
+  for (i, s) in ys.enumerate(0) { print("{i} {s}") }
+  for (i, p) in ps.enumerate(5) { print("{i} {p}") }
+  var zs = [1, 2, 3, 4]
+  for (i, z) in zs.enumerate(0) {
+    zs.push(z * 10)
+    if i == 2 { break }
+    print("{i} {z} {zs.len()}")
+  }
+  print("{zs}")
+  for (a, _) in xs.zip(xs) {
+    for (b, c) in xs.zip(xs.reversed()) { if a == b { print("{a} {c}") } }
+  }
+  let start = 9223372036854775806
+  for (i, x) in [7, 8].enumerate(start) { print("{i} {x}") }
+}

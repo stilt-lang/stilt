@@ -1,0 +1,47 @@
+//~ rule: lexical.continuing-expression
+//~ stdout:
+//~ | 6 -1 6 true true false true
+//~ | 3 5 true 1 8 7
+
+fn weight(
+  x: i64,
+) ->
+  i64 {
+  x
+}
+
+fn main() / io {
+  let sum = 1 +
+    2 +
+    3
+  let diff = 1 -
+    2
+  let product = 2 *
+    3
+  let both = true &&
+    true
+  let either = false ||
+    true
+  let equal = 1 ==
+    2
+  let less = 1 <
+    2
+  let bits = 1 |
+    2
+  let shifted = 5 <<
+    0
+  let opt: Option<bool> = None
+  let fallback = opt else
+    true
+  var x =
+    1
+  x +=
+    weight(7)
+  let picked = match x {
+    8 =>
+      7
+    _ => 0
+  }
+  print("{sum} {diff} {product} {both} {either} {equal} {less}")
+  print("{bits} {shifted} {fallback} {weight(1)} {x} {picked}")
+}

@@ -1,0 +1,7 @@
+//~ rule: declarations.unknown-names, declarations.qualified-variants
+
+use shapes
+
+fn f() -> shapes.Shape {
+  Circle(1.0) //~ ERROR E0211
+}

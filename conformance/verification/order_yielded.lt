@@ -1,0 +1,17 @@
+//~ tier: advanced
+//~ rule: projections.yield, facts.writes-through-calls
+//~ panic: bounds
+//~ panic-at: order_yielded.lt:10:3
+
+// The caller empties the list it is lent, before the write after the `yield`.
+fn whole(inout xs: List<i64>) -> inout List<i64> {
+  xs.push(0)
+  yield xs
+  xs[0] = 1
+}
+
+fn main() / io {
+  var ys = [5]
+  whole(inout ys).clear()
+  print("{ys}")
+}

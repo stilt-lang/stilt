@@ -1,0 +1,9 @@
+── SYNTAX ERROR ────────────── E0100_variable_outside_a_function.lt:1:1  [E0100]
+
+Stilt has no variable outside a function: a `const` never changes:
+
+  1 │ var counter = 0
+    │ ^^^
+
+A function changes what its caller gives it as `inout`, so state is passed, not
+shared.

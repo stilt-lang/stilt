@@ -1,0 +1,40 @@
+//~ rule: tests.generable-types, tests.growth-test, tests.composite-values, tests.minimal-values
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Kids = { name: str, kids: List<Kids> }
+
+type Empty = {}
+
+type Bin<T> = | Leaf2(T) | Node2(Bin<T>, Bin<T>)
+
+type A<T> = | X | Y(A<i64>)
+
+type Swap<T, U> = | Done | Next(Swap<U, T>)
+
+type Wrap<T> = | Wrap(List<T>)
+
+type Outer<T> = | Outer(Wrap<List<T>>)
+
+type Key = { k: str }
+
+impl Eq for Key {
+  fn eq(self, other: Key) -> bool { self.k.len() == other.k.len() }
+}
+
+impl Hash for Key {
+  fn hash(self) -> u64 { self.k.len().wrap_to_u64() }
+}
+
+/// prop: |b: bool, i: i8, j: i16, k: i32, l: i64, m: u8, n: u16, o: u32, p: u64| true //~ PASS
+/// prop: |f: f32, g: f64, s: str, u: ()| true //~ PASS
+/// prop: |t: (i64, str, (bool,)), xs: List<List<u8>>, m: Map<str, List<i64>>| true //~ PASS
+/// prop: |o: Option<i64>, r: Result<str, Ordering>, e: Empty| true //~ PASS
+/// prop: |t: Tree, k: Kids, m: Map<Key, Tree>| size(t) >= 0 && k.kids.len() >= 0 && m.len() >= 0 //~ PASS
+/// prop: |t: Bin<str>, a: A<bool>, s: Swap<i64, str>, o: Outer<u8>| true //~ PASS
+fn size(t: Tree) -> i64 {
+  match t {
+    Leaf => 0,
+    Node(l, _, r) => size(l) + 1 + size(r),
+  }
+}

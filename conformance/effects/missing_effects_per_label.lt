@@ -1,0 +1,9 @@
+//~ rule: effects.missing-effects
+
+fn quiet<e>(escaping g: fn() / e, s: str) {
+  g() //~ ERROR E0502
+  print(s) //~ ERROR E0502
+  g()
+  print(s)
+  raise s //~ ERROR E0502
+}

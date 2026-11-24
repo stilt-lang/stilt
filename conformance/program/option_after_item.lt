@@ -1,0 +1,6 @@
+//~ rule: syntax.programs, program.header-limits
+
+module main
+
+fn main() {}
+without panic //~ ERROR E0100

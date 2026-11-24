@@ -1,0 +1,15 @@
+//~ rule: expressions.if
+
+fn check(n: i64) / io {
+  if n < 0 { print("negative") }
+  if n > 100 { //~ ERROR E0323
+    n
+  }
+  if n == 0 { return }
+}
+
+fn sign(n: i64) -> i64 {
+  if n < 0 { //~ ERROR E0323
+    -1
+  }
+}

@@ -1,0 +1,13 @@
+── SYNTAX ERROR ──────────────────── E0100_catch_in_parentheses.lt:6:37  [E0100]
+
+Stilt writes a `catch` with arms, as `catch e => { … }`:
+
+  6 │   let v = try { risky() } catch (e) {
+    │                                     ^
+
+A `catch` takes arms like a `match`'s: a pattern, `=>` and the value.
+
+To fix it, write an arm:
+
+  6 │   let v = try { risky() } catch e => {
+    │                                 ~~~~

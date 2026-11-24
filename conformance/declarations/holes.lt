@@ -1,0 +1,11 @@
+//~ rule: declarations.function-declarations, declarations.typed-holes
+//~ run-output: "ready"
+
+fn later() -> i64 {
+  let a: i64 = ? //~ WARN W0300
+  a + ? //~ WARN W0300
+}
+
+fn unwritten(x: str) -> str = ? //~ WARN W0300
+
+fn main() / io { print("ready") }

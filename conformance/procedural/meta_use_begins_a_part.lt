@@ -1,0 +1,15 @@
+//~ tier: meta
+//~ rule: errors.parts, errors.part-reports, macros.meta-use
+
+// `meta` before `use` begins a part, though `meta` is a contextual keyword, so a part that
+// begins with it and breaks holds back only its own diagnostics: those of the part before it
+// are reported.
+fn before() -> i64 { missing } //~ ERROR E0211
+meta use nowhere
+ broken() -> i64 { 1 } //~ ERROR E0100
+
+use elsewhere //~ ERROR E0205
+meta use also_nowhere
+ again() -> i64 { 2 } //~ ERROR E0100
+
+fn main() {}

@@ -1,0 +1,11 @@
+── FACT BEYOND A `without` LIMIT ─────── E0204_panicking_callee.lt:3:60  [E0204]
+
+`ratio` can panic, through a division, but `share` says `without panic`:
+
+  3 │ pub fn share(part: i64, whole: i64) -> i64 without panic { ratio(part, whole) }
+    │                                                    ───── the limit
+    │                                                            ^^^^^^^^^^^^^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

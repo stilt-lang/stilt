@@ -1,0 +1,14 @@
+//~ tier: meta
+//~ rule: macros.tokens-and-code, macros.named-files
+//~ stdout:
+//~ | alpha, beta, gamma
+//~ | a "b" \c {d}
+//~ |
+
+// A file named by a use, read and lexed, and read as text.
+meta use reader
+
+fn main() / io {
+  print(", ".join(reader.words!("data/words.txt")))
+  print(reader.text!("data/note.txt"))
+}

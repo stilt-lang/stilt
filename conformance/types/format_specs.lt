@@ -1,0 +1,17 @@
+//~ rule: lexical.format-specs, std.width-fill-and-alignment, std.precision, std.integer-kinds, std.scientific-notation, std.invalid-specs
+
+fn report(name: str, ratio: f64, count: i64) -> str {
+  "{name:>10}|{ratio:.2}|{ratio:e}|{count:x}|{count:8b}|{name:*^12}"
+}
+
+fn hex_name(name: str) -> str {
+  "{name:x}" //~ ERROR E0325
+}
+
+fn fixed_count(count: i64) -> str {
+  "{count:.2}" //~ ERROR E0325
+}
+
+fn scientific_count(count: i64) -> str {
+  "{count:e}" //~ ERROR E0325
+}

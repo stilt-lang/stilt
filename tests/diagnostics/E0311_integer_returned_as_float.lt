@@ -1,0 +1,7 @@
+fn average(xs: List<i64>) -> f64 {
+  var total = 0
+  for x in xs { total += x }
+  total / xs.len()
+}
+
+fn main() / io { print("{average([1, 2])}") }

@@ -1,0 +1,40 @@
+//~ rule: std.show-output, std.deque, std.heap
+//~ stdout:
+//~ | Deque([1, 2, 3]) 3 Some(1) Some(3)
+//~ | Some(1) Some(2) Some(3) None
+//~ | Some(5) Some(4) Some(1) Some(3) Some(2) None None
+//~ | true true true false Deque([])
+//~ | Heap([1, 1, 2, 3]) Some(1)
+//~ | [Some(1), Some(1), Some(2), Some(3), None]
+//~ | true true Less Heap([])
+//~ | Deque(["a"]) Heap(["b"])
+
+use std.collections
+
+fn main() / io {
+  var d = collections.Deque.new()
+  d.push_back(2)
+  d.push_front(1)
+  d.push_back(3)
+  print("{d} {d.len()} {d.front()} {d.back()}")
+  var q = collections.Deque.from_list([1, 2, 3])
+  print("{q.pop_front()} {q.pop_front()} {q.pop_front()} {q.pop_front()}")
+  var e = collections.Deque.from_list([1, 2, 3])
+  e.push_front(4)
+  e.push_front(5)
+  print("{e.pop_front()} {e.pop_front()} {e.pop_front()} {e.pop_back()} {e.pop_back()} {e.pop_back()} {e.pop_front()}")
+  var built = collections.Deque.new()
+  built.push_front(2)
+  built.push_front(1)
+  let listed = collections.Deque.from_list([1, 2])
+  let empty: collections.Deque<i64> = collections.Deque.new()
+  print("{built == listed} {built.hash() == listed.hash()} {built.to_list() == [1, 2]} {built < listed} {empty}")
+  let h = collections.Heap.from_list([3, 1, 2, 1])
+  print("{h} {h.peek()}")
+  var g = h
+  print("{[g.pop(), g.pop(), g.pop(), g.pop(), g.pop()]}")
+  let other = collections.Heap.from_list([1, 2, 1, 3])
+  let none: collections.Heap<i64> = collections.Heap.new()
+  print("{h == other} {h.hash() == other.hash()} {Ord.compare(h, collections.Heap.from_list([2]))} {none}")
+  print("{collections.Deque.from_list(["a"])} {collections.Heap.from_list(["b"])}")
+}

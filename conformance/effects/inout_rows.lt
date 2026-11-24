@@ -1,0 +1,14 @@
+//~ rule: effects.inout-function-arguments
+
+fn replace(inout f: fn() / io) { f = || print("replaced") }
+
+fn run_quietly(f: fn()) { f() }
+
+fn main() / io {
+  var quiet: fn() = || ()
+  replace(inout quiet) //~ ERROR E0311
+  run_quietly(quiet)
+  var loud: fn() / io = || ()
+  replace(inout loud)
+  loud()
+}

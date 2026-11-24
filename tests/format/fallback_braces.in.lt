@@ -1,0 +1,30 @@
+// A block after `else`, in a let-else or an expression-level `else`, and the braces of a `catch`,
+// open on the line where the expression before them ends, and what they hold goes a level deeper
+// than that line. A fallback that isn't a block still breaks before its `else`, and a one-arm
+// `catch` whose body isn't a block before the `catch`, when the line doesn't fit.
+fn main() / io {
+  let n = "12".to_i64()
+    else {
+    eprint("not a number")
+    exit(2)
+  }
+  let [a, b] = pair(n)
+  else { return }
+  let c = cached(n)
+    else computed(n) else {
+    eprint("no value")
+    exit(2)
+  }
+  let total = try parse(text) catch e because "the order is empty" =>
+  {
+    eprint("no items")
+    0
+  }
+  let count = try parse(text)
+  catch {
+    _ => 0
+  }
+  let fallback = lookup_the_customer_name_in_the_table(customer_identifier) else default_customer_name
+  let quantity = try parse_the_number_of_items(the_text_of_the_order) catch _ => the_default_quantity
+  print("{a} {b} {c} {total} {count} {fallback} {quantity}")
+}

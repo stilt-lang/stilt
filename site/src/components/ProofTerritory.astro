@@ -1,0 +1,170 @@
+---
+// The proof map's picture of the model: each part (the modules under one name, as `Moves`) a
+// node sized by its declarations and filled by how many of them `soundness` rests on, drawn
+// above the parts it uses. Hovering a part lights its paths; clicking it draws its modules the
+// same way, and clicking a module lists its declarations for the explorer.
+import { NODE_HEIGHT, curve, layout } from "../lib/graph";
+import { proofMap, territory } from "../lib/proofmap";
+
+const map = proofMap()!;
+const { parts, uses } = territory(map);
+const width = (label: string) => Math.max(84, label.length * 7.4 + 30);
+const drawn = layout(parts.map((p) => ({ id: p.name, label: p.name, width: width(p.name) })), uses.map(([a, b]) => [a, b]));
+const share = (p: (typeof parts)[number]) => p.reached / Math.max(1, p.decls);
+const kind = (p: (typeof parts)[number]) =>
+  p.name === "Counterexamples" || p.name === "Examples" ? "aside" : p.reached === 0 ? "apart" : "core";
+const neighbours = parts.map((_, i) => drawn.edges.filter(([a, b]) => a === i || b === i).map(([a, b]) => (a === i ? b : a)));
+---
+
+<figure class="territory" data-parts={JSON.stringify(parts.map((p) => p.name))}>
+  <div class="legend">
+    <span><i class="sw core" /> rests under <code>soundness</code>, filled by the share of it that does</span>
+    <span><i class="sw apart" /> proved apart</span>
+    <span><i class="sw aside" /> examples and counterexamples</span>
+    <span class="hint">Hover a part to see its paths; click it to open it.</span>
+  </div>
+  <div class="canvas">
+    <svg width={drawn.width + 24} height={drawn.height + 8} viewBox={`-12 0 ${drawn.width + 24} ${drawn.height + 8}`} role="img" aria-label="The parts of the Lean model and the uses between them">
+      <g class="edges">
+        {drawn.edges.map(([a, b]) => <path d={curve(drawn.nodes[a], drawn.nodes[b])} data-a={a} data-b={b} />)}
+      </g>
+      {drawn.nodes.map((n, i) => (
+        <g class={`node ${kind(parts[i])}`} data-i={i} data-near={neighbours[i].join(",")} tabindex="0" role="button" aria-label={`${n.label}: ${parts[i].decls} declarations`}>
+          <rect x={n.x - n.width / 2} y={n.y - NODE_HEIGHT / 2} width={n.width} height={NODE_HEIGHT} rx="9" />
+          <rect class="fill" x={n.x - n.width / 2} y={n.y - NODE_HEIGHT / 2} width={n.width * share(parts[i])} height={NODE_HEIGHT} rx="9" />
+          <text x={n.x} y={n.y - 2}>{n.label}</text>
+          <text class="count" x={n.x} y={n.y + 13}>{parts[i].decls}{parts[i].reached > 0 && parts[i].reached < parts[i].decls ? ` · ${Math.round(100 * share(parts[i]))}%` : ""}</text>
+        </g>
+      ))}
+    </svg>
+  </div>
+  <div class="zoom" hidden>
+    <header><h3 /><button type="button" class="close">Close</button></header>
+    <p class="about" />
+    <div class="canvas small" />
+    <div class="module" />
+  </div>
+</figure>
+
+<script>
+  import { NODE_HEIGHT, curve, layout } from "../lib/graph";
+
+  interface D { n: string; k: string; m: string; s: number[]; b: number[]; r: boolean }
+  const figure = document.querySelector<HTMLElement>(".territory")!;
+  const svg = figure.querySelector("svg")!;
+  const zoom = figure.querySelector<HTMLElement>(".zoom")!;
+  const names: string[] = JSON.parse(figure.dataset.parts ?? "[]");
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+  let decls: D[] | null = null;
+  const loading = fetch("/design/proof-map/map.json").then((r) => r.json()).then((m) => { decls = m.decls; });
+
+  function light(root: SVGSVGElement, i: number | null) {
+    root.classList.toggle("lit", i !== null);
+    for (const g of root.querySelectorAll<SVGGElement>(".node")) {
+      const near = (g.dataset.near ?? "").split(",").filter(Boolean).map(Number);
+      g.classList.toggle("on", i !== null && (Number(g.dataset.i) === i || near.includes(i)));
+    }
+    for (const p of root.querySelectorAll<SVGPathElement>(".edges path")) {
+      p.classList.toggle("on", i !== null && (Number(p.dataset.a) === i || Number(p.dataset.b) === i));
+    }
+  }
+
+  function hover(root: SVGSVGElement) {
+    for (const g of root.querySelectorAll<SVGGElement>(".node")) {
+      g.addEventListener("mouseenter", () => light(root, Number(g.dataset.i)));
+      g.addEventListener("mouseleave", () => light(root, null));
+    }
+  }
+
+  /** The map of one part: its modules, drawn above the modules of the part they use. */
+  function open(part: string) {
+    if (!decls) return;
+    const ds = decls;
+    const modules = [...new Set(ds.filter((d) => d.m.split(".")[0] === part).map((d) => d.m))].sort();
+    const at = new Map(modules.map((m, i) => [m, i]));
+    const pairs = new Set<string>();
+    for (const d of ds) {
+      const a = at.get(d.m);
+      if (a === undefined) continue;
+      for (const j of [...d.s, ...d.b]) { const b = at.get(ds[j].m); if (b !== undefined && b !== a) pairs.add(`${a},${b}`); }
+    }
+    const short = (m: string) => (m === part ? part : m.slice(part.length + 1));
+    const drawn = layout(modules.map((m) => ({ id: m, label: short(m), width: Math.max(84, short(m).length * 7.4 + 30) })), [...pairs].map((p) => p.split(",").map(Number) as [number, number]));
+    const count = (m: string) => ds.filter((d) => d.m === m).length;
+    const reached = (m: string) => ds.filter((d) => d.m === m && d.r).length;
+    const near = (i: number) => drawn.edges.filter(([a, b]) => a === i || b === i).map(([a, b]) => (a === i ? b : a)).join(",");
+    zoom.querySelector("h3")!.textContent = part;
+    zoom.querySelector(".about")!.textContent = `${modules.length} modules, ${ds.filter((d) => d.m.split(".")[0] === part).length} declarations. Click a module for its declarations.`;
+    zoom.querySelector(".canvas")!.innerHTML = `<svg width="${drawn.width + 24}" height="${drawn.height + 8}" viewBox="-12 0 ${drawn.width + 24} ${drawn.height + 8}">
+      <g class="edges">${drawn.edges.map(([a, b]) => `<path d="${curve(drawn.nodes[a], drawn.nodes[b])}" data-a="${a}" data-b="${b}"/>`).join("")}</g>
+      ${drawn.nodes.map((n, i) => `<g class="node ${reached(modules[i]) ? "core" : "apart"}" data-i="${i}" data-near="${near(i)}" data-m="${esc(modules[i])}" tabindex="0" role="button">
+        <rect x="${n.x - n.width / 2}" y="${n.y - NODE_HEIGHT / 2}" width="${n.width}" height="${NODE_HEIGHT}" rx="9"/>
+        <rect class="fill" x="${n.x - n.width / 2}" y="${n.y - NODE_HEIGHT / 2}" width="${(n.width * reached(modules[i])) / Math.max(1, count(modules[i]))}" height="${NODE_HEIGHT}" rx="9"/>
+        <text x="${n.x}" y="${n.y - 2}">${esc(n.label)}</text><text class="count" x="${n.x}" y="${n.y + 13}">${count(modules[i])}</text></g>`).join("")}
+    </svg>`;
+    const inner = zoom.querySelector<SVGSVGElement>(".canvas svg")!;
+    hover(inner);
+    for (const g of inner.querySelectorAll<SVGGElement>(".node")) g.addEventListener("click", () => module(g.dataset.m!));
+    zoom.querySelector(".module")!.innerHTML = "";
+    zoom.hidden = false;
+    zoom.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  /** The declarations of a module, theorems first and those under `soundness` before the rest. */
+  function module(m: string) {
+    const ds = decls!.filter((d) => d.m === m).sort((a, b) => Number(b.r) - Number(a.r) || Number(b.k === "theorem") - Number(a.k === "theorem") || a.n.localeCompare(b.n));
+    zoom.querySelector(".module")!.innerHTML = `<h4>${esc(m)}</h4><ul>${ds.map((d) => `<li><a href="#decl=${encodeURIComponent(d.n)}" class="${d.r ? "in" : ""}"><span class="k">${d.k}</span><code>${esc(d.n)}</code></a></li>`).join("")}</ul>`;
+  }
+
+  hover(svg);
+  for (const g of svg.querySelectorAll<SVGGElement>(".node")) {
+    const go = () => loading.then(() => open(names[Number(g.dataset.i)]));
+    g.addEventListener("click", go);
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+  }
+  zoom.querySelector(".close")!.addEventListener("click", () => { zoom.hidden = true; });
+  zoom.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest("a[href^='#decl=']")) document.getElementById("explore")?.scrollIntoView({ behavior: "smooth" });
+  });
+</script>
+
+<style>
+  .territory { margin: 1.25rem 0 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.8125rem; color: var(--ink-soft); margin-bottom: 0.625rem; }
+  .legend .hint { color: var(--muted); }
+  .sw { display: inline-block; width: 0.875rem; height: 0.625rem; border-radius: 3px; margin-right: 0.3rem; vertical-align: -0.05rem; border: 1.5px solid; }
+  .sw.core { background: color-mix(in srgb, var(--pass) 55%, transparent); border-color: var(--pass); }
+  .sw.apart { border-color: var(--sky); }
+  .sw.aside { border-color: var(--rule-firm); border-style: dashed; }
+  .canvas { border: 1px solid var(--rule); border-radius: 0.625rem; overflow: auto; max-height: 78vh; background: var(--surface); padding: 0.5rem 0; }
+  .canvas.small { max-height: 60vh; }
+  .canvas :global(svg) { display: block; margin: 0 auto; }
+  .canvas :global(.edges path) { fill: none; stroke: var(--rule-firm); stroke-width: 1.25; transition: opacity 0.15s; }
+  .canvas :global(svg.lit .edges path) { opacity: 0.12; }
+  .canvas :global(svg.lit .edges path.on) { opacity: 1; stroke: var(--sky); stroke-width: 2; }
+  .canvas :global(.node) { cursor: pointer; transition: opacity 0.15s; }
+  .canvas :global(svg.lit .node) { opacity: 0.3; }
+  .canvas :global(svg.lit .node.on) { opacity: 1; }
+  .canvas :global(.node rect) { fill: var(--ground); stroke-width: 1.5; }
+  .canvas :global(.node rect.fill) { stroke: none; fill: color-mix(in srgb, var(--pass) 28%, transparent); pointer-events: none; }
+  .canvas :global(.node.core rect:first-child) { stroke: var(--pass); }
+  .canvas :global(.node.apart rect:first-child) { stroke: var(--sky); }
+  .canvas :global(.node.aside rect:first-child) { stroke: var(--rule-firm); stroke-dasharray: 4 3; }
+  .canvas :global(.node:hover rect:first-child), .canvas :global(.node:focus rect:first-child) { stroke-width: 2.5; }
+  .canvas :global(.node text) { text-anchor: middle; font-family: var(--sans); font-size: 13px; font-weight: 600; fill: var(--ink); pointer-events: none; }
+  .canvas :global(.node text.count) { font-family: var(--mono); font-size: 10.5px; font-weight: 400; fill: var(--muted); }
+  .canvas :global(.node:focus) { outline: none; }
+  .zoom { margin-top: 1.25rem; }
+  .zoom header { display: flex; align-items: baseline; justify-content: space-between; }
+  .zoom h3 { margin: 0; font-size: 1.125rem; }
+  .zoom .close { font: inherit; font-size: 0.8125rem; color: var(--muted); background: none; border: 1px solid var(--rule); border-radius: 0.375rem; padding: 0.125rem 0.5rem; cursor: pointer; }
+  .zoom .about { margin: 0.25rem 0 0.625rem; font-size: 0.875rem; color: var(--muted); }
+  .zoom :global(.module h4) { margin: 1rem 0 0.375rem; font-size: 0.9375rem; font-family: var(--mono); }
+  .zoom :global(.module ul) { list-style: none; padding: 0; margin: 0; columns: 2 18rem; column-gap: 1.5rem; }
+  .zoom :global(.module li) { font-size: 0.8125rem; break-inside: avoid; }
+  .zoom :global(.module a) { text-decoration: none; color: var(--ink-soft); }
+  .zoom :global(.module a.in) { color: var(--ink); }
+  .zoom :global(.module a:hover code) { color: var(--sky); }
+  .zoom :global(.module code) { background: none; padding: 0; font-size: 0.75rem; }
+  .zoom :global(.k) { display: inline-block; width: 5rem; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+</style>

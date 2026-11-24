@@ -1,0 +1,30 @@
+//~ rule: declarations.function-declarations, patterns.guards, std.str-building
+//~ stdout:
+//~ | A(0, n): 1 2 3 4 5
+//~ | A(1, n): 2 3 4 5 6
+//~ | A(2, n): 3 5 7 9 11
+//~ | A(3, n): 5 13 29 61 125
+//~ | A(2, 3) = 9
+//~ | A(3, 3) = 61
+
+// Rosetta Code, Ackermann function: A(m, n) is n + 1 when m is 0, A(m - 1, 1) when n is 0, and
+// A(m - 1, A(m, n - 1)) otherwise. Its values for m from 0 to 3 are A(0, n) = n + 1,
+// A(1, n) = n + 2, A(2, n) = 2n + 3 and A(3, n) = 2^(n + 3) - 3.
+
+fn ackermann(m: i64, n: i64) -> i64 {
+  match (m, n) {
+    (0, n) => n + 1
+    (m, 0) => ackermann(m - 1, 1)
+    (m, n) if m > 0 => ackermann(m - 1, ackermann(m, n - 1))
+    _ => panic("negative argument")
+  }
+}
+
+fn main() / io {
+  for m in 0..4 {
+    let row = List.generate(5, |n| "{ackermann(m, n)}")
+    print("A({m}, n): {" ".join(row)}")
+  }
+  print("A(2, 3) = {ackermann(2, 3)}")
+  print("A(3, 3) = {ackermann(3, 3)}")
+}

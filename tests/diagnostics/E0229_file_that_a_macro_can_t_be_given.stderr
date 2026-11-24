@@ -1,0 +1,15 @@
+── FILE THAT A MACRO CAN'T BE GIVEN ────────────────────── main.lt:4:24  [E0229]
+
+The package's directory has no entry named `Words.txt`, but one named
+`words.txt`:
+
+  4 │   let n = lines.count!("Words.txt")
+    │                        ^^^^^^^^^^^
+
+A macro reads only a regular UTF-8 file inside the package, named by a relative
+path spelled exactly as on disk, so that every machine builds the same program.
+
+To fix it, write `words.txt`:
+
+  4 │   let n = lines.count!("words.txt")
+    │                        ~~~~~~~~~~~

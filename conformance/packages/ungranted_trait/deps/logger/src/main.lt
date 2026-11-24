@@ -1,0 +1,11 @@
+pub trait Log {
+  fn log(self, s: str) / io
+}
+
+pub type Console = { prefix: str }
+
+pub fn console() -> Console { Console { prefix: "> " } }
+
+impl Log for Console {
+  fn log(self, s: str) / io { print("{self.prefix}{s}") }
+}

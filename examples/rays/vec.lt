@@ -1,0 +1,42 @@
+// Vectors of three components, which are points, directions and colors.
+
+/// A vector of three components, stored inline wherever it is held.
+pub type Vec3 = { x: f64, y: f64, z: f64 }
+
+/// The vector of three components.
+/// ex: v(1.0, 2.0, 3.0).y == 2.0
+pub fn v(x: f64, y: f64, z: f64) -> Vec3 { Vec3 { x, y, z } }
+
+impl Vec3 {
+  /// The sum of two vectors.
+  /// ex: v(1.0, 2.0, 3.0).plus(v(1.0, 1.0, 1.0)) == v(2.0, 3.0, 4.0)
+  pub fn plus(self, o: Vec3) -> Vec3 { v(self.x + o.x, self.y + o.y, self.z + o.z) }
+
+  /// The difference of two vectors.
+  /// ex: v(1.0, 2.0, 3.0).minus(v(1.0, 1.0, 1.0)) == v(0.0, 1.0, 2.0)
+  pub fn minus(self, o: Vec3) -> Vec3 { v(self.x - o.x, self.y - o.y, self.z - o.z) }
+
+  /// The vector scaled by `t`.
+  /// ex: v(1.0, 2.0, 3.0).times(2.0) == v(2.0, 4.0, 6.0)
+  pub fn times(self, t: f64) -> Vec3 { v(self.x * t, self.y * t, self.z * t) }
+
+  /// The product of two colors, component by component.
+  /// ex: v(0.5, 1.0, 0.0).tint(v(0.5, 0.5, 0.5)) == v(0.25, 0.5, 0.0)
+  pub fn tint(self, o: Vec3) -> Vec3 { v(self.x * o.x, self.y * o.y, self.z * o.z) }
+
+  /// The dot product.
+  /// ex: v(1.0, 2.0, 3.0).dot(v(4.0, 5.0, 6.0)) == 32.0
+  pub fn dot(self, o: Vec3) -> f64 { self.x * o.x + self.y * o.y + self.z * o.z }
+
+  /// The length.
+  /// ex: v(3.0, 4.0, 0.0).length() == 5.0
+  pub fn length(self) -> f64 { self.dot(self).sqrt() }
+
+  /// The vector of length one in the same direction.
+  /// ex: v(0.0, 0.0, 2.0).unit() == v(0.0, 0.0, 1.0)
+  pub fn unit(self) -> Vec3 { self.times(1.0 / self.length()) }
+
+  /// The direction `self` takes after bouncing off a surface whose normal is `n`.
+  /// ex: v(1.0, -1.0, 0.0).reflected(v(0.0, 1.0, 0.0)) == v(1.0, 1.0, 0.0)
+  pub fn reflected(self, n: Vec3) -> Vec3 { self.minus(n.times(2.0 * self.dot(n))) }
+}

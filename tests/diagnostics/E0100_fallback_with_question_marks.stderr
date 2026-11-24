@@ -1,0 +1,14 @@
+── SYNTAX ERROR ──────────── E0100_fallback_with_question_marks.lt:3:22  [E0100]
+
+Stilt gives a missing value's fallback with `else`, as `x else 0`:
+
+  3 │   let x = xs.first() ?? 0
+    │                      ^
+
+`else` after an `Option` gives the value inside it, or the fallback when it is
+`None`.
+
+To fix it, write `else`:
+
+  3 │   let x = xs.first() else 0
+    │                      ~~~~

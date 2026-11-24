@@ -1,0 +1,3 @@
+fn first(f: fn<T, U>(T) -> T) -> i64 { f(1) }
+
+fn main() {}

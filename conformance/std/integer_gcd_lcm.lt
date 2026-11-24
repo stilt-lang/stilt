@@ -1,0 +1,16 @@
+//~ rule: std.integers
+//~ stdout:
+//~ | 6 6 6 6 0 7 7
+//~ | 12 12 0 0 21
+//~ | 4611686018427387904 None
+//~ | 64 64 1
+
+fn main() / io {
+  print("{i64.gcd(12, 18)} {i64.gcd(-12, 18)} {i64.gcd(12, -18)} {i64.gcd(-12, -18)} {i64.gcd(0, 0)} {i64.gcd(7, 0)} {i64.gcd(0, -7)}")
+  print("{i64.lcm(4, 6)} {i64.lcm(-4, 6)} {i64.lcm(0, 6)} {i64.lcm(5, 0)} {i64.lcm(3, 7)}")
+  let half = i64.MIN / 2
+  print("{i64.lcm(half, 2)} {i64.MAX.checked_add(i64.gcd(1, 1))}")
+  let a: i8 = -64
+  let b: u8 = 64
+  print("{a.gcd(0)} {b.lcm(32)} {u64.gcd(u64.MAX, 2)}")
+}

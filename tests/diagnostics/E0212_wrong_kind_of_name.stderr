@@ -1,0 +1,10 @@
+── WRONG KIND OF NAME ──────────────── E0212_wrong_kind_of_name.lt:3:24  [E0212]
+
+`Point` is a type, not a value:
+
+  3 │ fn origin() -> Point { Point(1, 2) }
+    │                        ^^^^^
+
+A name is a value, a type, a trait or a module, and this one is of another kind
+than the place needs. A record is built with its fields, as `Point { x: 1, y: 2
+}`.

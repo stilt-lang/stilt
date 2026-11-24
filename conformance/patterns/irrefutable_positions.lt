@@ -1,0 +1,32 @@
+//~ rule: expressions.closures, expressions.for-iterables, patterns.irrefutable-positions
+//~ run-output: "3 [1, 2] 0 5 [3, 7]"
+
+type UserId = | UserId(i64)
+
+fn sum_ids(users: List<UserId>) -> i64 {
+  var sum = 0
+  for UserId(n) in users { sum += n }
+  sum
+}
+
+fn all(xs: List<i64>) -> List<i64> {
+  let [..rest] = xs
+  rest
+}
+
+fn ignored(xs: List<i64>) -> i64 {
+  let [..] = xs
+  0
+}
+
+fn either(pair: (i64, i64)) -> i64 {
+  let (x, _) | (_, x) = pair
+  x
+}
+
+fn totals(entries: List<(i64, UserId)>) -> List<i64> { entries.map(|(a, UserId(b))| a + b) }
+
+fn main() / io {
+  let ids = sum_ids([UserId(1), UserId(2)])
+  print("{ids} {all([1, 2])} {ignored([4])} {either((5, 6))} {totals([(1, UserId(2)), (3, UserId(4))])}")
+}

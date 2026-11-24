@@ -1,0 +1,15 @@
+//~ tier: meta
+//~ rule: macros.running
+//~ run-output: "same"
+
+// A macro's body runs the natives of `str`, of the integer types, of `f64`, of `List` and of
+// `Map` as the program's run does: the text that `tools.all` computes while the
+// macro expands is the text it computes when `main` runs.
+meta use tools
+use tools
+
+fn main() / io {
+  let expanded = tools.expanded!()
+  let run = tools.all()
+  if expanded == run { print("same") } else { print("expanded:\n{expanded}\nrun:\n{run}") }
+}

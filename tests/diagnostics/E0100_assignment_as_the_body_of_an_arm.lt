@@ -1,0 +1,8 @@
+fn main() / io {
+  var n = 0
+  match 3 {
+    3 => n = 1
+    _ => {}
+  }
+  print("{n}")
+}

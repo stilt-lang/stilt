@@ -1,0 +1,14 @@
+── `without` GIVEN TWICE ────────────── E0202_limit_given_twice.lt:2:23  [E0202]
+
+`panic` is already named in this `without`:
+
+  2 │ without panic, alloc, panic
+    │                       ^^^^^
+
+A module's header holds one `without`, which names each limit once, as `without
+panic, alloc`.
+
+To fix it, delete the repeated `panic`:
+
+  2 │ without panic, alloc, panic
+    │                     -------

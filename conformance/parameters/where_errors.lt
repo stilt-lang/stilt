@@ -1,0 +1,11 @@
+//~ tier: advanced
+//~ rule: traits.where
+
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+  // A trait's function can't bound what its trait leaves open.
+  fn smallest<C: Collection>(self, other: C) -> Option<C.Item> where C.Item: Ord //~ ERROR E0336
+}
+
+// A bound on a plain type parameter goes beside it.
+fn shown<T>(x: T) -> str where T: Show { "{x}" } //~ ERROR E0336

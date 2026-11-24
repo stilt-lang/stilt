@@ -1,0 +1,163 @@
+// Scale projects: directory programs of many modules that import one another,
+// whose modules are csmith programs without `main`.
+
+use code
+use context
+use csmith
+use pick
+use ty
+
+/// A module of a scale project, as the modules that import it see it: the
+/// name that `use` binds, its name as `use` writes it, its types and its
+/// `pub` functions, whose names, and the names of the types in them, are
+/// qualified, and the modules that a module importing it must import too, so
+/// that it can name every type in these items: this module, and the modules
+/// whose types these items name, with what those need.
+type Exported = {
+  name: str,
+  path: str,
+  types: List<(str, ty.Decl)>,
+  functions: List<context.FnSig>,
+  needs: List<str>,
+}
+
+/// The module that declares the error type. Every other module imports it.
+const ERRORS: str = "errors"
+
+/// `name` as other modules write it. A name without a qualifier is an item of
+/// the module being generated, `m`.
+/// ex: qualify("mod3", "T4") == "mod3.T4" && qualify("mod3", "mod1.T2") == "mod1.T2"
+fn qualify(m: str, name: str) -> str { if name.contains(".") { name } else { "{m}.{name}" } }
+
+/// ex: home("mod12.T4") == "mod12"
+fn home(name: str) -> str { (name.split_once(".") else unreachable()).0 }
+
+fn qualify_ty(m: str, t: ty.Ty) -> ty.Ty { ty.map_named(t, |name| qualify(m, name)) }
+
+fn qualify_decl(m: str, d: ty.Decl) -> ty.Decl {
+  match d {
+    Record(fields) => ty.Record(fields.map(|(f, t)| (f, qualify_ty(m, t))))
+    Variants(cases) => ty.Variants(
+      cases.map(|(c, payload)| (qualify(m, c), payload.map(|t| qualify_ty(m, t)))),
+    )
+  }
+}
+
+fn qualify_fn(m: str, f: context.FnSig) -> context.FnSig {
+  context.FnSig {
+    fname: qualify(m, f.fname),
+    params: f.params.map(|(passed, t)| (passed, qualify_ty(m, t))),
+    ret: qualify_ty(m, f.ret),
+    raises: f.raises,
+    cost: f.cost,
+  }
+}
+
+/// The modules whose types the qualified items name.
+fn named_modules(types: List<(str, ty.Decl)>, functions: List<context.FnSig>) -> List<str> {
+  var named = []
+  for (_, d) in types {
+    match d {
+      Record(fields) => for (_, t) in fields { named.extend(ty.named(t)) }
+      Variants(cases) => for (_, payload) in cases {
+        for t in payload { named.extend(ty.named(t)) }
+      }
+    }
+  }
+  for f in functions {
+    named.extend(ty.named(f.ret))
+    for (_, t) in f.params { named.extend(ty.named(t)) }
+  }
+  named.map(home).sorted().deduped()
+}
+
+/// What a module that imports `modules` can name: their types and `pub`
+/// functions, and the `use` declarations that import them, in the order they
+/// were generated. `before` is latest first.
+fn import(
+  inout p: context.Program,
+  before: List<Exported>,
+  modules: List<str>,
+) -> List<(i64, str)> {
+  let imported = before.reversed().filter(|m| modules.contains(m.name))
+  p.decls = List.flatten(imported.map(.types))
+  p.fns = List.flatten(imported.map(.functions))
+  code.line("use {ERRORS}").concat(imported.map(|m| (0, "use {m.path}")))
+}
+
+/// What a new module imports: a few of the modules before it, most of them
+/// recent, since code mostly uses its neighbours, with what those need.
+fn imports(inout r: pick.Rng, before: List<Exported>) -> List<str> {
+  if before.is_empty() { return [] }
+  let recent = before.take(16)
+  let n = pick.between(inout r, 1, 5)
+  var needs = []
+  for _ in 0..n {
+    let pool = if pick.chance(inout r, 0.6) { recent } else { before }
+    needs.extend(pick.one(inout r, pool).needs)
+  }
+  needs.sorted().deduped()
+}
+
+/// Module `index` of a scale project, and how its importers see it. Modules
+/// are grouped sixteen to a directory.
+fn scale_module(
+  inout p: context.Program,
+  before: List<Exported>,
+  index: i64,
+) -> (Exported, List<List<(i64, str)>>) {
+  let name = "mod{index}"
+  let path = "part{index / 16}.{name}"
+  let modules = imports(inout p.r, before)
+  var items = [import(inout p, before, modules)]
+  let types = pick.between(inout p.r, 1, 4)
+  for _ in 0..types { items.push(csmith.type_decl(inout p, true)) }
+  let count = pick.between(inout p.r, 3, 10)
+  var functions = []
+  for _ in 0..count {
+    let public = pick.chance(inout p.r, 0.7)
+    let (f, lines) = csmith.function(inout p, 2000, public)
+    if public { functions.push(qualify_fn(name, f)) }
+    items.push(lines)
+  }
+  let own = p.decls.filter(|(n, _)| !n.contains(".")).map(
+    |(n, d)| (qualify(name, n), qualify_decl(name, d)),
+  )
+  var needs = [name]
+  for k in named_modules(own, functions) {
+    if k == name { continue }
+    let m = before.find(|m| m.name == k) else unreachable()
+    needs.extend(m.needs)
+  }
+  (Exported { name, path, types: own, functions, needs: needs.sorted().deduped() }, items)
+}
+
+/// A file of the project: its path from the project's root, and its text.
+fn file(path: str, items: List<List<(i64, str)>>) -> (str, str) {
+  (path, "\n".join(items.map(code.render)))
+}
+
+/// A scale project from `seed`, of at least `lines` lines: the module that
+/// declares the error type, modules that import one another in an acyclic
+/// graph, and `main`, which imports the last eight of them. Each file comes
+/// with its path from the project's root.
+pub fn project(seed: i64, lines: i64) -> List<(str, str)> {
+  let variants = context.FAULT_VARIANTS.map(|(c, payload)| (qualify(ERRORS, c), payload))
+  var p = context.program(pick.make(seed), qualify(ERRORS, context.FAULT), variants)
+  let first = file("{ERRORS}.lt", [code.line("pub {context.FAULT_DECL}")])
+  var total = first.1.count("\n")
+  var files = [first]
+  var before = []
+  while total < lines {
+    let (m, items) = scale_module(inout p, before, before.len())
+    let f = file("{m.path.replace(".", "/")}.lt", items)
+    total += f.1.count("\n")
+    files.push(f)
+    before = [m].concat(before)
+  }
+  var top = []
+  for m in before.take(8) { top.extend(m.needs) }
+  let uses = import(inout p, before, top.sorted().deduped())
+  files.push(file("main.lt", [uses, csmith.main_fn(inout p)]))
+  files
+}

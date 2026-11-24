@@ -1,0 +1,3 @@
+pub fn parse() -> i64 { helper() }
+
+fn helper() -> i64 { 1 }

@@ -1,0 +1,22 @@
+//~ rule: effects.marking, effects.catch, effects.catch-alls-need-reason, errors.phases
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> { raise Missing }
+
+fn both(key: str) -> i64 / raise<Failure> {
+  let a = fetch(key) //~ ERROR E0505
+  try fetch(key) catch { //~ ERROR E0329
+    Missing => a
+  }
+}
+
+fn hidden_warning(key: str) -> i64 / raise<Failure> {
+  let a = fetch(key) //~ ERROR E0505
+  try fetch(key) catch _ => a
+}
+
+fn type_error_first(key: str) -> i64 / raise<Failure> {
+  let n: str = 1 //~ ERROR E0311
+  fetch(key)
+}

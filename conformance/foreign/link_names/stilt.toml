@@ -1,0 +1,6 @@
+[package]
+name = "names"
+link = ["a b"] # //~ ERROR E0600
+
+[dependencies]
+cl = { path = "deps/cl", may = ["unsafe", "unsafe"] } # //~ ERROR E0600

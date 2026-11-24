@@ -1,0 +1,17 @@
+//~ rule: facts.spelling, facts.io-and-capabilities
+//~ run-output: "1 2 3 4 5 6 7 8"
+
+// The capabilities are limits only after `without`: elsewhere they are names.
+fn pass<fs>(escaping f: fn() -> i64 / fs) -> i64 / fs { f() }
+
+fn net(clock: i64) -> i64 { clock + 1 }
+
+fn main() / io {
+  let env = 2
+  let console = 3
+  let rand = 4
+  let spawn = 5
+  let fs = pass(|| 6)
+  let clock = 7
+  print("{net(0)} {env} {console} {rand} {spawn} {fs} {clock} {clock + 1}")
+}

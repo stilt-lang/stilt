@@ -1,0 +1,25 @@
+//~ rule: effects.non-escaping-parameters, effects.paired-row-variables, effects.catch-around-row-variables
+//~ stdout:
+//~ | parsing 7
+//~ | parsing x
+//~ | 7 0
+
+fn parse(s: str) -> i64 / raise<str> { s.to_i64() else raise "not a number: {s}" }
+
+// `raise<E>` in the row of `f` is the failure that `or_zero` handles; the
+// argument's other effects, here `io`, pass through.
+fn or_zero<E>(f: fn() -> i64 / raise<E>) -> i64 {
+  try f() catch _ because "a failure counts as zero" => 0
+}
+
+fn main() / io {
+  let a = or_zero(|| {
+    print("parsing 7")
+    try parse("7")
+  })
+  let b = or_zero(|| {
+    print("parsing x")
+    try parse("x")
+  })
+  print("{a} {b}")
+}

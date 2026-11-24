@@ -1,0 +1,9 @@
+//~ rule: types.no-type-arguments
+
+fn parse(s: str) -> i64 {
+  0
+}
+
+fn call() -> i64 {
+  parse<i64>("1") //~ ERROR E0100
+}

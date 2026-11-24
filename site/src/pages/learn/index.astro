@@ -1,0 +1,64 @@
+---
+// The guide's front page: its introduction, then its contents in the groups of the guide's
+// README (docs/guide/README.md), each document with what the README says of it, then the
+// README's notes on running a program and on its examples.
+import Doc from "../../layouts/Doc.astro";
+import { docs, groups } from "../../lib/map";
+import { render } from "../../lib/markdown";
+import { sidebar } from "../../lib/nav";
+import { read } from "../../lib/repo";
+
+const README = "docs/guide/README.md";
+const index = docs().get(README)!;
+const inline = (text: string) => render(text, { from: README }).html.replace(/<\/?p>/g, "");
+const listed = groups(README).map((g) => ({
+  heading: g.heading,
+  entries: g.entries.map((e) => ({ ...e, blurb: inline(e.blurb) })),
+}));
+const parts = read(README).split(/\n(?=## )/);
+const grouped = new Set(groups(README).map((g) => g.heading));
+const intro = render(parts[0], { from: README, untitled: true }).html;
+// The notes after the contents, and each group's own sentence, from the README.
+const notes = parts.filter((p) => p.startsWith("## ") && !grouped.has(p.slice(3, p.indexOf("\n")).trim()));
+const { html, headings: noted } = render(notes.join("\n"), { from: README });
+const slug = (text: string) => text.toLowerCase().replaceAll(" ", "-");
+const headings = [...listed.map((g) => ({ depth: 2, id: slug(g.heading), text: g.heading })), ...noted];
+const lead = new Map(
+  parts
+    .filter((p) => grouped.has(p.slice(3, p.indexOf("\n")).trim()))
+    .map((p) => [p.slice(3, p.indexOf("\n")).trim(), /\n\n([^|\n][^\n]*)\n/.exec(p)?.[1] ?? ""]),
+);
+---
+
+<Doc title="Learn Stilt" section="learn" href={index.url} blocks={sidebar("learn")} headings={headings}>
+  <h1 slot="title" class="title">Learn Stilt</h1>
+  <Fragment set:html={intro} />
+  {
+    listed.map((g) => (
+      <section class="group">
+        <h2 id={slug(g.heading)}>{g.heading}</h2>
+        {lead.get(g.heading) && <p set:html={inline(lead.get(g.heading)!)} />}
+        <dl>
+          {g.entries.map((e) => (
+            <div>
+              <dt><a class="go" href={e.doc.url}>{e.label}</a></dt>
+              <dd set:html={e.blurb} />
+            </div>
+          ))}
+        </dl>
+      </section>
+    ))
+  }
+  <Fragment set:html={html} />
+</Doc>
+
+<style>
+  .title { margin-bottom: 1.25rem; font-size: 1.75rem; line-height: 1.25; letter-spacing: -0.02em; }
+  .group { margin-top: 3rem; }
+  .group h2 { font-size: 1.1875rem; line-height: 1.4; }
+  .group p { margin-top: 0.5rem; }
+  .group dl { display: flex; flex-direction: column; gap: 0.875rem; margin-top: 1rem; }
+  .group dd { margin: 0.125rem 0 0; font-size: 0.9375rem; line-height: 1.55; color: var(--muted); }
+  .group dd :global(code) { font-size: 0.875em; }
+  .group .go { font-weight: 500; }
+</style>

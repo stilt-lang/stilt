@@ -1,0 +1,32 @@
+/// What a creature is made of.
+type Element = | Fire | Water | Plant
+
+/// A fighter in the arena.
+type Creature = { name: str, element: Element, hp: i64, attack: i64 }
+
+/// How hard a move of `attacker` lands on `defender`, as a percentage.
+fn effectiveness(attacker: Element, defender: Element) -> i64 {
+  match (attacker, defender) {
+    (Fire, Plant) | (Water, Fire) | (Plant, Water) => 200
+    (Fire, Water) | (Water, Plant) | (Plant, Fire) => 50
+    _ => 100
+  }
+}
+
+/// `attacker` hits `defender` once, and says what happened.
+fn hit(attacker: Creature, inout defender: Creature) -> str {
+  let damage = attacker.attack * effectiveness(attacker.element, defender.element) / 100
+  defender.hp = (defender.hp - damage).max(0)
+  "{attacker.name} hits {defender.name} for {damage}. {defender.name} has {defender.hp} HP left."
+}
+
+fn main() / io {
+  var embercat = Creature { name: "Embercat", element: Fire, hp: 30, attack: 8 }
+  var tidepup = Creature { name: "Tidepup", element: Water, hp: 32, attack: 7 }
+  while embercat.hp > 0 && tidepup.hp > 0 {
+    print(hit(embercat, inout tidepup))
+    if tidepup.hp > 0 { print(hit(tidepup, inout embercat)) }
+  }
+  let winner = if embercat.hp > 0 { embercat.name } else { tidepup.name }
+  print("{winner} wins!")
+}

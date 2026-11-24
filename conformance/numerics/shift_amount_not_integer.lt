@@ -1,0 +1,44 @@
+//~ rule: numbers.literal-defaults, numbers.shift-amounts
+
+fn by_bool(x: i64, b: bool) -> i64 {
+  x << b //~ ERROR E0311
+}
+
+fn by_str(x: u8) -> u8 {
+  x >> "1" //~ ERROR E0311
+}
+
+fn by_float_literal(x: i32) -> i32 {
+  x << 1.5 //~ ERROR E0311
+}
+
+fn by_open_float(x: i64) -> i64 {
+  let n = 2.0
+  x << n //~ ERROR E0311
+}
+
+fn assigned(x: u16, f: f32) -> u16 {
+  var y = x
+  y <<= f //~ ERROR E0311
+  y >>= 1
+  y
+}
+
+fn undefined_on_left(x: f64, n: i64) -> f64 {
+  x << n //~ ERROR E0317
+}
+
+fn undefined_on_place(x: f64) -> f64 {
+  var y = x
+  y >>= 1.0 //~ ERROR E0317
+  y
+}
+
+fn decided_later(x: i64) -> u8 {
+  let k = 3
+  let shifted = x << k
+  let small: u8 = k
+  small
+}
+
+fn literal_left(n: u8) -> u64 { 1 << n }

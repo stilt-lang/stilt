@@ -1,0 +1,120 @@
+//~ tier: core
+
+// Verification (facts.verification): an index, a division or a map key that a range loop, a guard, a
+// divisor or a key proves adds no `panic`, and shows where the panic would have been (facts.range-loops, facts.guards and facts.divisors
+// to 22 and 26); a counting loop and self-calls that shrink add no `div` (facts.counting-loops and facts.shrinking-recursion).
+// Each near miss keeps its fact, and so does a check that only the analysis proves (facts.shown-proofs).
+
+fn total(xs: List<i64>) -> i64 {
+  var s = 0
+  for i in 0..xs.len() { s += xs[i] } //~ OVERFLOW PROVED bounds
+  s
+}
+
+// One past the last index.
+fn total_past(xs: List<i64>) -> i64 {
+  var s = 0
+  for i in 0..xs.len() + 1 { s += xs[i] } //~ PANIC OVERFLOW
+  s
+}
+
+// Below `xs.len()`, `i + 1` may be the length itself, while `i` is in range.
+fn rises(xs: List<i64>) -> i64 {
+  var n = 0
+  for i in 0..xs.len() {
+    if xs[i + 1] > xs[i] { n += 1 } //~ PANIC OVERFLOW PROVED bounds
+  }
+  n
+}
+
+fn first(xs: List<i64>) -> i64 {
+  if !xs.is_empty() { xs[0] } else { 0 } //~ PROVED bounds
+}
+
+fn second(xs: List<i64>) -> i64 {
+  if !xs.is_empty() { xs[1] } else { 0 } //~ PANIC
+}
+
+// The negation of the `||` reaches the code after the `if`, whose branch returns.
+fn at(xs: List<i64>, i: i64) -> i64 {
+  if i < 0 || i >= xs.len() { return 0 }
+  xs[i] //~ PROVED bounds
+}
+
+// The left side of `&&` guards its right side.
+fn positive(xs: List<i64>, i: i64) -> bool {
+  i >= 0 && i < xs.len() && xs[i] > 0 //~ PROVED bounds
+}
+
+// The analysis proves the middle in range, which only a release build reads.
+fn search(xs: List<i64>, x: i64) -> bool {
+  var lo = 0
+  var hi = xs.len()
+  while lo < hi { //~ DIV
+    let mid = lo + (hi - lo) / 2 //~ OVERFLOW
+    if xs[mid] == x { return true } //~ PANIC
+    if xs[mid] < x { lo = mid + 1 } else { hi = mid } //~ PANIC OVERFLOW
+  }
+  false
+}
+
+fn ratio(n: i64, d: i64) -> i64 {
+  if d != 0 { n / d } else { 0 } //~ OVERFLOW PROVED divide-by-zero
+}
+
+fn ratio_else(n: i64, d: i64) -> i64 {
+  if d == 0 { 0 } else { n / d } //~ OVERFLOW PROVED divide-by-zero
+}
+
+// `d >= 0` leaves zero in.
+fn ratio_at_least(n: i64, d: i64) -> i64 {
+  if d >= 0 { n / d } else { 0 } //~ PANIC OVERFLOW
+}
+
+fn stored() -> i64 {
+  var m: Map<str, i64> = Map.new() //~ ALLOC
+  m["a"] = 1 //~ ALLOC
+  m["a"] //~ PROVED missing-key
+}
+
+// Another key isn't present.
+fn stored_other() -> i64 {
+  var m: Map<str, i64> = Map.new() //~ ALLOC
+  m["a"] = 1 //~ ALLOC
+  m["b"] //~ PANIC
+}
+
+fn stored_if_missing() -> i64 {
+  var m: Map<str, i64> = Map.new() //~ ALLOC
+  if !m.contains("a") { m["a"] = 0 } //~ ALLOC
+  m["a"] //~ PROVED missing-key
+}
+
+fn up(n: i64) -> i64 {
+  var i = 0
+  while i < n { i += 1 } //~ OVERFLOW
+  i
+}
+
+// The step is inside an `if`.
+fn up_stalled(n: i64, step: bool) -> i64 {
+  var i = 0
+  while i < n { //~ DIV
+    if step { i += 1 } //~ OVERFLOW
+  }
+  i
+}
+
+fn count(n: i64) -> i64 {
+  if n > 0 { 1 + count(n - 1) } else { 0 } //~ OVERFLOW
+}
+
+// No test bounds `n` from below.
+fn count_down(n: i64) -> i64 {
+  1 + count_down(n - 1) //~ OVERFLOW DIV
+}
+
+// `count_zero(-1)` never ends.
+fn count_zero(n: i64) -> i64 {
+  if n == 0 { 0 } else { 1 + count_zero(n - 1) } //~ OVERFLOW DIV
+}

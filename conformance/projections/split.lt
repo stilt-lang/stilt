@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: projections.writable-views
+//~ stdout:
+//~ | [9, 2, 3, 8]
+//~ | caught
+//~ | [0, 2, 3, 8]
+
+use std.view
+
+type Bad = | Bad
+
+fn main() / io {
+  var xs = [1, 2, 3, 4]
+  // `split` hands the closure the two parts of `xs`, each writable.
+  view.split(inout xs, 2, |inout a, inout b| {
+    a[0] = 9
+    b[1] = 8
+  })
+  print("{xs}")
+  // The closure's effects pass through, and `xs` holds the writes made before the raise.
+  try view.split(inout xs, 1, |inout a, inout b| {
+    a[0] = 0
+    raise Bad
+  }) catch Bad => print("caught")
+  print("{xs}")
+}

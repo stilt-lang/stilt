@@ -1,0 +1,14 @@
+//~ rule: effects.function-values, effects.paired-row-variables, effects.catch-around-row-variables
+
+type Box = { v: i64 }
+
+// The signature pairs `e` with `str` only, so a caller may make `e` raise
+// `str` through `h`, which the arms written for `Box` can't handle.
+fn f<e>(escaping g: fn() / e) -> i64 / {raise<str>, e} {
+  let h: fn() / {raise<Box>, e} = g
+  try {
+    h() //~ ERROR E0506
+    0
+  }
+    catch x because "only a Box was expected" => x.v
+}

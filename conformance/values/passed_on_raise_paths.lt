@@ -1,0 +1,52 @@
+//~ rule: values.passing-values, values.inout-arguments, effects.innermost-catch
+//~ run-output: "[1] [1] [1, 9] [0] [1, 2] [1, 2, 9] []"
+
+type Failure = | Boom
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn risky(n: i64) -> i64 / raise<Failure> {
+  if n > 0 { raise Boom }
+  n
+}
+
+fn arm_follows(n: i64) -> List<i64> {
+  var xs = [1]
+  try {
+    let r = grown(xs)
+    let k = risky(n)
+    r
+  }
+    catch Boom => xs
+}
+
+fn arm_does_not_follow(n: i64) -> List<i64> {
+  var xs = [1]
+  try {
+    let k = risky(n)
+    grown(xs)
+  }
+    catch Boom => xs
+}
+
+fn escapes(inout xs: List<i64>, n: i64) -> List<i64> / raise<Failure> {
+  let r = grown(xs)
+  if n > 0 { raise Boom }
+  xs = []
+  r
+}
+
+fn main() / io {
+  let a = arm_follows(1)
+  let b = arm_does_not_follow(1)
+  let c = arm_does_not_follow(0)
+  var v = [1, 2]
+  let d = try escapes(inout v, 1) catch Boom => [0]
+  let before = "{v}"
+  let e = try escapes(inout v, 0) catch Boom => [0]
+  print("{a} {b} {c} {d} {before} {e} {v}")
+}

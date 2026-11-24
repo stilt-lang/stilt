@@ -1,0 +1,13 @@
+//~ rule: effects.without-panic, std.integers
+
+fn by_literal(x: i64) -> i64 without panic { x.rem_euclid(7) + x.div_euclid(-3) }
+
+fn powers(x: i64) -> Option<i64> without panic { x.pow(3).checked_add(x.gcd(4)) }
+
+fn by_variable(x: i64, y: i64) -> i64 without panic {
+  x.div_euclid(y) //~ ERROR E0204
+}
+
+fn by_zero(x: i64) -> i64 without panic {
+  x.rem_euclid(0) //~ ERROR E0204
+}

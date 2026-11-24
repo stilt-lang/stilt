@@ -1,0 +1,5 @@
+fn main() / io {
+  let mut count = 0
+  count += 1
+  print("{count}")
+}

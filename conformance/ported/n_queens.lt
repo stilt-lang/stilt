@@ -1,0 +1,29 @@
+//~ rule: numbers.shifts, numbers.bitwise-operators, numbers.wrapping
+//~ stdout:
+//~ | 1 queens: 1
+//~ | 2 queens: 0
+//~ | 3 queens: 0
+//~ | 4 queens: 2
+//~ | 5 queens: 10
+//~ | 6 queens: 4
+//~ | 7 queens: 40
+//~ | 8 queens: 92
+
+// Rosetta Code, N-queens problem: the number of ways to place n queens on an n by n board so
+// that none attacks another, 1, 0, 0, 2, 10, 4, 40 and 92 for n from 1 to 8 (OEIS A000170).
+// Each row's free squares are the bits no earlier queen's column or diagonal covers.
+
+fn solutions(n: i64, columns: u64, left: u64, right: u64) -> i64 {
+  let all: u64 = (1 << n) - 1
+  if columns == all { return 1 }
+  var free = all & !(columns | left | right)
+  var count = 0
+  while free != 0 {
+    let bit = free & (0 -% free)
+    free ^= bit
+    count += solutions(n, columns | bit, (left | bit) << 1 & all, (right | bit) >> 1)
+  }
+  count
+}
+
+fn main() / io { for n in 1..=8 { print("{n} queens: {solutions(n, 0, 0, 0)}") } }

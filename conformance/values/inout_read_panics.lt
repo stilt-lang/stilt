@@ -1,0 +1,18 @@
+//~ rule: values.inout-argument-order, modes.durations
+//~ stdout:
+//~ | first
+//~ panic: bounds
+//~ panic-at: inout_read_panics.lt:16:32
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn take(x: i64, inout xs: List<i64>) { xs.push(x) }
+
+fn main() / io {
+  var lists = [[1]]
+  take(note("first", 1), inout lists[5])
+  print("not reached")
+}

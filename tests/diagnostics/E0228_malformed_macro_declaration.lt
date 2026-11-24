@@ -1,0 +1,6 @@
+use std.meta
+
+/// The number, doubled.
+pub macro double(n: i64) -> meta.Expr { quote { $n * 2 } }
+
+fn main() {}

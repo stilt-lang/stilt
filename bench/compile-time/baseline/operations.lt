@@ -1,0 +1,216 @@
+// What the operators did and saw: the jobs, the retries, the deploys and what the requests did
+// around them, and the settings changed.
+
+use requests
+use rows
+use table
+use events.entry
+use events.ops
+use events.time
+use events.web
+
+/// The jobs, the retries, the deploys and the changes.
+pub fn lines(es: List<entry.Entry>) -> List<str> {
+  var out = ["== jobs =="].concat(table.render(jobs(es)))
+  out.extend(["== retries =="].concat(table.render(retries(es))))
+  out.extend(["== deploys =="].concat(table.render(deploys(es))))
+  out.extend(changes(es))
+  out
+}
+
+/// Each job's starts, finishes and failures, the time its finishes took on average, and the
+/// reason of its last failure, in the order the jobs first appear.
+/// ex: jobs([]) == []
+pub fn jobs(es: List<entry.Entry>) -> List<rows.JobRow> {
+  let js = es.filter_map(
+    |e| match e.event {
+      Job(j) => Some(j)
+      _ => None
+    },
+  )
+  var out: List<rows.JobRow> = []
+  for (job, of) in js.group_by(.name()) {
+    let times = of.filter_map(
+      |j| match j {
+        Finished(_, ms) => Some(ms)
+        _ => None
+      },
+    )
+    let reasons = of.filter_map(
+      |j| match j {
+        Failed(_, why) => Some(why)
+        _ => None
+      },
+    )
+    let mean = if times.is_empty() { None } else { Some(i64.sum(times) / times.len()) }
+    let started = of.count(|j| j.state() == "started")
+    out.push(
+      rows.JobRow {
+        job,
+        started,
+        finished: times.len(),
+        failed: reasons.len(),
+        mean,
+        reason: reasons.last(),
+      },
+    )
+  }
+  out
+}
+
+/// Each operation's retries: its attempts, the runs of attempts that started from the first,
+/// those that gave up, and the time it waited in all, in the order the operations first appear.
+/// ex: retries([]) == []
+pub fn retries(es: List<entry.Entry>) -> List<rows.RetryRow> {
+  let rs = es.filter_map(
+    |e| match e.event {
+      Retry(r) => Some(r)
+      _ => None
+    },
+  )
+  var out: List<rows.RetryRow> = []
+  for (op, of) in rs.group_by(.op) {
+    let runs = of.count(|r| r.attempt == 1)
+    out.push(
+      rows.RetryRow {
+        op,
+        attempts: of.len(),
+        runs,
+        gave_up: of.count(.last()),
+        waited: i64.sum(of.map(.wait)),
+      },
+    )
+  }
+  out
+}
+
+/// The seconds before and after a deploy whose requests it is compared with.
+pub const AROUND: i64 = 600
+
+/// Each deploy, with the requests in the `AROUND` seconds before it and after it on its day,
+/// and the time they took on average.
+pub fn deploys(es: List<entry.Entry>) -> List<rows.DeployRow> {
+  let rs = requests.of(es)
+  var out: List<rows.DeployRow> = []
+  for e in es {
+    let Deploy(d) = e.event else continue
+    let t = e.at.seconds()
+    let same_day = rs.filter(|(f, _)| f.at.date == e.at.date)
+    let before = same_day.filter(|(f, _)| f.at.seconds() < t && f.at.seconds() >= t - AROUND).map(
+      |(_, r)| r.millis,
+    )
+    let after = same_day.filter(|(f, _)| f.at.seconds() >= t && f.at.seconds() < t + AROUND).map(
+      |(_, r)| r.millis,
+    )
+    out.push(
+      rows.DeployRow {
+        version: d.version.text(),
+        at: e.at.clock(),
+        before: before.len(),
+        mean_before: mean(before),
+        after: after.len(),
+        mean_after: mean(after),
+      },
+    )
+  }
+  out
+}
+
+/// The mean of the values, rounded down, or 0 when there are none.
+/// ex: mean([1, 2]) == 1
+/// ex: mean([]) == 0
+pub fn mean(xs: List<i64>) -> i64 { if xs.is_empty() { 0 } else { i64.sum(xs) / xs.len() } }
+
+/// The deploys and the settings changed, in the order they happened.
+pub fn changes(es: List<entry.Entry>) -> List<str> {
+  var out = ["== changes =="]
+  for e in es {
+    let what = match e.event {
+      Deploy(d) => "deploy {d.text()}: {", ".join(d.hosts)}"
+      Config(s) => "config {s.key}: {s.before} -> {s.after}{direction(s)}"
+      _ => continue
+    }
+    out.push("{e.at.clock()} {e.source.text()} {what}")
+  }
+  out
+}
+
+// Whether a setting went up or down, when its values say.
+fn direction(s: ops.Setting) -> str {
+  match s.raised() {
+    Some(true) => " (raised)"
+    Some(false) => " (lowered)"
+    None => ""
+  }
+}
+
+// An entry of an event at a time, the tests' own.
+fn at(minute: u8, event: entry.Event) -> entry.Entry {
+  let stamp = time.Stamp {
+    date: time.Date { year: 2026, month: 11, day: 3 },
+    hour: 9,
+    minute,
+    second: 0,
+  }
+  entry.Entry { at: stamp, source: time.Source { host: "ops", index: 1 }, level: time.Info, event }
+}
+
+// A request that took `millis` milliseconds.
+fn request(millis: i64) -> entry.Event {
+  entry.Http(web.Request { method: web.Get, path: "/", query: None, status: 200, millis, bytes: 0 })
+}
+
+test "a deploy is compared with the requests of the ten minutes before it and after it" {
+  let deploy = entry.Deploy(
+    ops.Deploy { version: ops.Version { major: 2, minor: 0, patch: 0 }, by: "bo", hosts: [] },
+  )
+  let es = [
+    at(0, request(500)),
+    at(15, request(10)),
+    at(20, deploy),
+    at(29, request(30)),
+    at(31, request(900)),
+  ]
+  assert deploys(es) ==
+    [
+      rows.DeployRow {
+        version: "2.0.0",
+        at: "09:20",
+        before: 1,
+        mean_before: 10,
+        after: 1,
+        mean_after: 30,
+      },
+    ]
+}
+
+test "retries count the runs that start over and the attempts that gave up" {
+  let retry = |attempt: i64| entry.Retry(
+    ops.Retry { op: "fetch", attempt, limit: 3, wait: 10 * attempt },
+  )
+  let es = [1, 2, 1, 2, 3].map(|a| at(0, retry(a)))
+  assert retries(es) ==
+    [rows.RetryRow { op: "fetch", attempts: 5, runs: 2, gave_up: 1, waited: 90 }]
+}
+
+test "jobs keep the mean time of their finishes and the reason of their last failure" {
+  let es = [
+    ops.Started("a"),
+    ops.Finished("a", 10),
+    ops.Failed("a", "x"),
+    ops.Finished("a", 21),
+    ops.Failed("a", "y"),
+  ]
+  let found = jobs(es.map(|j| at(0, entry.Job(j))))
+  assert found ==
+    [
+      rows.JobRow {
+        job: "a",
+        started: 1,
+        finished: 2,
+        failed: 2,
+        mean: Some(15),
+        reason: Some("y"),
+      },
+    ]
+}

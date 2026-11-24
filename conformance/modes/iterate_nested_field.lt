@@ -1,0 +1,14 @@
+//~ rule: modes.overlap, modes.durations, modes.change-while-iterating
+
+type Inner = { items: List<i64>, count: i64 }
+type Outer = { inner: Inner, label: str }
+
+fn walk(inout r: Outer) {
+  for x in r.inner.items {
+    r.inner.count += x
+    r.label = "seen"
+    r.inner.items[0] = x //~ ERROR E0404
+    r.inner = Inner { items: [], count: 0 } //~ ERROR E0404
+    r = Outer { inner: Inner { items: [], count: 0 }, label: "" } //~ ERROR E0404
+  }
+}

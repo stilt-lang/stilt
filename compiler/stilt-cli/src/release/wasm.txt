@@ -1,0 +1,16 @@
+# The pinned archives of WebAssembly's tools (wasm.target): for each, its name, the
+# host it runs on, `any` for one that every host uses, the URL of its release and the SHA-256 of
+# the archive's bytes, one archive to a line. `just toolchain` puts in the toolchain what the
+# target's builds need, wasi-libc's start file and library and clang's builtins for
+# `wasm32-wasip1`, from wasi-sdk 34, and binaryen's `wasm-opt`, version 133, which applies
+# Asyncify; `just cross` runs the modules under wasmtime 50.0.1, the reference runtime (wasm.same-meaning).
+# Each recipe fetches an archive into `target/wasm-tools/`, checks its hash and keeps only what
+# it uses.
+wasi-sysroot any https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sysroot-34.0.tar.gz 9d813544eeebe38b7b8f2244ed591de46b6db812c6dd1a257ff9f0d2a905a2be
+libclang_rt any https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/libclang_rt-34.0.tar.gz eee3e634dcf71aa22b1333391623cf5c9965a637dc428a27b1a858c026c587f1
+binaryen aarch64-macos https://github.com/WebAssembly/binaryen/releases/download/version_133/binaryen-version_133-arm64-macos.tar.gz ad66da82ac13f163e424b1643f16c6dfcccc98b5966296b43e52d3cab04f84a8
+binaryen x86_64-linux https://github.com/WebAssembly/binaryen/releases/download/version_133/binaryen-version_133-x86_64-linux.tar.gz 2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489
+binaryen aarch64-linux https://github.com/WebAssembly/binaryen/releases/download/version_133/binaryen-version_133-aarch64-linux.tar.gz 89c07ea56faf38d0fbecf36ca8ec0721756716185f265b568e133d427f299bf8
+wasmtime aarch64-macos https://github.com/bytecodealliance/wasmtime/releases/download/v50.0.1/wasmtime-v50.0.1-aarch64-macos.tar.xz 960e5216c7ebd7e9b45e6561d15821b8b801b7d54aee28c7b91921aeb30c65c8
+wasmtime x86_64-linux https://github.com/bytecodealliance/wasmtime/releases/download/v50.0.1/wasmtime-v50.0.1-x86_64-linux.tar.xz 685466455dd42a14774a86c36c8f2e45cbb9bd6d92a850139315df60a75498a5
+wasmtime aarch64-linux https://github.com/bytecodealliance/wasmtime/releases/download/v50.0.1/wasmtime-v50.0.1-aarch64-linux.tar.xz d737e077416d78fbfb0a008229ec27d6a0fd5a4924874b8c38b293c850cf4094

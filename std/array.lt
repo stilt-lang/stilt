@@ -1,0 +1,37 @@
+module std.array
+
+// Fixed-size arrays (generics.arrays). An array holds exactly `n`
+// values of one type, stored inline as a record's fields are, so making,
+// copying, reading and writing one allocates nothing. A list literal is an
+// array where an `Array` is expected, and a list pattern of its length can't
+// fail. `fill`, `from_list` and `map` are native (views.std-view).
+
+/// A sequence of exactly `n` values of type `T`.
+pub type Array<T, n: i64> = ?
+
+/// `n` copies of `x`; panics with `bounds` when `n` is negative.
+/// ex: { let a: Array<i64, 3> = fill(7); a.to_list() == [7, 7, 7] }
+pub fn fill<T, n: i64>(x: T) -> Array<T, n> = ?
+
+/// The elements of `xs` in order, or `None` unless `xs` has exactly `n`.
+/// ex: { let a: Option<Array<i64, 2>> = from_list([1, 2]); a.is_some() }
+/// ex: { let a: Option<Array<i64, 2>> = from_list([1]); a.is_none() }
+pub fn from_list<T, n: i64>(xs: List<T>) -> Option<Array<T, n>> = ?
+
+impl<T, n: i64> Array<T, n> {
+  /// The number of elements, `n`.
+  /// ex: { let a: Array<str, 2> = ["a", "b"]; a.len() == 2 }
+  pub fn len(self) -> i64 { n }
+
+  /// The elements in order, as a list.
+  /// ex: { let a: Array<i64, 2> = [4, 5]; a.to_list() == [4, 5] }
+  pub fn to_list(self) -> List<T> {
+    var out: List<T> = []
+    for x in self { out.push(x) }
+    out
+  }
+
+  /// `f` of each element, called in order.
+  /// ex: { let a: Array<i64, 2> = [1, 2]; a.map(|x| x * 10).to_list() == [10, 20] }
+  pub fn map<U>(self, f: fn(T) -> U) -> Array<U, n> = ?
+}

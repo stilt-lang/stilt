@@ -1,0 +1,17 @@
+//~ tier: meta
+//~ rule: meta.reflection-tier
+//~ stdout:
+//~ | record Pair
+//~ | {"a":1,"b":[true]}
+
+// This module only calls functions that reflect, so it stays in the core
+// tier; `kinds`, which names `std.meta`, is in the meta tier.
+use kinds
+use std.json
+
+type Pair = { a: i64, b: List<bool> }
+
+fn main() / io {
+  print(kinds.kind(Pair { a: 1, b: [true] }))
+  print(json.to_text(Pair { a: 1, b: [true] }))
+}

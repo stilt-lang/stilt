@@ -1,0 +1,9 @@
+── PATTERNS THAT DON'T COVER EVERY VALUE ── E0329_patterns_that_don_t_cover_every_value.lt:4:3  [E0329]
+
+These patterns don't cover `Shipped`:
+
+  4 │   match s {
+    │   ^^^^^^^^^
+
+A `match` covers every value of its type. Add an arm for each case that the
+message names, or a last `_ => …` arm.

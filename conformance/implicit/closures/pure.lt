@@ -1,0 +1,28 @@
+module pure
+without panic
+
+use lib
+
+pub type Ops = { run: fn(i64) -> i64 }
+
+pub fn apply(f: fn(i64) -> i64, x: i64) -> i64 { f(x) }
+
+pub fn stored(x: i64) -> i64 {
+  let add = |n: i64| n + 1
+  add(x)
+}
+
+pub fn stored_panicking(x: i64) -> i64 {
+  let divide = |n: i64| 100 / n //~ ERROR E0204
+  divide(x)
+}
+
+pub fn passed(x: i64) -> i64 { lib.apply_twice(|n| n * 2, x) }
+
+pub fn passed_panicking(x: i64) -> i64 {
+  lib.apply_twice(|n| 100 / n, x) //~ ERROR E0204
+}
+
+pub fn through_list(xs: List<i64>) -> List<i64> { xs.map(|n| n - 1) }
+
+pub fn through_field(ops: Ops, x: i64) -> i64 { ops.run(x) }

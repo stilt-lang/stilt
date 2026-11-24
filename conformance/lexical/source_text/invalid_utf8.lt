@@ -1,0 +1,2 @@
+fn g() -> i64 { 007 }
+// café is Latin-1 //~ ERROR E0001

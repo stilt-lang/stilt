@@ -1,0 +1,12 @@
+//~ rule: syntax.longest-operands, expressions.closure-boundaries
+//~ run-output: "neg pos after"
+
+fn main() / io {
+  let label = |x: i64| {
+    if x < 0 { return "neg" }
+    "pos"
+  }
+  let a = label(-1)
+  let b = label(1)
+  print("{a} {b} after")
+}

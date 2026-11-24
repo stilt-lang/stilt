@@ -1,0 +1,17 @@
+//~ tier: core
+module main
+without panic
+
+// A module's limit rules out panics, not allocations.
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs //~ CONSUMES xs
+  ys.push(0) //~ ALLOC
+  ys //~ ESCAPES ys
+}
+
+fn first(xs: List<i64>) -> i64 { xs.get(0) else 0 }
+
+// A function that a `without` limits counts as one without the effect, wherever it is named.
+fn count(xs: List<i64>) -> i64 without alloc { xs.len() }
+
+fn total(xs: List<i64>) -> i64 { count(xs) + first(xs) } //~ OVERFLOW

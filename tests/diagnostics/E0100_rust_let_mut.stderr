@@ -1,0 +1,13 @@
+── SYNTAX ERROR ──────────────────────────── E0100_rust_let_mut.lt:2:11  [E0100]
+
+Stilt declares a variable that changes with `var`, not `let mut`:
+
+  2 │   let mut count = 0
+    │           ^^^^^
+
+A `let` binding never changes, and a `var` binding can, so no `mut` is needed.
+
+To fix it, write `var`:
+
+  2 │   var count = 0
+    │   ~~~

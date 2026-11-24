@@ -1,0 +1,9 @@
+pub syntax twice {
+  ($x:expr) => $x + nowhere($x) //~ ERROR E0211
+}
+
+pub syntax one { () => 1 }
+
+pub syntax called {
+  () => one() //~ ERROR E0212
+}

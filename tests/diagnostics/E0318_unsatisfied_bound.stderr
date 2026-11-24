@@ -1,0 +1,10 @@
+── UNSATISFIED BOUND ────────────────── E0318_unsatisfied_bound.lt:1:57  [E0318]
+
+`f64` doesn't implement `Hash`:
+
+  1 │ fn by_price(prices: Map<f64, str>, price: f64) -> str { prices[price] }
+    │                                                         ^^^^^^^^^^^^^
+
+Using a trait's operation on a type parameter needs the bound, as `<T: Show>` to
+interpolate a `T`. A type passed in implements the trait: write its `impl`, or
+choose a type that has one.

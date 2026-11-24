@@ -1,0 +1,3 @@
+fn count(xs: Vec<i64>) -> i64 { xs.len() }
+
+fn main() {}

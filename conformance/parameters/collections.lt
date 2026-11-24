@@ -1,0 +1,54 @@
+//~ tier: advanced
+//~ rule: traits.trait-parameters, traits.trait-arguments, traits.bound-arguments, traits.member-types
+//~ stdout:
+//~ | 3
+//~ | Some(30)
+//~ | 6
+//~ | Some("b")
+//~ | z
+
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+  fn size(self) -> i64
+}
+
+type Bag = { items: List<str> }
+
+impl<T> Collection<T> for List<T> {
+  fn at(self, i: i64) -> Option<T> { self.get(i) }
+  fn size(self) -> i64 { self.len() }
+}
+
+impl Collection<str> for Bag {
+  fn at(self, i: i64) -> Option<str> { self.items.get(i) }
+  fn size(self) -> i64 { self.items.len() }
+}
+
+// The bound leaves the parameter open, and the result names it as a member type.
+fn last<C: Collection>(c: C) -> Option<C.Item> { c.at(c.size() - 1) }
+
+// The bound fixes the parameter.
+fn total<C: Collection<i64>>(c: C) -> i64 {
+  var sum = 0
+  for i in 0..c.size() {
+    if let Some(x) = c.at(i) { sum += x }
+  }
+  sum
+}
+
+// The bound's argument is another generic, inferred from the impl.
+fn first_shown<C: Collection<T>, T: Show>(c: C) -> str {
+  match c.at(0) {
+    Some(x) => "{x}"
+    None => "none"
+  }
+}
+
+fn main() / io {
+  let xs = [10, 20, 30]
+  print("{xs.size()}")
+  print("{last(xs)}")
+  print("{total([1, 2, 3])}")
+  print("{last(Bag { items: ["a", "b"] })}")
+  print(first_shown(Bag { items: ["z"] }))
+}

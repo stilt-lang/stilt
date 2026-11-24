@@ -1,0 +1,62 @@
+//~ rule: effects.catch-syntax, effects.catch, effects.catch-alls-need-reason
+//~ run-output: "done"
+
+type Failure = | Missing | Invalid(str)
+
+fn fetch(key: str) -> i64 / raise<Failure> {
+  if key == "" { raise Missing }
+  1
+}
+
+fn wild(key: str) -> i64 {
+  try fetch(key) catch _ => 0 //~ WARN W0501
+}
+
+fn named(key: str) -> i64 {
+  try fetch(key) catch failure => 0 //~ WARN W0501
+}
+
+fn with_reason(key: str) -> i64 {
+  try fetch(key) catch _ because "a missing key counts as zero" => 0
+}
+
+fn block_form(key: str) -> i64 {
+  try fetch(key) catch {
+    failure => 0 //~ WARN W0501
+  }
+}
+
+fn block_reason(key: str) -> i64 {
+  try fetch(key) catch {
+    failure because "every failure counts as zero" => 0
+  }
+}
+
+fn reraised(key: str) -> i64 / raise<str> { try fetch(key) catch _ => raise "fetch failed" }
+
+fn reraised_in_block(key: str) -> i64 / raise<str> {
+  try fetch(key) catch {
+    failure => {
+      let message = "fetch failed"
+      raise message
+    }
+  }
+}
+
+fn by_variant(key: str) -> i64 {
+  try fetch(key) catch {
+    Missing => 0
+    Invalid(_) => -1
+  }
+}
+
+fn main() / io {
+  let total = wild("a") +
+    named("a") +
+    with_reason("a") +
+    block_form("a") +
+    block_reason("a") +
+    by_variant("a")
+  let more = try reraised("a") + reraised_in_block("a") catch _ because "unreachable here" => 0
+  print("done")
+}

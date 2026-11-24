@@ -1,0 +1,13 @@
+//~ rule: numbers.parsing, std.no-panics-by-default, std.str, std.lists, std.maps
+//~ stdout:
+//~ | None None None None None None
+//~ | None None None None None None
+
+fn main() / io {
+  var xs: List<i64> = []
+  let popped = xs.pop()
+  var m: Map<str, i64> = Map.new()
+  let removed = m.remove("a")
+  print("{xs.get(0)} {xs.get(-1)} {popped} {xs.first()} {xs.last()} {xs.find(|x| x > 0)}")
+  print("{"abc".find("d")} {"abc".to_i64()} {"".to_f64()} {m.get("a")} {removed} {[1, 2].get(2)}")
+}

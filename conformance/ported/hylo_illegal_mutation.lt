@@ -1,0 +1,26 @@
+//~ rule: modes.what-can-be-modified
+
+// Hylo, Tests/HyloTests/TestCases/Lowering/IllegalMutation.hylo and
+// IllegalPropertyMutation.hylo: a parameter passed without `inout` can't be modified, whether
+// the whole of it or a field. Hylo reports an illegal mutable access at each; Stilt reports
+// E0403 at the place modified. Hylo's caller passes `&local`, which Stilt writes as a plain
+// argument, since the parameter isn't `inout`.
+
+fn inc(x: i64) {
+  x += 1 //~ ERROR E0403
+}
+
+type Thing = { position: i64, speed: i64 }
+
+fn update_physics(t: Thing) {
+  t.position += t.speed //~ ERROR E0403
+}
+
+fn main() / io {
+  let local = 0
+  inc(local)
+  let t = Thing { position: 0, speed: 1 }
+  update_physics(t)
+  update_physics(t)
+  print("{t.position}")
+}

@@ -1,0 +1,6 @@
+[dependencies]
+both = { path = "deps/both", from = "github.com/someone/stilt-both" } # //~ ERROR E0600
+neither = { may = ["io"] } # //~ ERROR E0600
+pinned = { path = "deps/pinned", version = "1.0.0" } # //~ ERROR E0600
+unversioned = { from = "github.com/someone/stilt-unversioned", hash = "b3:0000000000000000000000000000000000000000000000000000000000000000" } # //~ ERROR E0600
+padded = { from = "github.com/someone/stilt-padded", version = "1.04.0" } # //~ ERROR E0600

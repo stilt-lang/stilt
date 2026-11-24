@@ -1,0 +1,3 @@
+//~ rule: program.no-cycles
+
+use a //~ ERROR E0206

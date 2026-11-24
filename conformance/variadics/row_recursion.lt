@@ -1,0 +1,20 @@
+//~ tier: advanced
+//~ rule: variadics.packs
+//~ stdout:
+//~ | Row { id: 2, cells: (0, 1) }
+
+type Row<..Ts> = { id: i64, cells: (..Ts) }
+
+// The pack grows on each call, and the last call builds a `Row` of it.
+fn rows<..Ts: Show>(xs: (..Ts), n: i64, stop: i64) -> str {
+  if n == stop {
+    let r = Row { id: n, cells: xs }
+    "{r}"
+  } else {
+    rows((..xs, n), n + 1, stop)
+  }
+}
+
+fn main() / io {
+  print(rows((), 0, 2))
+}

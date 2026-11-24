@@ -1,0 +1,9 @@
+{
+  "shop": "The Lantern",
+  "books": 6,
+  "authors": 5,
+  "sold_out": [
+    "One Hundred Years of Solitude",
+    "Piranesi"
+  ]
+}

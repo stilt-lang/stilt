@@ -1,0 +1,9 @@
+── MALFORMED NUMBER LITERAL ──── E0004_malformed_number_literal.lt:2:17  [E0004]
+
+A number literal can't be followed directly by a letter, a digit or `_`:
+
+  2 │   let small = 10u8
+    │                 ^
+
+A number literal has no suffix and no leading zero, and `_` stands only between
+digits. Give the type with an annotation instead, as `let small: u8 = 10`.

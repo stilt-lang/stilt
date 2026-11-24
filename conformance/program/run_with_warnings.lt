@@ -1,0 +1,6 @@
+//~ rule: conformance.run-statuses, program.programs-with-errors, declarations.running-holes, errors.running
+//~ run-output: "ran despite a warning"
+
+fn later() -> i64 = ? //~ WARN W0300
+
+fn main() / io { print("ran despite a warning") }

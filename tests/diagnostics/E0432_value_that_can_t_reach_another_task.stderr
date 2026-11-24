@@ -1,0 +1,11 @@
+── VALUE THAT CAN'T REACH ANOTHER TASK ── E0432_value_that_can_t_reach_another_task.lt:6:17  [E0432]
+
+This task's function captures `v`, a view, which can't reach another task:
+
+  5 │   let v = view.View.all(xs)
+    │       ─ `v` is a view from here
+  6 │   task.spawn(|| v.len()).await()
+    │                 ^
+
+A view can't reach another task, since it must not outlive its source. Capture
+the value it views.

@@ -1,0 +1,10 @@
+//~ rule: conformance.paths, conformance.environment
+//~ run-output: "use std.fs 10"
+
+use std.fs
+use std.io
+
+fn main() / {io, raise<io.IoError>} {
+  let lines = try fs.read_lines("working_directory.lt")
+  print("{lines[3]} {lines.len()}")
+}

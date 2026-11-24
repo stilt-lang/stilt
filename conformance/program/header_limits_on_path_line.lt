@@ -1,0 +1,9 @@
+//~ rule: lexical.continuation-lines, syntax.limit-clauses, program.module-header, program.header-limits
+//~ run-output: "header"
+
+// A header's `without` clause may follow its path on the path's line, and a second clause may
+// start the next line, which continues the header.
+module main without panic
+without alloc //~ ERROR E0202
+
+fn main() / io { print("header") }

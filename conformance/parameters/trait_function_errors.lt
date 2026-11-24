@@ -1,0 +1,42 @@
+//~ tier: advanced
+//~ rule: traits.functions-without-self, traits.trait-constants, traits.shared-member-names
+
+trait Empty {
+  fn empty() -> Self
+  const ZERO: Self
+}
+
+type Count = { n: i64 }
+
+// `ZERO` has no default.
+impl Empty for Count { //~ ERROR E0305
+  fn empty() -> Count { Count { n: 0 } }
+}
+
+// Nothing names the type whose `empty` is meant.
+fn make() -> Count { Empty.empty() } //~ ERROR E0330
+
+fn zero() -> Count { Empty.ZERO } //~ ERROR E0330
+
+type Tally = { n: i64 }
+
+impl Tally {
+  fn empty() -> Tally { Tally { n: 0 } }
+}
+
+impl Empty for Tally { //~ ERROR E0308
+  fn empty() -> Tally { Tally { n: 1 } }
+  const ZERO: Tally = Tally { n: 0 }
+}
+
+trait Bounds {
+  const LOW: i64
+  const HIGH: i64
+}
+
+type Span = { width: i64 }
+
+impl Bounds for Span {
+  const LOW: i64 = Span.HIGH
+  const HIGH: i64 = Span.LOW //~ ERROR E0327
+}

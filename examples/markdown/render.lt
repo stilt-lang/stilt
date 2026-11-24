@@ -1,0 +1,51 @@
+// Writing blocks as HTML, a block to a line or more, as CommonMark's reference renderer lays
+// them out.
+
+use blocks
+use inline
+
+/// The HTML of a document's blocks, each ending with a newline.
+/// ex: html([blocks.Heading(2, "A *b*"), blocks.Rule]) == "<h2>A <em>b</em></h2>\n<hr />\n"
+pub fn html(bs: List<blocks.Block>) -> str { "".join(bs.map(|b| "{block(b, false)}\n")) }
+
+/// The HTML of a block. In a tight list, a paragraph is written without its `<p>`.
+fn block(b: blocks.Block, tight: bool) -> str {
+  match b {
+    Heading(n, text) => "<h{n}>{inline.html(text)}</h{n}>"
+    Paragraph(text) => if tight { inline.html(text) } else { "<p>{inline.html(text)}</p>" }
+    Code(info, lines) => code(info, lines)
+    Quote(inner) => "<blockquote>\n{html(inner)}</blockquote>"
+    Bullets(items, t) => "<ul>\n{list(items, t)}</ul>"
+    Numbered(1, items, t) => "<ol>\n{list(items, t)}</ol>"
+    Numbered(n, items, t) => "<ol start=\"{n}\">\n{list(items, t)}</ol>"
+    Rule => "<hr />"
+  }
+}
+
+/// ex: code("py", ["if a < b:", "  pass"]) == "<pre><code class=\"language-py\">if a &lt; b:\n  pass\n</code></pre>"
+/// ex: code("", []) == "<pre><code></code></pre>"
+fn code(info: str, lines: List<str>) -> str {
+  let class = if info == "" { "" } else { " class=\"language-{inline.escape(info)}\"" }
+  let body = "".join(lines.map(|l| "{inline.escape(l)}\n"))
+  "<pre><code{class}>{body}</code></pre>"
+}
+
+fn list(items: List<List<blocks.Block>>, tight: bool) -> str {
+  "".join(items.map(|i| "{item(i, tight)}\n"))
+}
+
+/// An item of a list. In a tight list, a paragraph that starts or ends the item stays on the
+/// line of its `<li>` or `</li>`.
+fn item(bs: List<blocks.Block>, tight: bool) -> str {
+  let parts = bs.map(|b| block(b, tight))
+  let open = if bs.is_empty() || tight && is_paragraph(bs.first()) { "" } else { "\n" }
+  let close = if bs.is_empty() || tight && is_paragraph(bs.last()) { "" } else { "\n" }
+  "<li>{open}{"\n".join(parts)}{close}</li>"
+}
+
+fn is_paragraph(b: Option<blocks.Block>) -> bool {
+  match b {
+    Some(Paragraph(_)) => true
+    _ => false
+  }
+}

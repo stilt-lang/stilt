@@ -1,0 +1,183 @@
+// What the web servers and the database log: requests, and queries that took too long.
+
+use std.json
+use decode
+
+/// The method of a request.
+pub type Method = | Get | Post | Put | Delete
+
+/// A request a web server answered: what was asked, the status of the answer, the time it took
+/// and the size of the answer's body.
+pub type Request = {
+  method: Method,
+  path: str,
+  query: Option<str>,
+  status: i64,
+  millis: i64,
+  bytes: i64,
+}
+
+/// A query that took longer than the database's threshold, and the rows it read.
+pub type Query = { table: str, millis: i64, rows: i64 }
+
+impl Method {
+  /// The method that a line writes.
+  /// ex: Method.parse("PUT") == Some(Put)
+  pub fn parse(text: str) -> Option<Method> {
+    match text {
+      "GET" => Some(Get)
+      "POST" => Some(Post)
+      "PUT" => Some(Put)
+      "DELETE" => Some(Delete)
+      _ => None
+    }
+  }
+
+  /// The method as a line writes it.
+  /// ex: Delete.label() == "DELETE"
+  pub fn label(self) -> str {
+    match self {
+      Get => "GET"
+      Post => "POST"
+      Put => "PUT"
+      Delete => "DELETE"
+    }
+  }
+
+  /// Whether a request of this method changes what the server holds.
+  /// ex: Post.writes() && !Get.writes()
+  pub fn writes(self) -> bool { self != Get }
+}
+
+impl Request {
+  /// The class of the status: 2 for a success, 4 for the client's error, 5 for the server's.
+  /// ex: Request { method: Get, path: "/", query: None, status: 404, millis: 1, bytes: 0 }.class() == 4
+  pub fn class(self) -> i64 { self.status / 100 }
+
+  /// Whether the server failed to answer.
+  pub fn failed(self) -> bool { self.class() == 5 }
+
+  /// The first segment of the path, which names the service that answered.
+  /// ex: Request { method: Get, path: "/api/users/7", query: None, status: 200, millis: 1, bytes: 0 }.service() == "/api"
+  /// ex: Request { method: Get, path: "/", query: None, status: 200, millis: 1, bytes: 0 }.service() == "/"
+  pub fn service(self) -> str {
+    match self.path.split("/") {
+      ["", first, ..] if first != "" => "/{first}"
+      _ => "/"
+    }
+  }
+
+  /// The request as a line writes it.
+  /// ex: Request { method: Get, path: "/a", query: Some("b=1"), status: 200, millis: 3, bytes: 9 }.text() == "GET /a?b=1 200 3ms 9B"
+  pub fn text(self) -> str {
+    let query = match self.query {
+      Some(q) => "?{q}"
+      None => ""
+    }
+    "{self.method.label()} {self.path}{query} {self.status} {self.millis}ms {self.bytes}B"
+  }
+}
+
+impl Query {
+  /// The time each row took, in microseconds, or the whole time when there were none.
+  /// ex: Query { table: "t", millis: 300, rows: 1000 }.per_row() == 300
+  pub fn per_row(self) -> i64 {
+    if self.rows == 0 { self.millis * 1000 } else { self.millis * 1000 / self.rows }
+  }
+}
+
+// JSON, written and read by hand as `std.json` would from the types' shapes (std.json).
+
+impl Method {
+  /// The method's variant, as its name.
+  /// ex: Delete.name() == "Delete"
+  pub fn name(self) -> str {
+    match self {
+      Get => "Get"
+      Post => "Post"
+      Put => "Put"
+      Delete => "Delete"
+    }
+  }
+
+  /// The method that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Method / raise<json.Error> {
+    match decode.bare(v) {
+      Some("Get") => Get
+      Some("Post") => Post
+      Some("Put") => Put
+      Some("Delete") => Delete
+      _ => raise decode.mismatch("Method", v, path)
+    }
+  }
+}
+
+impl json.ToJson for Method {
+  fn to_json(self) -> json.Value { json.Text(self.name()) }
+}
+
+impl json.FromJson for Method {
+  fn from_json(v: json.Value) -> Method / raise<json.Error> { try Method.read(v, "$") }
+}
+
+impl Request {
+  /// The request that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Request / raise<json.Error> {
+    let ms = try decode.members(v, path, "Request")
+    Request {
+      method: try Method.read(try decode.field(ms, "method", path), "{path}.method"),
+      path: try decode.text(try decode.field(ms, "path", path), "{path}.path"),
+      query: try decode.maybe_text(ms, "query", path),
+      status: try decode.int(try decode.field(ms, "status", path), "{path}.status"),
+      millis: try decode.int(try decode.field(ms, "millis", path), "{path}.millis"),
+      bytes: try decode.int(try decode.field(ms, "bytes", path), "{path}.bytes"),
+    }
+  }
+}
+
+impl json.ToJson for Request {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("method", self.method.to_json()),
+        ("path", json.Text(self.path)),
+        ("query", decode.option(self.query, json.Text)),
+        ("status", decode.number(self.status)),
+        ("millis", decode.number(self.millis)),
+        ("bytes", decode.number(self.bytes)),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Request {
+  fn from_json(v: json.Value) -> Request / raise<json.Error> { try Request.read(v, "$") }
+}
+
+impl Query {
+  /// The slow query that the JSON at `path` holds.
+  pub fn read(v: json.Value, path: str) -> Query / raise<json.Error> {
+    let ms = try decode.members(v, path, "Query")
+    Query {
+      table: try decode.text(try decode.field(ms, "table", path), "{path}.table"),
+      millis: try decode.int(try decode.field(ms, "millis", path), "{path}.millis"),
+      rows: try decode.int(try decode.field(ms, "rows", path), "{path}.rows"),
+    }
+  }
+}
+
+impl json.ToJson for Query {
+  fn to_json(self) -> json.Value {
+    json.Object(
+      [
+        ("table", json.Text(self.table)),
+        ("millis", decode.number(self.millis)),
+        ("rows", decode.number(self.rows)),
+      ],
+    )
+  }
+}
+
+impl json.FromJson for Query {
+  fn from_json(v: json.Value) -> Query / raise<json.Error> { try Query.read(v, "$") }
+}

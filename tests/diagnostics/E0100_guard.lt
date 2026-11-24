@@ -1,0 +1,6 @@
+fn half(n: i64) -> i64 / raise<str> {
+  guard n % 2 == 0 else { raise "odd" }
+  n / 2
+}
+
+fn main() {}

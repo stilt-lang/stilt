@@ -1,0 +1,65 @@
+//~ tier: core
+
+type Pair = { left: List<i64>, right: List<i64> }
+
+type Stack = { items: List<i64> }
+
+// Returning a parameter consumes it.
+fn returned(xs: List<i64>) -> List<i64> {
+  xs //~ CONSUMES xs
+}
+
+// Storing parameters in a value consumes them.
+fn stored(xs: List<i64>, ys: List<i64>) -> Pair {
+  Pair { left: xs, right: ys } //~ CONSUMES xs CONSUMES ys
+}
+
+// Rebinding a parameter with `var` consumes it.
+fn rebound(xs: List<i64>) -> i64 {
+  var ys = xs //~ CONSUMES xs
+  ys.push(1) //~ ALLOC
+  ys.len()
+}
+
+// Passing a parameter to a parameter that its callee consumes consumes it.
+fn passed(xs: List<i64>) -> List<i64> {
+  returned(xs) //~ CONSUMES xs
+}
+
+// Reading a parameter, or passing it to a parameter that isn't consumed, doesn't.
+fn read(xs: List<i64>, ys: List<i64>) -> i64 { xs.len() + length(ys) } //~ OVERFLOW
+
+fn length(xs: List<i64>) -> i64 { xs.len() }
+
+// A closure is a value, so capturing a parameter in one stores it.
+fn counter(xs: List<i64>) -> fn() -> i64 {
+  || xs.len() //~ CONSUMES xs ALLOC
+}
+
+// A method consumes `self` as a function consumes a parameter.
+impl Stack {
+  fn pushed(self, x: i64) -> Stack {
+    var s = self //~ CONSUMES self
+    s.items.push(x) //~ ALLOC
+    s //~ ESCAPES s
+  }
+}
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+// Taking a parameter of a recursive type apart, in an arm that builds a value of its type,
+// consumes it: the node it matched can become the node it builds.
+fn mirrored(t: Tree) -> Tree {
+  match t { //~ CONSUMES t
+    Node(l, x, r) => Node(mirrored(r), x, mirrored(l)) //~ ALLOC
+    Leaf => Leaf
+  }
+}
+
+// Taking one apart without building one doesn't.
+fn size(t: Tree) -> i64 {
+  match t {
+    Node(l, _, r) => size(l) + size(r) + 1 //~ OVERFLOW
+    Leaf => 0
+  }
+}

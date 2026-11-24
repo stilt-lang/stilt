@@ -1,0 +1,11 @@
+//~ rule: program.one-value-namespace
+
+use std.fs
+
+fn f(fs: str) {} //~ ERROR E0207
+
+fn g() {
+  let fs = 1 //~ ERROR E0207
+  let text = fs.read("notes.txt")
+  let h = |fs: i64| fs + 1 //~ ERROR E0207
+}

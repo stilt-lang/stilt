@@ -1,0 +1,20 @@
+//~ tier: meta
+//~ rule: generics.array-traits
+//~ stdout:
+//~ | true false true true
+//~ | {[1, 2]: "a", [2, 1]: "b"}
+//~ | [[1, 2], [3, 4]]
+
+use std.array
+
+fn main() / io {
+  let v: array.Array<i64, 3> = [1, 2, 3]
+  let w: array.Array<i64, 3> = [1, 2, 4]
+  print("{v == [1, 2, 3]} {v == w} {v < w} {w > [0, 9, 9]}")
+  var m: Map<array.Array<i64, 2>, str> = Map.new()
+  m[[1, 2]] = "a"
+  m[[2, 1]] = "b"
+  print("{m}")
+  let grid: array.Array<array.Array<i64, 2>, 2> = [[1, 2], [3, 4]]
+  print("{grid}")
+}

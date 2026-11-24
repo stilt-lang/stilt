@@ -1,0 +1,19 @@
+//~ rule: syntax.types, syntax.type-parentheses, syntax.expression-parentheses, declarations.tuples-and-unit
+//~ stdout:
+//~ | (1,)
+//~ | ()
+//~ | ((1, "a"), ())
+//~ | 1
+
+fn nothing() {}
+
+fn main() / io {
+  let single: (i64,) = (1,)
+  print("{single}")
+  let unit: () = nothing()
+  print("{unit}")
+  let nested = ((1, "a"), ())
+  print("{nested}")
+  let grouped: i64 = (1)
+  print("{grouped}")
+}

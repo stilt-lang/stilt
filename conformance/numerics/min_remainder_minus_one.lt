@@ -1,0 +1,10 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ run-output: "0"
+//~ panic: overflow
+//~ panic-at: min_remainder_minus_one.lt:9:11
+
+fn main() / io {
+  let m = i16.MIN
+  print("{m % 1}")
+  print("{m % -1}")
+}

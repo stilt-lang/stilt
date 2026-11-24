@@ -1,0 +1,6 @@
+//~ rule: types.known-types, expressions.closure-parameter-types
+
+fn main() / io {
+  let size = |s| s.len() //~ ERROR E0312
+  print("{size("ab")}")
+}

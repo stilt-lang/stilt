@@ -1,0 +1,37 @@
+//~ rule: facts.rules-of-acceptance, facts.known-signs, facts.guarding-tests, facts.guards, facts.counting-loops
+//~ run-output: "true false false false true false true 2 0 6"
+
+// Within a condition, the left side of `&&` guards its right side, and the
+// negation of the left side of `||` guards its right side.
+
+fn positive(xs: List<i64>, i: i64) -> bool without panic {
+  i >= 0 && i < xs.len() && xs[i] > 0
+}
+
+fn zero_or_missing(xs: List<i64>, i: i64) -> bool without panic {
+  i < 0 || i >= xs.len() || xs[i] == 0
+}
+
+// A loop's condition guards its own conjuncts after the first, and its body.
+fn leading_zeros(xs: List<i64>) -> i64 without panic, div {
+  var i = 0
+  while i < xs.len() && xs[i] == 0 { i += 1 }
+  i
+}
+
+// `n = n + 1` keeps `n` known non-negative, as `n += 1` does.
+fn sum_until(xs: List<i64>, limit: i64) -> i64 without panic {
+  var n = 0
+  var s = 0
+  while n < xs.len() {
+    if s + xs[n] > limit { break }
+    s += xs[n]
+    n = n + 1
+  }
+  s
+}
+
+fn main() / io {
+  let xs = [0, 0, 3, 0]
+  print("{positive(xs, 2)} {positive(xs, 0)} {positive(xs, 9)} {positive(xs, -1)} {zero_or_missing(xs, 1)} {zero_or_missing(xs, 2)} {zero_or_missing(xs, 7)} {leading_zeros(xs)} {leading_zeros([])} {sum_until([1, 2, 3, 4], 6)}")
+}

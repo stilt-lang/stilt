@@ -1,0 +1,96 @@
+// The patterns of the log's lines: one for the head that every line of text starts with, and
+// one for the message of each topic, each read by `regex!` while the program is checked.
+
+meta use rx
+use matcher
+
+/// The head of a line: its date and time, the host and its number, the level, the topic, and
+/// the message after it.
+/// ex: line("2026-11-03T08:15:02Z web-1 INFO http: hi").map(|m| m.get(11)) == Some("hi")
+pub fn line(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(\\d+)-(\\d\\d)-(\\d\\d)T(\\d\\d):(\\d\\d):(\\d\\d)Z ([a-z]+)-(\\d+) (DEBUG|INFO|WARN|ERROR) ([a-z]+): (.*)$")
+  m(text)
+}
+
+/// A request: the method, the path and the query after its `?`, the status, the time it took
+/// and the size of the response.
+/// ex: http("GET /a?b=1 200 12ms 5B").map(|m| m.get(4)) == Some("b=1")
+/// ex: http("GET /a 200 12ms 5B").map(|m| m.has(3)) == Some(false)
+pub fn http(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(GET|POST|PUT|DELETE) (/[a-z0-9/_.-]*)(\\?([^ ]*))? (\\d+) (\\d+)ms (\\d+)B$")
+  m(text)
+}
+
+/// A slow query: its table, the time it took and the rows it read.
+pub fn slow(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^slow query on ([a-z_]+) took (\\d+)ms rows=(\\d+)$")
+  m(text)
+}
+
+/// A login: whether it succeeded, the user, the four numbers of the address, and the attempts
+/// it took when the line says.
+/// ex: login("login failed user=ana ip=10.0.0.4 attempts=3").map(|m| m.get(8)) == Some("3")
+pub fn login(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^login (ok|failed) user=(\\w+) ip=(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)( attempts=(\\d+))?$")
+  m(text)
+}
+
+/// A cache lookup: whether it hit, and the key's space and number.
+pub fn lookup(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(hit|miss) key=([a-z]+):(\\d+)$")
+  m(text)
+}
+
+/// A cache eviction: the key's space and number, and the size it freed.
+pub fn evict(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^evict key=([a-z]+):(\\d+) size=(\\d+)$")
+  m(text)
+}
+
+/// A job: whether it started, finished or failed, its name, and the time it took or the reason
+/// it failed.
+/// ex: job("failed name=backup reason=\"disk full\"").map(|m| m.get(5)) == Some("disk full")
+pub fn job(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(started|finished|failed) name=([a-z_]+)( in (\\d+)ms| reason=\"([^\"]*)\")?$")
+  m(text)
+}
+
+/// A disk's mount point and how full it is, in percent.
+pub fn disk(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(/[a-z/]*) at (\\d+)%$")
+  m(text)
+}
+
+/// A deploy: the three numbers of the version, who deployed it, and the hosts it went to.
+/// ex: deploy("version 1.4.2 by ana to web-1,web-2").map(|m| m.get(5)) == Some("web-1,web-2")
+pub fn deploy(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^version (\\d+)\\.(\\d+)\\.(\\d+) by (\\w+) to ([a-z0-9,-]+)$")
+  m(text)
+}
+
+/// A setting changed: its key, and its value before and after.
+pub fn setting(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^set ([a-z_.]+) from (\\S+) to (\\S+)$")
+  m(text)
+}
+
+/// A panic: the thread and its message.
+pub fn crash(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^thread ([a-z]+-\\d+) panicked: (.+)$")
+  m(text)
+}
+
+/// A retry: the operation, the attempt, how many it may make, and the wait before it.
+pub fn retry(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^([a-z]+) attempt (\\d+) of (\\d+) after (\\d+)ms$")
+  m(text)
+}
+
+/// A time of day, as the command line writes one: its hour, of one digit or two, and its
+/// minute.
+/// ex: clock("8:05").map(|m| m.int(1) * 60 + m.int(2)) == Some(485)
+/// ex: clock("8h05").is_none()
+pub fn clock(text: str) -> Option<matcher.Captures> {
+  let m = rx.regex!("^(\\d\\d?):(\\d\\d)$")
+  m(text)
+}

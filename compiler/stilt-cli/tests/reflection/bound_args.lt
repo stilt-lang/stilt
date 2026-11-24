@@ -1,0 +1,51 @@
+// Bound tests with a trait's arguments, and with impls whose own bounds decide (meta.bound-tests,
+// meta.bound-tests): an impl counts only with the bound's arguments, which may name the function's
+// other type parameters, and only where its own bounds hold, as they are checked for a call.
+
+use std.meta
+
+trait Convert<U> {
+  fn convert(self) -> U
+}
+
+type Tag = { id: i64 }
+
+type Other = { label: str }
+
+impl Convert<i64> for Tag {
+  fn convert(self) -> i64 { self.id }
+}
+
+impl Convert<str> for Other {
+  fn convert(self) -> str { self.label }
+}
+
+type Wrap<T> = { inner: T }
+
+impl<T: Show> Show for Wrap<T> {
+  fn show(self) -> str { "wrap {self.inner}" }
+}
+
+fn as_number<T>(value: T) -> str {
+  let name = T.name()
+  if T: Convert<i64> { "{value.convert()} from i64" } else { "no Convert<i64>: {name}" }
+}
+
+fn shown<T>(value: T) -> str {
+  let name = T.name()
+  if T: Show { value.show() } else { "no Show: {name}" }
+}
+
+fn converts<T, U>(value: T, other: U) -> bool {
+  if T: Convert<U> { true } else { false }
+}
+
+fn main() / io {
+  print(as_number(Tag { id: 7 }))
+  print(as_number(Other { label: "x" }))
+  print(shown(Wrap { inner: 3 }))
+  let f = || 1
+  print(shown(Wrap { inner: f }))
+  let other = Other { label: "y" }
+  print("{converts(other, "s")} {converts(other, 1)} {converts(Tag { id: 1 }, 2)}")
+}

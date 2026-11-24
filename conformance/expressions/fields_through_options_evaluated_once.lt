@@ -1,0 +1,20 @@
+//~ rule: types.fields-through-option
+//~ stdout:
+//~ | finding 1
+//~ | Some("Lyon")
+//~ | finding 2
+//~ | None
+
+type Address = { city: str }
+
+fn find(n: i64) -> Option<Address> / io {
+  print("finding {n}")
+  if n == 1 { Some(Address { city: "Lyon" }) } else { None }
+}
+
+fn main() / io {
+  let found = find(1).city
+  print("{found}")
+  let missing = find(2).city
+  print("{missing}")
+}

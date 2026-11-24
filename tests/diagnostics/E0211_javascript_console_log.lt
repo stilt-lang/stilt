@@ -1,0 +1,3 @@
+fn main() / io {
+  console.log("hello")
+}

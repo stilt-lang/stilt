@@ -1,0 +1,11 @@
+//~ rule: std.integers
+//~ panic: overflow
+//~ panic-at: integer_pow_overflow.lt:9:11
+//~ run-output: "fits"
+
+fn main() / io {
+  let b: i8 = -2
+  print(if b.pow(7) == i8.MIN { "fits" } else { "wrong" })
+  let x = b.pow(8)
+  print("{x}")
+}

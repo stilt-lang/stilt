@@ -1,0 +1,11 @@
+//~ rule: program.prelude-names
+
+fn print(n: i64) {} //~ ERROR E0209
+type Option = { value: i64 } //~ ERROR E0209
+type Maybe = | Some(i64) | Nothing //~ ERROR E0209
+
+fn f(o: Option<i64>) {
+  print(1)
+  let m = Some("text")
+  let print = 1
+}

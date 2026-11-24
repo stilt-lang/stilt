@@ -1,0 +1,10 @@
+── OVERLAPPING `inout` ARGUMENTS ── E0402_overlapping_inout_arguments.lt:7:57  [E0402]
+
+`xs` is already modified by this call:
+
+  7 │ fn mixed(inout xs: List<i64>) { swap(inout xs[0], inout xs[1]) }
+    │                                                         ^^^^^
+
+Two places that one call modifies can't overlap, since the result would depend
+on which one is written back last. Use a method made for it, such as `xs.swap(i,
+j)`, or copy one of them first.

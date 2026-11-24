@@ -1,0 +1,13 @@
+── SYNTAX ERROR ─────────────── E0100_mutable_reference_to_self.lt:4:11  [E0100]
+
+Stilt has no references: a method that changes its receiver takes `inout self`:
+
+  4 │   fn bump(&mut self) { self.n += 1 }
+    │           ^
+
+A method's receiver is a value, `self`; one that changes it takes `inout self`.
+
+To fix it, write `inout self`:
+
+  4 │   fn bump(inout self) { self.n += 1 }
+    │           ~~~~~~

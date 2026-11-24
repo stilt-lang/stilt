@@ -1,0 +1,31 @@
+//~ tier: advanced
+//~ rule: syntax.polymorphic-function-types, polymorphism.function-types, polymorphism.placement, errors.declarations-with-errors
+
+type Bag = { items: List<fn<T>(T) -> T> } //~ ERROR E0340
+
+fn maker() -> fn<T>(T) -> T { |x| x } //~ ERROR E0340
+
+fn ident<T>(x: T) -> T { x }
+
+fn local() -> i64 {
+  let f: fn<T>(T) -> T = ident //~ ERROR E0340
+  f(1)
+}
+
+fn pair(p: (fn<T>(T) -> T, i64)) -> i64 { p.1 } //~ ERROR E0340
+
+// `U` appears in neither the parameters nor the result.
+fn unused(f: fn<T, U>(T) -> T) -> i64 { f(1) } //~ ERROR E0339
+
+// `T` is already the enclosing function's type parameter.
+fn outer<T>(g: fn<T>(T) -> T) -> i64 { 0 } //~ ERROR E0208
+
+// `both`'s parameter has an error, so its type is the error type: neither the calls of `f`
+// in the body nor the arguments given for it report anything.
+fn both(f: fn<T: Show>() -> str, n: i64) -> str { "{f(n)} {f("s")}" } //~ ERROR E0339
+
+fn quoted<T: Show>(x: T) -> str { "'{x}'" }
+
+fn again(f: fn<T: Show>(T) -> str) -> str { both(f, 3) }
+
+fn twice() -> str { both(quoted, 1) }

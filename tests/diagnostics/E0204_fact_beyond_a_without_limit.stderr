@@ -1,0 +1,16 @@
+── FACT BEYOND A `without` LIMIT ── E0204_fact_beyond_a_without_limit.lt:4:42  [E0204]
+
+This index can panic, but the module's header says `without panic`:
+
+  2 │ without panic
+    │         ───── the limit
+  3 │ 
+  4 │ pub fn first(prices: List<i64>) -> i64 { prices[0] }
+    │                                          ^^^^^^^^^
+
+A guard needs a test that gives `0 < prices.len()`.
+
+To fix it, use `get`, with `0` for an index out of range:
+
+  4 │ pub fn first(prices: List<i64>) -> i64 { prices.get(0) else 0 }
+    │                                                ~~~~~ ~~~~~~~~

@@ -1,0 +1,9 @@
+//~ rule: effects.without-panic, tests.property-checking
+
+module main
+without panic
+
+/// prop: |xs: List<i64>| { assert xs.len() >= 0; true } //~ PASS
+/// prop: |xs: List<i64>| xs[0] == xs[0] //~ FAIL
+/// prop: |x: i64| { assert x != 0; true } //~ FAIL
+fn halve(n: i64) -> i64 { n / 2 }

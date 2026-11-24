@@ -1,0 +1,25 @@
+//~ rule: std.net, std.net-listeners
+//~ stdout:
+//~ | ["127.0.0.1"] ["::1"]
+//~ | NotFound("") Other("a\0b")
+//~ | Other("127.0.0.1:70000") Other("127.0.0.1:-1") NotFound(":80")
+
+use std.io
+use std.net
+
+// The error that a call raises, shown.
+fn failed(f: fn() -> str / {io, raise<io.IoError>}) -> str / io {
+  match Result.of(f) {
+    Ok(text) => text
+    Err(e) => "{e}"
+  }
+}
+
+fn main() / {io, raise<io.IoError>} {
+  print("{try net.lookup("127.0.0.1")} {try net.lookup("::1")}")
+  print("{failed(|| "{try net.lookup("")}")} {failed(|| "{try net.lookup("a\0b")}")}")
+  let far = failed(|| "{try net.connect("127.0.0.1", 70000)}")
+  let below = failed(|| "{try net.listen("127.0.0.1", -1)}")
+  let nameless = failed(|| "{try net.connect("", 80)}")
+  print("{far} {below} {nameless}")
+}

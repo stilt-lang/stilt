@@ -1,0 +1,28 @@
+//~ tier: advanced
+//~ rule: tasks.sequential-run, tasks.same-output-under-every-handler
+//~ stdin: "one\ntwo\nthree\n"
+//~ stdout:
+//~ | a reads
+//~ | b reads
+//~ | main reads
+//~ | Some("one") Some("two") Some("three")
+
+use std.io
+use std.task
+
+// Each read takes the line the sequential run gives it, after what it printed before.
+fn main() / io {
+  with task.threads() {
+    let a = task.spawn(|| {
+      print("a reads")
+      io.read_line()
+    })
+    let b = task.spawn(|| {
+      print("b reads")
+      io.read_line()
+    })
+    print("main reads")
+    let c = io.read_line()
+    print("{a.await()} {b.await()} {c}")
+  }
+}

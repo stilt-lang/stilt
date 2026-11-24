@@ -1,0 +1,14 @@
+── UNKNOWN NAME ─────────────────────────────────────────── main.lt:6:5  [E0211]
+
+`Shape` has no variant `Sqare`:
+
+  6 │     Sqare(side) => side * side
+    │     ^^^^^
+
+Check the spelling. A local is visible after its `let`, and an item of another
+module is named through it, as `fs.exists` after `use std.fs`.
+
+To fix it, write `Square`:
+
+  6 │     Square(side) => side * side
+    │     ~~~~~~

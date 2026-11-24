@@ -1,0 +1,50 @@
+---
+// The library's index: its modules by tier, each with the first paragraph of its description.
+import Doc from "../../layouts/Doc.astro";
+import { file, library } from "../../lib/stilt";
+import { render } from "../../lib/markdown";
+import { sidebar } from "../../lib/nav";
+
+const all = library().map((m) => ({
+  ...m,
+  // The first paragraph, without its links, which belong on the module's page.
+  summary: render(m.description.split("\n\n")[0], { from: file(m) }).html.replace(/<\/?(a|p)\b[^>]*>/g, ""),
+}));
+const tiers = ["core", "advanced", "meta", "systems"]
+  .map((tier) => ({ tier, modules: all.filter((m) => m.tier === tier) }))
+  .filter((t) => t.modules.length);
+---
+
+<Doc title="The standard library" section="library" href="/library/" blocks={sidebar("library")}>
+  <h1 slot="title" class="title">The standard library</h1>
+  <p>
+    Every module of <code>std</code>, the standard library, which is written in Stilt. Each
+    function has its signature, the facts the compiler infers for it, and examples. The same pages
+    print in a terminal with <code>stilt doc --std</code>.
+  </p>
+  {
+    tiers.map((t) => (
+      <section class="tier">
+        <h2>The {t.tier} tier</h2>
+        <dl>
+          {t.modules.map((m) => (
+            <div>
+              <dt><a class="go" href={`/library/${m.address}/`}><code>{m.address}</code></a></dt>
+              <dd set:html={m.summary} />
+            </div>
+          ))}
+        </dl>
+      </section>
+    ))
+  }
+</Doc>
+
+<style>
+  .title { margin-bottom: 1.25rem; font-size: 1.75rem; line-height: 1.25; letter-spacing: -0.02em; }
+  .tier { margin-top: 3rem; }
+  .tier h2 { font-size: 1.1875rem; line-height: 1.4; }
+  .tier dl { display: flex; flex-direction: column; gap: 0.875rem; margin-top: 1rem; }
+  .tier dt code { background: none; padding: 0; font-size: 0.9375rem; font-weight: 500; }
+  .tier dd { margin: 0.125rem 0 0; font-size: 0.9375rem; line-height: 1.55; color: var(--muted); }
+  .tier dd :global(code) { font-size: 0.875em; }
+</style>

@@ -1,0 +1,11 @@
+//~ rule: types.range-bounds, expressions.range-iteration
+//~ run-output: "45"
+
+fn main() / io {
+  var total: u8 = 0
+  for i in 0..10 {
+    let b: u8 = i
+    total += b
+  }
+  print("{total}")
+}

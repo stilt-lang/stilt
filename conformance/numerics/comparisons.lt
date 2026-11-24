@@ -1,0 +1,19 @@
+//~ rule: numbers.integer-literals, numbers.comparisons, numbers.ieee-754
+//~ stdout:
+//~ | true true false true true false
+//~ | true true true false
+//~ | false false false true true true false
+
+fn main() / io {
+  let a: u8 = 200
+  let b: i8 = -100
+  let c = u64.MAX
+  let d: i32 = -1
+  print("{a > 100} {b < 0} {c < 1} {d <= -1} {c >= c} {a != 200}")
+  let x: f32 = 0.1
+  let y = 0.1
+  print("{x == 0.1} {y == 0.1} {x.to_f64() != y} {x.to_f64() < y}")
+  let zero = 0.0
+  let nan = zero / zero
+  print("{nan < nan} {nan <= 1.0} {nan == nan} {nan != 1.0} {-0.0 <= zero} {-0.0 >= zero} {-0.0 > zero}")
+}

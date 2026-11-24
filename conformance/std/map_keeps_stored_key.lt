@@ -1,0 +1,28 @@
+//~ rule: traits.structural-impls, std.finding-keys, std.show-output
+//~ stdout:
+//~ | {Key { id: 1, label: "first" }: "c", Key { id: 2, label: "other" }: "d"}
+//~ | [Key { id: 1, label: "first" }, Key { id: 2, label: "other" }]
+//~ | true None 2
+
+type Key = { id: i64, label: str }
+
+impl Eq for Key {
+  fn eq(self, other: Self) -> bool { self.id == other.id }
+}
+
+impl Hash for Key {
+  fn hash(self) -> u64 { self.id.wrap_to_u64() }
+}
+
+fn main() / io {
+  var m = Map.new()
+  m.insert(Key { id: 1, label: "first" }, "a")
+  m.insert(Key { id: 2, label: "other" }, "b")
+  m.insert(Key { id: 1, label: "second" }, "c")
+  m[Key { id: 2, label: "third" }] = "d"
+  print("{m}")
+  print("{m.keys()}")
+  let probe = Key { id: 1, label: "probe" }
+  let absent = Key { id: 3, label: "first" }
+  print("{m.contains(probe)} {m.get(absent)} {m.len()}")
+}

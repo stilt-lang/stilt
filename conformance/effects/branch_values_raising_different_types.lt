@@ -1,0 +1,10 @@
+//~ rule: effects.rows-that-meet, effects.function-value-unions
+
+type A = | A1
+type B = | B1
+
+fn pick(c: bool) {
+  let f = || raise A1
+  let g = || raise B1
+  let h = if c { f } else { g } //~ ERROR E0311
+}

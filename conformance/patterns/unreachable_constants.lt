@@ -1,0 +1,40 @@
+//~ rule: patterns.guards-and-constants, patterns.unreachable-arms
+//~ run-output: "1 1 2 1 0"
+
+const ONE: i64 = 1
+
+fn after_all(o: Option<i64>) -> i64 {
+  match o {
+    Some(_) => 1
+    None => 0
+    Some(ONE) => 2 //~ WARN W0301
+  }
+}
+
+fn constants_twice(o: Option<i64>) -> i64 {
+  match o {
+    Some(ONE) => 1
+    Some(ONE) => 2
+    _ => 0
+  }
+}
+
+fn after_guards(n: i64) -> i64 {
+  match n {
+    x if x > 0 => 1
+    x if x <= 0 => 2
+    _ => 3
+  }
+}
+
+fn literals_twice(o: Option<i64>) -> i64 {
+  match o {
+    Some(1) => 1
+    Some(1) => 2 //~ WARN W0301
+    _ => 0
+  }
+}
+
+fn main() / io {
+  print("{after_all(Some(1))} {constants_twice(Some(1))} {after_guards(-1)} {literals_twice(Some(1))} {literals_twice(None)}")
+}

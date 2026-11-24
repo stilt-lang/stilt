@@ -1,0 +1,9 @@
+── SYNTAX ERROR ────────────────────────────────── E0100_switch.lt:2:10  [E0100]
+
+Stilt writes `match`, whose arms are `pattern => value`:
+
+  2 │   switch n {
+    │          ^
+
+A `match` runs the first arm whose pattern fits, with no fallthrough, and `_`
+matches anything.

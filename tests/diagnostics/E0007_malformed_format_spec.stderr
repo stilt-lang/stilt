@@ -1,0 +1,9 @@
+── MALFORMED FORMAT SPEC ─────────── E0007_malformed_format_spec.lt:2:6  [E0007]
+
+`.2f` is not a format spec:
+
+  2 │   "{x:.2f}"
+    │      ^^^^
+
+A format spec gives an alignment, a width, a precision and a kind, each
+optional, as in `{x:>8.2}` or `{n:x}`. A float's precision is `.2`, with no `f`.

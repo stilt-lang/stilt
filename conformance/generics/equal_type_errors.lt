@@ -1,0 +1,21 @@
+//~ tier: meta
+//~ rule: generics.equal-types
+
+use std.array
+
+type Mod<p: u64> = { value: u64 }
+
+const PRIME: u64 = 1_000_000_007
+
+fn moduli() {
+  let a: Mod<7> = Mod { value: 1 }
+  let b: Mod<PRIME> = a //~ ERROR E0311
+}
+
+// A value parameter is equal only to itself, in a body that nothing calls.
+fn sizes<n: i64, m: i64>(a: array.Array<i64, n>, b: array.Array<i64, m>) {
+  let c: array.Array<i64, 3> = a //~ ERROR E0311
+  let d: array.Array<i64, n> = b //~ ERROR E0311
+}
+
+fn main() {}

@@ -1,0 +1,41 @@
+//~ tier: advanced
+//~ rule: tasks.continuations-stay-in-task
+//~ stdout:
+//~ | 1 2
+//~ | after 3
+//~ | 1 2
+//~ | after 3
+
+use std.task
+
+effect Ask {
+  fn ask() -> i64
+}
+
+// The task installs the handler, performs and resumes, all in itself.
+fn asked() -> i64 / io {
+  let h = handler Ask -> i64 {
+    fn ask() -> i64 {
+      let v = resume(1)
+      print("after {v}")
+      v
+    }
+  }
+  with h {
+    let a = Ask.ask()
+    print("{a} {a + 1}")
+    a + 2
+  }
+}
+
+fn run(handler_: handler async) / io {
+  with handler_ {
+    let t = task.spawn(|| asked())
+    let _ = t.await()
+  }
+}
+
+fn main() / io {
+  run(task.threads())
+  run(task.sequential())
+}

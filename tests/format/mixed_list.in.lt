@@ -1,0 +1,6 @@
+// A list that holds an element that isn't a literal, here a call among numbers, has one element
+// per line when it doesn't fit in 100 columns, as any other list.
+fn main() / io {
+  let mixed = [1000000, 2000000, 3000000, scale(4000000), 5000000, 6000000, 7000000, 8000000, 9000000]
+  print("{mixed}")
+}

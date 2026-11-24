@@ -1,0 +1,69 @@
+//~ tier: core
+
+// Capabilities below `io` (facts.capabilities): each native of facts.capability-natives has its capability, a function has
+// those of the functions it names and of its closure literals (facts.capabilities), a call through a
+// function value adds nothing (facts.calls-through-function-values), and `exit` has none (facts.capability-natives and facts.io-and-capabilities).
+
+use std.cli
+use std.clock
+use std.fs
+use std.io
+use std.net
+use std.process
+use std.random
+
+fn greet() / io {
+  print("hello") //~ CONSOLE ALLOC
+  io.flush() //~ CONSOLE ALLOC
+}
+
+fn exists() -> bool / io {
+  fs.exists("log.txt") //~ FS ALLOC
+}
+
+fn now() -> i64 / io {
+  clock.monotonic_ns() //~ CLOCK
+}
+
+// `cli.env` gives a `str`, which allocates.
+fn home() -> bool / io {
+  cli.env("HOME").is_some() //~ ENV ALLOC
+}
+
+fn seed() -> u64 / io {
+  random.entropy() //~ RAND
+}
+
+// The natives of `std.process` have `exec`, and `Command.status` has it through them;
+// `Command.new` builds lists.
+fn quiet() -> i64 / {io, raise<io.IoError>} {
+  try process.Command.new("true").status() //~ EXEC ALLOC
+}
+
+// The natives of `std.net` have `net`, and `net.connect` has it through them.
+fn reach(port: i64) -> bool / io {
+  let opened = try {
+    let _ = net.connect("127.0.0.1", port) //~ NET ALLOC
+    true
+  }
+    catch _ because "a refused connection is an answer too" => false
+  opened
+}
+
+// A function has the capabilities of the functions it names.
+fn stamp() -> i64 / io {
+  if exists() { now() } else { 0 } //~ FS CLOCK ALLOC
+}
+
+// A call through a function value adds nothing: the closure's capabilities are its writer's.
+fn twice(f: fn() / io) / io {
+  f()
+  f()
+}
+
+fn hello_twice() / io {
+  twice(|| print("hi")) //~ ALLOC CONSOLE
+}
+
+// `exit` performs `io` with no capability.
+fn stop() -> Never / io { exit(1) }

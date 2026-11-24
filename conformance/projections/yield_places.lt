@@ -1,0 +1,19 @@
+//~ tier: advanced
+//~ rule: projections.yield
+
+// The operand of `yield` is a place rooted in a `var` or an `inout` parameter.
+fn ten() -> inout i64 {
+  yield 10 //~ ERROR E0401
+}
+
+fn of_let(inout x: i64) -> inout i64 {
+  let y = x
+  yield y //~ ERROR E0403
+}
+
+fn main() / io {
+  var x = 1
+  ten() = 2
+  of_let(inout x) = 3
+  print("{x}")
+}

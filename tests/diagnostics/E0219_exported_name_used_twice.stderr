@@ -1,0 +1,10 @@
+── EXPORTED NAME USED TWICE ─────────────────────────── refunds.lt:2:15  [E0219]
+
+Another exported function of this package is named `total`, and C has one
+namespace; rename one:
+
+  2 │ pub extern fn total(refunds: i64) -> i64 {
+    │               ^^^^^
+
+An exported function's name is its C symbol, and C has one namespace, so no two
+exported functions of a package share a name. Rename one of them.

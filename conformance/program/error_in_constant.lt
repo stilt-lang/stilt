@@ -1,0 +1,11 @@
+//~ rule: program.bodies-with-errors, program.errors-in-bodies, program.check-error-report
+//~ run-output: "start"
+//~ panic: check-error
+//~ panic-at: error_in_constant.lt:6:7
+
+const LIMIT: i64 = "ten" //~ ERROR E0311
+
+fn main() / io {
+  print("start")
+  print("{LIMIT}")
+}

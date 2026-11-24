@@ -1,0 +1,2 @@
+//~ rule: packages.manifest, packages.package-table
+//~ run-output: "named"

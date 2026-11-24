@@ -1,0 +1,13 @@
+//~ rule: program.syntax-errors-at-run, errors.broken-parts, errors.running
+//~ run-output: "0"
+//~ panic: check-error
+//~ panic-at: syntax_error_in_constant.lt:6:7
+
+const LIMIT: i64 = (: 1) //~ ERROR E0100
+
+fn count(xs: List<i64>) -> i64 { xs.len() }
+
+fn main() / io {
+  print("{count([])}")
+  print("{LIMIT}")
+}

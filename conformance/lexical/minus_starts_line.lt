@@ -1,0 +1,7 @@
+//~ rule: lexical.terminator-insertion, expressions.block-value
+
+fn net(price: i64, discount: i64) -> i64 {
+  let total = price
+    - discount //~ ERROR E0322
+  total
+}

@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────────── E0100_java_throw.lt:4:20  [E0100]
+
+Stilt raises an error with `raise`, not `throw`:
+
+  4 │   if n < 0 { throw Negative }
+    │                    ^^^^^^^^
+
+`raise` ends the function with the error, which its row names, as `/ raise<E>`.
+
+To fix it, write `raise`:
+
+  4 │   if n < 0 { raise Negative }
+    │              ~~~~~

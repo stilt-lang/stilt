@@ -1,0 +1,8 @@
+//~ rule: std.integers
+//~ panic: overflow
+//~ panic-at: integer_euclid_min.lt:7:11
+
+fn main() / io {
+  let m: i16 = i16.MIN
+  print("{m.rem_euclid(-1)}")
+}

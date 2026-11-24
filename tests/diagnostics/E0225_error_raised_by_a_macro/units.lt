@@ -1,0 +1,16 @@
+use std.meta
+
+/// The seconds in a duration of a number and a unit, `s`, `min` or `h`, as
+/// `seconds!(90, min)`.
+pub macro seconds(n: meta.Expr, unit: meta.Tokens) -> meta.Expr / raise<meta.Error> {
+  var c = meta.cursor(unit)
+  let name = try c.name()
+  try c.end()
+  let factor = match name.text() {
+    "s" => 1,
+    "min" => 60,
+    "h" => 3600,
+    other => raise meta.error(name.span(), "`{other}` isn't a unit: write `s`, `min` or `h`"),
+  }
+  quote { $n * $factor }
+}

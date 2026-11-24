@@ -1,0 +1,24 @@
+//~ tier: meta
+
+// Naming `std.meta` puts a module in the meta tier (meta.reflection-tier). A function reflects on
+// `T` when its body names `T.shape()`, or gives `T` to a type parameter of a function that
+// reflects on it (meta.reflects), which `stilt show` prints beside its signature. Reading a shape's
+// fields' number performs nothing (meta.accessor-effects), and overflow adds nothing (effects.without-overflow).
+
+use std.meta
+
+type Point = { x: i64, y: i64 }
+
+fn count<T>(value: T) -> i64 { //~ REFLECTS T
+  match T.shape() {
+    Tuple(fields) => fields.len()
+    Record(fields) => fields.len()
+    _ => 0
+  }
+}
+
+fn twice<U>(value: U) -> i64 { count(value) + count(value) } //~ OVERFLOW REFLECTS U
+
+fn main() / io {
+  print("{twice(Point { x: 1, y: 2 })}") //~ OVERFLOW ALLOC CONSOLE
+}

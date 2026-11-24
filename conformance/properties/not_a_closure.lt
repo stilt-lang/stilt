@@ -1,0 +1,9 @@
+//~ rule: tests.property-form
+
+/// prop: reverse([]) == [] //~ ERROR E0332
+/// prop: || reverse([]) == [] //~ ERROR E0332
+/// prop: |xs| reverse(reverse(xs)) == xs //~ ERROR E0332
+/// prop: |xs: List<i64>, n| reverse(xs).len() == n //~ ERROR E0332
+/// prop: |xs, n| reverse(xs).len() == n //~ ERROR E0332 ERROR E0332
+/// prop: |xs: List<i64>| reverse(reverse(xs)) == xs
+fn reverse(xs: List<i64>) -> List<i64> { xs.fold([], |acc, x| [x].concat(acc)) }

@@ -1,0 +1,5 @@
+pub fn f() -> i64 {
+  /// Before a statement. //~ ERROR E0100
+  let x = 1
+  x
+}

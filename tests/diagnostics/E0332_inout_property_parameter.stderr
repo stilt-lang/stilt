@@ -1,0 +1,15 @@
+── PROPERTY THAT ISN'T A CLOSURE WITH TYPED PARAMETERS ── E0332_inout_property_parameter.lt:1:18  [E0332]
+
+This parameter is `inout`, but a property's parameters take generated values:
+
+  1 │ /// prop: |inout xs: List<i64>| reverse(reverse(xs)) == xs
+    │                  ^^
+
+A property is a closure with typed parameters that returns a `bool`, as `///
+prop: |xs: List<i64>| …`, since `stilt test` generates values of each type. A
+check without parameters is an example, `/// ex:`.
+
+To fix it, delete the `inout`:
+
+  1 │ /// prop: |inout xs: List<i64>| reverse(reverse(xs)) == xs
+    │            ------

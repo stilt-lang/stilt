@@ -1,0 +1,2 @@
+//~ rule: lexical.whitespace, lexical.identifiers, lexical.tokens, errors.syntax-errors
+fn f() -> i64 { ~1 } //~ ERROR E0002

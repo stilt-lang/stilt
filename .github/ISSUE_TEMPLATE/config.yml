@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: An idea for the language
+    url: https://github.com/stilt-lang/stilt-rfcs/issues/new/choose
+    about: Feature ideas are discussed in the RFC repository until they can become RFCs.
+  - name: A security problem
+    url: https://github.com/stilt-lang/stilt/security/advisories/new
+    about: Report vulnerabilities privately; see SECURITY.md.
+  - name: A question
+    url: https://github.com/stilt-lang/stilt/discussions
+    about: Ask how to do something, or what a message means, in the discussions.

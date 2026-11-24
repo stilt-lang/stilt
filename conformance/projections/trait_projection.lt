@@ -1,0 +1,21 @@
+//~ tier: advanced
+//~ rule: projections.declaring-projection
+
+trait Cell {
+  fn cell(inout self, i: i64) -> inout i64
+}
+
+type Row = { xs: List<i64> }
+
+// A trait method that is a projection is implemented by a projection.
+impl Cell for Row {
+  fn cell(inout self, i: i64) -> i64 { //~ ERROR E0307
+    self.xs[i]
+  }
+}
+
+fn main() / io {
+  var r = Row { xs: [1, 2] }
+  r.cell(0) = 5
+  print("{r.xs}")
+}

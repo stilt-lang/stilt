@@ -1,0 +1,18 @@
+//~ rule: types.undecided-types, errors.undecided-types-last
+
+fn unused_list() -> i64 {
+  let xs = List.new() //~ ERROR E0312
+  0
+}
+
+fn with_other_error() -> i64 {
+  let xs = List.new()
+  let n: i64 = "zero" //~ ERROR E0311
+  n
+}
+
+fn decided() -> i64 {
+  var xs = List.new()
+  xs.push(1)
+  xs.len()
+}

@@ -1,0 +1,9 @@
+//~ rule: tests.property-checking
+
+type Opaque = { run: fn() }
+
+fn fails() / raise<Opaque> { raise Opaque { run: || () } }
+
+/// prop: |x: i64| { try fails(); x == x } //~ ERROR E0318
+/// prop: |x: i64| x == x
+fn documented() {}

@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: projections.yield
+
+// `yield` belongs only to a projection's body.
+fn plain(inout x: i64) {
+  yield x //~ ERROR E0425
+}
+
+fn at(inout x: i64) -> inout i64 {
+  let f = || {
+    yield x //~ ERROR E0425
+  }
+  yield x
+}
+
+test "no yield" {
+  var x = 1
+  yield x //~ ERROR E0425
+}
+
+fn main() / io {
+  var x = 1
+  plain(inout x)
+  at(inout x) = 2
+  print("{x}")
+}

@@ -1,0 +1,106 @@
+// Random choices, drawn from the generator of OCaml 5's `Random.State`
+// (LXM, L64X128), so that a seed fixes the same program as its Rust original.
+
+use md5
+
+/// The state of an L64X128 generator: the LCG's addend and state, and the
+/// xoroshiro128's two words.
+pub type Rng = { a: u64, s: u64, x0: u64, x1: u64 }
+
+/// The generator that `Random.State.make [| seed |]` makes: the seed's eight
+/// little-endian bytes and a suffix of 1, then 2, digested by MD5.
+/// ex: make(0) == Rng { a: 12433050829503690735, s: 3710375653678870699, x0: 13519105002681141917, x1: 6118462396525805778 }
+pub fn make(seed: i64) -> Rng {
+  var bytes = List.generate(8, |i| (seed >> (8 * i)).wrap_to_u8())
+  bytes.push(1)
+  let d1 = md5.digest(bytes)
+  bytes[8] = 2
+  let d2 = md5.digest(bytes)
+  let x0 = little(d2, 0)
+  let x1 = little(d2, 8)
+  Rng {
+    a: little(d1, 0) | 1,
+    s: little(d1, 8),
+    x0: if x0 == 0 { 1 } else { x0 },
+    x1: if x1 == 0 { 2 } else { x1 },
+  }
+}
+
+/// The little-endian `u64` at byte `at` of `bytes`.
+/// ex: little([1, 2, 0, 0, 0, 0, 0, 0], 0) == 513
+fn little(bytes: List<u8>, at: i64) -> u64 {
+  var x: u64 = 0
+  for i in 0..8 { x = x | bytes[at + i].to_u64() << (8 * i).wrap_to_u64() }
+  x
+}
+
+/// The next 64 bits: the LCG's state mixed, after which the LCG and the
+/// xoroshiro128 advance.
+/// ex: { var r = Rng { a: 1, s: 2, x0: 3, x1: 4 }; [next(inout r), next(inout r), next(inout r)] == [3860816457867857678, 21223322560256856, 3500884966496404595] }
+/// ex: { var r = make(7); next(inout r) == 3880793927505815243 && next(inout r) == 15302003549494431843 }
+pub fn next(inout r: Rng) -> u64 {
+  let z = mix(r.s +% r.x0)
+  r.s = r.s *% 0xd1342543de82ef95 +% r.a
+  let q1 = r.x1 ^ r.x0
+  let q0 = rotl(r.x0, 24)
+  r.x0 = q0 ^ q1 ^ q1 << 16
+  r.x1 = rotl(q1, 37)
+  z
+}
+
+fn mix(z: u64) -> u64 {
+  let z = (z ^ z >> 32) *% 0xdaba0b6eb09322e3
+  let z = (z ^ z >> 32) *% 0xdaba0b6eb09322e3
+  z ^ z >> 32
+}
+
+/// `x` rotated left by `k` bits, for `k` from 1 to 63.
+/// ex: rotl(0x8000000000000001, 4) == 24
+fn rotl(x: u64, k: u64) -> u64 { x << k | x >> (64 - k) }
+
+/// An integer from 0 to `n - 1`, for `n` from 1 to `2^30 - 1`: the low 30
+/// bits of a draw, unless they fall in the stretch at the top of their range
+/// that `n` doesn't divide, which `Random.State.int` draws again.
+/// ex: { var r = make(1); [below(inout r, 10), below(inout r, 10), below(inout r, 1000)] == [4, 4, 862] }
+pub fn below(inout r: Rng, n: i64) -> i64 {
+  loop {
+    let x = (next(inout r) & 0x3fffffff).wrap_to_i64()
+    let v = x % n
+    if x - v <= 0x3fffffff - n + 1 { return v }
+  }
+}
+
+/// An integer from `lo` to `hi`, both included.
+pub fn between(inout r: Rng, lo: i64, hi: i64) -> i64 { lo + below(inout r, hi - lo + 1) }
+
+/// `true` with probability `p`: a multiple of `2^-53` in `(0, 1)`, as
+/// `Random.State.float` draws it, below `p`.
+/// ex: { var r = make(7); [chance(inout r, 0.5), chance(inout r, 0.5), chance(inout r, 0.5)] == [true, false, true] }
+pub fn chance(inout r: Rng, p: f64) -> bool {
+  loop {
+    let n = next(inout r) >> 11
+    if n != 0 { return n.to_f64() * 1.1102230246251565e-16 < p }
+  }
+}
+
+/// One of the elements of `xs`, which isn't empty.
+pub fn one<T>(inout r: Rng, xs: List<T>) -> T { xs[below(inout r, xs.len())] }
+
+/// The index of one of the weights, each index as likely as its weight. A
+/// weight of 0 is never taken, and at least one weight is positive.
+/// ex: { var r = make(3); weighted(inout r, [1, 1, 3]) == 2 }
+pub fn weighted(inout r: Rng, weights: List<i64>) -> i64 {
+  var n = below(inout r, i64.sum(weights))
+  for (i, w) in weights.enumerate(0) {
+    if n < w { return i }
+    n -= w
+  }
+  unreachable()
+}
+
+/// What one of the closures makes, each as likely as its weight, and which draws
+/// from the same generator.
+pub fn run<T>(inout r: Rng, choices: List<(i64, fn(inout Rng) -> T)>) -> T {
+  let i = weighted(inout r, choices.map(|(w, _)| w))
+  choices[i].1(inout r)
+}

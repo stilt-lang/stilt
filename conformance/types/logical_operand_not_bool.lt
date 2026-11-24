@@ -1,0 +1,9 @@
+//~ rule: expressions.logical-operands, expressions.conditions
+
+fn left(x: i64) -> bool {
+  x && true //~ ERROR E0311
+}
+
+fn both(x: i64) -> bool {
+  1 && x //~ ERROR E0311 ERROR E0311
+}

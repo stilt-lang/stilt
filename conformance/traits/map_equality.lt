@@ -1,0 +1,23 @@
+//~ rule: traits.map-equality, std.maps
+//~ stdout:
+//~ | true {"x": 1, "y": 2} {"y": 2, "x": 1}
+//~ | true true
+//~ | false true
+
+fn main() / io {
+  var a: Map<str, i64> = Map.new()
+  a["x"] = 1
+  a["y"] = 2
+  var b: Map<str, i64> = Map.with_default(7)
+  b["y"] = 2
+  b["x"] = 1
+  print("{a == b} {a} {b}")
+  var c: Map<str, i64> = Map.new()
+  c["x"] = 1
+  c["y"] = 3
+  print("{[a] == [b]} {a != c}")
+  b["z"] = 7
+  let e: Map<str, i64> = Map.with_default(1)
+  let f: Map<str, i64> = Map.new()
+  print("{a == b} {e == f}")
+}

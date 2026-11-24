@@ -1,0 +1,54 @@
+//~ rule: patterns.unreachable-arms
+//~ run-output: "6"
+
+type Color = | Red | Green
+
+const ONE: i64 = 1
+
+fn after_wildcard(n: i64) -> i64 {
+  match n {
+    _ => 1
+    4 => 2 //~ WARN W0301
+  }
+}
+
+fn after_alternatives(c: Color) -> i64 {
+  match c {
+    Red | Green => 1
+    Red => 2 //~ WARN W0301
+  }
+}
+
+fn covered_by_rows(t: (bool, bool)) -> i64 {
+  match t {
+    (true, _) => 1
+    (_, true) => 2
+    (false, false) => 3
+    (true, true) => 4 //~ WARN W0301
+  }
+}
+
+fn constant_after_wildcard(n: i64) -> i64 {
+  match n {
+    x if x > 5 => 1
+    _ => 2
+    ONE => 3 //~ WARN W0301
+  }
+}
+
+fn literal_after_constant(n: i64) -> i64 {
+  match n {
+    ONE => 1
+    1 => 2
+    _ => 3
+  }
+}
+
+fn main() / io {
+  let total = after_wildcard(4) +
+    after_alternatives(Red) +
+    covered_by_rows((true, true)) +
+    constant_after_wildcard(1) +
+    literal_after_constant(1)
+  print("{total}")
+}

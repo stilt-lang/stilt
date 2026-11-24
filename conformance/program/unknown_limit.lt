@@ -1,0 +1,4 @@
+//~ rule: program.header-limits
+
+module main
+without fancy //~ ERROR E0100

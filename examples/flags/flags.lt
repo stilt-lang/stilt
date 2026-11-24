@@ -1,0 +1,286 @@
+// flags: reads command-line options into a record, from the record's type alone. Nothing is
+// declared on the type: `std.meta` gives its fields, and each field's type says what its option
+// takes.
+//
+// A field `max_steps` is the option `--max-steps`. A `bool` is a flag, `--verbose` setting it
+// and `--no-verbose` clearing it; an integer, a float and a `str` take a value, as `--width 40`
+// or `--width=40`; an `Option` takes its element's value, and a `List` takes one each time its
+// option is given; a variant type takes the name of one of its variants that have no payload,
+// in lower case. The field named `rest`, a `List`, takes the arguments that aren't options.
+
+use std.meta
+
+/// Why the arguments give no record: `--help` asked for the usage, or they are wrong.
+pub type Error = | Help | Wrong(str)
+
+/// `defaults`, with each field whose option `args` give set from it.
+/// ex: try parse(["--width", "8", "--verbose"], { verbose: false, width: 1 }) == { verbose: true, width: 8 }
+/// ex: Result.of(|| try parse(["--widht=8"], { width: 1 })) == Err(Wrong("unknown option --widht; did you mean --width?"))
+pub fn parse<T>(args: List<str>, defaults: T) -> T / raise<Error> {
+  comptime match T.shape() {
+    Record(fields) => {
+      var options = []
+      comptime for f in fields {
+        if let Some(kind) = unreadable(f) {
+          raise Wrong("flags can't read --{dashed(f.name())}, a {kind}")
+        }
+        options.push(Opt { name: dashed(f.name()), flag: is_flag(f) })
+      }
+      let given = try scan(args, options)
+      try fields.build(
+        |f| try value(
+          f.get(defaults),
+          given.filter(|(n, _)| n == f.name()).map(.1),
+          dashed(f.name()),
+        ),
+      )
+    }
+    _ => raise Wrong("flags reads a record, not a {T.name()}")
+  }
+}
+
+/// An option: its name, and whether it is a flag, which takes no value.
+type Opt = { name: str, flag: bool }
+
+/// The name of a field's type, when no option can give it a value.
+fn unreadable<T, F>(f: meta.Field<T, F>) -> Option<str> {
+  if readable(F.shape()) { None } else { Some(F.name()) }
+}
+
+fn readable<T>(shape: meta.Shape<T>) -> bool {
+  match shape {
+    Int(_) | Float(_) | Str(_) | Bool(_) => true
+    Option(o) => readable_inner(o)
+    List(l) => readable_element(l)
+    Variants(cases) => {
+      var bare = true
+      for c in cases { bare = bare && no_payload(c) }
+      bare
+    }
+    _ => false
+  }
+}
+
+fn readable_inner<T, E>(o: meta.Convert<T, Option<E>>) -> bool { readable(E.shape()) }
+
+fn readable_element<T, E>(l: meta.Convert<T, List<E>>) -> bool { readable(E.shape()) }
+
+fn no_payload<T, P>(c: meta.Case<T, P>) -> bool {
+  match P.shape() {
+    Unit(_) => true
+    _ => false
+  }
+}
+
+fn is_flag<T, F>(f: meta.Field<T, F>) -> bool {
+  match F.shape() {
+    Bool(_) => true
+    _ => false
+  }
+}
+
+/// Each value that `args` give, with the field it is for, in order, `"true"` or `"false"` for a
+/// flag, and the arguments that aren't options for the field `rest`.
+fn scan(args: List<str>, options: List<Opt>) -> List<(str, str)> / raise<Error> {
+  var (given, i) = ([], 0)
+  while i < args.len() {
+    let arg = args[i]
+    i += 1
+    if arg == "--help" { raise Help }
+    let Some(written) = arg.strip_prefix("--") else {
+      if !options.any(|o| o.name == "rest") { raise Wrong("unexpected argument {arg}") }
+      given.push(("rest", arg))
+      continue
+    }
+    let (name, attached) = match written.split_once("=") {
+      Some((n, v)) => (n, Some(v))
+      None => (written, None)
+    }
+    let negated = name.strip_prefix("no-").filter(|n| options.any(|o| o.flag && o.name == n))
+    let option = options.find(|o| o.name == (negated else name) && o.name != "rest")
+      else raise Wrong("unknown option --{name}{suggestion(name, options)}")
+    let text = match (option.flag, attached) {
+      (true, Some(_)) => raise Wrong("--{name} is a flag, which takes no value")
+      (true, None) => if negated == None { "true" } else { "false" }
+      (false, Some(v)) => v
+      (false, None) => {
+        i += 1
+        args.get(i - 1) else raise Wrong("--{name} needs a value")
+      }
+    }
+    given.push((option.name.replace("-", "_"), text))
+  }
+  given
+}
+
+/// The value of a field whose option is `--name`: `current` when `texts` is empty, a list of
+/// them all for a list, and otherwise the last.
+fn value<F>(current: F, texts: List<str>, name: str) -> F / raise<Error> {
+  let Some(last) = texts.last() else return current
+  match F.shape() {
+    List(l) => {
+      var items = []
+      for t in texts { items.push(try read(t, name)) }
+      l.make(items)
+    }
+    _ => try read(last, name)
+  }
+}
+
+/// The `T` that `text` writes, given to `--name`.
+fn read<T>(text: str, name: str) -> T / raise<Error> {
+  let wrong = || Wrong("--{name} takes {placeholder(T.shape())}, not {text}")
+  match T.shape() {
+    Int(n) => n.parse(text)
+      else raise Wrong("--{name} takes an integer that a {T.name()} holds, not {text}")
+    Float(c) => c.make(text.to_f64() else raise wrong())
+    Str(s) => s.make(text)
+    Bool(b) => b.make(text == "true")
+    Option(o) => o.make(Some(try read(text, name)))
+    Variants(cases) => {
+      for c in cases {
+        if dashed(c.name()) == text { return c.make(try unit() catch _ => raise wrong()) }
+      }
+      raise wrong()
+    }
+    _ => raise Wrong("flags can't read --{name}, a {T.name()}")
+  }
+}
+
+/// The payload of a variant that has none, `()`.
+fn unit<P>() -> P / raise<Error> {
+  match P.shape() {
+    Unit(u) => u.make(())
+    _ => raise Wrong("")
+  }
+}
+
+/// What the usage writes for a value of the type whose shape is `shape`.
+fn placeholder<T>(shape: meta.Shape<T>) -> str {
+  match shape {
+    Int(_) => "an integer"
+    Float(_) => "a number"
+    Str(_) => "text"
+    Option(o) => inner(o)
+    List(l) => "{listed(l)}, repeated"
+    Variants(cases) => {
+      var names = []
+      for c in cases { names.push(dashed(c.name())) }
+      "one of {", ".join(names)}"
+    }
+    _ => T.name()
+  }
+}
+
+fn inner<T, E>(o: meta.Convert<T, Option<E>>) -> str { placeholder(E.shape()) }
+
+fn listed<T, E>(l: meta.Convert<T, List<E>>) -> str { placeholder(E.shape()) }
+
+/// The usage of `program`, whose options are those of `T`, with each default that `defaults`
+/// gives.
+pub fn usage<T>(program: str, defaults: T) -> str {
+  var (options, rest) = ([], "")
+  comptime match T.shape() {
+    Record(fields) => {
+      comptime for f in fields {
+        let (name, shown) = (dashed(f.name()), default(f.get(defaults)))
+        let takes = if is_flag(f) { "--[no-]{name}" } else { "--{name} {value_name(f)}" }
+        if name == "rest" {
+          rest = " [{value_name(f)}]"
+        } else {
+          options.push((takes, if shown == "" { "" } else { "default: {shown}" }))
+        }
+      }
+    }
+    _ => {}
+  }
+  let width = (options.map(|(t, _)| t.char_count()).max() else 0) + 2
+  let lines = options.map(|(t, d)| "  {t.pad_end(width, " ")}{d}".trim_end())
+  "usage: {program} [OPTIONS]{rest}\n{"\n".join(lines)}"
+}
+
+fn value_name<T, F>(f: meta.Field<T, F>) -> str {
+  let words = placeholder(F.shape()).replace(", repeated", "...").replace("one of ", "")
+  words.replace("an ", "").replace("a ", "").replace(", ", "|").ascii_upper()
+}
+
+/// How the usage shows a default: nothing for `false`, `None` and an empty list.
+fn default<T>(value: T) -> str {
+  match T.shape() {
+    Int(n) => n.text(value)
+    Float(c) => "{c.get(value)}"
+    Str(s) => s.get(value)
+    Bool(b) => if b.get(value) { "true" } else { "" }
+    Option(o) => match o.get(value) {
+      Some(x) => default(x)
+      None => ""
+    }
+    List(l) => ", ".join(l.get(value).map(default))
+    Variants(cases) => {
+      var name = ""
+      for c in cases { if c.get(value).is_some() { name = dashed(c.name()) } }
+      name
+    }
+    _ => ""
+  }
+}
+
+/// A field's or a variant's name as an option writes it: `max_steps` as `max-steps`, and
+/// `FastPath` as `fast-path`.
+/// ex: dashed("max_steps") == "max-steps"
+/// ex: dashed("FastPath") == "fast-path"
+fn dashed(name: str) -> str {
+  var out = []
+  for (i, c) in name.chars().enumerate(0) {
+    if c.is_ascii_upper() && i > 0 { out.push("-") }
+    out.push(if c == "_" { "-" } else { c.ascii_lower() })
+  }
+  "".join(out)
+}
+
+/// `; did you mean --x?` for the option nearest `name`, at most two edits away.
+fn suggestion(name: str, options: List<Opt>) -> str {
+  let near = options.map(|o| (distance(name, o.name), o.name)).filter(|(d, _)| d <= 2).min()
+  match near {
+    Some((_, n)) => "; did you mean --{n}?"
+    None => ""
+  }
+}
+
+/// The number of characters to insert, delete or replace to make `a` into `b`.
+/// ex: distance("widht", "width") == 2
+fn distance(a: str, b: str) -> i64 {
+  let (xs, ys) = (a.chars(), b.chars())
+  var row = List.repeat(0, ys.len() + 1).enumerate(0).map(.0)
+  for (i, x) in xs.enumerate(1) {
+    var next = [i]
+    for (j, y) in ys.enumerate(1) {
+      let cost = if x == y { 0 } else { 1 }
+      next.push([row[j] + 1, next[j - 1] + 1, row[j - 1] + cost].min() else 0)
+    }
+    row = next
+  }
+  row.last() else 0
+}
+
+test "an anonymous record's options, a list's values and the arguments that aren't options" {
+  let o = try parse(
+    ["a.txt", "--level=3", "--name", "x", "--name", "y", "b.txt"],
+    { level: 1, name: ["z"], rest: [], },
+  )
+    catch e => panic("the arguments don't fit: {e}")
+  assert o == { level: 3, name: ["x", "y"], rest: ["a.txt", "b.txt"] }
+}
+
+test "what the arguments get wrong is said" {
+  let wrong = |args| Result.of(|| try parse(args, { level: 1, quiet: false }))
+  assert wrong(["--level"]) == Err(Wrong("--level needs a value"))
+  assert wrong(["--level", "x"]) == Err(Wrong("--level takes an integer that a i64 holds, not x"))
+  assert wrong(["--quiet=yes"]) == Err(Wrong("--quiet is a flag, which takes no value"))
+  assert wrong(["--no-level"]) == Err(Wrong("unknown option --no-level"))
+  assert wrong(["--rest", "x"]) == Err(Wrong("unknown option --rest"))
+  assert wrong(["x.txt"]) == Err(Wrong("unexpected argument x.txt"))
+  assert wrong(["--level", "2", "--help"]) == Err(Help)
+  let nested = Result.of(|| try parse([], { size: (1, 2) }))
+  assert nested == Err(Wrong("flags can't read --size, a (i64, i64)"))
+}

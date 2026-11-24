@@ -1,0 +1,9 @@
+//~ rule: traits.impl-blocks
+
+type Pair<A, B> = { a: A, b: B }
+
+impl<A, B> Pair<A, B> {}
+impl<B, A> Pair<A, B> {}
+impl Pair<i64, i64> {} //~ ERROR E0302
+impl<A> Pair<A, A> {} //~ ERROR E0302
+impl<A, B, C> Pair<A, B> {} //~ ERROR E0302

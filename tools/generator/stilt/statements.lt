@@ -1,0 +1,283 @@
+// Statements, and the blocks they make. A block's bindings end with it, and
+// every loop runs a bounded number of times.
+
+use changes
+use code
+use context
+use expr
+use pick
+use ty
+
+fn binding(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  mutable: bool,
+) -> (context.Scope, List<(i64, str)>) {
+  let t = context.random_ty(inout b.p, true, 2)
+  let name = context.fresh(inout b.p, "v")
+  let e = expr.expr(inout b, sc, depth, false, t)
+  let keyword = if mutable { "var" } else { "let" }
+  let text = if e.known && pick.chance(inout b.p.r, 0.5) {
+    "{keyword} {name} = {e.text}"
+  } else {
+    "{keyword} {name}: {ty.to_string(t)} = {e.text}"
+  }
+  (context.declare(sc, name, t, mutable), code.line(text))
+}
+
+/// A let-else, whose `else` leaves the block (patterns.let-else).
+fn let_else(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+) -> (context.Scope, List<(i64, str)>) {
+  let d = depth - 1
+  let leave = if sc.in_loop && pick.chance(inout b.p.r, 0.6) {
+    pick.one(inout b.p.r, ["continue", "break"])
+  } else {
+    match sc.returns {
+      Some(Unit) | None => "return"
+      Some(t) => "return {expr.expr(inout b, sc, d, false, t).text}"
+    }
+  }
+  let t = context.random_ty(inout b.p, false, 1)
+  let y = context.fresh(inout b.p, "y")
+  let after = context.declare(sc, y, t, false)
+  if pick.chance(inout b.p.r, 0.75) {
+    let value = expr.expr(inout b, sc, d, true, ty.OptionOf(t))
+    return (after, code.line("let Some({y}) = {code.operand(value)} else \{ {leave} }"))
+  }
+  let rest = context.fresh(inout b.p, "rest")
+  let value = expr.expr(inout b, sc, d, true, ty.ListOf(t))
+  let text = "let [{y}, ..{rest}] = {code.operand(value)} else \{ {leave} }"
+  (context.declare(after, rest, ty.ListOf(t), false), code.line(text))
+}
+
+/// The statements that print, or that leave the code when a condition holds:
+/// a raise, a `break` or `continue`, or a `return`. Each comes with its weight
+/// and the scope after it, which is `sc`.
+fn effects(
+  sc: context.Scope,
+  depth: i64,
+) -> List<(i64, fn(inout context.Body) -> (context.Scope, List<(i64, str)>))> {
+  let d = depth - 1
+  let io = if sc.io { 1 } else { 0 }
+  [
+    (
+      4 * io,
+      |inout b| { (sc, code.line("print({expr.expr(inout b, sc, depth, false, ty.Str).text})")) },
+    ),
+    (io, |inout b| (sc, code.line("eprint({expr.interpolation(inout b, sc, d).text})"))),
+    (
+      if sc.may_raise { 1 } else { 0 },
+      |inout b| {
+        let (case, payload) = pick.one(inout b.p.r, b.p.fault_variants)
+        var args = []
+        for t in payload { args.push(expr.expr(inout b, sc, d, false, t).text) }
+        let raised = if args.is_empty() { case } else { code.call_text(case, args) }
+        (sc, guarded(inout b, sc, d, "raise {raised}"))
+      },
+    ),
+    (
+      if sc.in_loop { 1 } else { 0 },
+      |inout b| {
+        let word = pick.one(inout b.p.r, ["break", "continue"])
+        (sc, guarded(inout b, sc, d, word))
+      },
+    ),
+    (
+      if sc.returns.is_some() { 1 } else { 0 },
+      |inout b| {
+        let value = match sc.returns {
+          Some(Unit) | None => ""
+          Some(t) => " {expr.expr(inout b, sc, d, false, t).text}"
+        }
+        (sc, guarded(inout b, sc, d, "return{value}"))
+      },
+    ),
+  ]
+}
+
+/// `text`, run when a condition holds.
+fn guarded(inout b: context.Body, sc: context.Scope, d: i64, text: str) -> List<(i64, str)> {
+  let c = expr.cond(inout b, sc, d)
+  code.line("if {code.head(c.text)} \{ {text} }")
+}
+
+/// `n` statements, and the scope after them.
+pub fn stmts(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  n: i64,
+) -> (context.Scope, List<(i64, str)>) {
+  var scope = sc
+  var lines = []
+  for _ in 0..n {
+    let (after, more) = stmt(inout b, scope, depth)
+    scope = after
+    lines.extend(more)
+  }
+  (scope, lines)
+}
+
+/// The statements of a block, whose bindings end with it.
+fn block(inout b: context.Body, sc: context.Scope, depth: i64) -> List<(i64, str)> {
+  let n = pick.between(inout b.p.r, 1, 4)
+  stmts(inout b, sc, depth, n).1
+}
+
+/// A statement: a binding, a change, an effect, or a statement that nests
+/// code, each with the scope after it.
+fn stmt(inout b: context.Body, sc: context.Scope, depth: i64) -> (context.Scope, List<(i64, str)>) {
+  context.spend(inout b, sc, 1)
+  let bindings: List<(i64, fn(inout context.Body) -> (context.Scope, List<(i64, str)>))> = [
+    (6, |inout b| binding(inout b, sc, depth, false)),
+    (4, |inout b| binding(inout b, sc, depth, true)),
+  ]
+  context.run(
+    inout b,
+    bindings.concat(changes.changes(b, sc, depth)).concat(effects(sc, depth)).concat(
+      nested(b, sc, depth),
+    ),
+  )
+}
+
+/// The statements that nest code, which the depth and the budget must allow:
+/// a let-else, and the statements that hold blocks.
+fn nested(
+  b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+) -> List<(i64, fn(inout context.Body) -> (context.Scope, List<(i64, str)>))> {
+  let deeper = if depth > 0 && context.affordable(b, sc, 8) { 1 } else { 0 }
+  [
+    (2 * deeper, |inout b| let_else(inout b, sc, depth)),
+    (3 * deeper, |inout b| (sc, if_stmt(inout b, sc, depth))),
+    (2 * deeper, |inout b| (sc, for_each(inout b, sc, depth))),
+    (2 * deeper, |inout b| (sc, for_range(inout b, sc, depth))),
+    (deeper, |inout b| (sc, counted_loop(inout b, sc, depth))),
+    (deeper, |inout b| (sc, match_stmt(inout b, sc, depth))),
+  ]
+}
+
+fn if_stmt(inout b: context.Body, sc: context.Scope, depth: i64) -> List<(i64, str)> {
+  let d = depth - 1
+  let c = expr.cond(inout b, sc, d)
+  let opening = "if {code.head(c.text)} \{"
+  let then_ = block(inout b, sc, d)
+  if pick.chance(inout b.p.r, 0.5) { return code.block_lines(opening, then_, "}") }
+  let else_ = block(inout b, sc, d)
+  var out = [(0, opening)]
+  out.extend(code.nest(then_))
+  out.push((0, "} else \{"))
+  out.extend(code.nest(else_))
+  out.push((0, "}"))
+  out
+}
+
+/// What a `for` iterates, its elements' type and the variables it freezes: a
+/// list or map variable, which can't change in the loop's body (modes.change-while-iterating, rule
+/// 4), or any other list cut to four elements.
+fn iterated(inout b: context.Body, sc: context.Scope, d: i64) -> (str, ty.Ty, List<str>) {
+  let iterable = sc.vars.filter(|v| {
+    match v.ty {
+      ListOf(_) | MapOf(_, _) => true
+      _ => false
+    }
+  })
+  if !iterable.is_empty() && pick.chance(inout b.p.r, 0.5) {
+    let v = pick.one(inout b.p.r, iterable)
+    let elem = match v.ty {
+      ListOf(t) => t
+      MapOf(k, t) => ty.Tuple([k, t])
+      _ => unreachable()
+    }
+    return (v.name, elem, [v.name])
+  }
+  let t = context.random_ty(inout b.p, false, 1)
+  let xs = expr.expr(inout b, sc, d, true, ty.ListOf(t))
+  let n = pick.between(inout b.p.r, 1, 4)
+  (code.method_on(xs, "take", ["{n}"]).text, t, [])
+}
+
+fn for_each(inout b: context.Body, sc: context.Scope, depth: i64) -> List<(i64, str)> {
+  let d = depth - 1
+  let (source, elem, frozen) = iterated(inout b, sc, d)
+  let parts = match elem {
+    Tuple(ts) => if pick.chance(inout b.p.r, 0.6) { ts } else { [] }
+    _ => []
+  }
+  var bound = []
+  for t in parts {
+    bound.push(context.Var { name: context.fresh(inout b.p, "x"), ty: t, mutable: false })
+  }
+  if parts.is_empty() {
+    bound.push(context.Var { name: context.fresh(inout b.p, "x"), ty: elem, mutable: false })
+  }
+  let pattern = if parts.is_empty() { bound[0].name } else { "({", ".join(bound.map(.name))})" }
+  var inner = sc
+  inner.vars = bound.concat(sc.vars)
+  inner.frozen = frozen.concat(sc.frozen)
+  inner.in_loop = true
+  inner.weight = sc.weight * 4
+  code.block_lines("for {pattern} in {code.head(source)} \{", block(inout b, inner, d), "}")
+}
+
+/// A `for` over a range of at most six integers. The upper bound's type
+/// decides the counter's, and a literal bound makes it an `i64`.
+fn for_range(inout b: context.Body, sc: context.Scope, depth: i64) -> List<(i64, str)> {
+  let d = depth - 1
+  let limit = pick.between(inout b.p.r, 0, 5)
+  let (range, t) = if pick.chance(inout b.p.r, 0.5) {
+    ("0..{limit}", ty.Int(ty.I64))
+  } else {
+    let k = pick.one(inout b.p.r, ty.INT_KINDS)
+    let n = expr.expr(inout b, sc, d, true, ty.Int(k))
+    ("0..=({code.operand(n)} & {limit})", ty.Int(k))
+  }
+  let i = context.fresh(inout b.p, "n")
+  var inner = context.declare(sc, i, t, false)
+  inner.in_loop = true
+  inner.weight = sc.weight * 6
+  code.block_lines("for {i} in {range} \{", block(inout b, inner, d), "}")
+}
+
+/// A `while` or a `loop`, counted so that it ends. The counter goes up at the
+/// start of each pass, so a `continue` can't skip it.
+fn counted_loop(inout b: context.Body, sc: context.Scope, depth: i64) -> List<(i64, str)> {
+  let d = depth - 1
+  let w = context.fresh(inout b.p, "w")
+  let limit = pick.between(inout b.p.r, 1, 4)
+  var inner = context.declare(sc, w, ty.Int(ty.I64), true)
+  inner.frozen = [w].concat(sc.frozen)
+  inner.in_loop = true
+  inner.weight = sc.weight * limit
+  let body = block(inout b, inner, d)
+  var out = [(0, "var {w} = 0")]
+  if pick.chance(inout b.p.r, 0.5) {
+    out.extend(code.block_lines("while {w} < {limit} \{", [(0, "{w} += 1")].concat(body), "}"))
+  } else {
+    out.extend(
+      code.block_lines(
+        "loop \{",
+        [(0, "{w} += 1"), (0, "if {w} > {limit} \{ break }")].concat(body),
+        "}",
+      ),
+    )
+  }
+  out
+}
+
+fn match_stmt(inout b: context.Body, sc: context.Scope, depth: i64) -> List<(i64, str)> {
+  let d = depth - 1
+  let (s, arms) = expr.scrutinee(inout b, sc, d)
+  var lines = []
+  for (pattern, bound) in arms {
+    var inner = sc
+    inner.vars = bound.concat(sc.vars)
+    lines.extend(code.block_lines("{pattern} => \{", block(inout b, inner, d), "}"))
+  }
+  code.block_lines("match {code.head(s.text)} \{", lines, "}")
+}

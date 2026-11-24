@@ -1,0 +1,60 @@
+//~ rule: syntax.statements, expressions.option-fallback, expressions.let-else, patterns.let-else, patterns.else-after-pattern
+//~ stdout:
+//~ | 2.5 -1.0
+//~ | 7 0
+//~ | 3
+//~ | bad x
+//~ | 12 0
+//~ | (2, 1) (9, 9)
+//~ | 42 0
+
+type Shape = | Circle(f64) | Square(f64)
+
+fn radius(s: Shape) -> f64 {
+  let Circle(r) = s else return -1.0
+  r
+}
+
+fn first_two(xs: List<i64>) -> i64 {
+  let [a, b, ..] = xs else return 0
+  a + b
+}
+
+fn total(lines: List<str>) -> i64 {
+  var sum = 0
+  for line in lines {
+    let Some(n) = line.to_i64() else continue
+    sum += n
+  }
+  sum
+}
+
+fn parse(s: str) -> i64 / raise<str> {
+  let Some(n) = s.to_i64() else raise "bad {s}"
+  n
+}
+
+fn swapped(pairs: List<(i64, i64)>) -> (i64, i64) {
+  let (x, y) = pairs.first() else (9, 9)
+  (y, x)
+}
+
+fn number(s: str) -> i64 {
+  let n = s.to_i64() else 0
+  n
+}
+
+fn main() / io {
+  print("{radius(Circle(2.5))} {radius(Square(1.0))}")
+  print("{first_two([3, 4, 5])} {first_two([3])}")
+  print("{total(["1", "x", "2"])}")
+  let good = try parse("12") catch _ because "a bad number counts as zero" => 0
+  let bad = try parse("x")
+    catch message because "the message is printed instead" => {
+    print(message)
+    0
+  }
+  print("{good} {bad}")
+  print("{swapped([(1, 2)])} {swapped([])}")
+  print("{number("42")} {number("x")}")
+}

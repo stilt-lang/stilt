@@ -1,0 +1,13 @@
+── SYNTAX ERROR ───────────────────────── E0100_argument_labels.lt:3:34  [E0100]
+
+Stilt's arguments have no labels: each is given in its parameter's place:
+
+  3 │ fn main() / io { print(greet(name: "ada", greeting: "hi")) }
+    │                                  ^
+
+A call gives one argument per parameter, in order, as `greet("ada")`.
+
+To fix it, delete the labels:
+
+  3 │ fn main() / io { print(greet(name: "ada", greeting: "hi")) }
+    │                              ------       ----------

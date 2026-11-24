@@ -1,0 +1,9 @@
+── RECORD THAT CONTAINS ITSELF ── E0309_record_that_contains_itself.lt:1:6  [E0309]
+
+This record contains itself, so no value of it can be built:
+
+  1 │ type Loop = { next: Loop }
+    │      ^^^^
+
+Building such a record would need one already built, forever. Make the field
+optional, as `next: Option<Node>`, or a list.

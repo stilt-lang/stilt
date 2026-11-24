@@ -1,0 +1,5 @@
+//~ rule: docs.bodies-compared, effects.without-panic
+
+fn limited(a: i64, b: i64) -> i64 without panic { a / b + a * 2 + b * 3 + a * b - 1 * 1 } //~ ERROR E0204
+
+fn free(a: i64, b: i64) -> i64 { a / b + a * 2 + b * 3 + a * b - 1 * 1 }

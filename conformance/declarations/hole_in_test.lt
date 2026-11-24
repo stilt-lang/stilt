@@ -1,0 +1,13 @@
+//~ rule: program.test-results, declarations.running-holes
+
+fn area(side: i64) -> i64 {
+  side * ? //~ WARN W0300
+}
+
+test "unfinished" { //~ FAIL
+  assert area(2) == 4
+}
+
+test "finished" { //~ PASS
+  assert 2 * 2 == 4
+}

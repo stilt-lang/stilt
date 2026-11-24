@@ -1,0 +1,3 @@
+//~ rule: packages.own-effects, facts.own-capabilities, facts.ungranted-capabilities
+//~ stdout:
+//~ | fired

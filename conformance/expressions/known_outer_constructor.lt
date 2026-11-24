@@ -1,0 +1,9 @@
+//~ rule: types.known-types, std.lists
+//~ run-output: "[1, 2] 2"
+
+fn main() / io {
+  var xs = []
+  xs.push(1)
+  xs.push(2)
+  print("{xs} {xs.len()}")
+}

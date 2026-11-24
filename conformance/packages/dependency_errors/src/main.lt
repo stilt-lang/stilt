@@ -1,0 +1,7 @@
+use csv
+
+fn main() / io {
+  let table = csv.load()
+  print("{csv.count()}")
+  print("{table.rows}")
+}

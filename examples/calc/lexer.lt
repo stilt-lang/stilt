@@ -1,0 +1,79 @@
+// Splitting a line of calc into tokens.
+
+/// What a token is: an integer, a name, a keyword, a symbol, or the end of the line.
+pub type Kind = | Int(i64) | Name(str) | Keyword(str) | Symbol(str) | End
+
+/// A token and the column where it starts, counting characters from 1.
+pub type Token = { kind: Kind, column: i64 }
+
+/// A syntax error, at a column.
+pub type SyntaxError = { column: i64, message: str }
+
+const KEYWORDS: List<str> = ["let", "in", "if", "then", "else", "fn", "true", "false"]
+
+const SYMBOLS: List<str> = [
+  "==", "!=", "<=", ">=", "&&", "||", "=>", "+", "-", "*", "/", "%", "<", ">", "!", "=", "(", ")",
+  ",",
+]
+
+/// The tokens of a line, ending with `End`. A `#` starts a comment that runs to the end of the
+/// line.
+/// ex: try tokens("f(x1) # call").map(.kind) == [Name("f"), Symbol("("), Name("x1"), Symbol(")"), End]
+/// ex: try tokens("a<=12").map(.column) == [1, 2, 4, 6]
+/// ex: try tokens("let x").map(.kind) == [Keyword("let"), Name("x"), End]
+pub fn tokens(line: str) -> List<Token> / raise<SyntaxError> {
+  let cs = line.chars()
+  var out = []
+  var pos = 0
+  while pos < cs.len() && cs[pos] != "#" {
+    if cs[pos].is_ascii_whitespace() {
+      pos += 1
+      continue
+    }
+    let start = pos
+    let kind = match cs[pos] {
+      c if c.is_ascii_digit() => try number(cs, inout pos)
+      c if is_word(c) => word(cs, inout pos)
+      _ => try symbol(cs, inout pos)
+    }
+    out.push(Token { kind, column: start + 1 })
+  }
+  out.push(Token { kind: End, column: pos + 1 })
+  out
+}
+
+/// The characters from `pos` while `keep` holds of them, which moves `pos` past them.
+fn run(cs: List<str>, inout pos: i64, keep: fn(str) -> bool) -> str {
+  let start = pos
+  while pos < cs.len() && keep(cs[pos]) { pos += 1 }
+  "".join(cs.slice(start, pos))
+}
+
+fn number(cs: List<str>, inout pos: i64) -> Kind / raise<SyntaxError> {
+  let column = pos + 1
+  let text = run(cs, inout pos, |c| c.is_ascii_digit())
+  let n = text.to_i64() else raise SyntaxError { column, message: "{text} is too large" }
+  Int(n)
+}
+
+fn word(cs: List<str>, inout pos: i64) -> Kind {
+  let text = run(cs, inout pos, is_word)
+  if KEYWORDS.contains(text) { Keyword(text) } else { Name(text) }
+}
+
+fn is_word(c: str) -> bool { c.is_ascii_alphanumeric() || c == "_" }
+
+fn symbol(cs: List<str>, inout pos: i64) -> Kind / raise<SyntaxError> {
+  let two = "".join(cs.slice(pos, (pos + 2).min(cs.len())))
+  let s = SYMBOLS.find(|s| two.starts_with(s))
+    else raise SyntaxError { column: pos + 1, message: "unexpected {cs[pos]}" }
+  pos += s.len()
+  Symbol(s)
+}
+
+test "a character that starts no token is an error at its column" {
+  assert Result.of(|| try tokens("é + $")) ==
+    Err(SyntaxError { column: 1, message: "unexpected é" })
+  assert Result.of(|| try tokens("1 + $")) ==
+    Err(SyntaxError { column: 5, message: "unexpected $" })
+}

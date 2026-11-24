@@ -1,0 +1,2 @@
+[package]
+name = "fn" # //~ ERROR E0600

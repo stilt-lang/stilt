@@ -1,0 +1,31 @@
+//~ rule: program.contents, program.prelude-functions, program.assert-expr
+//~ stdout:
+//~ | Some(2) None Ok(1) Err("e")
+//~ | [Less, Equal, Greater]
+//~ | [1, 2] {"k": true}
+//~ | 255 1.5
+//~ stderr:
+//~ | to stderr
+
+fn largest<T: Ord + Eq + Hash + Show>(a: T, b: T) -> T { if a > b { a } else { b } }
+
+fn main() / io {
+  let o: Option<i64> = Some(2)
+  let n: Option<i64> = None
+  let r: Result<i64, str> = Ok(1)
+  let e: Result<i64, str> = Err("e")
+  print("{o} {n} {r} {e}")
+  let orders: List<Ordering> = [Less, Equal, Greater]
+  print("{orders}")
+  var m: Map<str, bool> = Map.new()
+  m["k"] = true
+  let xs: List<i64> = [1, 2]
+  print("{xs} {m}")
+  let small: u8 = 255
+  let f: f32 = 1.5
+  print("{small} {f}")
+  eprint("to stderr")
+  assert largest(1, 2) == 2
+  let never: Option<Never> = None
+  assert never.is_none()
+}

@@ -1,0 +1,9 @@
+//~ rule: c.exported-functions
+
+// A local function isn't a module's, so it isn't exported.
+
+fn main() {
+  extern fn twice(x: i64) -> i64 { //~ ERROR E0100
+    2 * x
+  }
+}

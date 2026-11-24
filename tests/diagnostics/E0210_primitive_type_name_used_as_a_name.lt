@@ -1,0 +1,5 @@
+fn f() -> i64 {
+  let str = "a"
+  let n: i64 = str
+  n
+}

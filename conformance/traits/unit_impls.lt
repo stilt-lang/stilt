@@ -1,0 +1,9 @@
+//~ rule: traits.built-in-impls, std.show-output
+//~ run-output: "true false () {(): 1}"
+
+fn main() / io {
+  let u = ()
+  var m = Map.new()
+  m[u] = 1
+  print("{u == ()} {u < ()} {u} {m}")
+}

@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────────── E0100_rust_struct.lt:1:1  [E0100]
+
+Stilt declares a record type as `type Point = { x: i64, y: i64 }`:
+
+  1 │ struct Point { x: i64, y: i64 }
+    │ ^^^^^^
+
+A record type is `type`, its name, `=` and its fields in braces.
+
+To fix it, write `type … =`:
+
+  1 │ type Point = { x: i64, y: i64 }
+    │ ~~~~       ++

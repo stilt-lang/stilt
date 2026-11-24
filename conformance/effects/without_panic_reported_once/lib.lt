@@ -1,0 +1,5 @@
+module lib
+
+use base
+
+pub fn first(xs: List<i64>) -> i64 { base.at(xs) }

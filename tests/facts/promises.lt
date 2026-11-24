@@ -1,0 +1,114 @@
+//~ tier: core
+
+// Checked promises (facts.in-place-promise and facts.div): parameters updated in place under `without alloc`, through an
+// element or its parts, and the copy a call makes for them (facts.own-storage, facts.writes-in-place, facts.in-place-parameters and facts.copy-at-call), possible
+// non-termination (facts.div and facts.descending-self-calls), and writes that copy shared data (facts.copy). An index that a
+// range loop proves in range adds no `panic`, and a counting loop and self-calls that shrink add
+// no `div` (facts.range-loops, facts.counting-loops and facts.shrinking-recursion).
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+type Particle = { x: f64, v: f64 }
+
+// A `let` parameter rebound by `var` at its last use is written in place.
+fn bump_all(xs: List<i64>) -> List<i64> without alloc {
+  var ys = xs //~ CONSUMES xs
+  for i in 0..ys.len() { ys[i] += 1 } //~ OVERFLOW IN-PLACE xs PROVED bounds
+  ys //~ ESCAPES ys
+}
+
+// So is an `inout` parameter, under the limit.
+fn zero_first(inout xs: List<i64>) without alloc {
+  xs[0] = 0 //~ IN-PLACE xs PANIC
+}
+
+// A write through an element's parts is in place too, when the elements' type isn't
+// copy-on-write.
+fn step(inout ps: List<Particle>, dt: f64) without alloc {
+  for i in 0..ps.len() { ps[i].x += ps[i].v * dt } //~ IN-PLACE ps PROVED bounds
+}
+
+fn first(inout ts: List<(i64, (f64, bool))>) without alloc {
+  ts[0].1.0 *= 2.0 //~ IN-PLACE ts PANIC
+}
+
+// Passing it on, named whole, to an in-place parameter keeps it in place.
+fn reset(inout xs: List<i64>) without alloc {
+  zero_first(inout xs) //~ IN-PLACE xs PANIC
+}
+
+// A caller that uses its value after the call copies it there, for the callee.
+fn keeps() -> i64 {
+  let a = [1, 2] //~ ALLOC
+  let b = bump_all(a) //~ OVERFLOW LOST-REUSE a ESCAPES a ALLOC COPY
+  a.len() + b.len() //~ OVERFLOW
+}
+
+// A caller that passes its last use copies nothing.
+fn hands_over() -> i64 {
+  let a = [1, 2] //~ ALLOC
+  bump_all(a).len() //~ OVERFLOW ESCAPES a
+}
+
+// A list literal is a value that nothing else holds.
+fn fresh() -> List<i64> {
+  bump_all([3]) //~ OVERFLOW ALLOC
+}
+
+// An `inout` argument that a copy shares at the call is copied for the callee.
+fn shared_reset() -> List<i64> {
+  var xs = [1, 2] //~ ALLOC
+  let keep = xs
+  reset(inout xs) //~ SHARED xs PANIC ALLOC COPY
+  keep //~ ESCAPES keep
+}
+
+// Recursion on a part of a parameter descends, so it ends.
+fn size(t: Tree) -> i64 {
+  match t {
+    Leaf => 0
+    Node(l, _, r) => size(l) + 1 + size(r) //~ OVERFLOW
+  }
+}
+
+// Recursion on a number that shrinks toward a bound, and a `while` whose counter steps toward
+// one, end.
+fn countdown(n: i64) -> i64 {
+  if n <= 0 { 0 } else { countdown(n - 1) } //~ OVERFLOW
+}
+
+fn spin(n: i64) -> i64 {
+  var i = n
+  while i > 0 { i -= 1 } //~ OVERFLOW
+  i
+}
+
+// Recursion on a number that doesn't shrink, a `while` whose head is no comparison, and a
+// `loop` may not end.
+fn halving(n: i64) -> i64 {
+  if n <= 0 { 0 } else { halving(n / 2) } //~ DIV
+}
+
+fn spin_to_zero(n: i64) -> i64 {
+  var i = n
+  while i != 0 { i -= 1 } //~ OVERFLOW DIV
+  i
+}
+
+fn forever() -> i64 {
+  loop { break } //~ DIV
+  0
+}
+
+// A call of a function that may not end may not end.
+fn calls_spin() -> i64 { spin_to_zero(3) } //~ OVERFLOW DIV
+
+// A write while a copy lasts copies shared data, and so does a call of a function that does.
+fn grown() -> List<i64> {
+  var xs = [1] //~ ALLOC
+  let keep = xs
+  xs.push(2) //~ SHARED xs ALLOC COPY
+  keep //~ ESCAPES keep
+}
+
+fn calls_grown() -> i64 { grown().len() } //~ ALLOC COPY

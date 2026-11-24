@@ -1,0 +1,9 @@
+── NAME OF A PRELUDE ITEM ───────── E0209_name_of_a_prelude_item.lt:1:4  [E0209]
+
+`print` is the name of a prelude item:
+
+  1 │ fn print(message: str) {}
+    │    ^^^^^
+
+The prelude's names, such as `print`, `Option` and `List`, mean the same thing
+in every module, so nothing else takes them. Choose another name.

@@ -1,0 +1,11 @@
+//~ rule: effects.panic-kinds, std.lists
+//~ run-output: "[1, 2]"
+//~ panic: bounds
+//~ panic-at: list_insert_out_of_bounds.lt:10:3
+
+fn main() / io {
+  var xs = [1]
+  xs.insert(1, 2)
+  print("{xs}")
+  xs.insert(3, 3)
+}

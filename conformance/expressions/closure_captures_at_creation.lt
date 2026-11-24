@@ -1,0 +1,11 @@
+//~ rule: values.independent-copies, expressions.capture
+//~ run-output: "1 2 [1] [1, 2]"
+
+fn main() / io {
+  var f = |n: i64| n
+  f = |n: i64| f(n) + 1
+  var xs = [1]
+  let snapshot = || xs
+  xs.push(2)
+  print("{f(0)} {f(1)} {snapshot()} {xs}")
+}

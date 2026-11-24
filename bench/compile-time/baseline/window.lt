@@ -1,0 +1,44 @@
+// Rolling windows over the last values seen, of a size given when each is made.
+
+/// The last values added, as many as the window has slots, in the slots they were written to,
+/// and how many were added.
+pub type Window = { values: List<i64>, added: i64 }
+
+/// An empty window of `size` slots.
+/// ex: new(4).mean() == 0
+pub fn new(size: i64) -> Window { Window { values: List.repeat(0, size), added: 0 } }
+
+impl Window {
+  /// Adds `x`, in place of the oldest value once the window is full.
+  /// ex: { var w = new(2); w.add(1); w.add(2); w.add(3); w.values == [3, 2] }
+  pub fn add(inout self, x: i64) {
+    let size = self.values.len()
+    self.values[self.added % size] = x
+    self.added += 1
+  }
+
+  /// How many values it holds.
+  /// ex: { var w = new(2); w.add(1); w.held() == 1 }
+  pub fn held(self) -> i64 { self.added.min(self.values.len()) }
+
+  /// Whether every slot holds a value.
+  pub fn full(self) -> bool { self.added >= self.values.len() }
+
+  /// The mean of the values it holds, rounded down, or 0 when it holds none.
+  /// ex: { var w = new(3); w.add(1); w.add(2); w.mean() == 1 }
+  pub fn mean(self) -> i64 {
+    let held = self.held()
+    if held == 0 { return 0 }
+    var sum = 0
+    for i in 0..self.values.len() { if i < held { sum += self.values[i] } }
+    sum / held
+  }
+
+  /// The largest value it holds, or 0 when it holds none.
+  /// ex: { var w = new(2); w.add(4); w.add(9); w.add(1); w.most() == 9 }
+  pub fn most(self) -> i64 {
+    var most = 0
+    for i in 0..self.values.len() { if i < self.held() { most = most.max(self.values[i]) } }
+    most
+  }
+}

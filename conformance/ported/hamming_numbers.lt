@@ -1,0 +1,28 @@
+//~ rule: std.heap, program.what-use-binds, expressions.break-and-continue
+//~ stdout:
+//~ | 1 2 3 4 5 6 8 9 10 12 15 16 18 20 24 25 27 30 32 36
+//~ | 1691st: 2125764000
+
+// Rosetta Code, Hamming numbers: the numbers whose only prime factors are 2, 3 and 5, in order.
+// The task shows the first twenty, and 2125764000 as the 1691st. Each number taken off a heap
+// puts its doubles, triples and quintuples on it, and repeats are skipped.
+
+use std.collections
+
+fn hamming(count: i64) -> List<i64> {
+  var heap = collections.Heap.from_list([1])
+  var out = []
+  while out.len() < count {
+    let h = heap.pop() else break
+    if out.last() == Some(h) { continue }
+    out.push(h)
+    for f in [2, 3, 5] { heap.push(h * f) }
+  }
+  out
+}
+
+fn main() / io {
+  let numbers = hamming(1691)
+  print(" ".join(numbers.take(20).map(|h| "{h}")))
+  print("1691st: {numbers[1690]}")
+}

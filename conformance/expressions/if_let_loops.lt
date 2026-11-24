@@ -1,0 +1,28 @@
+//~ rule: syntax.if-let-heads, expressions.closure-boundaries, expressions.if-let-matching, expressions.break-and-continue, patterns.bindings-are-copies, patterns.match
+//~ run-output: "[2, 4] 7 [10, 20] 3"
+
+fn main() / io {
+  let words = [Some(1), None, Some(2), Some(30), Some(4)]
+  var kept = []
+  for w in words {
+    if let Some(n) = w {
+      if n > 9 { continue }
+      kept.push(n * 2)
+    } else if let None = w { continue }
+    if kept.len() == 2 { break }
+  }
+  var o = Some([1, 2, 3])
+  var sum = 0
+  if let Some(xs) = o {
+    let add = |x: i64| x + xs.len()
+    sum = add(4)
+    o = None
+  }
+  let scaled = if let Some(xs) = Some([1, 2]) { xs.map(|x| x * 10) } else { [] }
+  var steps = 0
+  loop {
+    steps += 1
+    if let Some(_) = (if steps < 3 { Some(steps) } else { None }) {} else { break }
+  }
+  print("{kept} {sum} {scaled} {steps}")
+}

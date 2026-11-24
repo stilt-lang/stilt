@@ -1,0 +1,54 @@
+# The budget of each goal that the benchmark suite measures (Goals,
+# Enforcement). `just bench` fails when a measurement exceeds its budget.
+
+[release-speed]
+# The geometric mean, over the suite, of the run time of each program's release build divided
+# by its Rust baseline's under Rust's release profile, measured without profiles, which the baselines
+# don't use. A program that allocates much is measured against its baseline linked with
+# mimalloc (compare/alloc/), and the mean must hold with any one program left out. Set on
+# 2026-11-23 from the --long sizes: 0.94, and 0.97 with binary-trees left out.
+geomean = 1.0
+
+[no-outliers]
+# The largest such ratio of one program.
+largest = 2.0
+
+[memory]
+# The geometric mean, over the suite, of the peak resident memory of each program's release
+# build divided by its Rust baseline's.
+geomean = 1.2
+
+[cheap-checks]
+# The ratio of a program's release build's run time to its wrapping variant's, whose integer
+# arithmetic wraps, so that it checks no overflow: their geometric mean over the suite; and the
+# largest cost of one program's checks, the lesser of that ratio and the ratio of the
+# instructions they retire. binary-trees' is the largest, 1.16 by instructions and 1.22 by
+# time at the --long sizes: a function of little but additions, whose checked sum keeps the
+# order of its additions, which wrapping ones let LLVM turn into a loop.
+geomean = 1.05
+largest = 1.25
+
+[debug-speed]
+# The geometric mean, over the suite, of the run time of each program's debug build divided
+# by its Rust baseline's under Rust's release profile.
+geomean = 2.0
+# The largest such ratio of one program. life's is the largest: its 3-by-3 neighbourhood is two
+# loops of three iterations, which LLVM unrolls in the baseline and a debug build keeps as loops.
+largest = 6.0
+
+[free-success]
+# The geometric mean, over the suite, of each raising variant's run time divided by its
+# program's, and the largest such ratio among the microbenchmarks.
+geomean = 1.02
+microbenchmark = 1.10
+
+[small-runtime]
+# How many megabytes an empty program's peak resident memory may exceed an empty Rust
+# program's by.
+megabytes = 0.25
+
+[inline-values]
+# How many boxes the debug builds of the suite's programs make in all: heap objects that hold
+# the words of a record, a tuple or a variant of a type that isn't recursive, which the runtime
+# counts.
+boxes = 0

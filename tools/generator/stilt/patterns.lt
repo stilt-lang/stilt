@@ -1,0 +1,155 @@
+// Matches: a value to match on, the patterns that cover it, and `match`
+// expressions.
+
+use bools
+use code
+use context
+use pick
+use ty
+
+/// A pattern and the variables it binds.
+fn bind(inout b: context.Body, t: ty.Ty) -> (str, List<context.Var>) {
+  let name = context.fresh(inout b.p, "m")
+  (name, [context.Var { name, ty: t, mutable: false }])
+}
+
+/// The arms of a match on a variant type: a pattern for each variant, or for
+/// all but the last and a catch-all.
+fn variant_arms(
+  inout b: context.Body,
+  cases: List<(str, List<ty.Ty>)>,
+) -> List<(str, List<context.Var>)> {
+  var arms = []
+  for (case, payload) in cases {
+    var parts = []
+    var bound = []
+    for t in payload {
+      if pick.chance(inout b.p.r, 0.3) {
+        parts.push("_")
+      } else {
+        let (part, vars) = bind(inout b, t)
+        parts.push(part)
+        bound.extend(vars)
+      }
+    }
+    arms.push(if payload.is_empty() { (case, []) } else { (code.call_text(case, parts), bound) })
+  }
+  let n = arms.len()
+  if n > 1 && pick.chance(inout b.p.r, 0.3) { arms.take(n - 1).concat([("_", [])]) } else { arms }
+}
+
+/// `arms`, perhaps after a copy of the first with a guard.
+fn guarded(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  arms: List<(str, List<context.Var>)>,
+) -> List<(str, List<context.Var>)> {
+  if arms.is_empty() || !pick.chance(inout b.p.r, 0.3) { return arms }
+  let (pattern, bound) = arms[0]
+  var inner = sc
+  inner.vars = bound.concat(sc.vars)
+  let guard = bools.cond(ex, inout b, inner, depth)
+  [("{pattern} if {guard.text}", bound)].concat(arms)
+}
+
+/// One to three distinct literals, in order, and a catch-all.
+fn literals(texts: List<str>) -> List<(str, List<context.Var>)> {
+  texts.sorted().deduped().map(|v| (v, [])).concat([("_", [])])
+}
+
+/// Patterns that cover every value of `t`, each with the variables it binds.
+fn patterns(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  t: ty.Ty,
+) -> List<(str, List<context.Var>)> {
+  match t {
+    Named(name) => {
+      match context.decl(b, name) {
+        Variants(cases) => {
+          let arms = variant_arms(inout b, cases)
+          guarded(ex, inout b, sc, depth, arms)
+        }
+        Record(_) => [bind(inout b, t)]
+      }
+    }
+    OptionOf(u) => {
+      let (some, bound) = bind(inout b, u)
+      guarded(ex, inout b, sc, depth, [("Some({some})", bound), ("None", [])])
+    }
+    Int(k) => {
+      let low = if ty.signed(k) { -2 } else { 0 }
+      let n = pick.between(inout b.p.r, 1, 3)
+      var texts = []
+      for _ in 0..n { texts.push("{pick.between(inout b.p.r, low, 4)}") }
+      literals(texts)
+    }
+    Bool => guarded(ex, inout b, sc, depth, [("true", []), ("false", [])])
+    Str => {
+      let n = pick.between(inout b.p.r, 1, 3)
+      var texts = []
+      for _ in 0..n { texts.push("\"{pick.one(inout b.p.r, ["a", "b", "c"])}\"") }
+      literals(texts)
+    }
+    Tuple([Int(I64), Bool]) => {
+      let (n, bound) = bind(inout b, ty.Int(ty.I64))
+      guarded(ex, inout b, sc, depth, [("(0, _)", []), ("({n}, true)", bound), ("(_, false)", [])])
+    }
+    _ => [bind(inout b, t)]
+  }
+}
+
+/// A value to match on, and patterns that cover it, each with the variables
+/// it binds. A guarded arm, which covers nothing for exhaustiveness (patterns.guards),
+/// may come first. The patterns are drawn before the value.
+pub fn scrutinee(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+) -> (code.Code, List<(str, List<context.Var>)>) {
+  let decls = b.p.decls
+  let variants = decls.filter_map(|(name, d)| {
+    match d {
+      Variants(_) if !ty.has_map(decls, ty.Named(name)) => Some(ty.Named(name))
+      _ => None
+    }
+  })
+  let t = context.run(
+    inout b,
+    [
+      (if variants.is_empty() { 0 } else { 4 }, |inout b| pick.one(inout b.p.r, variants)),
+      (2, |inout b| ty.OptionOf(context.random_ty(inout b.p, false, 1))),
+      (2, |inout b| ty.Int(pick.one(inout b.p.r, ty.INT_KINDS))),
+      (1, |inout b| ty.Bool),
+      (1, |inout b| ty.Str),
+      (1, |inout b| ty.Tuple([ty.Int(ty.I64), ty.Bool])),
+    ],
+  )
+  let arms = patterns(ex, inout b, sc, depth, t)
+  (ex.make(inout b, sc, depth, true, t), arms)
+}
+
+pub fn match_expr(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  t: ty.Ty,
+) -> code.Code {
+  let d = depth - 1
+  let (s, arms) = scrutinee(ex, inout b, sc, d)
+  var bodies = []
+  for (i, (pattern, bound)) in arms.enumerate(0) {
+    var inner = sc
+    inner.vars = bound.concat(sc.vars)
+    let body = ex.make(inout b, inner, d, known && i == 0, t)
+    bodies.push("{pattern} => {body.text}")
+  }
+  code.compound_with("match {code.head(s.text)} \{ {", ".join(bodies)} }", known)
+}

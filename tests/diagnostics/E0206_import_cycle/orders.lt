@@ -1,0 +1,3 @@
+use customers
+
+pub fn total() -> i64 { 0 }

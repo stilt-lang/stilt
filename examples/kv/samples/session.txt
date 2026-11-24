@@ -1,0 +1,12 @@
+# A session against a fresh store.
+GET /k/greeting
+PUT /k/greeting hello, world
+PUT /k/count 1
+GET /k/greeting
+PUT /k/count 2
+GET /
+GET /stats
+DELETE /k/greeting
+DELETE /k/greeting
+POST /k/count 3
+GET /nowhere

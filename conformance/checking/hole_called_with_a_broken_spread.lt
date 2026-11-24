@@ -1,0 +1,7 @@
+//~ rule: declarations.typed-holes, errors.error-type
+
+// The tuple's type names an unknown name, reported where it is written, so a hole called with
+// its spread takes the error type, whose parameters nothing decides, and gets no error of its own.
+fn heads<..Ts>(lists: (..List<Us>)) -> (..Ts) { //~ ERROR E0211
+  ?(..lists) //~ WARN W0300
+}

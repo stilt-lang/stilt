@@ -1,0 +1,5 @@
+use std.meta
+use beta
+
+/// Two, through `beta`.
+pub macro two() -> meta.Expr { quote { beta.two() } }

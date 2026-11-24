@@ -1,0 +1,5 @@
+fn main() / io {
+  var i = 0
+  for i < 3 { i += 1 }
+  print("{i}")
+}

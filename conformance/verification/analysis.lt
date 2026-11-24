@@ -1,0 +1,154 @@
+//~ rule: facts.terms, facts.difference-facts, facts.linear-forms, facts.intervals, facts.relative-bounds, facts.analysis-order, facts.bindings-and-assignments, facts.writes-through-calls, facts.conditions, facts.joins, facts.paths-that-leave, facts.match-arms, facts.loop-heads, facts.widening, facts.for-loops, facts.proved-indexes, facts.proved-divisions, facts.map-keys
+//~ stdout:
+//~ | 2 0 true false
+//~ | 30 [1, 5] 7 4 0 5 0
+//~ | 2 1 5 0 10 4 11
+//~ | [2, 1] [7, 8] [8, 7, 2, 1]
+
+// The analysis proves each check below, which no rule of acceptance does, so
+// release builds drop them; nothing here is limited, and every build runs it
+// as the reference interpreter does, which keeps every check.
+
+// A remainder by the length of a list that isn't empty, of a value at least 0.
+fn bucket(xs: List<i64>, h: i64) -> i64 {
+  if h >= 0 && !xs.is_empty() { xs[h % xs.len()] } else { 0 }
+}
+
+// A binary search's middle lies between its bounds, and below the upper one.
+fn search(xs: List<i64>, x: i64) -> bool {
+  var lo = 0
+  var hi = xs.len()
+  while lo < hi {
+    let mid = lo + (hi - lo) / 2
+    if xs[mid] == x { return true }
+    if xs[mid] < x { lo = mid + 1 } else { hi = mid }
+  }
+  false
+}
+
+fn third() -> i64 {
+  let xs = [10, 20, 30]
+  xs[2]
+}
+
+// Each `push` adds one to the length, which a write then reads.
+fn built() -> List<i64> {
+  var xs = []
+  xs.push(1)
+  xs.push(2)
+  xs[1] = 5
+  xs
+}
+
+// The indexed list is read before the index (values.index-reads), so the index is
+// checked against the length before the `clear`.
+fn read_cleared() -> i64 {
+  var xs = [7]
+  xs[{ xs.clear(); 0 }]
+}
+
+// A `pop` from a list of at least two leaves at least one.
+fn popped(xs: List<i64>) -> i64 {
+  var ys = xs
+  if ys.len() >= 2 {
+    let _ = ys.pop()
+    ys[0]
+  } else {
+    0
+  }
+}
+
+// A later arm knows the scrutinee isn't 0.
+fn matched(n: i64, d: i64) -> i64 {
+  match d {
+    0 => 0
+    _ => n / d
+  }
+}
+
+// A fact that both branches of an `if` keep holds after it.
+fn stored(b: bool) -> i64 {
+  var m: Map<str, i64> = Map.new()
+  if b { m["x"] = 1 } else { m["x"] = 2 }
+  m["x"]
+}
+
+fn divided(n: i64, a: i64, b: bool) -> i64 {
+  if a != 0 {
+    var d = 1
+    if b { d = a } else { d = a }
+    n / d
+  } else {
+    0
+  }
+}
+
+// The thresholds are 0, 1 and 2 from the literal 1, and 9, 10 and 11 from the
+// literal 10: the visits widen `i`'s bound to 1, 2, 9 and then 10, at the fifth
+// visit, where it stops growing, so after the loop `i` is 10.
+fn counted() -> i64 {
+  let ys = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  var i = 0
+  while i < 10 { i += 1 }
+  ys[i - 1]
+}
+
+// No comparison at the head bounds `i`, but the visits widen its bound to the
+// thresholds 1, 2 and 3, by the fourth visit, where it stops growing.
+fn saturated(n: i64) -> i64 {
+  let ys = [1, 2, 3, 4]
+  var i = 0
+  var k = 0
+  while k < n {
+    if i < 3 { i += 1 }
+    k += 1
+  }
+  ys[i]
+}
+
+// The bound reaches 10 at the fifth visit, before the sixth would drop a pair
+// that grew.
+fn saturated_late(n: i64) -> i64 {
+  let ys = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  var i = 0
+  var k = 0
+  while k < n {
+    if i < 10 { i += 1 }
+    k += 1
+  }
+  ys[i]
+}
+
+// `insert`, `remove`, `slice` and `swap` panic only with `bounds` on their
+// arguments, which the facts prove in range here.
+fn shuffled(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.insert(0, 7)
+  ys.insert(ys.len(), 8)
+  let _ = ys.remove(0)
+  ys.swap(0, ys.len() - 1)
+  ys.slice(1, ys.len())
+}
+
+// `slice` takes `self`, so the receiver's length is the one where it is
+// evaluated, before the arguments: 3, not the 0 that the `clear` leaves.
+fn sliced() -> List<i64> {
+  var xs = [7, 8, 9]
+  xs.slice({ xs.clear(); 1 } * 0, 2)
+}
+
+fn swapped(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(7)
+  ys.push(8)
+  ys.swap(0, ys.len() - 1)
+  ys.swap(1, ys.len() - 2)
+  ys
+}
+
+fn main() / io {
+  print("{bucket([1, 2, 3], 7)} {bucket([], 7)} {search([1, 3, 5, 7], 5)} {search([1, 3], 2)}")
+  print("{third()} {built()} {read_cleared()} {popped([4, 5])} {popped([4])} {matched(10, 2)} {matched(10, 0)}")
+  print("{stored(false)} {stored(true)} {divided(10, 2, true)} {divided(10, 0, false)} {counted()} {saturated(5)} {saturated_late(12)}")
+  print("{shuffled([1, 2])} {sliced()} {swapped([1, 2])}")
+}

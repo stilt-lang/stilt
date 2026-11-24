@@ -1,0 +1,18 @@
+module pure
+without panic
+
+use lib
+
+pub fn parity(n: i64) -> bool { lib.even(n) }
+
+pub fn group(xs: List<i64>) -> i64 {
+  lib.a(xs, 3) //~ ERROR E0204
+}
+
+pub fn counted(n: i64) -> i64 { lib.countdown(n) }
+
+pub fn ping(xs: List<i64>, n: i64) -> i64 {
+  if n == 0 { xs[0] } else { pong(xs, n - 1) } //~ ERROR E0204
+}
+
+pub fn pong(xs: List<i64>, n: i64) -> i64 { ping(xs, n) }

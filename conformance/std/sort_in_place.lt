@@ -1,0 +1,29 @@
+//~ rule: std.method-names, std.list-sorting, std.list-changes
+//~ stdout:
+//~ | [1, 2, 3]
+//~ | ["a", "c", "bb", "dd"]
+//~ | ["bb", "dd", "a", "c"]
+//~ | ["c", "a", "dd", "bb"]
+//~ | [1, 2, 1, 3] [3, 2, 1]
+//~ | [(1, "b"), (1, "a"), (0, "a")]
+
+fn main() / io {
+  var xs = [3, 1, 2]
+  xs.sort()
+  print("{xs}")
+  var words = ["bb", "a", "dd", "c"]
+  words.sort_by(.len())
+  print("{words}")
+  words.sort_desc_by(.len())
+  print("{words}")
+  words.reverse()
+  print("{words}")
+  var runs = [1, 1, 2, 2, 2, 1, 3, 3]
+  runs.dedup()
+  var ys = [2, 3, 1]
+  ys.sort_desc()
+  print("{runs} {ys}")
+  var pairs = [(0, "a"), (1, "b"), (1, "a")]
+  pairs.sort_with(|a, b| Ord.compare(b.0, a.0))
+  print("{pairs}")
+}

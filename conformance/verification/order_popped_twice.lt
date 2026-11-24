@@ -1,0 +1,14 @@
+//~ rule: patterns.guards, facts.joins, facts.paths-that-leave, facts.match-arms
+//~ panic: bounds
+//~ panic-at: order_popped_twice.lt:9:63
+
+// Both ways of the or-pattern match, and the guard runs and pops for each.
+fn popped_twice() -> i64 {
+  var xs = [1, 2]
+  match (0, 0) {
+    (0, _) | (_, 0) if { let _ = xs.pop(); xs.is_empty() } => xs[0]
+    _ => 0
+  }
+}
+
+fn main() / io { print("{popped_twice()}") }

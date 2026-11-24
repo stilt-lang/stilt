@@ -1,0 +1,4 @@
+/// The total of the refunds.
+pub extern fn total(refunds: i64) -> i64 {
+  -refunds
+}

@@ -1,0 +1,36 @@
+//~ rule: numbers.wrapping, numbers.shifts, expressions.assignment
+//~ run-output: "[15, 12, 24, 4, 1, 16, 4, 7, 5, 4] [4, 255, 254]"
+
+fn main() / io {
+  var n: i64 = 10
+  var log: List<i64> = []
+  n += 5
+  log.push(n)
+  n -= 3
+  log.push(n)
+  n *= 2
+  log.push(n)
+  n /= 5
+  log.push(n)
+  n %= 3
+  log.push(n)
+  n <<= 4
+  log.push(n)
+  n >>= 2
+  log.push(n)
+  n |= 3
+  log.push(n)
+  n &= 5
+  log.push(n)
+  n ^= 1
+  log.push(n)
+  var w: u8 = 250
+  var bytes: List<u8> = []
+  w +%= 10
+  bytes.push(w)
+  w -%= 5
+  bytes.push(w)
+  w *%= 2
+  bytes.push(w)
+  print("{log} {bytes}")
+}

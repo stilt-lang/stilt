@@ -1,0 +1,2 @@
+//~ rule: lexical.format-specs, errors.syntax-errors
+fn f(n: i64) -> str { "{n:q}" } //~ ERROR E0007

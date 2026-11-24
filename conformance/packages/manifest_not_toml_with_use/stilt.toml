@@ -1,0 +1,2 @@
+[dependencies]
+json = { path = "deps/json" # //~ ERROR E0600

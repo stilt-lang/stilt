@@ -1,0 +1,77 @@
+//~ rule: patterns.algorithm, patterns.non-exhaustive-matches
+
+type Point = { x: i64, y: i64 }
+
+fn flag(b: bool) -> i64 {
+  match b { //~ ERROR E0329
+    true => 1
+  }
+}
+
+fn both_flags(b: bool) -> i64 {
+  match b {
+    true => 1
+    false => 0
+  }
+}
+
+fn word(s: str) -> i64 {
+  match s { //~ ERROR E0329
+    "a" => 1
+    "b" => 2
+  }
+}
+
+fn point(p: Point) -> i64 {
+  match p { //~ ERROR E0329
+    Point { x: 0, y } => y
+    Point { x, y: 0 } => x
+  }
+}
+
+fn nonempty(xs: List<bool>) -> i64 {
+  match xs { //~ ERROR E0329
+    [_, ..] => 1
+  }
+}
+
+fn lists(xs: List<bool>) -> i64 {
+  match xs {
+    [] => 0
+    [true, ..] => 1
+    [false] => 2
+    [false, _, ..] => 3
+  }
+}
+
+fn pairs(t: (bool, bool)) -> i64 {
+  match t { //~ ERROR E0329
+    (true, _) => 1
+    (_, true) => 2
+  }
+}
+
+fn results(r: Result<i64, str>) -> i64 {
+  match r { //~ ERROR E0329
+    Ok(n) => n
+  }
+}
+
+fn no_arms(b: bool) {
+  match b {} //~ ERROR E0329
+}
+
+fn unit(u: ()) -> i64 {
+  match u {
+    () => 1
+  }
+}
+
+fn nested(o: Option<Option<bool>>) -> i64 {
+  match o {
+    None => 0
+    Some(None) => 1
+    Some(Some(true)) => 2
+    Some(Some(false)) => 3
+  }
+}

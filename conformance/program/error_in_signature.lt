@@ -1,0 +1,13 @@
+//~ rule: program.meeting-the-error-type, program.check-error-report
+//~ run-output: "before"
+//~ panic: check-error
+//~ panic-at: error_in_signature.lt:8:4
+
+fn broken(x: Unknown) -> i64 { 1 } //~ ERROR E0211
+
+fn caller() -> i64 { broken(1) }
+
+fn main() / io {
+  print("before")
+  print("{caller()}")
+}

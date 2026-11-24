@@ -1,0 +1,13 @@
+//~ rule: declarations.constructors
+
+type Shape = | Circle(f64) | Dot
+
+fn none() -> Option<i64> {
+  None() //~ ERROR E0311
+}
+
+fn dot() -> Shape {
+  Dot() //~ ERROR E0311
+}
+
+fn circles(rs: List<f64>) -> List<Shape> { rs.map(Circle) }

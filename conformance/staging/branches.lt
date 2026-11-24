@@ -1,0 +1,64 @@
+//~ tier: meta
+//~ rule: syntax.staging-annotations, meta.staging-annotations, meta.erasure, meta.static-expressions, meta.annotated-code
+//~ stdout:
+//~ | empty small large
+//~ | small
+//~ | 2: 0 1
+//~ | none
+//~ | circle 5
+//~ | big
+
+use std.array
+
+type Shape = | Circle(i64) | Square(i64)
+
+const UNIT: Shape = Circle(5)
+
+const LIMIT: Option<i64> = Some(2)
+
+fn size<n: i64>(a: array.Array<i64, n>) -> str {
+  comptime if n == 0 { "empty" } else if n <= 4 { "small" } else { "large" }
+}
+
+fn describe<n: i64>(a: array.Array<i64, n>) / io {
+  comptime if n == 0 {
+    print("empty")
+  } else if n <= 4 {
+    print("small")
+  } else {
+    print("large")
+  }
+}
+
+fn main() / io {
+  let none: array.Array<i64, 0> = []
+  let some: array.Array<i64, 2> = [1, 2]
+  let many: array.Array<i64, 5> = array.fill(0)
+  print("{size(none)} {size(some)} {size(many)}")
+  describe(some)
+  // An `if let` on a static `Option`, whose `else if let` binds the bound of a
+  // nested loop.
+  let missing: Option<i64> = None
+  comptime if let Some(k) = missing {
+    print("{k}")
+  } else if let Some(k) = LIMIT {
+    var line = "{k}:"
+    comptime for i in 0..k { line = "{line} {i}" }
+    print(line)
+  }
+  comptime if let Some(k) = missing { print("{k}") } else { print("none") }
+  // A `match` on a static variant, with a guard.
+  comptime match UNIT {
+    Circle(r) if r > 3 => print("circle {r}"),
+    Circle(r) => print("small circle {r}"),
+    Square(s) => print("square {s}"),
+  }
+  let label = comptime match COUNT_OF {
+    0 => "none",
+    n if n > 2 => "big",
+    _ => "some",
+  }
+  print(label)
+}
+
+const COUNT_OF: i64 = 3

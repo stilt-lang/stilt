@@ -1,0 +1,7 @@
+//~ rule: numbers.shifts, numbers.shift-amounts
+
+fn mask(bits: u8, n: i64) -> u8 { bits << n }
+
+fn by_float(bits: u8, n: f64) -> u8 {
+  bits << n //~ ERROR E0311
+}

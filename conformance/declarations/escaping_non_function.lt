@@ -1,0 +1,3 @@
+//~ rule: syntax.escaping-parameters, declarations.parameters
+
+fn f(escaping g: i64) {} //~ ERROR E0100

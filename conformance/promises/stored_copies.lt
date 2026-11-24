@@ -1,0 +1,60 @@
+//~ rule: facts.copy, facts.without-copy, modes.shared-writes, modes.shared-holders
+
+// A write to a `var` reaches a copy of another binding that the `var` holds at a place inside
+// its value, so it copies while that binding reads the copy after it.
+
+type Halves = { left: List<i64>, right: List<i64> }
+
+// A copy held at a place inside the `var`'s value, as a field, a tuple's element, a list's
+// element or a part assigned to, is written by a write that reaches inside that place.
+fn in_a_field(xs: List<i64>) -> i64 without copy {
+  var p = Halves { left: xs, right: [] }
+  p.left.push(1) //~ ERROR E0204
+  xs.len() + p.left.len()
+}
+
+fn in_a_tuple(xs: List<i64>) -> i64 without copy {
+  var t = (Halves { left: xs, right: [] }, 1)
+  t.0.left.push(1) //~ ERROR E0204
+  xs.len() + t.1
+}
+
+fn in_a_list(xs: List<i64>) -> i64 without copy {
+  var ls = [xs]
+  ls[0].push(1) //~ ERROR E0204
+  xs.len() + ls.len()
+}
+
+fn in_a_part(xs: List<i64>) -> i64 without copy {
+  var p = Halves { left: [], right: [] }
+  p.left = xs
+  p.left.push(1) //~ ERROR E0204
+  xs.len() + p.left.len()
+}
+
+// A write beside the copy, to the list that holds it, or after an assignment has replaced it,
+// writes no copy.
+fn beside(xs: List<i64>) -> i64 without copy {
+  var p = Halves { left: xs, right: [] }
+  p.right.push(1)
+  var ls = [xs]
+  ls.push([])
+  p.left = [5]
+  p.left.push(1)
+  xs.len() + p.right.len() + ls.len()
+}
+
+// A copy that comes back to the binding it was made of, through a pattern of a list that holds
+// it, is the same copy wherever it is found again.
+fn back(inout p: Halves, flag: bool) -> str {
+  if flag {
+    let v = [1]
+    p = Halves { left: v, right: [] }
+  } else {
+    let [y, ..rest] = [p, p] else { return "" }
+    p = y
+  }
+  "{p.left}"
+}
+
+fn main() / io {}

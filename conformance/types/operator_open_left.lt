@@ -1,0 +1,5 @@
+//~ rule: numbers.integer-literals, expressions.open-left-operand
+
+fn count() -> i64 {
+  1 + "a" //~ ERROR E0311
+}

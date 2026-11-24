@@ -1,0 +1,117 @@
+//~ rule: modes.copies, modes.shared-writes, modes.shared-paths, facts.without-copy
+
+// A closure literal copies each binding it captures, a `match` or `if let` arm each part its
+// pattern binds, and a loop's body makes its copies anew on each turn, which a modification
+// outside the loop doesn't share.
+
+type Pair = { left: List<i64>, right: List<i64> }
+
+// The second binding a closure captures is copied as the first is.
+fn second_capture() -> i64 without copy {
+  var a = [1]
+  var b = [2]
+  let f = || a.len() + b.len()
+  b.push(3) //~ ERROR E0204
+  f()
+}
+
+// So is one captured beside the closure's own parameter.
+fn beside_a_parameter() -> i64 without copy {
+  var xs = [1]
+  let f = |n: i64| xs.len() + n
+  xs.push(2) //~ ERROR E0204
+  f(1)
+}
+
+// A closure that a binding outside the branch holds keeps its copies past the scope of the
+// binding that held it first, along the paths after the branch (modes.shared-writes).
+fn kept_closure(flag: bool) -> fn() -> i64 without copy {
+  var xs = [1]
+  var g = || 0
+  if flag {
+    let f = || xs.len()
+    g = f
+  }
+  xs.push(2) //~ ERROR E0204
+  g
+}
+
+// A closure's body is a function of its own: what it returns leaves the closure, not the
+// function around it, so `xs`, which holds a copy of `a`, doesn't escape, and its copy ends
+// with its block.
+fn closure_result() -> i64 without copy {
+  var a = [1]
+  var n = 0
+  {
+    let xs = [a]
+    let g = || xs
+    n = g().len()
+  }
+  a.push(2)
+  n + a.len()
+}
+
+// A closure's `inout` parameter is shared at a write while a copy of it lasts, as a
+// function's is.
+fn closure_inout() -> i64 without copy {
+  let f = |inout xs: List<i64>| {
+    let ys = xs
+    xs.push(1) //~ ERROR E0204
+    ys.len()
+  }
+  var zs = [1]
+  f(inout zs)
+}
+
+// A part a `match` arm binds is a copy while the arm lasts; the other part isn't.
+fn matched_part(p: Pair) -> i64 without copy {
+  var p = p
+  match p {
+    Pair { left, right: _ } => {
+      p.right.push(1)
+      p.left.push(1) //~ ERROR E0204
+      left.len()
+    }
+  }
+}
+
+// The part's copy is held by its binding, not stored in a value, so it ends with the arm even
+// when the arm returns it.
+fn returned_part(p: Pair, flag: bool) -> List<i64> without copy {
+  var p = p
+  match p {
+    Pair { left, right: _ } => if flag { return left }
+  }
+  p.left.push(1)
+  p.left
+}
+
+// So is a part an `if let` binds: assigning the part it is in modifies it.
+fn if_let_part(p: (Option<List<i64>>, List<i64>)) -> i64 without copy {
+  var p = p
+  if let (Some(l), _) = p {
+    p.1.push(1)
+    p.0 = None //~ ERROR E0204
+    l.len()
+  } else {
+    0
+  }
+}
+
+// A copy made in one loop's body doesn't share a write in the loop after it.
+fn later_loop(n: i64) -> i64 without copy {
+  var xs = [n]
+  var total = 0
+  for _ in 0..2 {
+    let ys = xs
+    total += ys.len()
+  }
+  for i in 0..2 {
+    xs.push(i)
+  }
+  total + xs.len()
+}
+
+fn main() / io {
+  print("{second_capture()} {beside_a_parameter()} {later_loop(1)}")
+}

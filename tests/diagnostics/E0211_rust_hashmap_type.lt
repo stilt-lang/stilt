@@ -1,0 +1,3 @@
+fn count(ages: HashMap<str, i64>) -> i64 { ages.len() }
+
+fn main() {}

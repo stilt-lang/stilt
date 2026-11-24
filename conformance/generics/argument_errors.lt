@@ -1,0 +1,45 @@
+//~ tier: meta
+//~ rule: generics.value-arguments, generics.value-argument-names, generics.constant-arguments
+
+type Mod<p: u64> = { value: u64 }
+
+type Small<k: u8> = { tag: str }
+
+type Offset<k: i64> = { base: i64 }
+
+type Pair<a: i64, b: i64> = { tag: str }
+
+const PRIME: u64 = 1_000_000_007
+
+const SIGNED: i64 = 7
+
+const LOWEST: i64 = -9_223_372_036_854_775_808
+
+// A unary `-` that overflows, so that computing it panics. Nothing reads it
+// at run time.
+const OVERFLOW: i64 = -LOWEST
+
+fn helper() -> i64 { 0 }
+
+fn literals() {
+  let a: Small<300> = Small { tag: "a" } //~ ERROR E0320
+  let b: Mod<true> = Mod { value: 1 } //~ ERROR E0311
+  let c: Mod<SIGNED> = Mod { value: 1 } //~ ERROR E0311
+}
+
+fn kinds() {
+  let x = 3
+  let a: Mod<i64> = Mod { value: 1 } //~ ERROR E0347
+  let b: List<3> = [] //~ ERROR E0347
+  let c: List<PRIME> = [] //~ ERROR E0347
+  let d: Mod<x> = Mod { value: 1 } //~ ERROR E0347
+  let e: Mod<helper> = Mod { value: 1 } //~ ERROR E0347
+}
+
+fn others() {
+  let a: Offset<OVERFLOW> = Offset { base: 1 } //~ ERROR E0347
+  let b: Mod<MISSING> = Mod { value: 1 } //~ ERROR E0211
+  let c: Pair<1> = Pair { tag: "c" } //~ ERROR E0300
+}
+
+fn main() {}

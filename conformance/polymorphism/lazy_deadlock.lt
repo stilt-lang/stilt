@@ -1,0 +1,28 @@
+//~ tier: advanced
+//~ rule: polymorphism.lazy-waits-for-nothing, shared.when-on-value-already-held
+//~ panic: deadlock
+//~ panic-at: lazy_deadlock.lt:25:20
+//~ stdout:
+//~ | 42
+//~ | before
+
+// A function that reaches `Lazy.new` through a parameter, which no check sees, runs a `when`
+// while the value is computed, and panics there. A function that runs none computes as usual.
+
+use std.sync
+use std.lazy
+
+type Counter = { n: i64 }
+
+fn later(escaping f: fn() -> i64) -> lazy.Lazy<i64> {
+  lazy.Lazy.new(f)
+}
+
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 1 })
+  let plain = later(|| 6 * 7)
+  print("{plain.get()}")
+  let l = later(|| when c { c.n })
+  print("before")
+  print("{l.get()}")
+}

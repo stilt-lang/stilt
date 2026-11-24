@@ -1,0 +1,58 @@
+// Printing the expressions that both published forms share, and the sets of characters of the
+// regular expressions of the lexemes, in the syntax of one of the forms.
+
+use ebnf
+use lexicon
+
+/// How a published form writes what the two forms write differently.
+pub trait Syntax {
+  /// The text of a rule's name.
+  fn name(self, rule: str) -> str
+  /// A regular expression, as the body of a token rule.
+  fn rx(self, rx: lexicon.Rx) -> str
+  /// The alternatives of a rule, one to a line.
+  fn lines(self, branches: List<str>) -> str
+}
+
+/// The expression in the syntax of a form. `level` is 0 for the body of a rule, 1 inside a
+/// sequence and 2 under a repetition.
+pub fn expr<S: Syntax>(form: S, e: ebnf.Expr, level: i64) -> str {
+  match e {
+    Ref(name) => form.name(name)
+    Seq(items) => {
+      let text = " ".join(items.map(|i| expr(form, i, 1)))
+      if level >= 2 { "({text})" } else { text }
+    }
+    Alt(items) => {
+      let text = " | ".join(items.map(|i| expr(form, i, 0)))
+      if level >= 1 { "({text})" } else { text }
+    }
+    Opt(inner) => "{expr(form, inner, 2)}?"
+    Star(inner) => "{expr(form, inner, 2)}*"
+    Lit(_) | Call(_, _) | Empty => ""
+  }
+}
+
+/// The body of a rule, one alternative to a line.
+pub fn body<S: Syntax>(form: S, e: ebnf.Expr) -> str {
+  match e {
+    Alt(items) => form.lines(items.map(|i| expr(form, i, 0)))
+    other => expr(form, other, 0)
+  }
+}
+
+/// The characters of a set, each escaped by `escape`. A `-` stands last, and a `^` never
+/// first, so that neither needs an escape.
+/// ex: set_text(false, [("a", "z"), ("-", "-"), ("0", "9")], |c| c) == "[a-z0-9-]"
+/// ex: set_text(true, [("^", "^"), ("a", "a")], |c| c) == "[^a^]"
+pub fn set_text(negated: bool, ranges: List<(str, str)>, escape: fn(str) -> str) -> str {
+  let single = |c: str, r: (str, str)| r.0 == c && r.1 == c
+  let ordered = ranges
+    .filter(|r| !single("-", r) && !single("^", r))
+    .concat(ranges.filter(|r| single("^", r)))
+    .concat(ranges.filter(|r| single("-", r)))
+  let inner = "".join(
+    ordered.map(|r| if r.0 == r.1 { escape(r.0) } else { "{escape(r.0)}-{escape(r.1)}" }),
+  )
+  "[{if negated { "^" } else { "" }}{inner}]"
+}

@@ -1,0 +1,1 @@
+fn totals(orders: Map<str, List<i64>>) -> Map<str, List<str>> { orders }

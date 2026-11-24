@@ -1,0 +1,41 @@
+//~ rule: traits.prelude-traits, traits.structural-impls, traits.structural-calls, std.option-result-and-ordering
+//~ stdout:
+//~ | true true false
+//~ | true false true
+//~ | true true true true
+//~ | true true true true
+//~ | true true true true
+//~ | true true true true
+//~ | Greater Less Equal
+//~ | 2 3
+//~ | 2 2
+
+type Point = { x: i64, y: i64 }
+
+type Shape = | Dot | Circle(i64) | Rect(i64, i64)
+
+fn main() / io {
+  let a = (1, "a")
+  let b = (1, "b")
+  print("{a == a} {a != b} {b < a}")
+  let p = Point { x: 1, y: 9 }
+  let q = Point { x: 2, y: 0 }
+  print("{p == p} {p == q} {p < q}")
+  print("{Dot < Circle(0)} {Circle(5) < Rect(0, 0)} {Circle(1) < Circle(2)} {Rect(1, 2) == Rect(1, 2)}")
+  print("{[1, 2] < [1, 2, 0]} {[1, 2, 0] > [1, 2]} {[2] > [1, 9]} {[1, 2] == [1, 2]}")
+  let some_a: Option<str> = Some("a")
+  let ok: Result<i64, str> = Ok(1)
+  print("{None < Some(0)} {Ok(1) < Err(0)} {some_a == Some("a")} {ok != Err("x")}")
+  print("{false < true} {"B" < "a"} {"é" > "z"} {"ab" < "b"}")
+  print("{Ord.compare(Circle(1), Dot)} {Ord.compare(p, q)} {Ord.compare(a, a)}")
+  var by_place: Map<(Point, Shape), i64> = Map.new()
+  by_place[(p, Dot)] = 1
+  by_place[(p, Circle(1))] = 2
+  by_place[(p, Dot)] = 3
+  print("{by_place.len()} {by_place[(p, Dot)]}")
+  var by_list: Map<List<Option<str>>, i64> = Map.new()
+  by_list[[Some("a"), None]] = 1
+  by_list[[Some("a"), None]] = 2
+  by_list[[None]] = 3
+  print("{by_list.len()} {by_list[[Some("a"), None]]}")
+}

@@ -1,0 +1,5 @@
+//~ rule: expressions.closures
+
+fn make() -> fn(i64) -> i64 {
+  |x: i64| -> i64 { x } //~ ERROR E0100
+}

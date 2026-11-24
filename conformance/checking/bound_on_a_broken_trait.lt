@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: errors.unknown-names, errors.broken-blocks, traits.bound-arguments, traits.where
+
+// A trait whose part breaks before its block declares only its name, so a bound
+// that names it bounds nothing. The bound's argument is a type all the same, and
+// one that names nothing is reported, as is every name outside a body that
+// doesn't resolve.
+trait Collection<Item> //~ ERROR E0100
+
+fn zero<C: Collection<Nope>>(c: C) -> i64 { 0 } //~ ERROR E0211
+
+// So is the argument of a bound whose trait names nothing, and that of a bound
+// on a member type that names nothing.
+fn one<C: Missing<Gone>>(c: C) -> i64 { 0 } //~ ERROR E0211 ERROR E0211
+
+fn two<C>(c: C) -> i64 where C.Item: Collection<Lost> { 0 } //~ ERROR E0334 ERROR E0211
+
+fn main() {}

@@ -1,0 +1,28 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.call-that-handler-ends, expressions.capture
+//~ run-output: "aborted getter=42"
+
+// Effekt, examples/pos/abort_past_var.effekt: a block sets a local to 41, stores in a variable
+// outside the `with` a closure that reads it, and then performs an operation whose handler
+// doesn't resume. The `with`'s value is the handler's, "aborted", and the closure stays in the
+// outer variable. Effekt's closure reads the local from a region that outlives the block; a
+// Stilt closure copies the local when it is made, when it holds 41. Either way it gives 42.
+
+effect Stop {
+  fn stop() -> Never
+}
+
+fn main() / io {
+  var getter = || 0
+  let aborting = handler Stop -> str {
+    fn stop() -> Never { "aborted" }
+  }
+  let res = with aborting {
+    var x = 0
+    x = 41
+    getter = || x + 1
+    Stop.stop()
+    "resumed"
+  }
+  print("{res} getter={getter()}")
+}

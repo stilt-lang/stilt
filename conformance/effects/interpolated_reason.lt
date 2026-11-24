@@ -1,0 +1,11 @@
+//~ rule: effects.reasons-only-on-catch-alls
+
+type Failure = | Missing
+
+fn fetch(key: str) -> i64 / raise<Failure> {
+  raise Missing
+}
+
+fn lookup(key: str) -> i64 {
+  try fetch(key) catch _ because "{key} may be absent" => 0 //~ ERROR E0100
+}

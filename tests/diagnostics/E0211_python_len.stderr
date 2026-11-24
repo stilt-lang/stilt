@@ -1,0 +1,13 @@
+── UNKNOWN NAME ────────────────────────────── E0211_python_len.lt:3:11  [E0211]
+
+Stilt has no `len` function: a length is a method, as `xs.len()`:
+
+  3 │   print("{len(xs)} items")
+    │           ^^^
+
+Lists, maps, sets and strings have a `len` method.
+
+To fix it, call the method `len`:
+
+  3 │   print("{xs.len()} items")
+    │           ~~~~~~~~

@@ -1,0 +1,3 @@
+[package]
+name = "missing"
+link = ["stilt-no-such-library"] # //~ ERROR E0611

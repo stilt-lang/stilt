@@ -1,0 +1,46 @@
+//~ rule: facts.without, facts.capabilities, facts.capability-natives
+
+use std.cli
+use std.clock
+use std.fs
+use std.io
+use std.random
+
+fn shout(s: str) / io without console {
+  print(s) //~ ERROR E0204
+}
+
+fn ask() -> Option<str> / io without console {
+  io.read_line() //~ ERROR E0204
+}
+
+fn load(path: str) -> str / {io, raise<io.IoError>} without fs {
+  try fs.read(path) //~ ERROR E0204
+}
+
+fn now() -> i64 / io without clock {
+  clock.unix_ms() //~ ERROR E0204
+}
+
+fn first_arg() -> Option<str> / io without env {
+  cli.args().first() //~ ERROR E0204
+}
+
+fn seed() -> u64 / io without rand {
+  random.entropy() //~ ERROR E0204
+}
+
+// The capability of a function of the program is inherited by what names it.
+fn stamp(msg: str) -> str / io { "{clock.unix_ms()} {msg}" }
+
+fn report(msg: str) / io without clock {
+  print(stamp(msg)) //~ ERROR E0204
+}
+
+// A closure literal written in the limited function is its own code.
+fn later() / io without console {
+  let f = || print("x") //~ ERROR E0204
+  f()
+}
+
+fn main() / io {}

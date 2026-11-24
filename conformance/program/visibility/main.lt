@@ -1,0 +1,26 @@
+//~ rule: program.visibility, program.what-use-binds, declarations.qualified-variants
+
+use shapes
+
+fn visible() -> f64 {
+  let s = shapes.Shape.unit()
+  let c = shapes.Circle(2.0)
+  let p = shapes.Point { x: 1.0, y: 2.0 }
+  s.area() + c.area() + p.x + shapes.Shape.ZERO + shapes.helper()
+}
+
+fn private_function() -> f64 {
+  shapes.private_helper() //~ ERROR E0213
+}
+
+fn private_method() -> f64 {
+  shapes.Shape.unit().secret() //~ ERROR E0213
+}
+
+fn private_constant() -> f64 {
+  shapes.Shape.LIMIT //~ ERROR E0213
+}
+
+fn public_member_of_private_type() {
+  let _ = shapes.Hidden.make() //~ ERROR E0213
+}

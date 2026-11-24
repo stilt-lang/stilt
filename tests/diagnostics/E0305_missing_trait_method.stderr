@@ -1,0 +1,9 @@
+── MISSING TRAIT MEMBER ───────────── E0305_missing_trait_method.lt:8:1  [E0305]
+
+The impl of `Shape` for `Circle` lacks the method `name`:
+
+  8 │ impl Shape for Circle {
+    │ ^^^^^^^^^^^^^^^^^^^^^^^
+
+A trait impl defines every method and constant of the trait that has no default.
+Add the missing member.

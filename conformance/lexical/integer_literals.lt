@@ -1,0 +1,6 @@
+//~ rule: lexical.integer-literals
+//~ run-output: "0 7 1000 1000000 255 255 255 3735928559 15 10 2 1 0"
+
+fn main() / io {
+  print("{0} {7} {1_000} {1_000_000} {0xFf} {0xff} {0xF_F} {0xDEAD_BEEF} {0o17} {0b1010} {0b1_0} {0x1} {0b0}")
+}

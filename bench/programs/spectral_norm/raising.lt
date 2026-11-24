@@ -1,0 +1,50 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+
+use std.cli
+
+type Fail = | Fail
+
+fn a(i: i64, j: i64) -> f64 / raise<Fail> { 1.0 / ((i + j) * (i + j + 1) / 2 + i + 1).to_f64() }
+
+fn times(v: List<f64>) -> List<f64> / raise<Fail> {
+  let n = v.len()
+  var out = []
+  for i in 0..n {
+    var sum = 0.0
+    for j in 0..n { sum += try a(i, j) * v[j] }
+    out.push(sum)
+  }
+  out
+}
+
+fn times_transposed(v: List<f64>) -> List<f64> / raise<Fail> {
+  let n = v.len()
+  var out = []
+  for i in 0..n {
+    var sum = 0.0
+    for j in 0..n { sum += try a(j, i) * v[j] }
+    out.push(sum)
+  }
+  out
+}
+
+fn times_both(v: List<f64>) -> List<f64> / raise<Fail> { try times_transposed(try times(v)) }
+
+fn main() / {io, raise<Fail>} {
+  let n = (cli.arg(0) else "").to_i64() else 1000
+  var u = []
+  for _ in 0..n { u.push(1.0) }
+  var v = []
+  for _ in 0..10 {
+    v = try times_both(u)
+    u = try times_both(v)
+  }
+  var vbv = 0.0
+  var vv = 0.0
+  for i in 0..n {
+    vbv += u[i] * v[i]
+    vv += v[i] * v[i]
+  }
+  print("{(vbv / vv).sqrt():.9}")
+}

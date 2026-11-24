@@ -1,0 +1,109 @@
+//~ rule: modes.copies, modes.shared-writes, modes.shared-holders, facts.without-copy
+
+// A copy of a copy is a copy of the binding: a binding that copies the part of a value that
+// holds a copy of `a` holds a copy of `a` itself, and a write to it copies while `a` is read
+// after it.
+
+type Pair = { left: List<i64>, right: List<i64> }
+
+fn through_a_field(a: List<i64>) -> i64 without copy {
+  let p = Pair { left: a, right: [] }
+  var z = p.left
+  z.push(1) //~ ERROR E0204
+  z.len() + a.len()
+}
+
+fn through_an_index(a: List<i64>) -> i64 without copy {
+  let xs = [a]
+  var z = xs[0]
+  z.push(1) //~ ERROR E0204
+  z.len() + a.len()
+}
+
+fn through_a_pattern(a: List<i64>) -> i64 without copy {
+  let p = Pair { left: a, right: [] }
+  match p {
+    Pair { left, right: _ } => {
+      var z = left
+      z.push(1) //~ ERROR E0204
+      z.len() + a.len()
+    }
+  }
+}
+
+fn through_if_let(a: List<i64>) -> i64 without copy {
+  let p = ([a], 1)
+  if let ([l], _) = p {
+    var z = l
+    z.push(1) //~ ERROR E0204
+    z.len() + a.len()
+  } else {
+    0
+  }
+}
+
+fn through_a_loop(a: List<i64>) -> i64 without copy {
+  let xs = [a]
+  var n = 0
+  for y in xs {
+    var z = y
+    z.push(1) //~ ERROR E0204
+    n += z.len()
+  }
+  n + a.len()
+}
+
+// A copy assigned to another local comes into it at the assignment.
+fn through_an_assignment(a: List<i64>) -> i64 without copy {
+  let y = a
+  var z: List<i64> = []
+  z = y
+  z.push(1) //~ ERROR E0204
+  z.len() + a.len()
+}
+
+// The element a `for` binds is a copy of the list's element, and so of `a`.
+fn after_a_loop(a: List<i64>) -> i64 without copy {
+  let xs = [a]
+  var z: List<i64> = []
+  for y in xs {
+    z = y
+  }
+  z.push(1) //~ ERROR E0204
+  z.len() + a.len()
+}
+
+// A part inside the copy is a copy of a part of `a`.
+fn inside_the_copy(a: Pair) -> i64 without copy {
+  let t = (a, 1)
+  var z = t.0.left
+  z.push(1) //~ ERROR E0204
+  z.len() + a.left.len()
+}
+
+// A part beside the copy holds nothing of `a`: once the value that holds the copy has gone, a
+// write to `a` copies nothing.
+fn beside_the_copy(a: List<i64>) -> i64 without copy {
+  var a = a
+  var z: List<i64> = []
+  {
+    let p = Pair { left: a, right: [2] }
+    z = p.right
+  }
+  a.push(1)
+  z.len() + a.len()
+}
+
+// A part that holds the copy is still a copy of `a` once that value has gone.
+fn holding_the_copy(a: List<i64>) -> i64 without copy {
+  var a = a
+  var z: List<i64> = []
+  {
+    let p = Pair { left: a, right: [2] }
+    z = p.left
+  }
+  a.push(1) //~ ERROR E0204
+  z.len() + a.len()
+}
+
+fn main() / io {}

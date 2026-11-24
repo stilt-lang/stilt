@@ -1,0 +1,189 @@
+// Turning the spans of a paragraph or a heading into HTML: emphasis, code, links, images,
+// autolinks, escapes and hard line breaks.
+
+/// `text` with the characters that HTML gives a meaning escaped.
+/// ex: escape("a < b & \"c\"") == "a &lt; b &amp; &quot;c&quot;"
+pub fn escape(text: str) -> str {
+  text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
+}
+
+/// The HTML of a span of Markdown.
+/// ex: html("*a* **b** `c`") == "<em>a</em> <strong>b</strong> <code>c</code>"
+/// ex: html("[site](http://x.org \"X\")") == "<a href=\"http://x.org\" title=\"X\">site</a>"
+/// ex: html("snake_case_name") == "snake_case_name"
+/// ex: html("a  \nb") == "a<br />\nb"
+/// ex: html("\\*not\\*") == "*not*"
+pub fn html(text: str) -> str {
+  let cs = text.chars()
+  var out = []
+  var i = 0
+  while i < cs.len() {
+    let (piece, next) = span(cs, i)
+    out.push(piece)
+    i = next
+  }
+  "".join(out)
+}
+
+/// The HTML of the span that starts at `i`, and the index after it.
+fn span(cs: List<str>, i: i64) -> (str, i64) {
+  let found = match cs[i] {
+    "\\" => escaped(cs, i)
+    "`" => code(cs, i)
+    "*" | "_" => emphasis(cs, i)
+    "[" => link(cs, i)
+    "!" => image(cs, i)
+    "<" => autolink(cs, i)
+    " " => line_break(cs, i)
+    _ => None
+  }
+  found else (escape(cs[i]), i + 1)
+}
+
+/// The text of `cs` from `start` up to `end`.
+fn text(cs: List<str>, start: i64, end: i64) -> str { "".join(cs.slice(start, end)) }
+
+/// A backslash before punctuation, which stands for the punctuation itself, or before a
+/// newline, which is a hard line break.
+fn escaped(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  let c = cs.get(i + 1) else return None
+  if c == "\n" { return Some(("<br />\n", i + 2)) }
+  if !c.is_ascii() || c.is_ascii_alphanumeric() || c.is_ascii_whitespace() { return None }
+  Some((escape(c), i + 2))
+}
+
+/// Two spaces or more before a newline make a hard line break, and fewer are dropped.
+fn line_break(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  var j = i
+  while j < cs.len() && cs[j] == " " { j += 1 }
+  if j == cs.len() || cs[j] != "\n" { return None }
+  Some((if j - i >= 2 { "<br />\n" } else { "\n" }, j + 1))
+}
+
+/// The length of the run of `c` that starts at `i`.
+fn run(cs: List<str>, i: i64, c: str) -> i64 { cs.skip(i).take_while(|x| x == c).len() }
+
+/// A code span: a run of backticks, and the text up to a run of the same length.
+/// ex: html("`` a ` b ``") == "<code>a ` b</code>"
+/// ex: html("`open") == "`open"
+fn code(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  let n = run(cs, i, "`")
+  var j = i + n
+  while j < cs.len() {
+    let m = run(cs, j, "`")
+    if m == n {
+      var body = text(cs, i + n, j).replace("\n", " ")
+      if body.starts_with(" ") && body.ends_with(" ") && body.trim() != "" {
+        body = body.slice(1, body.len() - 1)
+      }
+      return Some(("<code>{escape(body)}</code>", j + n))
+    }
+    j += m.max(1)
+  }
+  Some((text(cs, i, i + n), i + n))
+}
+
+/// Whether the character at `i` is whitespace, or is outside the text.
+fn space_at(cs: List<str>, i: i64) -> bool { i < 0 || i >= cs.len() || cs[i].is_ascii_whitespace() }
+
+/// Whether the character at `i` is a letter or a digit.
+fn word_at(cs: List<str>, i: i64) -> bool {
+  i >= 0 && i < cs.len() && cs[i].is_ascii_alphanumeric()
+}
+
+/// Strong emphasis between two pairs of `*` or `_`, or emphasis between two single ones. An
+/// opening delimiter isn't followed by a space, a closing one isn't preceded by one, and an `_`
+/// can't open or close inside a word.
+/// ex: html("**a *b* c**") == "<strong>a <em>b</em> c</strong>"
+/// ex: html("*a **b** c*") == "<em>a <strong>b</strong> c</em>"
+/// ex: html("2 * 3 * 4") == "2 * 3 * 4"
+fn emphasis(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  let c = cs[i]
+  if c == "_" && word_at(cs, i - 1) { return None }
+  if run(cs, i, c) >= 2 {
+    if let Some(k) = closing(cs, i + 2, c, 2) {
+      return Some(("<strong>{html(text(cs, i + 2, k))}</strong>", k + 2))
+    }
+  }
+  let k = closing(cs, i + 1, c, 1) else return None
+  Some(("<em>{html(text(cs, i + 1, k))}</em>", k + 1))
+}
+
+/// Where the closing run of `n` delimiters `c` for an opening one before `start` begins. A
+/// single delimiter skips the pairs inside it, which close emphasis of their own.
+fn closing(cs: List<str>, start: i64, c: str, n: i64) -> Option<i64> {
+  if space_at(cs, start) { return None }
+  var k = start + 1
+  while k < cs.len() {
+    let m = run(cs, k, c)
+    if m == 0 {
+      k += if cs[k] == "\\" { 2 } else { 1 }
+      continue
+    }
+    let closes = !space_at(cs, k - 1) && !(c == "_" && word_at(cs, k + n))
+    if closes && (m == n || n == 2 && m >= 2 || n == 1 && m == 3) { return Some(k) }
+    k += m
+  }
+  None
+}
+
+/// The index of the bracket that closes the one at `i`, `[` with `]` or `(` with `)`.
+fn matching(cs: List<str>, i: i64, close: str) -> Option<i64> {
+  let open = cs[i]
+  var depth = 0
+  var k = i
+  while k < cs.len() {
+    if cs[k] == "\\" {
+      k += 2
+      continue
+    }
+    if cs[k] == open { depth += 1 }
+    if cs[k] == close {
+      depth -= 1
+      if depth == 0 { return Some(k) }
+    }
+    k += 1
+  }
+  None
+}
+
+/// The text in brackets at `i`, then its destination and title in parentheses, and the index
+/// after them.
+fn target(cs: List<str>, i: i64) -> Option<(str, str, str, i64)> {
+  let close = matching(cs, i, "]") else return None
+  if close + 1 >= cs.len() || cs[close + 1] != "(" { return None }
+  let end = matching(cs, close + 1, ")") else return None
+  let inside = text(cs, close + 2, end).trim()
+  let (dest, title) = inside.split_once(" ") else (inside, "")
+  let title = title.trim()
+  let quoted = title.len() >= 2 && title.starts_with("\"") && title.ends_with("\"")
+  let title = if quoted { title.slice(1, title.len() - 1) } else { title }
+  Some((text(cs, i + 1, close), dest, title, end + 1))
+}
+
+fn link(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  let (label, dest, title, next) = target(cs, i) else return None
+  let title = if title == "" { "" } else { " title=\"{escape(title)}\"" }
+  Some(("<a href=\"{escape(dest)}\"{title}>{html(label)}</a>", next))
+}
+
+/// An image, `![alt](src)`, whose alternative text is the label without its markup.
+/// ex: html("![a *b*](x.png)") == "<img src=\"x.png\" alt=\"a b\" />"
+fn image(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  if i + 1 >= cs.len() || cs[i + 1] != "[" { return None }
+  let (label, dest, title, next) = target(cs, i + 1) else return None
+  let alt = escape(label.replace("*", "").replace("_", "").replace("`", ""))
+  let title = if title == "" { "" } else { " title=\"{escape(title)}\"" }
+  Some(("<img src=\"{escape(dest)}\" alt=\"{alt}\"{title} />", next))
+}
+
+/// A link written `<URL>`, with an `http`, `https` or `mailto` URL.
+/// ex: html("<https://stilt.dev>") == "<a href=\"https://stilt.dev\">https://stilt.dev</a>"
+/// ex: html("<b>") == "&lt;b&gt;"
+fn autolink(cs: List<str>, i: i64) -> Option<(str, i64)> {
+  let end = cs.skip(i).find_index(|c| c == ">" || c == " " || c == "\n") else return None
+  if cs[i + end] != ">" { return None }
+  let url = text(cs, i + 1, i + end)
+  if !["http://", "https://", "mailto:"].any(|s| url.starts_with(s)) { return None }
+  Some(("<a href=\"{escape(url)}\">{escape(url)}</a>", i + end + 1))
+}

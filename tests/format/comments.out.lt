@@ -1,0 +1,31 @@
+// Comments stay on their lines. A comment that ends a line stays after the code before it, and a
+// comment alone on its line stays alone, at the level of the code after it.
+
+/// The sum of two numbers.
+/// ex: add(1, 2) == 3
+fn add(a: i64, b: i64) -> i64 {
+  a + b // the sum
+}
+
+fn sign(n: i64) -> i64 { // a block that holds a comment stays on several lines
+  if n < 0 { -1 } else { 1 }
+}
+
+fn half(n: i64) -> i64 { n / 2 } // a comment after the block
+
+type Point = {
+  x: i64, // across
+  y: i64, // down
+}
+
+fn origin() -> Point {
+  // the start
+  Point { x: 0, y: 0 }
+}
+
+fn main() / io {
+  let p = origin()
+  // between two statements, indented too far
+  print("{p.x}") // after a statement, with spaces before
+}
+// at the end of the file

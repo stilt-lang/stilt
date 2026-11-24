@@ -1,0 +1,18 @@
+//~ rule: tests.prop-lines, tests.property-form, tests.property-checking, tests.property-cases, tests.seeds, tests.draws, tests.generated-scalars, tests.boundary-values, tests.property-results
+
+/// Halves a number, rounding toward zero.
+/// ex: halve(-3) == -1 //~ PASS
+/// prop: |n: i64| halve(n) * 2 + n % 2 == n //~ PASS
+/// prop: |(a, b): (i64, i64)| halve(a) == halve(a) && b == b //~ PASS
+/// prop: |n: i32| n < 90 || n > 99 //~ PASS
+/// prop: |b: bool| b || !b //~ PASS
+/// prop: |x: i8, y: i16, z: i32| x <= i8.MAX && y >= i16.MIN && z == z //~ PASS
+/// prop: |x: u8, y: u16, z: u32, w: u64| x >= 0 && y >= 0 && z >= 0 && w >= 0 //~ PASS
+/// prop: |x: i64| x >= i64.MIN && x <= i64.MAX //~ PASS
+/// prop: |x: f32, y: f64| x == x || x.is_nan() || y.is_nan() //~ PASS
+/// prop: |s: str, u: ()| s.len() >= 0 && u == () //~ PASS
+fn halve(n: i64) -> i64 { n / 2 }
+
+test "halves" { //~ PASS
+  assert halve(4) == 2
+}

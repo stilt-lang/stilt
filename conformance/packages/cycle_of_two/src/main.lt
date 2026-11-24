@@ -1,0 +1,3 @@
+use a
+
+fn main() / io { print("{a.f()}") }

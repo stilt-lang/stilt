@@ -1,0 +1,47 @@
+use std.cli
+use std.fs
+
+/// One validated row of the orders file.
+type Order = { customer: str, qty: i64, price: f64 }
+
+/// Parses one `customer,qty,price` row.
+fn parse_line(n: i64, text: str) -> Order / raise<str> {
+  match text.split(",") {
+    [customer, q, p] => {
+      let qty = match q.to_i64() {
+        Some(v) => v
+        None => raise "line {n}: bad qty {q}"
+      }
+      let price = match p.to_f64() {
+        Some(v) => v
+        None => raise "line {n}: bad price {p}"
+      }
+      if qty <= 0 {
+        raise "line {n}: qty must be positive"
+      }
+      Order { customer: customer, qty: qty, price: price }
+    }
+    _ => raise "line {n}: expected 3 fields"
+  }
+}
+
+/// Revenue per customer, largest first.
+fn totals(orders: List<Order>) -> List<(str, f64)> {
+  var sums = Map.with_default(0.0)
+  for o in orders {
+    sums[o.customer] += o.qty.to_f64() * o.price
+  }
+  sums.entries().sorted_desc_by(|e| e.1)
+}
+
+fn main() / {io, raise<str>} {
+  let path = match cli.arg(0) {
+    Some(a) => a
+    None => raise "usage: orders <file>"
+  }
+  let lines = try fs.read_lines(path) catch _ => raise "cannot read {path}"
+  let orders = try lines.skip(1).enumerate(2).map(|(n, l)| parse_line(n, l))
+  for (c, t) in totals(orders).take(3) {
+    print("{c}: {t:.2}")
+  }
+}

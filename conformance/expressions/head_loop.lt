@@ -1,0 +1,7 @@
+//~ rule: expressions.head-contents
+
+fn once() {
+  match loop { break } { //~ ERROR E0100
+    () => ()
+  }
+}

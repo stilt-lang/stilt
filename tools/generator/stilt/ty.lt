@@ -1,0 +1,156 @@
+// The types of generated programs, and what the Reference says each one can do.
+
+pub type IntKind = | I8 | I16 | I32 | I64 | U8 | U16 | U32 | U64
+
+pub type FloatKind = | F32 | F64
+
+/// A type of a generated program. `Named` is a record or variant type that the
+/// program declares.
+pub type Ty =
+  | Int(IntKind)
+  | Float(FloatKind)
+  | Bool
+  | Str
+  | Unit
+  | Tuple(List<Ty>)
+  | ListOf(Ty)
+  | MapOf(Ty, Ty)
+  | OptionOf(Ty)
+  | Named(str)
+
+/// A declared type: a record's fields, or a variant type's variants with their
+/// payloads.
+pub type Decl = | Record(List<(str, Ty)>) | Variants(List<(str, List<Ty>)>)
+
+pub const INT_KINDS: List<IntKind> = [I8, I16, I32, I64, U8, U16, U32, U64]
+
+pub const FLOAT_KINDS: List<FloatKind> = [F32, F64]
+
+/// ex: int_name(U16) == "u16"
+pub fn int_name(k: IntKind) -> str {
+  match k {
+    I8 => "i8"
+    I16 => "i16"
+    I32 => "i32"
+    I64 => "i64"
+    U8 => "u8"
+    U16 => "u16"
+    U32 => "u32"
+    U64 => "u64"
+  }
+}
+
+pub fn float_name(k: FloatKind) -> str {
+  match k {
+    F32 => "f32"
+    F64 => "f64"
+  }
+}
+
+pub fn bits(k: IntKind) -> i64 {
+  match k {
+    I8 | U8 => 8
+    I16 | U16 => 16
+    I32 | U32 => 32
+    I64 | U64 => 64
+  }
+}
+
+pub fn signed(k: IntKind) -> bool {
+  match k {
+    I8 | I16 | I32 | I64 => true
+    U8 | U16 | U32 | U64 => false
+  }
+}
+
+/// `t` as a program writes it.
+/// ex: to_string(MapOf(Str, Tuple([Int(I8), OptionOf(Named("T1"))]))) == "Map<str, (i8, Option<T1>)>"
+pub fn to_string(t: Ty) -> str {
+  match t {
+    Int(k) => int_name(k)
+    Float(k) => float_name(k)
+    Bool => "bool"
+    Str => "str"
+    Unit => "()"
+    Tuple(ts) => "({", ".join(ts.map(to_string))})"
+    ListOf(t) => "List<{to_string(t)}>"
+    MapOf(k, v) => "Map<{to_string(k)}, {to_string(v)}>"
+    OptionOf(t) => "Option<{to_string(t)}>"
+    Named(name) => name
+  }
+}
+
+/// `t` with `f` applied to the name of every declared type in it.
+/// ex: map_named(ListOf(Named("T1")), |n| "m.{n}") == ListOf(Named("m.T1"))
+pub fn map_named(t: Ty, f: fn(str) -> str) -> Ty {
+  match t {
+    Named(name) => Named(f(name))
+    Tuple(ts) => Tuple(ts.map(|u| map_named(u, f)))
+    ListOf(u) => ListOf(map_named(u, f))
+    OptionOf(u) => OptionOf(map_named(u, f))
+    MapOf(k, v) => MapOf(map_named(k, f), map_named(v, f))
+    _ => t
+  }
+}
+
+/// The names of the declared types in `t`.
+/// ex: named(MapOf(Named("a"), Tuple([Named("b"), Str]))) == ["a", "b"]
+pub fn named(t: Ty) -> List<str> {
+  match t {
+    Named(name) => [name]
+    Tuple(ts) => List.flatten(ts.map(named))
+    ListOf(u) | OptionOf(u) => named(u)
+    MapOf(k, v) => named(k).concat(named(v))
+    _ => []
+  }
+}
+
+/// numbers.conversions: `.to_T()` returns `T` when every value of the source type
+/// fits in `T`, and `Option<T>` otherwise.
+/// ex: widens(U8, I16) && !widens(I8, U64) && !widens(U16, I16)
+pub fn widens(from: IntKind, into: IntKind) -> bool {
+  match (signed(from), signed(into)) {
+    (true, false) => false
+    (false, true) => bits(from) < bits(into)
+    _ => bits(from) <= bits(into)
+  }
+}
+
+/// The declaration of the type `name`, its first if there are several.
+pub fn lookup(decls: List<(str, Decl)>, name: str) -> Decl {
+  for (n, d) in decls { if n == name { return d } }
+  panic("no declared type {name}")
+}
+
+/// Whether `t` has `Ord` structurally (traits.structural-impls). Floats do, through
+/// their total order, and maps don't.
+pub fn ordered(decls: List<(str, Decl)>, t: Ty) -> bool {
+  match t {
+    MapOf(_, _) => false
+    Tuple(ts) => ts.all(|u| ordered(decls, u))
+    ListOf(u) | OptionOf(u) => ordered(decls, u)
+    Named(name) => {
+      match lookup(decls, name) {
+        Record(fields) => fields.all(|(_, u)| ordered(decls, u))
+        Variants(cases) => cases.all(|(_, payload)| payload.all(|u| ordered(decls, u)))
+      }
+    }
+    _ => true
+  }
+}
+
+/// Whether a map appears anywhere in `t`.
+pub fn has_map(decls: List<(str, Decl)>, t: Ty) -> bool {
+  match t {
+    MapOf(_, _) => true
+    Tuple(ts) => ts.any(|u| has_map(decls, u))
+    ListOf(u) | OptionOf(u) => has_map(decls, u)
+    Named(name) => {
+      match lookup(decls, name) {
+        Record(fields) => fields.any(|(_, u)| has_map(decls, u))
+        Variants(cases) => cases.any(|(_, payload)| payload.any(|u| has_map(decls, u)))
+      }
+    }
+    _ => false
+  }
+}

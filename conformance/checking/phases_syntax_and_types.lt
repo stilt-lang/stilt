@@ -1,0 +1,6 @@
+//~ rule: errors.part-reports, errors.registry-phases
+
+fn f() -> i64 {
+  let s: str = 1
+  (1 + ) //~ ERROR E0100
+}

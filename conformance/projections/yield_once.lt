@@ -1,0 +1,81 @@
+//~ tier: advanced
+//~ rule: projections.once-on-every-path
+
+type Bad = | Bad
+
+fn checked(i: i64) / raise<Bad> {
+  if i < 0 { raise Bad }
+}
+
+// No path yields.
+fn none(inout x: i64) -> inout i64 {
+  x += 1
+} //~ ERROR E0424
+
+// One path yields twice.
+fn twice(inout x: i64) -> inout i64 {
+  yield x
+  yield x //~ ERROR E0424
+}
+
+// A `yield` in a loop could run more than once; it counts as the one `yield` of the body.
+fn in_for(inout xs: List<i64>) -> inout i64 {
+  for i in 0..xs.len() {
+    yield xs[i] //~ ERROR E0424
+  }
+}
+
+fn in_while(inout x: i64) -> inout i64 {
+  while x > 0 {
+    yield x //~ ERROR E0424
+  }
+}
+
+fn in_loop(inout x: i64) -> inout i64 {
+  loop {
+    yield x //~ ERROR E0424
+  }
+}
+
+// A path through the loop's body has yielded already at the `yield` after it.
+fn after_loop(inout x: i64) -> inout i64 {
+  while x > 0 {
+    yield x //~ ERROR E0424
+  }
+  yield x //~ ERROR E0424
+}
+
+// A `yield` in the operand of a `try` with arms could run before or after the raise
+// that the arms catch.
+fn in_try(inout xs: List<i64>, i: i64) -> inout i64 {
+  try {
+    yield xs[i] //~ ERROR E0424
+    checked(i)
+  } catch Bad => {}
+}
+
+// One arm yields and the other doesn't: the path through the `else` reaches the end.
+fn half(inout x: i64, flag: bool) -> inout i64 {
+  if flag { yield x }
+} //~ ERROR E0424
+
+// A `return` before any `yield` ends a path without one.
+fn early(inout x: i64, flag: bool) -> inout i64 {
+  if flag { return } //~ ERROR E0424
+  yield x
+}
+
+fn main() / io {
+  var x = 1
+  none(inout x) = 2
+  twice(inout x) = 3
+  half(inout x, true) = 4
+  early(inout x, false) = 5
+  var xs = [1]
+  in_for(inout xs) = 6
+  in_while(inout x) = 7
+  in_loop(inout x) = 8
+  after_loop(inout x) = 10
+  in_try(inout xs, 0) = 9
+  print("{x} {xs}")
+}

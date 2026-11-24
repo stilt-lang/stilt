@@ -1,0 +1,13 @@
+//~ rule: c.exported-functions
+
+// Only a module's function is exported, never a method.
+
+pub type Counter = { count: i64 }
+
+impl Counter {
+  pub extern fn count(self) -> i64 { //~ ERROR E0100
+    self.count
+  }
+}
+
+fn main() {}

@@ -1,0 +1,57 @@
+//~ rule: program.test-results, numbers.literal-defaults, numbers.shift-amounts, effects.panic-kinds
+
+test "i64 by a u8 63, and u8 by an i64 7" { //~ PASS
+  let one: i64 = 1
+  let last: u8 = 63
+  let byte: u8 = 255
+  let seven: i64 = 7
+  assert one << last == i64.MIN
+  assert byte >> seven == 1
+}
+
+test "u8 by a u64 7" { //~ PASS
+  let one: u8 = 1
+  let last: u64 = 7
+  assert one << last == 128
+}
+
+test "i8 by an i64 0" { //~ PASS
+  let one: i8 = 1
+  let zero: i64 = 0
+  assert one << zero == 1
+  assert one >> zero == 1
+}
+
+test "u8 by an i64 8" { //~ FAIL
+  let one: u8 = 1
+  let width: i64 = 8
+  let _ = one << width
+}
+
+test "i32 by a u8 32" { //~ FAIL
+  let one: i32 = 1
+  let width: u8 = 32
+  let _ = one >> width
+}
+
+test "u64 by an i8 -1" { //~ FAIL
+  let one: u64 = 1
+  let minus_one: i8 = -1
+  let _ = one << minus_one
+}
+
+test "i8 by the largest u64" { //~ FAIL
+  let one: i8 = 1
+  let _ = one >> u64.MAX
+}
+
+test "i64 by a u64 of 2^63" { //~ FAIL
+  let one: i64 = 1
+  let top: u64 = 9223372036854775808
+  let _ = one << top
+}
+
+test "u8 by an open literal 300, an i64" { //~ FAIL
+  let one: u8 = 1
+  let _ = one << 300
+}

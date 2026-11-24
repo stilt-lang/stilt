@@ -1,0 +1,12 @@
+── CONTENT THAT DOESN'T MATCH ITS HASH ───────────────── stilt.toml:7:8  [E0602]
+
+`json` 1.4.0, as file:///repos/json serves it, has the hash
+b3:a81555448921806f657a9b66ef93d348ee9e37a2b22251551b2bfc9954ce1476, not the one
+pinned here:
+
+  7 │ hash = "b3:a6ce0919cc85a0d6f362a6e79b7e0e524dbe43912e289a09cfe0465f7534ae0e"
+    │        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A dependency is pinned by its content's hash, so a changed release is caught,
+and nothing was built from it. If its author retagged the version on purpose,
+remove `hash`, and the next `stilt check` pins the new content.

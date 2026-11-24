@@ -1,0 +1,10 @@
+── BINDING NAMED LIKE A VALUE PARAMETER ── E0348_binding_named_like_a_value_parameter.lt:4:7  [E0348]
+
+`n` is a value parameter here, and a type written after this binding would still
+name the parameter, so no binding takes its name: rename this one:
+
+  4 │   let n = n - 1
+    │       ^
+
+A type written after this binding would still mean the value parameter, not the
+binding. Give the binding another name.

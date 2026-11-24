@@ -1,0 +1,13 @@
+── UNKNOWN NAME ────────────────────────────────── E0211_c_void.lt:1:15  [E0211]
+
+Stilt has no `void`: a function that gives no value has the result type `()`:
+
+  1 │ fn greet() -> void {}
+    │               ^^^^
+
+A function whose result type isn't written gives `()`, the empty tuple.
+
+To fix it, write `()`:
+
+  1 │ fn greet() -> () {}
+    │               ~~

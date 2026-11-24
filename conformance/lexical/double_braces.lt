@@ -1,0 +1,5 @@
+//~ rule: lexical.escapes
+
+fn show(x: i64) -> str {
+  "{{x}}" //~ ERROR E0006
+}

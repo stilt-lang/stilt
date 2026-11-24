@@ -1,0 +1,41 @@
+//~ rule: tests.generable-types, tests.growth-test
+
+type Loop = | Loop(Loop)
+
+type Holds = { run: fn(i64) -> i64 }
+
+type Half = | Good(i64) | Bad(Never)
+
+type Deep = { inner: List<(str, Loop)> }
+
+type Name = { n: str }
+
+type Grow<T> = | Stop | More(Grow<List<T>>)
+
+type Ping<T> = | End | Ping(Pong<List<T>>)
+
+type Pong<T> = | Pong(Ping<T>)
+
+type P<T> = | Z | S(P<(T, T)>)
+
+type Via<T> = { next: Option<Grow<T>> }
+
+impl Eq for Name {
+  fn eq(self, other: Name) -> bool { self.n == other.n }
+}
+
+/// prop: |f: fn(i64) -> i64, x: i64| f(x) == f(x) //~ ERROR E0333
+/// prop: |n: Never| true //~ ERROR E0333
+/// prop: |l: Loop| true //~ ERROR E0333
+/// prop: |m: Map<f64, i64>| true //~ ERROR E0333
+/// prop: |m: Map<Name, i64>| true //~ ERROR E0333
+/// prop: |h: Holds| true //~ ERROR E0333
+/// prop: |h: Half| true //~ ERROR E0333
+/// prop: |d: List<Deep>, x: i64| true //~ ERROR E0333
+/// prop: |x: i64, f: fn() -> bool| f() //~ ERROR E0333
+/// prop: |g: Grow<i64>| true //~ ERROR E0333
+/// prop: |p: Ping<i64>| true //~ ERROR E0333
+/// prop: |p: P<bool>| true //~ ERROR E0333
+/// prop: |v: Via<u8>| true //~ ERROR E0333
+/// prop: |x: i64| x == x
+fn documented() {}

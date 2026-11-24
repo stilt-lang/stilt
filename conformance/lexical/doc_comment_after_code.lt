@@ -1,0 +1,3 @@
+//~ rule: lexical.line-comments, lexical.doc-comments, syntax.doc-comment-placement, program.doc-comments
+fn f() {} // an ordinary comment may follow code
+fn g() {} /// a doc comment may not //~ ERROR E0100

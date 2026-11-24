@@ -1,0 +1,11 @@
+//~ tier: advanced
+//~ rule: records.anonymous-types, records.anonymous-literals
+
+type Person = { name: str, age: i64 }
+
+// A literal is never a declared record.
+fn make() -> Person { { name: "Ada", age: 36 } } //~ ERROR E0311
+
+fn twice() -> { a: i64 } { { a: 1, a: 2 } } //~ ERROR E0316
+
+fn doubled(p: { a: i64, a: str }) -> i64 { 0 } //~ ERROR E0316

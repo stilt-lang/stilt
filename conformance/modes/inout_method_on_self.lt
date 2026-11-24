@@ -1,0 +1,12 @@
+//~ rule: modes.kinds-of-access, modes.what-can-be-modified
+
+type Counter = { n: i64 }
+
+impl Counter {
+  fn bump(inout self) { self.n += 1 }
+
+  fn bumped(self) -> Counter {
+    self.bump() //~ ERROR E0403
+    self
+  }
+}

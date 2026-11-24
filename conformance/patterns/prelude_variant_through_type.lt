@@ -1,0 +1,22 @@
+//~ rule: program.prelude-namespaces, program.meeting-the-error-type, patterns.variants-by-type
+//~ stdout:
+//~ | 4
+//~ | 0
+//~ | maybe
+
+type Maybe = | Some(i64) | Nothing //~ ERROR E0209
+
+fn value(o: Option<i64>) -> i64 {
+  match o {
+    Some(x) => x
+    None => 0
+  }
+}
+
+fn present(o: Option<i64>) -> bool { if let Some(_) = o { true } else { false } }
+
+fn main() / io {
+  print("{value("4".to_i64())}")
+  print("{value("x".to_i64())}")
+  if present("1".to_i64()) { print("maybe") }
+}

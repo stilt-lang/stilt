@@ -1,0 +1,7 @@
+//~ rule: std.integer-kinds
+//~ run-output: "ff FF 10 101 0 ffffffffffffffff 11111111"
+
+fn main() / io {
+  let small: i8 = -1
+  print("{255:x} {255:X} {8:o} {5:b} {0:b} {-1:x} {small:b}")
+}

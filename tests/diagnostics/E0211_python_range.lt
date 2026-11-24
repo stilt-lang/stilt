@@ -1,0 +1,5 @@
+fn main() / io {
+  for i in range(3) {
+    print("{i}")
+  }
+}

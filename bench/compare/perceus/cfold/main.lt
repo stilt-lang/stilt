@@ -1,0 +1,75 @@
+// cfold: builds an expression of 2^20 sums, reassociates it into a chain and folds its constants,
+// then evaluates it before and after (Reinking et al., Perceus, PLDI 2021).
+
+type Expr = | Var(i64) | Val(i64) | Add(Expr, Expr) | Mul(Expr, Expr)
+
+fn make(n: i64, v: i64) -> Expr {
+  if n == 0 {
+    if v == 0 { Var(1) } else { Val(v) }
+  } else {
+    Add(make(n - 1, v + 1), make(n - 1, i64.max(v - 1, 0)))
+  }
+}
+
+fn append_add(a: Expr, b: Expr) -> Expr {
+  match a {
+    Add(x, y) => Add(x, append_add(y, b))
+    _ => Add(a, b)
+  }
+}
+
+fn append_mul(a: Expr, b: Expr) -> Expr {
+  match a {
+    Mul(x, y) => Mul(x, append_mul(y, b))
+    _ => Mul(a, b)
+  }
+}
+
+fn reassoc(e: Expr) -> Expr {
+  match e {
+    Add(a, b) => append_add(reassoc(a), reassoc(b))
+    Mul(a, b) => append_mul(reassoc(a), reassoc(b))
+    _ => e
+  }
+}
+
+fn fold(e: Expr) -> Expr {
+  match e {
+    Add(a, b) => {
+      let a = fold(a)
+      let b = fold(b)
+      match (a, b) {
+        (Val(x), Val(y)) => Val(x + y)
+        (Val(x), Add(f, Val(y))) => Add(Val(x + y), f)
+        (Val(x), Add(Val(y), f)) => Add(Val(x + y), f)
+        (a, b) => Add(a, b)
+      }
+    }
+    Mul(a, b) => {
+      let a = fold(a)
+      let b = fold(b)
+      match (a, b) {
+        (Val(x), Val(y)) => Val(x * y)
+        (Val(x), Mul(f, Val(y))) => Mul(Val(x * y), f)
+        (Val(x), Mul(Val(y), f)) => Mul(Val(x * y), f)
+        (a, b) => Mul(a, b)
+      }
+    }
+    _ => e
+  }
+}
+
+fn eval(e: Expr) -> i64 {
+  match e {
+    Var(_) => 0
+    Val(v) => v
+    Add(a, b) => eval(a) + eval(b)
+    Mul(a, b) => eval(a) * eval(b)
+  }
+}
+
+fn main() / io {
+  let e = make(20, 1)
+  print("{eval(e)}")
+  print("{eval(fold(reassoc(e)))}")
+}

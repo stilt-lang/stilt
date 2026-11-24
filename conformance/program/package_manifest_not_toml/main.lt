@@ -1,0 +1,4 @@
+//~ rule: program.forms, packages.manifest
+//~ run-output: "package"
+
+fn main() / io { print("not a module") }

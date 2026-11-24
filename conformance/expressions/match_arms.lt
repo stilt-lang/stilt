@@ -1,0 +1,20 @@
+//~ rule: expressions.match, patterns.match
+//~ run-output: "zero one many neg small big"
+
+fn name(n: i64) -> str {
+  match n {
+    0 => "zero"
+    1 => "one"
+    _ => "many"
+  }
+}
+
+fn size(n: i64) -> str {
+  match n {
+    m if m < 0 => "neg"
+    m if m < 10 => "small"
+    _ => "big"
+  }
+}
+
+fn main() / io { print("{name(0)} {name(1)} {name(5)} {size(-1)} {size(3)} {size(50)}") }

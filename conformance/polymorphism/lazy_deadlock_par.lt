@@ -1,0 +1,26 @@
+//~ tier: advanced
+//~ rule: polymorphism.lazy-waits-for-nothing, shared.when-on-value-already-held
+//~ panic: deadlock
+//~ panic-at: lazy_deadlock_par.lt:23:22
+//~ stdout:
+//~ | before
+
+// The computation of a `Lazy` that calls `std.par` waits for nothing in any of its parts,
+// whichever thread runs them.
+
+use std.sync
+use std.lazy
+use std.par
+
+type Counter = { n: i64 }
+
+fn spread(escaping f: fn(i64) -> i64) -> lazy.Lazy<i64> {
+  lazy.Lazy.new(|| par.map([1, 2, 3, 4, 5, 6, 7, 8], |x| f(x)).fold(0, |a, b| a + b))
+}
+
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 1 })
+  let l = spread(|x| when c { c.n + x })
+  print("before")
+  print("{l.get()}")
+}

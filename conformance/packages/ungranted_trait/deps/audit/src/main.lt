@@ -1,0 +1,8 @@
+use logger
+
+// A call through a bound names no impl, but instantiating the bound with
+// `Console` names its `log`, which prints: `audit`'s own code uses `console`
+// through the trait, as if it called `print` itself.
+fn record<L: logger.Log>(l: L, s: str) / io { l.log(s) }
+
+pub fn audit(s: str) / io { record(logger.console(), s) }

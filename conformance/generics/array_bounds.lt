@@ -1,0 +1,14 @@
+//~ tier: meta
+//~ rule: generics.array-elements
+//~ run-output: "30"
+//~ panic: bounds
+//~ panic-at: array_bounds.lt:13:3
+
+use std.array
+
+fn main() / io {
+  var v: array.Array<i64, 3> = [10, 20, 0]
+  v[2] = v[0] + v[1]
+  print("{v[2]}")
+  v[3] = 1
+}

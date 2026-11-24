@@ -1,0 +1,14 @@
+//~ rule: std.map-element-places
+//~ stdout:
+//~ | {"a": Count { n: 5, label: "new" }}
+//~ | Count { n: 0, label: "new" }
+
+type Count = { n: i64, label: str }
+
+fn main() / io {
+  var m = Map.with_default(Count { n: 0, label: "new" })
+  m["a"].n = 5
+  let k = "b"
+  print("{m}")
+  print("{m[k]}")
+}

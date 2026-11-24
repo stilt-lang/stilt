@@ -1,0 +1,18 @@
+//~ rule: program.errors-outside-bodies, program.check-error-report, traits.impl-members
+//~ run-output: "start"
+//~ panic: check-error
+//~ panic-at: missing_method_reached.lt:12:1
+
+trait Describe {
+  fn describe(self) -> str
+}
+
+type Tag = { name: str }
+
+impl Describe for Tag { //~ ERROR E0305
+}
+
+fn main() / io {
+  print("start")
+  print(Tag { name: "a" }.describe())
+}

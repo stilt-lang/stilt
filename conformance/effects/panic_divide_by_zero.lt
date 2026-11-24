@@ -1,0 +1,11 @@
+//~ rule: numbers.integer-panics, effects.panic-kinds
+//~ run-output: "1"
+//~ panic: divide-by-zero
+//~ panic-at: panic_divide_by_zero.lt:6:47
+
+fn leftover(total: i64, people: i64) -> i64 { total % people }
+
+fn main() / io {
+  print("{leftover(10, 3)}")
+  print("{leftover(10, 0)}")
+}

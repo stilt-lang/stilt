@@ -1,0 +1,12 @@
+── AMBIGUOUS ADDRESS ────────── E0702_one_name_for_two_functions.lt:3:1  [E0702]
+
+`main.total` names two functions:
+
+  1 │ fn total() -> i64 { 1 }
+    │ ─────────────────────── the first
+  2 │ 
+  3 │ fn total() -> i64 { 1 }
+    │ ^^^^^^^^^^^^^^^^^^^^^^^ the second
+
+The path names two declarations, so the address adds the hash of the one you
+mean, as `stilt show --json` gives it. Nothing was written.

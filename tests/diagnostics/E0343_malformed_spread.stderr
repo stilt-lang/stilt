@@ -1,0 +1,10 @@
+── MALFORMED SPREAD ──────────────────── E0343_malformed_spread.lt:1:44  [E0343]
+
+A spread maps a tuple whose type spreads a pack, and this one names none:
+
+  1 │ fn sizes<..Ts>(xs: (..Ts)) -> List<i64> { [..1] }
+    │                                            ^^^
+
+A spread maps a tuple whose type spreads a pack, once per element, as
+`[..lists.len()]`. It names exactly one such tuple, and can't stand inside
+another spread.

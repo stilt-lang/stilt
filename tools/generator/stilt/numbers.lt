@@ -1,0 +1,335 @@
+// The forms that make an integer or a float: arithmetic, conversions, and the
+// methods of numbers.
+
+use code
+use context
+use lit
+use pick
+use ty
+
+/// The forms that make an integer of kind `k`, each with its weight: the
+/// operators, then the methods, then the arithmetic of std.integers.
+pub fn int_ops(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  k: ty.IntKind,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  int_operators(ex, sc, depth, known, k).concat(int_methods(ex, sc, depth, k)).concat(
+    int_arithmetic(ex, sc, depth, k),
+  )
+}
+
+/// The integer kinds that `k` doesn't hold every value of.
+fn narrower_than(k: ty.IntKind) -> List<ty.IntKind> { ty.INT_KINDS.filter(|j| !ty.widens(j, k)) }
+
+/// Two integers of kind `k`, the first `known` if asked, and the second if it
+/// is a shift's amount, to which a shift gives no type (numbers.shifts;
+/// numbers.shift-amounts).
+fn pair(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  d: i64,
+  known: bool,
+  amount: bool,
+  k: ty.IntKind,
+) -> (code.Code, code.Code) {
+  let x = ex.make(inout b, sc, d, known, ty.Int(k))
+  let y = ex.make(inout b, sc, d, amount, ty.Int(k))
+  (x, y)
+}
+
+/// `x` and `y` as the operands of the text that `format` makes, which is as
+/// known as `x` is.
+fn joined(x: code.Code, y: code.Code, format: fn(str, str) -> str) -> code.Code {
+  code.compound_with(format(code.operand(x), code.operand(y)), x.known)
+}
+
+/// The operators. Operands are masked so that the checked operators can't
+/// overflow, and divisors and shift amounts are kept in range (numbers.integer-panics
+/// and 11).
+fn int_operators(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  k: ty.IntKind,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  [
+    (
+      4,
+      |inout b| {
+        let (x, y) = pair(ex, inout b, sc, d, known, false, k)
+        let op = pick.one(inout b.p.r, [" +% ", " -% ", " *% "])
+        joined(x, y, |p, q| "{p}{op}{q}")
+      },
+    ),
+    (
+      2,
+      |inout b| {
+        let (x, y) = pair(ex, inout b, sc, d, known, false, k)
+        let op = pick.one(inout b.p.r, [" & ", " | ", " ^ "])
+        joined(x, y, |p, q| "{p}{op}{q}")
+      },
+    ),
+    (
+      2,
+      |inout b| {
+        let (x, y) = pair(ex, inout b, sc, d, known, false, k)
+        joined(x, y, |p, q| "({p} & 15) + ({q} & 15)")
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let (x, y) = pair(ex, inout b, sc, d, known, false, k)
+        joined(x, y, |p, q| "({p} & 7) * ({q} & 7)")
+      },
+    ),
+    (
+      if ty.signed(k) { 1 } else { 0 },
+      |inout b| {
+        let (x, y) = pair(ex, inout b, sc, d, known, false, k)
+        joined(x, y, |p, q| "({p} & 15) - ({q} & 15)")
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let op = pick.one(inout b.p.r, ["<<", ">>"])
+        let (x, y) = pair(ex, inout b, sc, d, known, true, k)
+        joined(x, y, |p, q| "{p} {op} ({q} & {ty.bits(k) - 1})")
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let op = pick.one(inout b.p.r, ["/", "%"])
+        let (x, y) = pair(ex, inout b, sc, d, known, false, k)
+        joined(x, y, |p, q| "{p} {op} (({q} & 7) + 1)")
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let x = ex.make(inout b, sc, d, known, ty.Int(k))
+        code.compound_with("!{code.operand(x)}", x.known)
+      },
+    ),
+    (
+      if ty.signed(k) { 1 } else { 0 },
+      |inout b| {
+        let x = ex.make(inout b, sc, d, known, ty.Int(k))
+        code.compound_with("-({code.operand(x)} & 63)", x.known)
+      },
+    ),
+  ]
+}
+
+/// `first`, or else an integer of kind `k`, drawn after it.
+fn or_else(
+  ex: context.Expr,
+  inout b: context.Body,
+  sc: context.Scope,
+  d: i64,
+  k: ty.IntKind,
+  first: code.Code,
+) -> code.Code {
+  let fallback = ex.make(inout b, sc, d, false, ty.Int(k))
+  code.compound("{code.operand(first)} else {code.operand(fallback)}")
+}
+
+/// The methods that make an integer of kind `k`: conversions from other
+/// numbers and from strings, and the methods of integers, lists and strings.
+fn int_methods(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+  k: ty.IntKind,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let name = ty.int_name(k)
+  let me = ty.Int(k)
+  let narrower = narrower_than(k)
+  [
+    (
+      2,
+      |inout b| {
+        let j = pick.one(inout b.p.r, ty.INT_KINDS)
+        let x = ex.make(inout b, sc, d, true, ty.Int(j))
+        code.method_on(x, if ty.widens(j, k) { "to_{name}" } else { "wrap_to_{name}" }, [])
+      },
+    ),
+    (
+      if narrower.is_empty() { 0 } else { 1 },
+      |inout b| {
+        let j = pick.one(inout b.p.r, narrower)
+        let x = ex.make(inout b, sc, d, true, ty.Int(j))
+        or_else(ex, inout b, sc, d, k, code.method_on(x, "to_{name}", []))
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let other = ex.make(inout b, sc, d, false, me)
+        let m = pick.one(inout b.p.r, ["min", "max"])
+        code.method_on(ex.make(inout b, sc, d, true, me), m, [other.text])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let x = ex.make(inout b, sc, d, true, me)
+        if ty.signed(k) {
+          code.method_on(code.compound("{code.operand(x)} & 63"), "abs", [])
+        } else {
+          code.method_on(x, "abs", [])
+        }
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let f = pick.one(inout b.p.r, ty.FLOAT_KINDS)
+        let x = ex.make(inout b, sc, d, true, ty.Float(f))
+        or_else(ex, inout b, sc, d, k, code.method_on(x, "to_{name}", []))
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let s = if pick.chance(inout b.p.r, 0.5) {
+          quoted(lit.int(inout b.p.r, k))
+        } else {
+          ex.make(inout b, sc, d, true, ty.Str)
+        }
+        or_else(ex, inout b, sc, d, k, code.method_on(s, "to_{name}", []))
+      },
+    ),
+    (
+      if k == ty.I64 { 3 } else { 0 },
+      |inout b| {
+        if pick.chance(inout b.p.r, 0.6) {
+          let u = context.random_ty(inout b.p, false, 1)
+          return code.method_on(ex.make(inout b, sc, d, true, ty.ListOf(u)), "len", [])
+        }
+        code.method_on(ex.make(inout b, sc, d, true, ty.Str), "len", [])
+      },
+    ),
+    (1, |inout b| code.method_on(other_int(ex, inout b, sc, d), "wrap_to_{name}", [])),
+  ]
+}
+
+/// `text` in a string literal.
+fn quoted(text: str) -> code.Code { code.atom("\"{text}\"") }
+
+/// An integer of a kind drawn first.
+fn other_int(ex: context.Expr, inout b: context.Body, sc: context.Scope, d: i64) -> code.Code {
+  let j = pick.one(inout b.p.r, ty.INT_KINDS)
+  ex.make(inout b, sc, d, true, ty.Int(j))
+}
+
+/// The arithmetic of std.integers, on integers of kind `k`, none of which can
+/// panic as the generator calls it.
+fn int_arithmetic(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+  k: ty.IntKind,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let me = ty.Int(k)
+  [
+    (
+      1,
+      |inout b| {
+        let other = ex.make(inout b, sc, d, false, me)
+        let m = pick.one(inout b.p.r, ["saturating_add", "saturating_sub"])
+        code.method_on(ex.make(inout b, sc, d, true, me), m, [other.text])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let other = ex.make(inout b, sc, d, false, me)
+        let m = pick.one(inout b.p.r, ["checked_add", "checked_sub", "checked_mul"])
+        let call = code.method_on(ex.make(inout b, sc, d, true, me), m, [other.text])
+        or_else(ex, inout b, sc, d, k, call)
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        // A divisor from 1 to 8 neither divides by zero nor overflows.
+        let other = ex.make(inout b, sc, d, false, me)
+        let m = pick.one(inout b.p.r, ["div_euclid", "rem_euclid"])
+        let arg = "({code.operand(other)} & 7) + 1"
+        code.method_on(ex.make(inout b, sc, d, true, me), m, [arg])
+      },
+    ),
+    (
+      if k == ty.I64 { 1 } else { 0 },
+      |inout b| {
+        let m = pick.one(inout b.p.r, ["count_ones", "leading_zeros", "trailing_zeros"])
+        code.method_on(other_int(ex, inout b, sc, d), m, [])
+      },
+    ),
+  ]
+}
+
+/// The forms that make a float of kind `k`, each with its weight.
+pub fn float_ops(
+  ex: context.Expr,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  k: ty.FloatKind,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let me = ty.Float(k)
+  let name = ty.float_name(k)
+  [
+    (
+      4,
+      |inout b| {
+        let x = ex.make(inout b, sc, d, known, me)
+        let y = ex.make(inout b, sc, d, false, me)
+        let op = pick.one(inout b.p.r, [" + ", " - ", " * ", " / "])
+        code.compound_with("{code.operand(x)}{op}{code.operand(y)}", x.known)
+      },
+    ),
+    (
+      2,
+      |inout b| {
+        let m = pick.one(inout b.p.r, ["sqrt", "floor", "ceil", "trunc", "round", "abs"])
+        code.method_on(ex.make(inout b, sc, d, true, me), m, [])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let other = ex.make(inout b, sc, d, false, me)
+        let m = pick.one(inout b.p.r, ["min", "max"])
+        code.method_on(ex.make(inout b, sc, d, true, me), m, [other.text])
+      },
+    ),
+    (2, |inout b| code.method_on(other_int(ex, inout b, sc, d), "to_{name}", [])),
+    (
+      1,
+      |inout b| {
+        let f = pick.one(inout b.p.r, ty.FLOAT_KINDS)
+        code.method_on(ex.make(inout b, sc, d, true, ty.Float(f)), "to_{name}", [])
+      },
+    ),
+    (
+      1,
+      |inout b| {
+        let x = ex.make(inout b, sc, d, known, me)
+        code.compound_with("-{code.operand(x)}", x.known)
+      },
+    ),
+  ]
+}

@@ -1,0 +1,15 @@
+── PROPERTY THAT ISN'T A CLOSURE WITH TYPED PARAMETERS ── E0332_property_that_isn_t_a_closure_with_typed_parameters.lt:1:12  [E0332]
+
+The parameter `xs` has no type, so no values can be generated for it:
+
+  1 │ /// prop: |xs| reverse(reverse(xs)) == xs
+    │            ^^
+
+A property is a closure with typed parameters that returns a `bool`, as `///
+prop: |xs: List<i64>| …`, since `stilt test` generates values of each type. A
+check without parameters is an example, `/// ex:`.
+
+To fix it, write the type of `xs`:
+
+  1 │ /// prop: |xs: List<i64>| reverse(reverse(xs)) == xs
+    │              +++++++++++

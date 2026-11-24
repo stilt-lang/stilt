@@ -1,0 +1,98 @@
+// The report: what the log held, section by section.
+
+use alerts
+use errors
+use flat
+use objectives
+use operations
+use pace
+use people
+use requests
+use rows
+use spikes
+use summary
+use table
+use tally
+use timeline
+use events.entry
+use events.time
+
+/// Every line of the report.
+pub fn lines(t: tally.Tally) -> List<str> {
+  let es = t.entries()
+  var out = overview(t)
+  out.extend(topics(es))
+  out.extend(levels(es))
+  out.extend(hosts(es))
+  out.extend(timeline.lines(es))
+  out.extend(pace.lines(es))
+  out.extend(t.charts.lines())
+  out.extend(requests.lines(es))
+  out.extend(objectives.lines(es))
+  out.extend(spikes.lines(es))
+  out.extend(people.lines(es))
+  out.extend(operations.lines(es))
+  out.extend(alerts.lines(es))
+  out.extend(errors.lines(es))
+  out.extend(trips(t))
+  out.extend(summary.lines(t))
+  out
+}
+
+// How many lines the log had, what they held, and why each line that held no entry didn't.
+fn overview(t: tally.Tally) -> List<str> {
+  let n = t.seen.len()
+  var out = [
+    "== log ==",
+    "{t.lines} lines: {n} entries, {t.from_json()} of them from JSON, {t.left_out} left out, {t.skipped.len()} not read, {t.blank} blank",
+  ]
+  for (line, why) in t.skipped { out.push("line {line}: {why}") }
+  out
+}
+
+// The entries of each topic, every topic listed.
+fn topics(es: List<entry.Entry>) -> List<str> {
+  let found = entry.TOPICS.map(|topic| {
+    let n = es.count(|e| e.event.topic() == topic)
+    rows.TopicRow { topic, entries: n, share: rows.percent(n, es.len()) }
+  })
+  ["== topics =="].concat(table.render(found))
+}
+
+// The entries of each level, every level listed.
+fn levels(es: List<entry.Entry>) -> List<str> {
+  let found = time.LEVELS.map(|level| {
+    let n = es.count(|e| e.level == level)
+    rows.LevelRow { level: level.label(), entries: n, share: rows.percent(n, es.len()) }
+  })
+  ["== levels =="].concat(table.render(found))
+}
+
+// The entries of each host, the hosts in the order they first appear.
+fn hosts(es: List<entry.Entry>) -> List<str> {
+  var found: List<rows.HostRow> = []
+  for (host, of) in es.group_by(|e| e.source.text()) {
+    let last = of.last() else continue
+    found.push(
+      rows.HostRow {
+        host,
+        entries: of.len(),
+        notable: of.count(|e| e.level.notable()),
+        last: last.at.clock(),
+      },
+    )
+  }
+  ["== hosts =="].concat(table.render(found))
+}
+
+// How many entries read back equal from their JSON, and the first entry of each kind: its
+// JSON, what that read back as, and the leaves of that.
+fn trips(t: tally.Tally) -> List<str> {
+  var out = ["== read back from JSON ==", "{t.equal} of {t.seen.len()} entries read back equal"]
+  for trip in t.trips {
+    out.push("{trip.kind}, line {trip.line}: {trip.text}")
+    out.push("  {trip.back}")
+    out.push("  {" ".join(flat.pairs(trip.back))}")
+  }
+  out
+}

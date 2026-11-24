@@ -1,0 +1,26 @@
+//~ rule: facts.known-signs, facts.guards, facts.divisors
+
+// Only `len()` among calls is known non-negative, and a sum is only when both its
+// operands are.
+
+fn by_abs(x: i64, ys: List<i64>) -> i64 without panic {
+  let i = x.abs()
+  if i < ys.len() { ys[i] } else { 0 } //~ ERROR E0204
+}
+
+fn by_sum(xs: List<i64>, d: i64, ys: List<i64>) -> i64 without panic {
+  let i = xs.len() + d
+  if i < ys.len() { ys[i] } else { 0 } //~ ERROR E0204
+}
+
+// A range from 0 holds 0, and a binding of a positive literal is no literal.
+fn from_zero(n: i64) -> i64 without panic {
+  var s = 0
+  for d in 0..4 { s += n / d } //~ ERROR E0204
+  s
+}
+
+fn bound(n: i64) -> i64 without panic {
+  let d = 5
+  n / d //~ ERROR E0204
+}

@@ -1,0 +1,15 @@
+── RECEIVER'S TYPE WRITTEN OR MISSING ── E0338_receiver_s_type_written_or_missing.lt:2:11  [E0338]
+
+A receiver's type is `Self`, which isn't written; only a constructor trait's
+methods write theirs, as `self: Self<A>`:
+
+  2 │   fn name(self: Self) -> str
+    │           ^^^^
+
+A method's receiver is written `self`, without a type. Only a constructor
+trait's methods write one, as `self: Self<A>`.
+
+To fix it, delete the receiver's type:
+
+  2 │   fn name(self: Self) -> str
+    │               ------

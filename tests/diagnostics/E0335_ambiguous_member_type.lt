@@ -1,0 +1,11 @@
+trait Collection<Item> {
+  fn at(self, i: i64) -> Option<Item>
+}
+
+trait Stream<Item> {
+  fn next(self) -> Option<Item>
+}
+
+fn first<C: Collection + Stream>(c: C) -> Option<C.Item> { None }
+
+fn main() {}

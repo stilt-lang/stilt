@@ -1,0 +1,23 @@
+//~ rule: types.option-key-paths, expressions.key-paths, std.lists
+//~ stdout:
+//~ | ["Lyon"]
+//~ | [Some("Lyon"), None, None]
+//~ | Some("Lyon")
+
+type Address = { city: str }
+type Person = { name: str, address: Option<Address> }
+type Order = { customer: Option<Person> }
+
+fn main() / io {
+  let ana = Person { name: "ana", address: Some(Address { city: "Lyon" }) }
+  let bo = Person { name: "bo", address: None }
+  let orders = [
+    Order { customer: Some(ana) },
+    Order { customer: Some(bo) },
+    Order { customer: None },
+  ]
+  print("{orders.filter_map(.customer.address.city)}")
+  print("{orders.map(.customer.address.city)}")
+  let city: fn(Order) -> Option<str> = .customer.address.city
+  print("{city(orders[0])}")
+}

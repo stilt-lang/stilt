@@ -1,0 +1,32 @@
+//~ tier: advanced
+//~ rule: handlers.handler-literals, handlers.handler-types
+
+// A handler's bodies may perform `io` beyond their operations' rows; the handler's type holds
+// it, and the `with` that installs the handler performs it. A raise, or another declared
+// effect, that the operation's row doesn't hold is an error in the body.
+
+effect Ask {
+  fn ask() -> i64
+}
+
+effect Log {
+  fn log(msg: str)
+}
+
+fn quiet() {
+  let h = handler Ask { fn ask() -> i64 { print("asked"); 1 } }
+  let _ = with h { Ask.ask() } //~ ERROR E0502
+}
+
+fn raising() / raise<str> {
+  let h = handler Ask { fn ask() -> i64 { raise "no" } } //~ ERROR E0502
+  let _ = with h { Ask.ask() }
+}
+
+fn logging() / io {
+  let logger = handler Log { fn log(msg: str) { print(msg) } }
+  with logger {
+    let h = handler Ask { fn ask() -> i64 { Log.log("asked"); 1 } } //~ ERROR E0502
+    let _ = with h { Ask.ask() }
+  }
+}

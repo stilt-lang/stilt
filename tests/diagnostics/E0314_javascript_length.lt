@@ -1,0 +1,4 @@
+fn main() / io {
+  let names = ["Ada", "Grace"]
+  print("{names.length()} names")
+}

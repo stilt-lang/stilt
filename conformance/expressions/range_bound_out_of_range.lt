@@ -1,0 +1,9 @@
+//~ rule: numbers.integer-literals, types.range-bounds
+
+fn bytes() -> List<u8> {
+  var xs: List<u8> = []
+  for i in 0..300 { //~ ERROR E0320
+    xs.push(i)
+  }
+  xs
+}

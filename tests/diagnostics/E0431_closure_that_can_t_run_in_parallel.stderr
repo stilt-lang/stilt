@@ -1,0 +1,12 @@
+── CLOSURE THAT CAN'T RUN IN PARALLEL ── E0431_closure_that_can_t_run_in_parallel.lt:5:15  [E0431]
+
+This closure can't run in parallel: it reaches `factor`, a `Shared<T>`, which
+only a `when` reads:
+
+  4 │ fn scaled(factor: sync.Shared<i64>, xs: List<i64>) -> List<i64> {
+    │           ────── `factor` is a `Shared<T>` from here
+  5 │   par.map(xs, |x| when factor { factor * x })
+    │               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+`std.par` runs the closure on other threads, so it can't reach a `Shared` value.
+Read the shared value once before the call, and capture the copy.

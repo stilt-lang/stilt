@@ -1,0 +1,9 @@
+//~ rule: std.durations
+//~ panic: overflow
+//~ panic-at: durations_overflow.lt:8:11
+
+use std.clock
+
+fn main() / io {
+  print("{clock.Duration.from_seconds(10000000000)}")
+}

@@ -1,0 +1,9 @@
+── SYNTAX ERROR ───────────────────────────── E0100_go_statement.lt:4:6  [E0100]
+
+Stilt starts a task with `task.spawn(|| f(x))`:
+
+  4 │   go work(1)
+    │      ^^^^
+
+`std.task` starts tasks and waits for them, in a function whose row holds
+`async`.

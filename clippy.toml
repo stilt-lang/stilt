@@ -1,0 +1,2 @@
+# A function longer than this is hard to read at once (CONTRIBUTING.md).
+too-many-lines-threshold = 60

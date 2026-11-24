@@ -1,0 +1,14 @@
+── SYNTAX ERROR ──────────────────────────────── E0100_extension.lt:3:1  [E0100]
+
+Stilt adds methods to a type with `impl`:
+
+  3 │ extension Point {
+    │ ^^^^^^^^^
+
+`impl T { … }` adds methods to a type of the same module; a type of another
+module gets them through a trait.
+
+To fix it, write `impl`:
+
+  3 │ impl Point {
+    │ ~~~~

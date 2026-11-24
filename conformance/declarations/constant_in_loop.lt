@@ -1,0 +1,32 @@
+//~ rule: declarations.constant-evaluation, numbers.integer-panics
+//~ stdout:
+//~ | 0 0
+//~ | 30
+//~ | round 0
+//~ panic: overflow
+//~ panic-at: constant_in_loop.lt:13:17
+
+// A constant is evaluated where the program first uses it, and only then: a loop that never
+// runs never uses `BAD`, and one that runs panics at the first read, after what that round
+// printed before it.
+const LOW: i8 = -128
+const BAD: i8 = -LOW
+const STEP: i64 = 10
+
+fn main() / io {
+  var sum = 0
+  var count = 0
+  for i in 0..0 {
+    sum += BAD.to_i64()
+    count += 1
+  }
+  print("{sum} {count}")
+  var total = 0
+  for i in 0..3 { total += STEP }
+  print("{total}")
+  for round in 0..2 {
+    print("round {round}")
+    let b = BAD
+    print("{b}")
+  }
+}

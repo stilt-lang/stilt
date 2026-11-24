@@ -1,0 +1,20 @@
+//~ tier: advanced
+//~ rule: views.making-view, effects.panicking-operations, effects.without-panic
+
+// `View.of` and `v.view` panic as `slice` does, so a limit of `without panic` rejects
+// them; `View.all` views the whole source and can't.
+
+use std.view
+
+fn part(s: str) -> i64 without panic {
+  view.View.of(s, 0, 2).len() //~ ERROR E0204
+}
+
+fn sub(s: str) -> i64 without panic {
+  let v = view.View.all(s)
+  v.view(1, 2).len() //~ ERROR E0204
+}
+
+fn whole(s: str) -> i64 without panic { view.View.all(s).len() }
+
+fn main() {}

@@ -1,0 +1,2 @@
+//~ rule: packages.own-effects
+//~ run-output: "3"

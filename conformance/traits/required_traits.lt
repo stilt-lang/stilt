@@ -1,0 +1,19 @@
+//~ rule: traits.unsatisfied-bounds, traits.required-traits, traits.floats
+
+fn same<T>(a: T, b: T) -> bool {
+  a == b //~ ERROR E0318
+}
+
+fn same_eq<T: Eq>(a: T, b: T) -> bool { a == b }
+
+fn by_weight() -> Map<f64, str> {
+  Map.new() //~ ERROR E0318
+}
+
+fn by_name() -> Map<str, f64> { Map.new() }
+
+fn shown<T>(x: T) -> str {
+  "{x}" //~ ERROR E0318
+}
+
+fn shown_show<T: Show>(x: T) -> str { "{x}" }

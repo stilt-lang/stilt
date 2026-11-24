@@ -1,0 +1,8 @@
+//~ rule: lexical.whitespace
+//~ run-output: "3"
+
+fn main() / io {
+	let	n = 1	+	2
+	
+	print("{n}")
+}

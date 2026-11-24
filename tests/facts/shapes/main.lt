@@ -1,0 +1,14 @@
+//~ tier: core
+
+// Calling a function with a record bound, an open parameter type or a pack that another module
+// declares doesn't make a module advanced (records.advanced-tier; variadics.advanced-tier).
+
+use shaped
+
+type Person = { name: str, age: i64 }
+
+fn main() / io {
+  let ada = Person { name: "Ada", age: 36 }
+  print(shaped.greet(ada)) //~ ALLOC CONSOLE
+  print("{shaped.age_of(ada)} {shaped.count((1, "a", true))}") //~ ALLOC CONSOLE
+}

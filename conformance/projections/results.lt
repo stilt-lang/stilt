@@ -1,0 +1,27 @@
+//~ tier: advanced
+//~ rule: projections.results-that-write
+
+use std.view
+
+// A result that writes `xs` must be made through `inout`.
+fn reads(inout xs: List<i64>) -> view.View<List<i64>> {
+  view.View.of(xs, 0, 1) //~ ERROR E0428
+}
+
+fn two(inout xs: List<i64>, ys: List<i64>) -> view.View<List<i64>> {
+  view.into(inout xs, 0, 1)
+}
+
+// A view of a local still outlives it.
+fn of_local() -> view.View<List<i64>> {
+  let s = [1]
+  view.View.all(s) //~ ERROR E0422
+}
+
+fn main() / io {
+  var xs = [1, 2, 3, 4]
+  let ys = [0]
+  // The result of `two` views `ys`, which it takes by `let`, so it can't be written through.
+  var h = two(inout xs, ys) //~ ERROR E0428
+  print("{h} {of_local()}")
+}

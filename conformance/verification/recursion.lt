@@ -1,0 +1,45 @@
+//~ rule: facts.div, facts.descending-self-calls, facts.without-div, facts.what-proofs-change, facts.rules-of-acceptance, facts.shrinking-recursion
+//~ run-output: "5 0 3 3 15 4 3 4"
+
+// Each self-call passes one `let` parameter less a known positive number,
+// under a test that keeps it above a bound, or more one, under a test that
+// keeps it below one.
+
+fn count(n: i64) -> i64 without div {
+  if n > 0 { 1 + count(n - 1) } else { 0 }
+}
+
+// The `else` branch of `n <= 0` has `n > 0`.
+fn countdown(n: i64) -> i64 without div {
+  if n <= 0 { 0 } else { countdown(n - 1) }
+}
+
+// The bound is a parameter that every self-call passes unchanged.
+fn walk(i: i64, n: i64) -> i64 without div {
+  if i < n { walk(i + 1, n) } else { i }
+}
+
+// Two self-calls, each on `n`, the second after an early return.
+fn sum(n: i64) -> i64 without div {
+  if n < 1 { return 0 }
+  if n % 2 == 0 { n + sum(n - 1) } else { sum(n - 1) + n }
+}
+
+const HALF: i64 = 2
+
+fn steps(n: i64) -> i64 without div {
+  if n >= HALF { 1 + steps(n - HALF) } else { 0 }
+}
+
+// The mirror of a test bounds too, with the bound on the left.
+fn mirrored(n: i64) -> i64 without div {
+  if 0 < n { 1 + mirrored(n - 2) } else { 0 }
+}
+
+fn mirrored_up(i: i64, n: i64) -> i64 without div {
+  if n > i { mirrored_up(i + 1, n) } else { i }
+}
+
+fn main() / io {
+  print("{count(5)} {countdown(3)} {walk(0, 3)} {walk(3, 1)} {sum(5)} {steps(9)} {mirrored(5)} {mirrored_up(1, 4)}")
+}

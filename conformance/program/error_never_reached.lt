@@ -1,0 +1,13 @@
+//~ rule: conformance.run-statuses, conformance.kinds-of-test, program.programs-with-errors, program.bodies-with-errors, errors.running
+//~ stdout:
+//~ | start
+//~ | done
+
+fn unused(x: i64) -> i64 {
+  x + missing //~ ERROR E0211
+}
+
+fn main() / io {
+  print("start")
+  print("done")
+}

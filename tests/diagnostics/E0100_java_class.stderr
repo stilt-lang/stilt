@@ -1,0 +1,9 @@
+── SYNTAX ERROR ─────────────────────────────── E0100_java_class.lt:1:1  [E0100]
+
+Stilt declares a record type as `type Point = { x: i64 }`, and its methods in
+`impl Point`:
+
+  1 │ class Point { x: i64, y: i64 }
+    │ ^^^^^
+
+A type holds data, and its methods are in an `impl` block of their own.

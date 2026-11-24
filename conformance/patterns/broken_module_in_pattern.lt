@@ -1,0 +1,20 @@
+//~ rule: program.meeting-the-error-type, program.bodies-with-errors, program.check-error-report, patterns.unreachable-arms
+//~ run-output: "before"
+//~ panic: check-error
+//~ panic-at: broken_module_in_pattern.lt:10:4
+
+// A pattern that names a constant through a module with an error has the error type: the body
+// has an error, so its arms get no warning, and it panics when it is called.
+use std.nothing //~ ERROR E0205
+
+fn label(n: i64) -> str {
+  match n {
+    nothing.LIMIT => "limit"
+    _ => "other"
+  }
+}
+
+fn main() / io {
+  print("before")
+  print(label(1))
+}

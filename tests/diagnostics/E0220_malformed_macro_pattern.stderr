@@ -1,0 +1,16 @@
+── MALFORMED MACRO PATTERN ─────── E0220_malformed_macro_pattern.lt:2:4  [E0220]
+
+`$first` could read on into what follows it, which isn't `,`, `;`, `=>` or the
+group's end:
+
+  2 │   ($first: expr $($rest: expr),*) => $first $(+ $rest)*
+    │    ^^^^^^^^^^^^
+
+A pattern names each fragment once, with a kind such as `expr` or `name`. An
+`expr`, `pattern` or `type` fragment is followed by `,`, `;`, `=>` or the end of
+its group, which tells it where to stop.
+
+To fix it, end `$first` with a `,`:
+
+  2 │   ($first: expr, $($rest: expr),*) => $first $(+ $rest)*
+    │                +

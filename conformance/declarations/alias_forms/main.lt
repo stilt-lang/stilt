@@ -1,0 +1,3 @@
+//~ rule: declarations.no-aliases
+
+type Id = UserId //~ ERROR E0100

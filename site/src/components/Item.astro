@@ -1,0 +1,66 @@
+---
+// A declaration of the library: its kind and name, under its anchor, its signature, the facts
+// the compiler infers beside it, its doc and its examples, then its members, one level deeper.
+import { type Item, type Module, file } from "../lib/stilt";
+import { block } from "../lib/code";
+import { lines } from "../lib/highlight";
+import { render } from "../lib/markdown";
+import Self from "./Item.astro";
+
+interface Props {
+  item: Item;
+  module: Module;
+  owner?: string;
+  depth?: number;
+}
+const { item, module, owner = "", depth = 2 } = Astro.props;
+const anchor = owner ? `${owner}.${item.name}` : item.name;
+const Heading = `h${Math.min(depth + 1, 6)}` as "h3";
+const doc = item.doc ? render(item.doc, { from: file(module) }).html : "";
+const examples = item.examples.length ? block(item.examples.join("\n"), "stilt", "fragment", false) : "";
+const impls = item.members.filter((m) => m.kind === "impl");
+const members = item.members.filter((m) => m.kind !== "impl");
+---
+
+<section class="item" id={anchor}>
+  <Heading class="item-head">
+    <a href={`#${anchor}`}><code>{item.name}</code></a>
+    <span class="kind">{item.kind}</span>
+  </Heading>
+  <pre class="signature"><code set:html={lines(item.signature, "stilt")} /></pre>
+  {
+    item.facts && item.facts.length > 0 && (
+      <p class="facts" title="The facts the compiler infers for this function">
+        {item.facts.map((f) => <span class="fact">{f}</span>)}
+      </p>
+    )
+  }
+  {doc && <div class="item-doc" set:html={doc} />}
+  {examples && <div set:html={examples} />}
+  {impls.map((m) => <pre class="signature impl"><code set:html={lines(m.signature, "stilt")} /></pre>)}
+  {members.map((m) => <Self item={m} module={module} owner={anchor} depth={depth + 1} />)}
+</section>
+
+<style>
+  .item { margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--rule); scroll-margin-top: calc(var(--header) + 1rem); }
+  .item .item { padding: 0 0 0 1.25rem; border-top: 0; border-left: 1px solid var(--rule); margin-top: 1.75rem; }
+  .item-head { display: flex; align-items: baseline; gap: 0.625rem; margin: 0; }
+  .kind { font-size: 0.8125rem; font-weight: 400; color: var(--muted); }
+  .item-head a { text-decoration: none; }
+  .item-head code { font-size: 1rem; font-weight: 600; color: var(--ink); background: none; padding: 0; }
+  .signature {
+    margin-top: 0.75rem;
+    padding: 0.625rem 1rem;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    background: var(--surface);
+    border-radius: 8px;
+    color: var(--t-text);
+  }
+  .signature.impl { margin-top: 0.5rem; padding-block: 0.375rem; font-size: 0.75rem; }
+  .facts { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.625rem; }
+  .item-doc { margin-top: 0.75rem; }
+  .item-doc :global(p + p) { margin-top: 0.75rem; }
+  .item :global(.code) { margin-block: 1rem 0; }
+</style>

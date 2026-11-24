@@ -1,0 +1,11 @@
+fn digits(n: i64) -> List<i64> {
+  var out = List.new()
+  var rest = n
+  while rest > 0 {
+    out.push(rest % 10)
+    rest = rest / 10
+  }
+  out
+}
+
+pub fn digit_count(n: i64) -> i64 without alloc { digits(n).len() }

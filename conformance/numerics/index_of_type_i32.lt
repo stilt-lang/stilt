@@ -1,0 +1,5 @@
+//~ rule: numbers.lengths-are-i64, std.lists
+
+fn pick(names: List<str>, i: i32) -> str {
+  names[i] //~ ERROR E0311
+}

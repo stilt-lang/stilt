@@ -1,0 +1,30 @@
+//~ rule: modes.copies, modes.shared-writes, facts.copy
+
+// Two ways a copy is made, each followed by a write that it shares: a block's value bound by a
+// `let`, and a value assigned to the whole of another local.
+fn through_block(inout xs: List<i64>) -> i64 without copy {
+  let ys = { xs }
+  xs.push(1) //~ ERROR E0204
+  ys.len()
+}
+
+fn assigned(inout xs: List<i64>) -> i64 without copy {
+  var ys: List<i64> = []
+  ys = xs
+  xs.push(1) //~ ERROR E0204
+  ys.len()
+}
+
+// Once the scope of the local that holds the copy ends, the write shares nothing.
+fn ended(inout xs: List<i64>) -> i64 without copy {
+  var n = 0
+  {
+    var ys: List<i64> = []
+    ys = xs
+    n = ys.len()
+  }
+  xs.push(1)
+  n
+}
+
+fn main() {}

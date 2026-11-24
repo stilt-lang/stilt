@@ -1,0 +1,25 @@
+//~ rule: modes.overlap, modes.law, modes.overlapping-inout
+
+type Inner = { c: i64, d: i64 }
+type Outer = { a: i64, b: Inner }
+
+fn swap(inout x: i64, inout y: i64) {
+  let t = x
+  x = y
+  y = t
+}
+
+fn put(inout into: Inner, inout n: i64) { into.c = n }
+
+fn calls(i: i64, j: i64) {
+  var xs = [1, 2]
+  swap(inout xs[0], inout xs[1]) //~ ERROR E0402
+  swap(inout xs[i], inout xs[j]) //~ ERROR E0402
+  var p = Outer { a: 1, b: Inner { c: 2, d: 3 } }
+  swap(inout p.b.c, inout p.b.d)
+  swap(inout p.a, inout p.b.c)
+  put(inout p.b, inout p.b.c) //~ ERROR E0402
+  var pairs = [(1, 2), (3, 4)]
+  swap(inout pairs[0].0, inout pairs[0].1)
+  swap(inout pairs[0].0, inout pairs[1].0) //~ ERROR E0402
+}

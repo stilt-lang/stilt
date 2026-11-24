@@ -1,0 +1,22 @@
+pub type Fragile = { n: i64 }
+
+impl Eq for Fragile {
+  fn eq(self, other: Fragile) -> bool { 100 / self.n == 100 / other.n }
+}
+
+impl Ord for Fragile {
+  fn compare(self, other: Fragile) -> Ordering {
+    if self.n == 0 { panic("zero") }
+    Ord.compare(self.n, other.n)
+  }
+}
+
+impl Show for Fragile {
+  fn show(self) -> str { "{100 / self.n}" }
+}
+
+impl Hash for Fragile {
+  fn hash(self) -> u64 { unreachable() }
+}
+
+pub type Sturdy = { n: i64 }

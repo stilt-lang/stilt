@@ -1,0 +1,9 @@
+//~ rule: errors.error-type
+fn quiet() -> i64 {
+  let n = missing() //~ ERROR E0211
+  n.field.method(1)
+}
+
+fn parse(s: Strng) -> i64 { 0 } //~ ERROR E0211
+
+fn callers() -> i64 { parse(1) + parse("x") }

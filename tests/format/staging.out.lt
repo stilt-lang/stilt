@@ -1,0 +1,19 @@
+// `comptime` is one space before the `if`, `match` or `for` it annotates, which is laid out as
+// it is without it (meta.staging-annotations).
+fn dot<n: i64>(a: List<i64>) -> i64 {
+  var sum = 0
+  comptime for i in 0..n { sum = sum + a[i] }
+  sum
+}
+
+fn size<n: i64>(a: List<i64>) -> str {
+  comptime if n == 0 { "empty" } else if n <= 4 { "small" } else { "large" }
+}
+
+fn kind<n: i64>(a: List<i64>) -> i64 {
+  let k = comptime match n {
+    0 => 1
+    _ => 2
+  }
+  k
+}

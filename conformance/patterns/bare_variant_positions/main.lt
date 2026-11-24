@@ -1,0 +1,58 @@
+//~ rule: patterns.variants-by-type, patterns.irrefutable-positions, patterns.else-after-pattern
+//~ stdout:
+//~ | side 3
+//~ | not a square
+//~ | from 1 to 4
+//~ | total 6
+//~ | doubled 12
+//~ | found 5
+//~ | found 0
+//~ | measured 7
+//~ | too big: 150
+//~ | negative
+
+use geo
+
+fn side(s: geo.Shape) -> str {
+  let Square(n) = s else return "not a square"
+  "side {n}"
+}
+
+fn ends(s: geo.Shape) -> str {
+  var Line(a, b) = s else return "not a line"
+  b += a
+  "from {a} to {b}"
+}
+
+fn total(sizes: List<geo.Size>) -> i64 {
+  var sum = 0
+  for Meters(m) in sizes { sum += m }
+  sum
+}
+
+fn doubled(sizes: List<geo.Size>) -> i64 { sizes.map(|Meters(m)| m * 2).fold(0, |a, b| a + b) }
+
+fn found(size: Option<geo.Size>) -> str {
+  let Meters(m) = size else geo.Meters(0)
+  "found {m}"
+}
+
+fn checked(n: i64) -> str {
+  try "measured {geo.measure(n)}" catch {
+    TooBig(m) => "too big: {m}"
+    Negative => "negative"
+  }
+}
+
+fn main() / io {
+  print(side(geo.Square(3)))
+  print(side(geo.Line(1, 2)))
+  print(ends(geo.Line(1, 3)))
+  print("total {total([geo.Meters(1), geo.Meters(2), geo.Meters(3)])}")
+  print("doubled {doubled([geo.Meters(1), geo.Meters(2), geo.Meters(3)])}")
+  print(found(Some(geo.Meters(5))))
+  print(found(None))
+  print(checked(7))
+  print(checked(150))
+  print(checked(-1))
+}

@@ -1,0 +1,7 @@
+samples/orders.csv
+--where
+product=tea
+--sort
+qty
+--columns
+customer,qty

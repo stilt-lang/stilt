@@ -1,0 +1,29 @@
+name: Confusing diagnostic
+description: A message that made you stop and wonder what to do. A confusing message is a bug, even when it is correct.
+labels: [diagnostic]
+body:
+  - type: textarea
+    id: program
+    attributes:
+      label: The program
+      render: stilt
+    validations:
+      required: true
+  - type: textarea
+    id: message
+    attributes:
+      label: The message, in full
+    validations:
+      required: true
+  - type: textarea
+    id: wanted
+    attributes:
+      label: What you would have needed it to say
+      description: What was unclear, and what you did next. If you know the fix, show it in the code.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `stilt --version`.

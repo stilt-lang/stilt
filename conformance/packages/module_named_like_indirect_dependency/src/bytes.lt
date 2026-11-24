@@ -1,0 +1,2 @@
+// The root's own module, named like a package that only a dependency depends on.
+pub fn size() -> i64 { 1 }

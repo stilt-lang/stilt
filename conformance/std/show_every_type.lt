@@ -1,0 +1,37 @@
+//~ rule: numbers.printing-integers, numbers.printing-floats, traits.structural-impls, traits.show, std.show-output, std.show-names-and-escapes
+//~ stdout:
+//~ | ["\"\\\n\t\r\0", "\u{1}\u{1f}\u{7f}", " ~é{}"]
+//~ | a"b\c
+//~ | [1.0, -0.0, nan, inf, 1e-7, 0.1] [0.1, 0.3] [-1, 255] [true, false]
+//~ | ((1, "a"), [()], (true,), ((),)) Some(Point { x: 1, y: -2 }) Wrapper { inner: Some("x") }
+//~ | Circle(1.5) Rect(2.0, 3.0) NotFound("x.txt") Other("") [Less, Equal, Greater] Ok(Err("x"))
+//~ | {(1, "a"): "b"} {"k": {"n": [1.5]}} [[]] [{}] Some("") <>
+
+use std.io
+
+type Point = { x: i64, y: i64 }
+type Wrapper = { inner: Option<str> }
+type Shape = | Circle(radius: f64) | Rect(w: f64, h: f64)
+
+fn main() / io {
+  print("{["\"\\\n\t\r\0", "\u{1}\u{1f}\u{7f}", " ~é\u{80}\{}"]}")
+  print("a\"b\\c")
+  let zero = 0.0
+  let tenth: f32 = 0.1
+  let small: i8 = -1
+  let byte: u8 = 255
+  print("{[1.0, -0.0, zero / zero, 1.0 / zero, 1e-7, 0.1]} {[tenth, tenth * 3.0]} {[small.to_i64(), byte.to_i64()]} {[true, false]}")
+  print("{((1, "a"), [()], (true,), ((),))} {Some(Point { x: 1, y: -2 })} {Wrapper { inner: Some("x") }}")
+  let ok: Result<Result<i64, str>, i64> = Ok(Err("x"))
+  print("{Circle(1.5)} {Rect(2.0, 3.0)} {io.NotFound("x.txt")} {io.Other("")} {[Less, Equal, Greater]} {ok}")
+  var pairs = Map.new()
+  pairs[(1, "a")] = "b"
+  var inner = Map.new()
+  inner["n"] = [1.5]
+  var outer = Map.new()
+  outer["k"] = inner
+  let nested: List<List<i64>> = [[]]
+  let maps: List<Map<str, i64>> = [Map.new()]
+  let blank = Some("")
+  print("{pairs} {outer} {nested} {maps} {blank} <{[""].get(0) else "?"}>")
+}

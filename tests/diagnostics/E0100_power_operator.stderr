@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────────────── E0100_power_operator.lt:3:14  [E0100]
+
+Stilt raises a number to a power with `pow`, as `a.pow(2)`:
+
+  3 │   let b = a ** 2
+    │              ^
+
+`pow` is a method of every integer and float type; an integer's can overflow.
+
+To fix it, write `pow`:
+
+  3 │   let b = a.pow(2)
+    │           ~~~~~~~~

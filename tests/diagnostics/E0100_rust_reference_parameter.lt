@@ -1,0 +1,1 @@
+fn len_of(s: &str) -> i64 { s.len() }

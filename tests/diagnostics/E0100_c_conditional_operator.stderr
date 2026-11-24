@@ -1,0 +1,13 @@
+── SYNTAX ERROR ────────────────── E0100_c_conditional_operator.lt:1:32  [E0100]
+
+Stilt has no `? :`: an `if` gives a value, as `if c { a } else { b }`:
+
+  1 │ fn sign(n: i64) -> i64 { n > 0 ? 1 : 0 }
+    │                                ^
+
+An `if` with `else` is an expression, so it stands wherever a value does.
+
+To fix it, write an `if`:
+
+  1 │ fn sign(n: i64) -> i64 { if n > 0 { 1 } else { 0 } }
+    │                          +++      ~   ~~~~~~~~  ++

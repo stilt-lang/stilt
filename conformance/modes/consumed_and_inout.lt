@@ -1,0 +1,49 @@
+//~ rule: values.passing-values, values.inout-arguments, modes.durations
+//~ stdout:
+//~ | [1, 2] [1, 3]
+//~ | [1, 2] [1, 3]
+//~ | [1] [1, 9]
+//~ | [] [1, 9]
+
+fn g(inout a: List<i64>, b: List<i64>) -> List<i64> {
+  a.push(2)
+  var c = b
+  c.push(3)
+  c
+}
+
+fn h(b: List<i64>, inout a: List<i64>) -> List<i64> {
+  a.push(2)
+  var c = b
+  c.push(3)
+  c
+}
+
+fn grown(xs: List<i64>) -> List<i64> {
+  var ys = xs
+  ys.push(9)
+  ys
+}
+
+fn written_back(inout xs: List<i64>) -> List<i64> { grown(xs) }
+
+fn replaced(inout xs: List<i64>) -> List<i64> {
+  let n = grown(xs)
+  xs = []
+  n
+}
+
+fn main() / io {
+  var xs = [1]
+  let c = g(inout xs, xs)
+  print("{xs} {c}")
+  var ys = [1]
+  let d = h(ys, inout ys)
+  print("{ys} {d}")
+  var zs = [1]
+  let e = written_back(inout zs)
+  print("{zs} {e}")
+  var ws = [1]
+  let f = replaced(inout ws)
+  print("{ws} {f}")
+}

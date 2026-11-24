@@ -1,0 +1,170 @@
+//~ rule: modes.shared-writes, modes.shared-self-parts, modes.shared-holders, modes.shared-paths, facts.without-copy
+
+// The conditions of a shared write are read along the paths that execution may take: a loop's
+// next turn, a `break`, a raise and a branch that isn't taken reach a write by paths on which no
+// assignment replaced a copy.
+
+type Tree = { items: List<i64>, kids: List<Tree> }
+
+// In the second turn, `w` and `y` hold the copies of `x` that the first gave them, and `y` is
+// named after the write.
+fn next_turn() -> i64 without copy {
+  var x = [5]
+  var w = [1]
+  var y = [2]
+  var n = 0
+  var i = 0
+  while i < 2 {
+    w[0] = 9 //~ ERROR E0204
+    n += y.len()
+    w = x
+    y = x
+    i += 1
+  }
+  n
+}
+
+// A copy of a copy made in one turn holds what the turn before gave the binding it copies.
+fn copy_of_last_turn() -> i64 without copy {
+  var x = [5]
+  var w = [1]
+  var n = 0
+  var i = 0
+  while i < 2 {
+    var z = w
+    z[0] = 9 //~ ERROR E0204
+    n += x.len() + z.len()
+    w = x
+    i += 1
+  }
+  n
+}
+
+// The `break` skips `w = [1]`, so `w` still holds `x`'s value at the write.
+fn break_skips(c: bool) -> i64 without copy {
+  var x = [5]
+  var w = [1]
+  loop {
+    if c {
+      w = x
+      break
+    }
+    w = [1]
+  }
+  w[0] = 9 //~ ERROR E0204
+  x.len() + w.len()
+}
+
+// So does a `while` that runs no turn.
+fn no_turn(c: bool) -> i64 without copy {
+  var x = [5]
+  var w = x
+  while c {
+    w = [1]
+  }
+  w[0] = 9 //~ ERROR E0204
+  x.len() + w.len()
+}
+
+// And a branch that isn't taken.
+fn branch_skips(c: bool) -> i64 without copy {
+  var x = [5]
+  var w = x
+  if c {
+    w = [1]
+  }
+  w[0] = 9 //~ ERROR E0204
+  x.len() + w.len()
+}
+
+fn fail() / raise<str> {
+  raise "no"
+}
+
+// The raise skips `w = [1]` on its way to the `catch`.
+fn raise_skips() -> i64 without copy {
+  var x = [5]
+  var w = [1]
+  try {
+    w = x
+    fail()
+    w = [1]
+  } catch _ because "the write is what the test checks" => {
+    w[0] = 9 //~ ERROR E0204
+    return x.len() + w.len()
+  }
+  w.len()
+}
+
+// A `break` skips the assignment of the copied binding too, so the copy that `w` holds lasts at
+// the write to `x`.
+fn source_kept(c: bool) -> i64 without copy {
+  var x = [5]
+  let w = x
+  loop {
+    if c {
+      break
+    }
+    x = [1]
+  }
+  x[0] = 9 //~ ERROR E0204
+  x.len() + w.len()
+}
+
+// After `u = u.kids[0]`, the copy `z` holds counts as a copy of every part of `u`, so `w`, which
+// holds `u.items`, reads the part that the write to `z` modifies.
+fn reshaped_source(t: Tree) -> i64 without copy {
+  var u = t
+  var z = u
+  u = u.kids[0]
+  let w = u.items
+  z.kids[0].items[0] = 9 //~ ERROR E0204
+  w.len() + z.kids.len()
+}
+
+// Each element a `for` binds is a copy of an element of `xs`, which the loop reads for its whole
+// body, so a write to a copy of the element is shared.
+fn for_element(xs: List<List<i64>>) -> i64 without copy {
+  var n = 0
+  for a in xs {
+    var z = a
+    z.push(1) //~ ERROR E0204
+    n += z.len()
+  }
+  n
+}
+
+fn risky() / raise<List<i64>> {
+  raise [1, 2]
+}
+
+// A `catch`'s name is a binding like any other: a copy of it is shared while it is read after.
+fn caught_copy() -> i64 without copy {
+  try {
+    risky()
+    0
+  } catch e => {
+    var z = e
+    z[0] = 9 //~ ERROR E0204
+    e.len() + z.len()
+  }
+}
+
+// A binding that holds a copy is named after the write even where another binding of its name
+// hides it at the write.
+fn hidden_holder() -> i64 without copy {
+  var u = [1]
+  var w = u
+  var n = 0
+  if u.len() > 0 {
+    let w = 5
+    var z = u
+    z[0] = 9 //~ ERROR E0204
+    n = w + z.len()
+  }
+  n + w.len()
+}
+
+fn main() / io {
+  print("{next_turn()} {break_skips(true)} {no_turn(false)} {branch_skips(false)}")
+}

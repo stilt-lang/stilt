@@ -1,0 +1,87 @@
+// The board: a grid of cells that wraps around at its edges, each holding how many generations
+// it has been alive, 0 for a dead one.
+
+use rules
+
+pub type Board = { width: i64, height: i64, ages: List<i64> }
+
+/// An empty board of `width` by `height` cells.
+pub fn empty(width: i64, height: i64) -> Board {
+  Board { width, height, ages: List.repeat(0, width * height) }
+}
+
+/// The board with the cells of `pattern` alive, its rows of `.` and `O` centred on it.
+/// ex: alive(seeded(empty(3, 3), ["O"])) == 1
+pub fn seeded(b: Board, pattern: List<str>) -> Board {
+  let tall = pattern.len()
+  let wide = pattern.map(.char_count()).max() else 0
+  let (left, top) = ((b.width - wide) / 2, (b.height - tall) / 2)
+  var ages = b.ages
+  for (y, row) in pattern.enumerate(0) {
+    for (x, c) in row.chars().enumerate(0) { if c == "O" { ages[at(b, left + x, top + y)] = 1 } }
+  }
+  Board { ..b, ages }
+}
+
+/// The index of the cell at column `x` and row `y`, which wrap around the board.
+fn at(b: Board, x: i64, y: i64) -> i64 {
+  (y % b.height + b.height) % b.height * b.width + (x % b.width + b.width) % b.width
+}
+
+/// The next generation, by the rule of `rules`.
+/// ex: alive(step(seeded(empty(5, 5), ["OOO"]))) == 3
+pub fn step(b: Board) -> Board {
+  var next = List.repeat(0, b.ages.len())
+  for y in 0..b.height {
+    for x in 0..b.width {
+      let n = neighbours(b, x, y)
+      let age = b.ages[at(b, x, y)]
+      next[at(b, x, y)] = if age > 0 && rules.survives(n) {
+        age + 1
+      } else if age == 0 && rules.born(n) {
+        1
+      } else {
+        0
+      }
+    }
+  }
+  Board { ..b, ages: next }
+}
+
+fn neighbours(b: Board, x: i64, y: i64) -> i64 {
+  var n = 0
+  for dy in -1..=1 {
+    for dx in -1..=1 { if (dx != 0 || dy != 0) && b.ages[at(b, x + dx, y + dy)] > 0 { n += 1 } }
+  }
+  n
+}
+
+/// How many cells are alive.
+pub fn alive(b: Board) -> i64 { b.ages.filter(|a| a > 0).len() }
+
+/// The board's rows as `.` and `O`, as a pattern writes them.
+/// ex: rows(seeded(empty(3, 1), ["O"])) == [".O."]
+pub fn rows(b: Board) -> List<str> {
+  List.repeat(0, b.height).enumerate(0).map(|(y, _)| {
+    "".join(b.ages.slice(y * b.width, (y + 1) * b.width).map(|a| if a > 0 { "O" } else { "." }))
+  })
+}
+
+/// The board as the terminal draws it, each cell by `rules.look`, a dead one as blank.
+pub fn drawn(b: Board) -> str {
+  var out = []
+  for y in 0..b.height {
+    for x in 0..b.width {
+      let age = b.ages[at(b, x, y)]
+      out.push(if age > 0 { rules.look(age) } else { "  " })
+    }
+    out.push("\u{1b}[0m\n")
+  }
+  "".join(out)
+}
+
+test "a glider moves one cell down and one right every four generations" {
+  var b = seeded(empty(8, 8), [".O.", "..O", "OOO"])
+  for _ in 0..4 { b = step(b) }
+  assert rows(b) == rows(seeded(empty(8, 8), ["....", "..O.", "...O", ".OOO"]))
+}

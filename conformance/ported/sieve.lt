@@ -1,0 +1,31 @@
+//~ rule: std.lists, expressions.loops, expressions.assignment
+//~ stdout:
+//~ | 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97
+//~ | 25 primes below 100
+
+// Rosetta Code, Sieve of Eratosthenes: the primes below 100, found by crossing out the
+// multiples of each prime from its square on.
+
+fn primes_below(limit: i64) -> List<i64> {
+  var prime = List.repeat(true, limit)
+  prime[0] = false
+  prime[1] = false
+  var p = 2
+  while p * p < limit {
+    if prime[p] {
+      var m = p * p
+      while m < limit {
+        prime[m] = false
+        m += p
+      }
+    }
+    p += 1
+  }
+  prime.enumerate(0).filter(.1).map(.0)
+}
+
+fn main() / io {
+  let primes = primes_below(100)
+  print(" ".join(primes.map(|p| "{p}")))
+  print("{primes.len()} primes below 100")
+}

@@ -1,0 +1,16 @@
+//~ tier: systems
+//~ rule: c.finding-functions, c.both-implementations
+//~ exit: 134
+//~ stderr:
+//~ | fatal: no C function stilt_no_such_function
+
+// A name that no library defines ends the program at the first call, as running out of memory
+// does.
+
+extern fn stilt_no_such_function(n: i32) -> i32
+
+fn main() / io {
+  print("before")
+  let n = unsafe because "it takes any i32" { stilt_no_such_function(1) }
+  print("{n}")
+}

@@ -1,0 +1,15 @@
+── FACT BEYOND A `without` LIMIT ── E0204_shared_write_without_copy.lt:4:3  [E0204]
+
+This write to `ys` while `before` shares it copies a shared value, but `grown`
+says `without copy`:
+
+  1 │ fn grown(xs: List<i64>) -> List<i64> without copy {
+    │                                              ──── the limit
+  2 │   var ys = xs
+  3 │   let before = ys
+  4 │   ys.push(1)
+    │   ^^^^^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

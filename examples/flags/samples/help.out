@@ -1,0 +1,8 @@
+usage: thumbs [OPTIONS] [TEXT...]
+  --width INTEGER              default: 640
+  --height INTEGER
+  --quality INTEGER            default: 85
+  --scale NUMBER               default: 1.0
+  --fit CONTAIN|COVER|STRETCH  default: contain
+  --[no-]keep-metadata         default: true
+  --tags TEXT...

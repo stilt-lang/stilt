@@ -1,0 +1,4 @@
+fn main() / io {
+  let _1 = 5
+  print("{_1}")
+}

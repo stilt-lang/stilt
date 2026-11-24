@@ -1,0 +1,9 @@
+//~ rule: program.forms, program.report-paths, program.panic-report
+//~ stdout:
+//~ | package
+//~ stderr:
+//~ | panic: explicit: "from the package"
+//~ |   at src/tools.lt:1:17
+//~ panic: explicit
+
+fn main() / io { print("directory program") }

@@ -1,0 +1,11 @@
+── MISMATCHED TYPES ────────────────────────────────────── main.lt:7:35  [E0311]
+
+Expected `str`, found `i64`:
+
+  7 │   if let Some(user) = keys.value!(login.attempts, "user") { print(user) }
+    │                       ────────── in the expansion of `keys.value!`
+    │                                   ^^^^^^^^^^^^^^
+
+Stilt never converts a value to another type on its own. Give a value of the
+expected type, convert it with a method such as `to_f64()`, or change what
+expects it.

@@ -1,0 +1,12 @@
+{
+  "shop": "The Lantern",
+  "open": true,
+  "books": [
+    {"title": "The Left Hand of Darkness", "author": "Ursula K. Le Guin", "year": 1969, "price": 9.5, "stock": 3, "tags": ["sf", "classic"]},
+    {"title": "One Hundred Years of Solitude", "author": "Gabriel García Márquez", "year": 1967, "price": 12, "stock": 0, "tags": ["classic"]},
+    {"title": "The Dispossessed", "author": "Ursula K. Le Guin", "year": 1974, "price": 8.75, "stock": 5, "tags": ["sf", "utopia"]},
+    {"title": "Invisible Cities", "author": "Italo Calvino", "year": 1972, "price": 7.25, "stock": 2, "tags": ["fable"]},
+    {"title": "Piranesi", "author": "Susanna Clarke", "year": 2020, "price": 14.5, "stock": 0, "tags": []},
+    {"title": "Kindred", "author": "Octavia E. Butler", "year": 1979, "price": 10.25, "stock": 4, "tags": ["sf", "classic"], "note": null}
+  ]
+}

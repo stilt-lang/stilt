@@ -1,0 +1,22 @@
+//~ rule: values.compound-assignment-order, std.finding-keys
+//~ stdout:
+//~ | key
+//~ | value
+//~ panic: missing-key
+//~ panic-at: compound_reads_after_value.lt:20:3
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn key(s: str) -> str / io {
+  print("key")
+  s
+}
+
+fn main() / io {
+  var m: Map<str, i64> = Map.new()
+  m[key("a")] += note("value", 1)
+  print("not reached")
+}

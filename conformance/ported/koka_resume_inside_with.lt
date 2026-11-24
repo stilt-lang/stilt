@@ -1,0 +1,41 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.with
+//~ run-output: "2"
+
+// Koka, test/algeff/peek1.kk: `ppstate` answers `peek` with a constant, and its handler of
+// `poke` installs a handler of `peek` that answers the poked value, and resumes inside it. The
+// action reads 1, pokes 41, and reads again. Koka runs the rest of the action under the handler
+// that the body installed, so the second read gives 41 and Koka prints 42. In Stilt the rest
+// of the block runs under the handlers installed around the performance, never under one that
+// the body installs around its `resume`, so the second read still gives 1, and the program
+// prints 2.
+
+effect Peek {
+  fn peek() -> i64
+}
+
+effect Poke {
+  fn poke(x: i64)
+}
+
+fn constant(n: i64) -> handler Peek {
+  handler Peek { fn peek() -> i64 { n } }
+}
+
+fn ppstate(init: i64, action: fn() -> i64 / {Peek, Poke}) -> i64 {
+  let poker = handler Poke -> i64 {
+    fn poke(x: i64) {
+      with constant(x) { resume() }
+    }
+  }
+  with constant(init), poker { action() }
+}
+
+fn main() / io {
+  let res = ppstate(1, || {
+    let x = Peek.peek()
+    Poke.poke(41)
+    x + Peek.peek()
+  })
+  print("{res}")
+}

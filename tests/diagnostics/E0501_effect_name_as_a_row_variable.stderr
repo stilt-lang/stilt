@@ -1,0 +1,14 @@
+── EFFECT NAME AS A ROW VARIABLE ── E0501_effect_name_as_a_row_variable.lt:1:35  [E0501]
+
+`alloc` is an implicit effect, which is never written:
+
+  1 │ fn squares(n: i64) -> List<i64> / alloc { [n * n] }
+    │                                   ^^^^^
+
+`panic` and `alloc` are inferred, never written in a row. To forbid one, write
+`without alloc` after the signature.
+
+To fix it, delete it:
+
+  1 │ fn squares(n: i64) -> List<i64> / alloc { [n * n] }
+    │                                --------

@@ -1,0 +1,9 @@
+//~ rule: effects.panic-kinds, std.maps
+//~ panic: missing-key
+//~ panic-at: missing_key.lt:8:11
+
+fn main() / io {
+  var m = Map.new()
+  m["a"] = 1
+  print("{m["b"]}")
+}

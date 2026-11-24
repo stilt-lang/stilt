@@ -1,0 +1,3 @@
+pub type Expr = | Seq(List<Expr>) | Alt(List<Expr>) | Opt(Expr) | Lit(str) | Empty
+
+pub type Rule = { name: str, body: Expr }

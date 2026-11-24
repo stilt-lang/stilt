@@ -1,0 +1,5 @@
+//~ rule: tests.property-checking
+
+/// prop: |x: i64| x + 1 //~ ERROR E0311
+/// prop: |x: i64| x == x
+fn f() {}

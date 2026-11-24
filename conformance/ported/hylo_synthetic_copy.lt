@@ -1,0 +1,20 @@
+//~ rule: values.independent-copies, values.let-and-var
+//~ stdout:
+//~ | Some(42) 1337
+//~ | Some(42) 1
+
+// Hylo, Tests/EndToEndTests/TestCases/SyntheticCopy.hylo: `b` is a copy of `a`, so assigning a
+// field of `a` afterwards leaves `b` as it was. The original states the four fields in
+// preconditions, which this port prints. Hylo writes the copy as `a.copy()`; in Stilt binding
+// a value copies it. The original's `==`, which answers `false` for any two values, takes no
+// part in its checks and is left out.
+
+type A = { x: Option<i64>, y: i64 }
+
+fn main() / io {
+  var a = A { x: Some(42), y: 1 }
+  var b = a
+  a.y = 1337
+  print("{a.x} {a.y}")
+  print("{b.x} {b.y}")
+}

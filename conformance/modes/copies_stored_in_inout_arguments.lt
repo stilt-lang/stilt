@@ -1,0 +1,62 @@
+//~ rule: modes.copies, modes.call-stores, modes.shared-writes, values.consumed-parameters, facts.copy
+
+// A copy passed to a consumed parameter may end in the call's `inout` arguments, the receiver
+// among them, so it lasts as long as the bindings they are parts of. A binding passed there at
+// its last use is no copy, but passes on the copies it holds, a closure's captures among them.
+fn put(inout to: List<List<i64>>, x: List<i64>) {
+  to.push(x)
+}
+
+fn pushed(inout a: List<i64>) -> i64 without copy {
+  var ls: List<List<i64>> = []
+  {
+    let b = a
+    ls.push(b)
+  }
+  a.push(4) //~ ERROR E0204
+  ls.len()
+}
+
+fn captured(inout a: List<i64>) -> i64 without copy {
+  var fs: List<fn() -> i64> = []
+  {
+    let g = || a.len()
+    fs.push(g)
+  }
+  a.push(4) //~ ERROR E0204
+  fs.len()
+}
+
+fn literal(inout a: List<i64>) -> i64 without copy {
+  var fs: List<fn() -> i64> = []
+  {
+    fs.push(|| a.len())
+  }
+  a.push(4) //~ ERROR E0204
+  fs.len()
+}
+
+fn by_name(inout a: List<i64>) -> i64 without copy {
+  var ls: List<List<i64>> = []
+  {
+    let b = a
+    put(inout ls, b)
+  }
+  a.push(4) //~ ERROR E0204
+  ls.len()
+}
+
+// A receiver whose scope ends with the block holds the copy no longer.
+fn ended(inout a: List<i64>) -> i64 without copy {
+  var n = 0
+  {
+    var ls: List<List<i64>> = []
+    let b = a
+    ls.push(b)
+    n = ls.len()
+  }
+  a.push(4)
+  n
+}
+
+fn main() {}

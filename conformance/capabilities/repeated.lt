@@ -1,0 +1,6 @@
+//~ rule: facts.spelling
+
+fn quiet() without fs, console, fs { //~ ERROR E0202
+}
+
+fn main() / io {}

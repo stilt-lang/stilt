@@ -1,0 +1,10 @@
+//~ rule: syntax.expressions, expressions.precedence, declarations.typed-holes
+
+fn parse(s: str) -> i64 / raise<str> {
+  s.to_i64() else raise "not a number"
+}
+
+fn next(s: str) -> i64 / raise<str> {
+  let n = parse(s)? //~ ERROR E0100
+  n + 1
+}

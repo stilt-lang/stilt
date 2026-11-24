@@ -1,0 +1,101 @@
+// kv: a key-value store served over HTTP/1.1, whose keys a file keeps between runs. Each
+// connection is answered by a task of its own, and the tasks share the store through a
+// `Shared`, which each reaches inside `when`, so no two change it at once.
+
+use std.cli
+use std.fs
+use std.http
+use std.io
+use std.net
+use std.sync
+use std.task
+use store
+
+const USAGE: str = "usage: kv serve [--port N] [--data FILE] [--max N] | kv replay FILE"
+
+fn main() / {io, raise<str>} {
+  match cli.args() {
+    ["replay", path] => try replay(path),
+    ["serve", ..rest] => try serve(try options(rest)),
+    _ => raise USAGE,
+  }
+}
+
+/// Where to listen, the file that keeps the keys, and how many connections to answer before
+/// stopping, with no bound when it is `None`.
+type Options = { port: i64, data: Option<str>, max: Option<i64> }
+
+/// The options that the arguments after `serve` give.
+/// ex: try options(["--port", "9000", "--max", "2"]) == Options { port: 9000, data: None, max: Some(2) }
+/// ex: Result.of(|| try options(["--port"])) == Err(USAGE)
+fn options(args: List<str>) -> Options / raise<str> {
+  var o = Options { port: 8080, data: None, max: None }
+  var i = 0
+  while i < args.len() {
+    let value = args.get(i + 1) else raise USAGE
+    match args.get(i) else "" {
+      "--port" => { o.port = value.to_i64() else raise USAGE }
+      "--data" => { o.data = Some(value) }
+      "--max" => { o.max = Some(value.to_i64() else raise USAGE) }
+      _ => raise USAGE,
+    }
+    i += 2
+  }
+  o
+}
+
+/// Answers connections on the port: each in a task of its own, all of them changing one store,
+/// which is written to the data file after each write.
+fn serve(o: Options) / {io, raise<str>} {
+  let start = match o.data {
+    Some(path) if fs.exists(path) => {
+      let text = try fs.read(path) catch _ => raise "cannot read {path}"
+      store.restore(text) else raise "{path} doesn't hold a store"
+    }
+    _ => store.new(),
+  }
+  let shared = sync.Shared.new(start)
+  var listener = try net.listen("127.0.0.1", o.port) catch e => raise "cannot listen on port {o.port}: {e}"
+  eprint("kv: listening on http://127.0.0.1:{listener.port()}/")
+  var answered = 0
+  with task.threads() {
+    while o.max.map(|n| answered < n) else true {
+      let conn = try listener.accept() catch e => raise "cannot accept: {e}"
+      task.spawn(|| answer(conn, shared, o.data))
+      answered += 1
+    }
+  }
+}
+
+/// Reads one request from `conn`, answers it from the store, and writes the store to `data`
+/// when the request changed it.
+fn answer(conn: net.Stream, shared: sync.Shared<store.Store>, data: Option<str>) / io {
+  var c = conn
+  let request = try http.read_request(inout c) catch _ because "a client that sends no request gets no answer" => { c.close(); return }
+  var response = http.Response.new(500, "")
+  // The file is written inside `when`, so the snapshots reach it in the order of the writes.
+  when shared {
+    let writes = shared.writes
+    response = store.handle(inout shared, request)
+    if let Some(path) = data {
+      if shared.writes != writes { try fs.write(path, store.snapshot(shared)) catch e because "the answer goes out even when the file can't be written" => eprint("kv: cannot write {path}: {e}") }
+    }
+  }
+  try http.write_response(inout c, response.with_header("Connection", "close")) catch _ because "the client has gone" => {}
+  c.close()
+}
+
+/// Runs the requests of a file through a store, one to a line as `METHOD TARGET [BODY]`, and
+/// prints each response's status and body: the store without the network.
+fn replay(path: str) / {io, raise<str>} {
+  let text = try fs.read(path) catch _ => raise "cannot read {path}"
+  var s = store.new()
+  for line in text.lines() {
+    if line.is_empty() || line.starts_with("#") { continue }
+    let parts = line.split(" ")
+    let request = http.Request.new(parts.get(0) else "", parts.get(1) else "").with_body(" ".join(parts.skip(2)))
+    let response = store.handle(inout s, request)
+    print("{line}\n-> {response.status} {http.reason(response.status)}")
+    if !response.body.is_empty() { print(response.body.trim_end()) }
+  }
+}

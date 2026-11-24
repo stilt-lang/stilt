@@ -1,0 +1,54 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.with
+//~ stdout:
+//~ | outer: the body resumes
+//~ | inner: the rest has 7
+//~ | outer: after the with, 70
+//~ | outer: the body resumes
+//~ | outer: the body goes on
+//~ | outer: a second with gives 2
+
+// A raise that leaves the rest of the block ends the `with` with it, and the body that waits at
+// its `resume` never goes on; the handlers after the `with` are those around it, so a later
+// performance reaches `outer`, and a second `with` of the same handler resumes as the first
+// would have.
+
+effect Note {
+  fn note(msg: str)
+}
+
+type Oops = { code: i64 }
+
+effect Ask {
+  fn ask(n: i64) -> i64 / Note
+}
+
+fn main() / io {
+  let outer = handler Note { fn note(msg: str) { print("outer: {msg}") } }
+  let inner = handler Note { fn note(msg: str) { print("inner: {msg}") } }
+  let ask = handler Ask -> i64 {
+    fn ask(n: i64) -> i64 / Note {
+      Note.note("the body resumes")
+      let r = resume(n)
+      Note.note("the body goes on")
+      r
+    }
+  }
+  with outer {
+    let got = try with ask {
+      with inner {
+        let v = Ask.ask(7)
+        Note.note("the rest has {v}")
+        if v > 0 { raise Oops { code: v } }
+        v
+      }
+    } catch {
+      Oops { code } => code * 10
+    }
+    Note.note("after the with, {got}")
+    let again = with ask {
+      with inner { Ask.ask(1) + 1 }
+    }
+    Note.note("a second with gives {again}")
+  }
+}

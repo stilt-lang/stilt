@@ -1,0 +1,18 @@
+//~ tier: systems
+//~ rule: c.without-unsafe
+
+// A module's `without unsafe` limits each function's own code, but not its test bodies.
+
+module main without unsafe
+
+extern fn abs(n: i32) -> i32
+
+fn magnitude(n: i32) -> i32 {
+  unsafe because "abs takes any i32 but the least" { abs(n) } //~ ERROR E0204
+}
+
+test "a test body" {
+  assert unsafe because "abs takes any i32 but the least" { abs(-1) } == 1
+}
+
+fn main() {}

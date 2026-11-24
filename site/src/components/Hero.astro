@@ -1,0 +1,34 @@
+---
+// The front page's example as `stilt show` prints it, with what the compiler added to the
+// source marked: the facts after each signature, the types of bindings, and the comments that
+// name the operation behind each fact.
+import { example } from "../lib/stilt";
+import { annotated } from "../lib/shown";
+
+const { source, functions } = example();
+const html = annotated(source, functions);
+const names = functions.map((f) => `main.${f.name}`).join(" ");
+---
+
+<figure class="panel example" aria-label={`What stilt show prints for ${names}`}>
+  <div class="panel-head"><code>$ stilt show {names}</code></div>
+  <pre><code set:html={html} /></pre>
+</figure>
+
+<style>
+  .example { margin: 0.5rem 0 0; }
+  .panel-head code { font-size: 0.75rem; }
+  pre {
+    margin: 0;
+    padding: 1.25rem 0;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--t-text);
+  }
+  pre code { display: grid; min-width: max-content; }
+  pre :global(.line) { display: block; min-height: 1.55em; padding-inline: 1.25rem; white-space: pre; }
+  .example :global(.added) { color: var(--sky); }
+  .example :global(.added.facts) { font-weight: 600; }
+  .example :global(.added.comment) { color: var(--t-comment); font-style: italic; }
+</style>

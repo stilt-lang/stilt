@@ -1,0 +1,22 @@
+//~ tier: meta
+//~ rule: macros.outside-run
+//~ stdout:
+//~ | left
+//~ | right
+//~ | made
+
+use std.meta
+
+// Called when the program runs: the quote evaluates its splices from left to right,
+// whatever it makes of their values.
+fn noisy(side: str) -> meta.Expr / io {
+  print(side)
+  quote { 1 }
+}
+
+fn make() -> meta.Expr / io { quote { $(noisy("left")) + $(noisy("right")) } }
+
+fn main() / io {
+  let _ = make()
+  print("made")
+}

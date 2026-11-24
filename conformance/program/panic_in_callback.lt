@@ -1,0 +1,9 @@
+//~ rule: program.panic-location, effects.panic-kinds
+//~ panic: divide-by-zero
+//~ panic-at: panic_in_callback.lt:7:23
+
+fn main() / io {
+  let xs = [1, 0]
+  let ys = xs.map(|x| 10 / x)
+  print("{ys}")
+}

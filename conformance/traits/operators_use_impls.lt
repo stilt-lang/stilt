@@ -1,0 +1,32 @@
+//~ rule: traits.operators, traits.structural-impls
+//~ stdout:
+//~ | false false true true
+//~ | false true false true
+//~ | true false
+//~ | [Version { major: 2, minor: 3 }, Version { major: 1, minor: 5 }]
+
+type Version = { major: i64, minor: i64 }
+
+impl Ord for Version {
+  fn compare(self, other: Version) -> Ordering {
+    match Ord.compare(self.minor, other.minor) {
+      Equal => Ord.compare(self.major, other.major)
+      order => order
+    }
+  }
+}
+
+impl Eq for Version {
+  fn eq(self, other: Version) -> bool { self.major == other.major }
+}
+
+fn main() / io {
+  let a = Version { major: 1, minor: 5 }
+  let b = Version { major: 2, minor: 3 }
+  let c = Version { major: 1, minor: 9 }
+  print("{a < b} {a <= b} {a > b} {a >= b}")
+  let e = Version { major: 1, minor: 5 }
+  print("{a < e} {a <= e} {a > e} {a >= e}")
+  print("{a == c} {a != c}")
+  print("{[a, b].sorted()}")
+}

@@ -1,0 +1,14 @@
+── SYNTAX ERROR ───────────────────────────────── E0100_protocol.lt:1:1  [E0100]
+
+Stilt declares a protocol as a `trait`:
+
+  1 │ protocol Shape {
+    │ ^^^^^^^^
+
+A trait lists the methods that a type implements, each in an `impl` of the trait
+for the type.
+
+To fix it, write `trait`:
+
+  1 │ trait Shape {
+    │ ~~~~~

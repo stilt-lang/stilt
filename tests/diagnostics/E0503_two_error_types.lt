@@ -1,0 +1,6 @@
+type ParseError = | Empty
+
+fn parse(text: str) -> i64 / raise<ParseError> {
+  if text == "" { raise Empty }
+  raise "not a number: {text}"
+}

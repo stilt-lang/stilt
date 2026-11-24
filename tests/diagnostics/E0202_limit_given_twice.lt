@@ -1,0 +1,4 @@
+module main
+without panic, alloc, panic
+
+pub fn halve(n: i64) -> i64 { n / 2 }

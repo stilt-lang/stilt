@@ -1,0 +1,48 @@
+# The Rust versions of the programs that allocate most, linked with mimalloc, the allocator of
+# small blocks that a Rust program allocating many small objects would choose (../../README.md,
+# Allocators). Each binary is its program's Rust version as it is, with the global allocator set.
+# A workspace of its own, outside the repository's, built by `stilt-bench compare`
+# (../../src/compare.rs).
+[package]
+name = "alloc-baselines"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+build = "build.rs"
+
+[workspace]
+
+[dependencies]
+mimalloc = { version = "0.1", default-features = false }
+
+[[bin]]
+name = "binary_trees"
+path = "binary_trees.rs"
+
+[[bin]]
+name = "binarytrees"
+path = "binarytrees.rs"
+
+[[bin]]
+name = "cfold"
+path = "cfold.rs"
+
+[[bin]]
+name = "deriv"
+path = "deriv.rs"
+
+[[bin]]
+name = "nqueens"
+path = "nqueens.rs"
+
+[[bin]]
+name = "rbtree"
+path = "rbtree.rs"
+
+[[bin]]
+name = "rbtree_ck"
+path = "rbtree_ck.rs"
+
+[profile.release]
+opt-level = 3

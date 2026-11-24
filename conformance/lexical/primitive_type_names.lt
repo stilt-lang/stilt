@@ -1,0 +1,26 @@
+//~ rule: lexical.primitive-type-names, errors.syntax-errors
+
+type Pair = { i16: i64, ok: bool } //~ ERROR E0210
+
+impl Pair {
+  fn str(self) -> i64 { 1 } //~ ERROR E0210
+}
+
+fn bool() {} //~ ERROR E0210
+
+fn f64() {} //~ ERROR E0210
+
+fn wrap(i8: i64) {} //~ ERROR E0210
+
+fn apply<f32>() {} //~ ERROR E0210
+
+fn bindings(xs: List<i64>) -> i64 {
+  let i32 = 1 //~ ERROR E0210
+  var i64 = 2 //~ ERROR E0210
+  let (u8, x) = (3, 4) //~ ERROR E0210
+  for u16 in xs {} //~ ERROR E0210
+  let f = |u32: i64| 0 //~ ERROR E0210
+  match 5 {
+    u64 => 0 //~ ERROR E0210
+  }
+}

@@ -1,0 +1,21 @@
+//~ rule: values.assignment-order, values.compound-assignment-order
+//~ stdout:
+//~ | row
+//~ | col
+//~ | value
+//~ | row
+//~ | col
+//~ | value
+//~ | [[0, 5], [0, 3]]
+
+fn note(s: str, v: i64) -> i64 / io {
+  print(s)
+  v
+}
+
+fn main() / io {
+  var grid = [[0, 0], [0, 1]]
+  grid[note("row", 0)][note("col", 1)] = note("value", 5)
+  grid[note("row", 1)][note("col", 1)] += note("value", 2)
+  print("{grid}")
+}

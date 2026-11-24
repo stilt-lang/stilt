@@ -1,0 +1,10 @@
+type ParseError = | Empty | NotANumber
+
+fn parse(text: str) -> i64 / raise<ParseError> { raise NotANumber }
+
+fn count(text: str) -> i64 {
+  try parse(text) catch {
+    Empty because "an empty line counts zero" => 0
+    NotANumber => 1
+  }
+}

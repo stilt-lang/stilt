@@ -1,0 +1,29 @@
+── REACHING A VALUE WHILE A VIEW WRITES IT ── E0429_reaching_a_value_while_a_view_writes_it.lt:7:11  [E0429]
+
+`xs` is reached here while `head` writes `xs`:
+
+  7 │   print("{xs.len()}")
+    │           ^^
+  8 │ }
+    │ ─ `head` writes `xs` until here
+
+While a view writes its source, the source is the view's. Use the view, or let
+it end before reading the source.
+
+Two ways to fix it:
+
+  1. Make the access before the view:
+
+  5 │   print("{xs.len()}")
+    │   +++++++++++++++++++
+  6 │   var head = view.into(inout xs, 0, 2)
+    ┆
+  7 │   print("{xs.len()}")
+    │   -------------------
+
+  2. End the view's scope before the access:
+
+  5 │   { var head = view.into(inout xs, 0, 2)
+    │   ++
+  6 │   head[0] = 9 }
+    │              ++

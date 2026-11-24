@@ -1,0 +1,7 @@
+// The raising variant of main.lt (goal free-success): every function's row
+// raises and every call of the program's functions goes through `try`, though nothing raises.
+type Fail = | Fail
+
+fn fib(n: i64) -> i64 / raise<Fail> { if n < 2 { n } else { try fib(n - 1) + try fib(n - 2) } }
+
+fn main() / {io, raise<Fail>} { print("{try fib(38)}") }

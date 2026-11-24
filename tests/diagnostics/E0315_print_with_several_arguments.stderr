@@ -1,0 +1,13 @@
+── WRONG NUMBER OF ARGUMENTS ── E0315_print_with_several_arguments.lt:3:3  [E0315]
+
+`print` takes one string, which holds the values, as `print("a is {a}")`:
+
+  3 │   print("a is", a)
+    │   ^^^^^^^^^^^^^^^^
+
+A string inserts the value of each `{…}` in it, so one string says it all.
+
+To fix it, write one string:
+
+  3 │   print("a is {a}")
+    │         ~~~~~~~~~~

@@ -1,0 +1,95 @@
+//~ tier: core
+
+// Once (modes.once-closures and modes.once-parameters): a closure literal that can run at most
+// once, and a parameter of function type that its function calls at most once.
+
+type Job = { run: fn() -> i64 }
+
+// A closure called where it is written is once.
+fn immediate() -> i64 {
+  (|| 1)() //~ ONCE ALLOC
+}
+
+// A closure bound by `let` and called once is once.
+fn bound() -> i64 {
+  let xs = [1] //~ ALLOC
+  let f = || xs.len() //~ ONCE f ALLOC
+  f() //~ DIV
+}
+
+// A parameter called exactly once, outside every loop, is once.
+fn run(f: fn() -> i64) -> i64 {
+  f() //~ ONCE f
+}
+
+// A closure passed to a once parameter is once.
+fn passed_to_once() -> i64 {
+  run(|| 2) //~ ONCE ALLOC
+}
+
+// A closure called twice is many.
+fn twice() -> i64 {
+  let f = || 1 //~ ALLOC
+  f() + f() //~ OVERFLOW DIV
+}
+
+// A closure called in a loop is many.
+fn in_a_loop() -> i64 {
+  let f = || 1 //~ ALLOC
+  var n = 0
+  for i in 0..3 { n += f() } //~ OVERFLOW DIV
+  n
+}
+
+// A closure called inside another closure is many.
+fn in_a_closure() -> i64 {
+  let f = || 1 //~ ALLOC
+  let g = || f() //~ ONCE g ALLOC DIV
+  g() //~ DIV
+}
+
+// A closure stored in a value is many.
+fn stored() -> Job {
+  let f = || 1 //~ ALLOC
+  Job { run: f } //~ ESCAPES f
+}
+
+// A closure passed to a many parameter is many.
+fn passed_to_many() -> List<i64> {
+  [1, 2].map(|x| x + 1) //~ OVERFLOW ALLOC
+}
+
+// A parameter called in a loop is many.
+fn repeat(f: fn() -> i64, n: i64) -> i64 {
+  var total = 0
+  for i in 0..n { total += f() } //~ OVERFLOW
+  total
+}
+
+// A parameter passed to `map`, whose parameter is many, is many.
+fn mapped(f: fn(i64) -> i64) -> List<i64> {
+  [1, 2].map(f) //~ ALLOC
+}
+
+// A parameter used twice is many, even when only one use runs.
+fn either(f: fn() -> i64, flag: bool) -> i64 {
+  if flag { f() } else { f() + 1 } //~ OVERFLOW
+}
+
+// A recursive group that calls a parameter twice makes it many.
+fn ping(f: fn() -> i64, n: i64) -> i64 {
+  if n == 0 { f() } else { pong(f, n - 1) } //~ OVERFLOW DIV
+}
+
+fn pong(f: fn() -> i64, n: i64) -> i64 {
+  if n == 0 { f() } else { ping(f, n - 1) } //~ OVERFLOW DIV
+}
+
+// A recursive group whose functions each use a parameter once keeps it once.
+fn tick(f: fn() -> i64, n: i64) -> i64 {
+  if n == 0 { 0 } else { tock(f, n - 1) } //~ OVERFLOW ONCE f DIV
+}
+
+fn tock(f: fn() -> i64, n: i64) -> i64 {
+  if n == 0 { 0 } else { tick(f, n - 1) } //~ OVERFLOW ONCE f DIV
+}

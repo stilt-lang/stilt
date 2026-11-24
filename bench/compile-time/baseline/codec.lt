@@ -1,0 +1,12 @@
+// Entries as JSON, which each type of the entry writes and reads by hand (std.json).
+
+use std.json
+use events.entry
+
+/// The entry as one line of JSON.
+pub fn write(e: entry.Entry) -> str { json.render(e.to_json()) }
+
+/// The entry that a line of JSON holds.
+pub fn read(text: str) -> entry.Entry / raise<json.Error> {
+  try entry.Entry.from_json(try json.parse(text))
+}

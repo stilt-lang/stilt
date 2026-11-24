@@ -1,0 +1,7 @@
+//~ rule: std.io
+//~ stdin: "x\r\ny\n\nz"
+//~ run-output: "[\"x\", \"y\", \"\", \"z\"] []"
+
+use std.io
+
+fn main() / io { print("{io.read_lines()} {io.read_lines()}") }

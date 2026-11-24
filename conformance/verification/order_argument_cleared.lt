@@ -1,0 +1,18 @@
+//~ rule: values.inout-argument-order, facts.analysis-order, facts.map-keys
+//~ panic: missing-key
+//~ panic-at: order_argument_cleared.lt:14:14
+
+type Count = { n: i64 }
+
+fn bump(inout c: Count, by: i64) { c.n += by }
+
+// An `inout` argument's place is read where the call starts, after the next
+// argument clears the map.
+fn argument_cleared() -> Map<str, Count> {
+  var m: Map<str, Count> = Map.new()
+  m["a"] = Count { n: 1 }
+  bump(inout m["a"], { m.clear(); 1 })
+  m
+}
+
+fn main() / io { print("{argument_cleared()}") }

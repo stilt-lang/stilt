@@ -1,0 +1,67 @@
+//~ tier: advanced
+//~ rule: traits.functions-without-self
+//~ stdout:
+//~ | 0
+//~ | (0, 0)
+//~ | []
+//~ | 1
+//~ | 10
+//~ | score
+//~ | 3
+//~ | 0
+
+trait Empty {
+  fn empty() -> Self
+  fn pair() -> (Self, Self) { (Self.empty(), Self.empty()) }
+  const UNIT: i64 = 1
+}
+
+trait Monoid {
+  fn neutral() -> Self
+  fn combine(self, other: Self) -> Self
+  const NAME: str
+}
+
+type Score = { points: i64 }
+
+impl Empty for i64 {
+  fn empty() -> i64 { 0 }
+}
+
+impl<T> Empty for List<T> {
+  fn empty() -> List<T> { [] }
+}
+
+impl Monoid for Score {
+  fn neutral() -> Score { Score { points: 0 } }
+  fn combine(self, other: Score) -> Score { Score { points: self.points + other.points } }
+  const NAME: str = "score"
+}
+
+// The body names the type that `empty` is called on.
+fn fresh<T: Empty>() -> T { T.empty() }
+
+fn sum_all<T: Monoid>(xs: List<T>) -> T {
+  var acc = T.neutral()
+  for x in xs { acc = acc.combine(x) }
+  acc
+}
+
+fn label<T: Monoid>(x: T) -> str { T.NAME }
+
+fn maker<T: Empty>() -> fn() -> T { T.empty }
+
+fn main() / io {
+  print("{i64.empty()}")
+  print("{i64.pair()}")
+  let xs: List<i64> = fresh()
+  print("{xs}")
+  print("{i64.UNIT}")
+  let total = sum_all([Score { points: 4 }, Score { points: 6 }])
+  print("{total.points}")
+  print(label(total))
+  let make = i64.empty
+  print("{make() + 3}")
+  let again: fn() -> i64 = maker()
+  print("{again()}")
+}

@@ -1,0 +1,16 @@
+//~ rule: std.instants
+//~ run-output: "true true true 30ns Instant { ns: 30 }"
+
+use std.clock
+
+fn main() / io {
+  let start = clock.now()
+  clock.sleep(clock.Duration.from_ms(20))
+  let waited = start.elapsed()
+  clock.sleep(clock.Duration.from_ms(-5))
+  clock.sleep(clock.Duration.from_ns(0))
+  let later = clock.now()
+  let since = clock.Instant { ns: 50 }.since(clock.Instant { ns: 20 })
+  let moved = clock.Instant { ns: 50 }.plus(clock.Duration.from_ns(-20))
+  print("{waited >= clock.Duration.from_ms(20)} {later.since(start) >= waited} {start.plus(waited) <= later} {since} {moved}")
+}

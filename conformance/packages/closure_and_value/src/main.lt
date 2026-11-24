@@ -1,0 +1,9 @@
+use echo
+use shout
+
+fn main() / io {
+  let loud = shout.printer()
+  loud("a")
+  let quiet = echo.printer()
+  quiet("b")
+}

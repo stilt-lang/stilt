@@ -1,0 +1,14 @@
+── DEPENDENCY NAMED UNLIKE ITS PACKAGE ───────────────── stilt.toml:5:1  [E0603]
+
+This entry names `jsn`, but deps/json/stilt.toml names its package `json`:
+
+  5 │ jsn = { path = "deps/json" }
+    │ ^^^
+
+A dependency's entry has its package's own name, so that its modules have one
+name everywhere. Rename the entry.
+
+To fix it, name the entry `json`:
+
+  5 │ json = { path = "deps/json" }
+    │ ~~~~

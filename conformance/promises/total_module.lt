@@ -1,0 +1,31 @@
+//~ rule: facts.spelling, facts.without-div
+//~ run-output: "4 3"
+
+module main
+without panic, div
+
+type Tree = | Leaf | Node(Tree, i64, Tree)
+
+fn size(t: Tree) -> i64 {
+  match t {
+    Leaf => 0
+    Node(l, _, r) => size(l) + 1 + size(r)
+  }
+}
+
+fn largest(xs: List<i64>) -> i64 {
+  var best = 0
+  for x in xs { if x > best { best = x } }
+  best
+}
+
+// Tests are exempt from the module's limits.
+test "while loops in a test" {
+  var i = 0
+  while i < 3 { i += 1 }
+  assert i == 3
+}
+
+fn main() / io {
+  print("{largest([1, 4, 2])} {size(Node(Node(Leaf, 1, Leaf), 2, Node(Leaf, 3, Leaf)))}")
+}

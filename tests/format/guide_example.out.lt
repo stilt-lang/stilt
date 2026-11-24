@@ -1,0 +1,10 @@
+// The example of the guide's "One syntax, one format" (docs/guide/08-programs.md).
+type Item = { name: str, price: i64 }
+
+fn total(items: List<Item>) -> i64 {
+  var sum = 0
+  for i in items { sum += i.price }
+  sum
+}
+
+fn priced(name: str, price: i64) -> Item { Item { name, price } }

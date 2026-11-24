@@ -1,0 +1,22 @@
+//~ rule: lexical.commented-out-code
+
+// let a = 1; let b = 2 //~ WARN W0001
+// use std.io //~ WARN W0001
+// type Point = { x: i64, y: i64 } //~ WARN W0001
+// const LIMIT: i64 = 10 //~ WARN W0001
+// test "adds" { assert 1 + 1 == 2 } //~ WARN W0001
+// fn later() -> i64 = ? //~ WARN W0001
+
+fn main() {
+  // let total =
+  // if ready {
+  //   start() //~ WARN W0001
+  // }
+  // x = 1 //~ WARN W0001
+  // self.items //~ WARN W0001
+  // ((x)) //~ WARN W0001
+  // return
+  // "a" "b"
+  // 007
+  // Note: see above
+}

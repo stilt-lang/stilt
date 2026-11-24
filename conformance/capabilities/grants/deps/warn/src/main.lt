@@ -1,0 +1,1 @@
+pub fn odd(what: str) / io { print("warning: odd {what}") }

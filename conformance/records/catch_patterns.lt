@@ -1,0 +1,30 @@
+//~ tier: advanced
+//~ rule: syntax.patterns, records.anonymous-patterns
+//~ stdout:
+//~ | 7 2 0 3
+//~ | 20 7
+
+fn parse(n: i64) -> i64 / raise<{ code: i64, line: i64 }> {
+  if n < 0 { raise { code: -n, line: 2 } } else { n }
+}
+
+// A `catch` whose one arm matches an anonymous record: its `{` opens the pattern, which holds
+// `..` or begins with a field's name that a `:`, a `,` or the `}` follows.
+fn code(n: i64) -> i64 { try parse(n) catch { code, .. } => code }
+
+fn line(n: i64) -> i64 { try parse(n) catch { code: _, line } => line }
+
+fn none(n: i64) -> i64 { try parse(n) catch {..} => 0 }
+
+// The block form, whose arms match anonymous records too.
+fn arms(n: i64) -> i64 {
+  try parse(n) catch {
+    { code: 7, line } => line * 10
+    { code, .. } => code
+  }
+}
+
+fn main() / io {
+  print("{code(-7)} {line(-7)} {none(-7)} {code(3)}")
+  print("{arms(-7)} {arms(-7) - 13}")
+}

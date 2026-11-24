@@ -1,0 +1,14 @@
+── HANDLER AROUND AN EFFECT THAT BELONGS TO THE CALLER ── E0516_handler_around_an_effect_that_belongs_to_the_caller.lt:6:50  [E0516]
+
+`f`'s performances belong to the caller, but this `with` handles them:
+
+  6 │   with (handler Ask { fn ask() -> i64 { 1 } }) { f() }
+    │                                                  ^^^
+
+A call of a function parameter performs your caller's effects, which this `with`
+would capture. Name the effect in the parameter's row to handle it here.
+
+To fix it, handle `f`'s `Ask` here: write `Ask` in its row:
+
+  5 │ fn run(f: fn() -> i64 / Ask) -> i64 {
+    │                      ++++++

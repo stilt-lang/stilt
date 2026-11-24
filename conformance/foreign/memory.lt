@@ -1,0 +1,46 @@
+//~ tier: systems
+//~ rule: c.module-std-c, c.element-types, c.lending-buffer, c.both-implementations
+//~ stdout:
+//~ | 30
+//~ | [20, 30]
+//~ | 0
+//~ | 0
+//~ | [0, 65535, 0]
+//~ | [1.25]
+//~ | false
+//~ | -3
+//~ | false
+//~ | true 0
+//~ | 4
+//~ | 18446744073709551608
+
+// Reading and writing through a list's address, each element as C holds it in its width;
+// `read_list` gives `[]` for a count that isn't positive; an empty list lends an address that
+// isn't 0; `c.null()` is the address 0, and `offset` moves an address by elements, wrapping as
+// a `u64` does.
+
+use std.c
+
+fn main() / io {
+  let xs: List<i32> = [10, 20, 30]
+  print("{xs.with_ptr(|p| unsafe because "xs holds three i32s" { p.offset(2).read() })}")
+  print("{xs.with_ptr(|p| unsafe because "xs holds three i32s" { p.offset(1).read_list(2) })}")
+  print("{xs.with_ptr(|p| unsafe because "a count of 0 reads nothing" { p.read_list(0) }).len()}")
+  print("{xs.with_ptr(|p| unsafe because "a negative count reads nothing" { p.read_list(-2) }).len()}")
+  var ys: List<u16> = [0, 0, 0]
+  ys.with_mut_ptr(|p| unsafe because "ys holds three u16s" { p.offset(1).write(65535) })
+  print("{ys}")
+  var fs: List<f64> = [0.25]
+  fs.with_mut_ptr(|p| unsafe because "fs holds one f64" { p.write(p.read() + 1.0) })
+  print("{fs}")
+  let flags = [true, false]
+  print("{flags.with_ptr(|p| unsafe because "flags holds two bools" { p.offset(1).read() })}")
+  let small: List<i8> = [-3]
+  print("{small.with_ptr(|p| unsafe because "small holds one i8" { p.read() })}")
+  let empty: List<u8> = []
+  print("{empty.with_ptr(|p| p.is_null())}")
+  let nothing: c.Ptr<u64> = c.null()
+  print("{nothing.is_null()} {nothing.address()}")
+  print("{xs.with_ptr(|p| p.offset(1).address() - p.address())}")
+  print("{nothing.offset(-1).address()}")
+}

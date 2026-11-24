@@ -1,0 +1,37 @@
+//~ rule: types.inferred-per-body, traits.bound-arguments, traits.unsatisfied-bounds, errors.undecided-types-last
+
+// A bound's argument that only an undecided type would decide leaves the bound undecided: the
+// body reports the type it can't infer, and no missing impl. A type parameter is decided, so a
+// bound it doesn't meet is a missing impl.
+
+trait Into2<T> {
+  fn into2(self) -> T
+}
+
+impl Into2<i64> for i32 {
+  fn into2(self) -> i64 { self.to_i64() }
+}
+
+type Wrap<A, B> = { a: A, bs: List<B> }
+
+impl<A: Into2<B>, B> Show for Wrap<A, B> {
+  fn show(self) -> str { "wrap" }
+}
+
+fn elements() -> str {
+  let a: i32 = 1
+  let w = Wrap { a: a, bs: [] } //~ ERROR E0312
+  "{w}"
+}
+
+fn parameters() -> str {
+  let a: i32 = 1
+  let w = Wrap { a: a, bs: [|x| 1] } //~ ERROR E0312
+  "{w}"
+}
+
+fn generic<T>(w: Wrap<i32, T>) -> str {
+  "{w}" //~ ERROR E0318
+}
+
+fn main() {}

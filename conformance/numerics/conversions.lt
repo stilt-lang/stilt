@@ -1,0 +1,18 @@
+//~ rule: numbers.literal-defaults, numbers.conversions, numbers.wrapping-conversions, numbers.parsing, numbers.printing-floats
+//~ stdout:
+//~ | None 18446744073709551615 Some(255) None 300
+//~ | Some(7) Some(-7) None None Some(0) Some(255) None
+//~ | 16777216.0 9007199254740992.0 16777216.0
+//~ | Some(7) None None Some(-128) None Some(1500.0) None None Some(-0.0)
+
+fn main() / io {
+  let big: u64 = 18446744073709551615
+  let small: i64 = 255
+  let wide: i16 = 300
+  print("{big.to_i64()} {(-1).wrap_to_u64()} {small.to_u8()} {(256).to_u8()} {wide.to_i64()}")
+  let nan = 0.0 / 0.0
+  print("{(7.9).to_i64()} {(-7.9).to_i64()} {nan.to_i64()} {(1e19).to_i64()} {(-0.5).to_u8()} {(255.9).to_u8()} {(256.0).to_u8()}")
+  let precise: f64 = 16777217.0
+  print("{(16777217).to_f32()} {(9007199254740993).to_f64()} {precise.to_f32()}")
+  print("{"007".to_i64()} {"+5".to_i64()} {"-0".to_u8()} {"-128".to_i8()} {"128".to_i8()} {"1.5e3".to_f64()} {"inf".to_f64()} {"1.".to_f64()} {"-0".to_f64()}")
+}

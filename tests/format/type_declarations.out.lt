@@ -1,0 +1,26 @@
+// A record or variant type goes on one line when it fits in 100 columns, and otherwise puts
+// each field or variant on a line of its own.
+type Shape = | Circle(f64) | Square(f64)
+
+type Point = { x: i64, y: i64 }
+
+type Pair<A, B> = { first: A, second: B }
+
+type Exactly = { alpha: i64, beta: i64, gamma: i64, delta: i64, epsilon: i64, zeta_zzzzzzzzzz: i64 }
+
+type OverByOne = {
+  alpha: i64,
+  beta: i64,
+  gamma: i64,
+  delta: i64,
+  epsilon: i64,
+  zeta_zzzzzzzzz: i64,
+}
+
+type Signal = | Started(at: i64) | Paused(at: i64) | Resumed(at: i64) | Stopped(at: i64, why_y: str)
+
+type Message =
+  | Started(at: i64)
+  | Paused(at: i64)
+  | Resumed(at: i64)
+  | Stopped(at: i64, why_y: str)

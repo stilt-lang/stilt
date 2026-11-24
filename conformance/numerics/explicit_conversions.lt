@@ -1,0 +1,21 @@
+//~ rule: numbers.no-implicit-conversions, numbers.conversions
+//~ stdout:
+//~ | 2.5 7.5 300 -56
+//~ | true false
+
+fn mean(xs: List<i64>) -> f64 {
+  let total = xs.fold(0, |a, x| a + x)
+  total.to_f64() / xs.len().to_f64()
+}
+
+fn main() / io {
+  let n: i64 = 3
+  let price = 2.5
+  let small: u8 = 44
+  let wide: i32 = 256
+  let signed: i8 = -100
+  print("{mean([1, 2, 3, 4])} {n.to_f64() * price} {wide.to_i64() + small.to_i64()} {signed.to_i16() + small.to_i16()}")
+  let a: i32 = 7
+  let b: i64 = 7
+  print("{a.to_i64() == b} {a.to_i64() < b}")
+}

@@ -1,0 +1,34 @@
+//~ tier: advanced
+//~ rule: handlers.declaring-effect, handlers.with, handlers.no-effect-reaches-main
+
+// A `with` performs the effects of its handler's operations' rows, since the bodies perform
+// them on the handlers outside it. A handler of `Foo` installed inside the `with`, around the
+// performance, doesn't handle them, so the `with` needs `Foo` in its function's row, or a
+// handler of `Foo` around it.
+
+effect Foo {
+  fn foo() -> i64
+}
+
+effect Bar {
+  fn bar() -> i64 / Foo
+}
+
+fn adds_ten() -> handler Bar {
+  handler Bar { fn bar() -> i64 / Foo { Foo.foo() + 10 } }
+}
+
+fn quiet() -> i64 {
+  let one = handler Foo { fn foo() -> i64 { 1 } }
+  with adds_ten() { with one { Bar.bar() } } //~ ERROR E0502
+}
+
+fn declared() -> i64 / Foo {
+  let one = handler Foo { fn foo() -> i64 { 1 } }
+  with adds_ten() { with one { Bar.bar() } }
+}
+
+fn main() / io {
+  let one = handler Foo { fn foo() -> i64 { 1 } }
+  print("{with adds_ten() { with one { Bar.bar() } }}") //~ ERROR E0512
+}

@@ -1,0 +1,20 @@
+//~ rule: program.output-flushing, std.io
+//~ stdout:
+//~ | abc
+//~ | d
+//~ | e
+
+use std.io
+
+fn main() / io {
+  io.flush()
+  io.write("a")
+  io.flush()
+  io.write("b")
+  io.flush()
+  io.flush()
+  print("c")
+  io.write("d\ne")
+  io.flush()
+  print("")
+}

@@ -1,0 +1,17 @@
+//~ rule: numbers.integer-panics, declarations.constant-evaluation
+//~ stdout:
+//~ | start
+//~ | 127
+//~ panic: overflow
+//~ panic-at: constant_overflow.lt:11:17
+
+const LOW: i8 = -128
+const UNUSED: i8 = -LOW
+const HIGH: i8 = 127
+const BAD: i8 = -LOW
+
+fn main() / io {
+  print("start")
+  print("{HIGH}")
+  print("{BAD}")
+}

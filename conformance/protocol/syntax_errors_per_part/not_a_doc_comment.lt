@@ -1,0 +1,5 @@
+fn f() {}
+/// A vertical tab starts this line, so it documents nothing. //~ ERROR E0002
+fn g() {}
+/// A form feed starts this line, so it documents nothing. //~ ERROR E0002
+fn h() -> i64 { 1 + } //~ ERROR E0100

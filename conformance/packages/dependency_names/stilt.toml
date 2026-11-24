@@ -1,0 +1,3 @@
+[dependencies]
+csv = { path = "deps/csv" } # //~ ERROR E0603
+jsn = { path = "deps/json" } # //~ ERROR E0603

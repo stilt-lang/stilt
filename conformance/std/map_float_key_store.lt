@@ -1,0 +1,5 @@
+//~ rule: std.map-key-bounds, std.finding-keys
+
+fn put(inout m: Map<f64, str>) {
+  m[1.0] = "one" //~ ERROR E0318
+}

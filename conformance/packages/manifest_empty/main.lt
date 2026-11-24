@@ -1,0 +1,2 @@
+//~ rule: packages.manifest
+//~ run-output: "empty"

@@ -1,0 +1,2 @@
+/// Before an import. //~ ERROR E0100
+use std.io

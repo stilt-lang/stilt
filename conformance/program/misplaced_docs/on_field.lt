@@ -1,0 +1,4 @@
+pub type Point = {
+  /// Before a field. //~ ERROR E0100
+  x: i64,
+}

@@ -1,0 +1,9 @@
+//~ rule: records.update, errors.error-type
+
+type Person = { name: str, age: i64 }
+
+// An update that doesn't name the declared record it copies is E0311, and has the error type,
+// so the comparison it is an operand of reports nothing more.
+fn older(ada: Person) -> bool { 1 < { ..ada, age: 2 } } //~ ERROR E0311
+
+fn main() {}

@@ -1,0 +1,21 @@
+//~ rule: patterns.empty-matches
+
+type Lists = | Lists(List<Never>)
+type Maps = | Maps(Map<Never, i64>)
+type Thunks = | Thunks(fn() -> Never)
+
+fn float(x: f64) -> i64 {
+  match x {} //~ ERROR E0329
+}
+
+fn lists(x: Lists) -> i64 {
+  match x {} //~ ERROR E0329
+}
+
+fn maps(x: Maps) -> i64 {
+  match x {} //~ ERROR E0329
+}
+
+fn thunks(x: Thunks) -> i64 {
+  match x {} //~ ERROR E0329
+}

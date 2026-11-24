@@ -1,0 +1,12 @@
+use std.sync
+
+type Account = { balance: i64 }
+
+fn moved(a: sync.Shared<Account>, b: sync.Shared<Account>, n: i64) {
+  when a {
+    a.balance -= n
+    when b { b.balance += n }
+  }
+}
+
+fn main() {}

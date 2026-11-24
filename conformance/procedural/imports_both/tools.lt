@@ -1,0 +1,12 @@
+use std.meta
+
+/// The expression plus one.
+pub macro succ(e: meta.Expr) -> meta.Expr { quote { $e + 1 } }
+
+/// Two.
+pub fn two() -> i64 { 2 }
+
+/// A pattern of a pair.
+pub syntax pair {
+  ($a: pattern, $b: pattern) => ($a, $b)
+}

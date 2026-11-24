@@ -1,0 +1,8 @@
+//~ rule: patterns.empty-matches
+//~ run-output: "checked"
+
+type Gone = | A(Never) | B(i64, Never)
+
+fn absurd(g: Gone) -> i64 { match g {} }
+
+fn main() / io { print("checked") }

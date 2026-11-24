@@ -1,0 +1,16 @@
+//~ tier: advanced
+//~ rule: polymorphism.lazy-values, polymorphism.lazy-unobservable
+
+use std.lazy
+
+fn greet() / io { print("hi") }
+
+fn main() / io {
+  // The closure that `new` keeps has an empty row.
+  let loud = lazy.Lazy.new(|| { greet(); 1 }) //~ ERROR E0502
+  let a = lazy.Lazy.new(|| 1)
+  let b = lazy.Lazy.new(|| 1)
+  // Neither would say when the value is computed.
+  print("{a == b}") //~ ERROR E0318
+  print("{a}") //~ ERROR E0318
+}

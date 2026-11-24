@@ -1,0 +1,234 @@
+// Statements that change variables in scope: assignments, changes to a field,
+// a list or a map, and calls that pass variables `inout`.
+
+use code
+use context
+use expr
+use pick
+use ty
+
+/// The variables a statement can change, by what it can do to them, and the
+/// functions it can call with some of them `inout`.
+pub type Targets = {
+  all: List<context.Var>,
+  numbers: List<context.Var>,
+  records: List<context.Var>,
+  lists: List<context.Var>,
+  maps: List<context.Var>,
+  calls: List<context.FnSig>,
+}
+
+pub fn targets(b: context.Body, sc: context.Scope) -> Targets {
+  let all = context.changeable(sc)
+  let calls = b.p.fns.filter(
+    |f| f.params.any(.0) && context.affordable(b, sc, f.cost) && inout_args(sc, f).is_some(),
+  )
+  Targets {
+    all,
+    numbers: all.filter(|v| {
+      match v.ty {
+        Int(_) | Float(_) => true
+        _ => false
+      }
+    }),
+    records: all.filter(|v| has_fields(b, v.ty)),
+    lists: all.filter(|v| {
+      match v.ty {
+        ListOf(_) => true
+        _ => false
+      }
+    }),
+    maps: all.filter(|v| {
+      match v.ty {
+        MapOf(_, _) => true
+        _ => false
+      }
+    }),
+    calls,
+  }
+}
+
+/// Whether `t` is a tuple or a record, whose parts can be assigned.
+fn has_fields(b: context.Body, t: ty.Ty) -> bool {
+  match t {
+    Tuple(_) => true
+    Named(name) => {
+      match context.decl(b, name) {
+        Record(_) => true
+        Variants(_) => false
+      }
+    }
+    _ => false
+  }
+}
+
+/// The statements that change a variable in scope, each with its weight and
+/// the scope after it, which is `sc`.
+pub fn changes(
+  b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+) -> List<(i64, fn(inout context.Body) -> (context.Scope, List<(i64, str)>))> {
+  let t = targets(b, sc)
+  [
+    (
+      if t.all.is_empty() { 0 } else { 4 },
+      |inout b| {
+        let v = pick.one(inout b.p.r, t.all)
+        // The value doesn't read the variable, so values can't double on each
+        // pass of a loop.
+        let e = expr.expr(inout b, context.without([v.name], sc), depth, false, v.ty)
+        (sc, code.line("{v.name} = {e.text}"))
+      },
+    ),
+    (
+      if t.numbers.is_empty() { 0 } else { 3 },
+      |inout b| { (sc, compound_assign(inout b, sc, depth, pick.one(inout b.p.r, t.numbers))) },
+    ),
+    (
+      if t.records.is_empty() { 0 } else { 2 },
+      |inout b| { (sc, field_assign(inout b, sc, depth, pick.one(inout b.p.r, t.records))) },
+    ),
+    (
+      if t.lists.is_empty() { 0 } else { 3 },
+      |inout b| { (sc, list_change(inout b, sc, depth, pick.one(inout b.p.r, t.lists))) },
+    ),
+    (
+      if t.maps.is_empty() { 0 } else { 3 },
+      |inout b| { (sc, map_change(inout b, sc, depth, pick.one(inout b.p.r, t.maps))) },
+    ),
+    (
+      if t.calls.is_empty() { 0 } else { 2 },
+      |inout b| { (sc, inout_call(inout b, sc, depth, pick.one(inout b.p.r, t.calls))) },
+    ),
+  ]
+}
+
+fn compound_assign(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  v: context.Var,
+) -> List<(i64, str)> {
+  let e = expr.expr(inout b, sc, depth - 1, false, v.ty)
+  let ops = match v.ty {
+    Int(_) => ["+%=", "-%=", "*%=", "&=", "|=", "^="]
+    _ => ["+=", "-=", "*=", "/="]
+  }
+  let op = pick.one(inout b.p.r, ops)
+  code.line("{v.name} {op} {e.text}")
+}
+
+fn field_assign(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  v: context.Var,
+) -> List<(i64, str)> {
+  let (field, t) = match v.ty {
+    Tuple(ts) => {
+      let i = pick.below(inout b.p.r, ts.len())
+      ("{i}", ts[i])
+    }
+    Named(name) => {
+      let Record(fields) = context.decl(b, name) else unreachable()
+      pick.one(inout b.p.r, fields)
+    }
+    _ => unreachable()
+  }
+  let e = expr.expr(inout b, context.without([v.name], sc), depth - 1, false, t)
+  code.line("{v.name}.{field} = {e.text}")
+}
+
+/// A change to a list through a method that takes `inout self`. The
+/// arguments don't read the list, which the call changes (modes.overlap).
+fn list_change(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  v: context.Var,
+) -> List<(i64, str)> {
+  let ListOf(t) = v.ty else unreachable()
+  let others = context.without([v.name], sc)
+  let item = |inout b: context.Body| expr.expr(inout b, others, depth - 1, false, t).text
+  context.run(
+    inout b,
+    [
+      (4, |inout b| code.line("{v.name}.push({item(inout b)})")),
+      (1, |inout b| code.line("{v.name}.insert(0, {item(inout b)})")),
+      (1, |inout b| code.line("let _ = {v.name}.pop()")),
+      (
+        1,
+        |inout b| code.line("{v.name}.retain({expr.closure(inout b, others, depth - 1, t, ty.Bool)})"),
+      ),
+      (1, |inout b| code.line("if {v.name}.len() > 0 \{ {v.name}[0] = {item(inout b)} }")),
+    ],
+  )
+}
+
+fn map_change(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  v: context.Var,
+) -> List<(i64, str)> {
+  let MapOf(k, t) = v.ty else unreachable()
+  let others = context.without([v.name], sc)
+  let key = expr.expr(inout b, others, depth - 1, false, k).text
+  let item = |inout b: context.Body| expr.expr(inout b, others, depth - 1, false, t).text
+  context.run(
+    inout b,
+    [
+      (3, |inout b| code.line("{v.name}[{key}] = {item(inout b)}")),
+      (1, |inout b| code.line("{v.name}.insert({key}, {item(inout b)})")),
+      (1, |inout b| code.line("let _ = {v.name}.remove({key})")),
+    ],
+  )
+}
+
+/// Distinct changeable variables for the `inout` parameters of `f`, in
+/// order, or `None` if the scope lacks them.
+fn inout_args(sc: context.Scope, f: context.FnSig) -> Option<List<Option<context.Var>>> {
+  let pool = context.changeable(sc)
+  var used = []
+  var slots = []
+  for (passed, t) in f.params {
+    if !passed {
+      slots.push(None)
+      continue
+    }
+    let v = pool.find(|v| v.ty == t && !used.contains(v.name)) else return None
+    used.push(v.name)
+    slots.push(Some(v))
+  }
+  Some(slots)
+}
+
+/// A call that passes `inout` arguments, as a statement. Its other arguments
+/// don't read the variables passed `inout` (modes.law).
+fn inout_call(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  f: context.FnSig,
+) -> List<(i64, str)> {
+  context.spend(inout b, sc, f.cost)
+  let slots = inout_args(sc, f) else unreachable()
+  let others = context.without(slots.filter_map(|s| s.map(.name)), sc)
+  var args = []
+  for (slot, (_, t)) in slots.zip(f.params) {
+    match slot {
+      Some(v) => args.push("inout {v.name}")
+      None => args.push(expr.expr(inout b, others, depth - 1, false, t).text)
+    }
+  }
+  let text = code.call_text(f.fname, args)
+  let marked = if !f.raises {
+    text
+  } else if sc.may_raise {
+    "try {text}"
+  } else {
+    "try {text} catch {expr.catch_arms(inout b, others, depth, f.ret)}"
+  }
+  code.line(if f.ret == ty.Unit { marked } else { "let _ = {marked}" })
+}

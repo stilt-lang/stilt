@@ -1,0 +1,7 @@
+//~ rule: errors.part-reports, errors.registry-phases
+
+type Loop = { next: Loop } //~ ERROR E0309
+
+fn f() -> i64 {
+  (1 + ) //~ ERROR E0100
+}

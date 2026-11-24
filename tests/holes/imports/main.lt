@@ -1,0 +1,11 @@
+// An imported module's public functions fit, written after its name.
+
+use shapes
+
+fn area() -> i64 {
+  ? //~ HOLE
+  //~ expects: i64
+  //~ effects: none
+  //~ fits: shapes.unit() -> i64
+  //~ not: shapes.hidden() -> i64
+}

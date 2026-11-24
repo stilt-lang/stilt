@@ -1,0 +1,3 @@
+pub fn f() {}
+
+/// Nothing follows. //~ ERROR E0100

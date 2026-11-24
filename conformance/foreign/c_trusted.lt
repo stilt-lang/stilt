@@ -1,0 +1,22 @@
+//~ tier: systems
+//~ rule: c.effects, c.both-implementations
+//~ stdout:
+//~ | 7 true
+
+// A `without` clause on a foreign function's declaration is trusted: code under the same limits
+// calls it, and runs as C gives it.
+
+extern fn labs(n: i64) -> i64 without panic, overflow, alloc, div
+extern fn getpid() -> i32 / io without panic, alloc, div, fs, net, clock, env, console, rand, spawn, exec
+
+fn magnitude(n: i64) -> i64 without panic, alloc, div {
+  unsafe because "labs takes any i64 but the least" { labs(n) }
+}
+
+fn running() -> bool / io without alloc, net, fs {
+  unsafe because "getpid only reads the process's id" { getpid() } > 0
+}
+
+fn main() / io {
+  print("{magnitude(-7)} {running()}")
+}

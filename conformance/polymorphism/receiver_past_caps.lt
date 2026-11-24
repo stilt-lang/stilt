@@ -1,0 +1,30 @@
+//~ rule: polymorphism.recursion, traits.impl-blocks
+//~ stdout:
+//~ | 2 79
+
+type P = { x: i64, y: i64 }
+
+type Pair<A> = { left: A, right: A, tag: i64 }
+
+trait Grow {
+  fn grow(self, n: i64) -> i64
+}
+
+impl Grow for P {
+  fn grow(self, n: i64) -> i64 { self.x }
+}
+
+// A method whose receiver's type grows with each call: `Pair<A>` calls the method of
+// `Pair<Pair<A>>`, past what a key holds.
+impl<A: Grow> Grow for Pair<A> {
+  fn grow(self, n: i64) -> i64 {
+    if n == 0 { return self.tag + self.left.grow(0) }
+    Pair { left: self, right: self, tag: self.tag + 1 }.grow(n - 1)
+  }
+}
+
+fn main() / io {
+  let p = P { x: 1, y: 2 }
+  let start = Pair { left: p, right: p, tag: 0 }
+  print("{start.grow(1)} {start.grow(12)}")
+}

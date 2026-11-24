@@ -1,0 +1,3 @@
+test "adds" { //~ PASS
+  assert 2 + 2 == 4
+}

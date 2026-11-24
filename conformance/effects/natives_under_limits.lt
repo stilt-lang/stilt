@@ -1,0 +1,35 @@
+//~ rule: facts.native-allocation, facts.without-alloc, effects.panicking-operations, effects.without-panic, effects.without-overflow, generics.array-effects
+
+// The limits that natives meet: the built-in `show` allocates and can't panic,
+// `eq` does neither; of `std.view`, `copy` and `collect` allocate and `len`
+// doesn't; an array's natives allocate nothing; and a native other than the
+// ones of std.integers can't overflow.
+
+use std.array
+use std.view
+
+type Point = { x: i64, y: i64 }
+
+fn shown(p: Point) -> str without alloc {
+  p.show() //~ ERROR E0204
+}
+
+fn calm(p: Point) -> str without panic { p.show() }
+
+fn same(p: Point, q: Point) -> bool without alloc { p == q }
+
+fn copied(v: view.View<str>) -> str without alloc {
+  v.copy() //~ ERROR E0204
+}
+
+fn collected(xs: List<i64>) -> List<i64> without alloc {
+  view.Iter.of(xs).collect() //~ ERROR E0204
+}
+
+fn counted(v: view.View<str>) -> i64 without alloc { v.len() }
+
+fn size(a: array.Array<i64, 3>) -> i64 without alloc { a.len() }
+
+fn length(xs: List<i64>) -> i64 without overflow { xs.len() }
+
+fn main() {}

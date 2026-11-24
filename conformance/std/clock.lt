@@ -1,0 +1,14 @@
+//~ rule: std.clock
+//~ run-output: "true true true true"
+
+use std.clock
+
+fn main() / io {
+  let start = clock.monotonic_ns()
+  clock.sleep_ms(20)
+  let after = clock.monotonic_ns()
+  clock.sleep_ms(-5)
+  clock.sleep_ms(0)
+  let last = clock.monotonic_ns()
+  print("{after - start >= 20000000} {last >= after} {clock.unix_ms() > 1577836800000} {clock.unix_ms() < 4102444800000}")
+}

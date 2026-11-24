@@ -1,0 +1,51 @@
+//~ rule: traits.associated-functions, traits.method-resolution, traits.ambiguous-methods, traits.qualified-calls
+
+trait Named {
+  fn name(self) -> str
+}
+
+trait Labeled {
+  fn name(self) -> str
+}
+
+type User = { first: str, greet: fn(str) -> str }
+
+impl User {
+  fn new(first: str) -> User { User { first, greet: |s| "hello {s}" } }
+
+  fn initial(self) -> str { self.first.slice(0, 1) }
+}
+
+impl Named for User {
+  fn name(self) -> str { self.first }
+}
+
+type Robot = { serial: i64 }
+
+impl Named for Robot {
+  fn name(self) -> str { "robot {self.serial}" }
+}
+
+impl Labeled for Robot {
+  fn name(self) -> str { "#{self.serial}" }
+}
+
+fn describe<T: Named>(x: T) -> str { x.name() }
+
+fn main() / io {
+  let u = User.new("ada")
+  print(u.initial())
+  print(u.name())
+  print(describe(u))
+  print(u.greet("you"))
+  print(u.new("bob").first) //~ ERROR E0314
+  print(u.surname()) //~ ERROR E0314
+  let r = Robot { serial: 7 }
+  print(r.name()) //~ ERROR E0319
+  print(Named.name(r))
+  let pair = (|n: i64| n + 1, |n: i64| n * 2)
+  let _ = pair.1(3)
+  let _ = pair.2(3) //~ ERROR E0314
+  // A function type has no head constructor, and so no impl of a trait.
+  let _ = pair.0.show() //~ ERROR E0314
+}

@@ -1,0 +1,39 @@
+//~ rule: facts.verification, facts.what-proofs-change, facts.rules-of-acceptance, facts.range-loops
+//~ run-output: "6 2 [1, 2, 3] [2, 4, 6]"
+
+// Each index is the variable of a `for` over a range, plus or minus a number,
+// and the range keeps it within the list, whose length the body doesn't change.
+
+fn sum(xs: List<i64>) -> i64 without panic {
+  var s = 0
+  for i in 0..xs.len() { s += xs[i] }
+  s
+}
+
+// `xs[i + 1]` needs a range that ends one before the length, and `xs[i]`, as
+// `xs[i + 0]`, is within it too.
+fn rises(xs: List<i64>) -> i64 without panic {
+  var n = 0
+  for i in 0..xs.len() - 1 {
+    if xs[i + 1] > xs[i] { n += 1 }
+  }
+  n
+}
+
+// `xs[i - 1]` needs a range that starts at 1 or above.
+fn steps(xs: List<i64>) -> List<i64> without panic {
+  var ds = []
+  for i in 1..xs.len() { ds.push(xs[i] - xs[i - 1]) }
+  ds
+}
+
+// A write through an element keeps the length.
+fn doubled(xs: List<i64>) -> List<i64> without panic {
+  var ys = xs
+  for i in 0..ys.len() { ys[i] = ys[i] * 2 }
+  ys
+}
+
+fn main() / io {
+  print("{sum([1, 2, 3])} {rises([1, 3, 2, 5])} {steps([1, 2, 4, 7])} {doubled([1, 2, 3])}")
+}

@@ -1,0 +1,11 @@
+── INVALID `main` ─────────────────────────── E0310_invalid_main.lt:1:4  [E0310]
+
+`main` must take no parameters, return `()` and perform at most `io` and
+`raise<E>` with `E: Show`:
+
+  1 │ fn main<T>() {}
+    │    ^^^^
+
+`main` takes no parameters and returns nothing, and its row allows only `io` and
+raising an error that can be shown. Read the command line with `std.cli`'s
+`args()`.

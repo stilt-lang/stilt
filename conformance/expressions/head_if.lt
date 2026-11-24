@@ -1,0 +1,6 @@
+//~ rule: expressions.head-contents
+
+fn spin(ready: bool) {
+  while if ready { true } else { false } { //~ ERROR E0100
+  }
+}

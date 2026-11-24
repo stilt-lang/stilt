@@ -1,0 +1,55 @@
+//~ rule: traits.declaring-trait, traits.implementing-trait, traits.prelude-traits, traits.structural-impls, traits.show
+//~ stdout:
+//~ | true true true true
+//~ | false true [<bo>, <ana>]
+//~ | <ana> [<ana>, <bo>] Some(<bo>)
+//~ | {<ana>: 2, <bo>: 3} first
+//~ | #x [tag x] (tag y,)
+
+type Name = { text: str, note: str }
+
+impl Eq for Name {
+  fn eq(self, other: Name) -> bool { self.text == other.text }
+}
+
+impl Hash for Name {
+  fn hash(self) -> u64 { self.text.hash() }
+}
+
+impl Ord for Name {
+  fn compare(self, other: Name) -> Ordering { Ord.compare(other.text, self.text) }
+}
+
+impl Show for Name {
+  fn show(self) -> str { "<{self.text}>" }
+}
+
+type Tag = | Tag(str)
+
+impl Show for Tag {
+  fn show(self) -> str {
+    let Tag(t) = self
+    "#{t}"
+  }
+
+  fn show_nested(self) -> str {
+    let Tag(t) = self
+    "tag {t}"
+  }
+}
+
+fn main() / io {
+  let a = Name { text: "ana", note: "first" }
+  let b = Name { text: "ana", note: "second" }
+  let c = Name { text: "bo", note: "" }
+  print("{a == b} {[a] == [b]} {(1, a) == (1, b)} {Some(a) == Some(b)}")
+  print("{a < c} {c < a} {[a, c].sorted()}")
+  print("{a} {[a, c]} {Some(c)}")
+  var m: Map<Name, i64> = Map.new()
+  m[a] = 1
+  m[b] = 2
+  m[c] = 3
+  let stored = m.keys()[0]
+  print("{m} {stored.note}")
+  print("{Tag("x")} {[Tag("x")]} {(Tag("y"),)}")
+}

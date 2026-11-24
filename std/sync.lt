@@ -1,0 +1,15 @@
+module std.sync
+
+// Shared state (shared.std-sync). A `Shared<T>` is a handle on a value with one
+// identity: every copy of the handle reaches the same value (values.shared),
+// which only a `when` that names the handle reads and writes (shared.when). Both
+// items here are native (views.std-view).
+
+/// A handle on one value, which tasks share, reached only inside `when`.
+pub type Shared<T> = ?
+
+impl<T> Shared<T> {
+  /// A new value holding `value`, which must be `portable`: no view.
+  /// ex: { let s = Shared.new(2); when s { s += 1 }; when s { s } } == 3
+  pub fn new(value: T) -> Shared<T> = ?
+}

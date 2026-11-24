@@ -1,0 +1,6 @@
+/// Greets someone.
+pub syntax greet {
+  ($n: expr) => print(helper($n))
+}
+
+fn helper(name: str) -> str { "hello {name}" }

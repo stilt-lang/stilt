@@ -1,0 +1,3 @@
+//~ rule: program.module-names, program.module-header
+
+use a.b

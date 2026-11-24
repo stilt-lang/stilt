@@ -1,0 +1,57 @@
+// fannkuch-redux: the most pancake flips over the permutations of 1 to n, and a checksum of
+// them, as the Benchmarks Game's program counts them, on one thread.
+
+use std.cli
+
+fn fannkuch(n: i64) -> (i64, i64) {
+  var perm1 = []
+  var count = []
+  for i in 0..n {
+    perm1.push(i)
+    count.push(0)
+  }
+  var max_flips = 0
+  var checksum = 0
+  var permutations = 0
+  var r = n
+  loop {
+    while r != 1 {
+      count[r -% 1] = r
+      r -%= 1
+    }
+    var perm = perm1
+    var flips = 0
+    var k = perm[0]
+    while k != 0 {
+      var i = 0
+      var j = k
+      while i < j {
+        let t = perm[i]
+        perm[i] = perm[j]
+        perm[j] = t
+        i +%= 1
+        j -%= 1
+      }
+      flips +%= 1
+      k = perm[0]
+    }
+    if flips > max_flips { max_flips = flips }
+    if permutations % 2 == 0 { checksum +%= flips } else { checksum -%= flips }
+    loop {
+      if r == n { return (checksum, max_flips) }
+      let first = perm1[0]
+      for i in 0..r { perm1[i] = perm1[i +% 1] }
+      perm1[r] = first
+      count[r] -%= 1
+      if count[r] > 0 { break }
+      r +%= 1
+    }
+    permutations +%= 1
+  }
+}
+
+fn main() / io {
+  let n = (cli.arg(0) else "").to_i64() else 10
+  let (checksum, flips) = fannkuch(n)
+  print("{checksum}\nPfannkuchen({n}) = {flips}")
+}

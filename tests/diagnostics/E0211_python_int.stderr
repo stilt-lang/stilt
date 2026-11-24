@@ -1,0 +1,10 @@
+── UNKNOWN NAME ────────────────────────────── E0211_python_int.lt:2:11  [E0211]
+
+Stilt has no `int` function: a value converts with a method, as `x.to_i64()`:
+
+  2 │   let n = int("42")
+    │           ^^^
+
+A number converts with a method, as `n.to_i64()` or `n.to_f64()`, and a string
+parses with the same methods, which give an `Option`, `None` when the text isn't
+a number.

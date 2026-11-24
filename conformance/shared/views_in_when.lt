@@ -1,0 +1,57 @@
+//~ tier: advanced
+//~ rule: views.escaping, shared.when
+//~ run-output: "3 2"
+
+// In a `when`'s block, each name stands for the place of a value that the `when` lets go when
+// the block ends. So a view of one, or a closure that captures such a view, lives only in the
+// block: it may be used there, and may not be the `when`'s value nor be assigned to a variable
+// from outside.
+
+use std.sync
+use std.view
+
+fn length(a: sync.Shared<List<i64>>) -> i64 {
+  when a {
+    let v = view.View.all(a)
+    v.len()
+  }
+}
+
+fn viewed(a: sync.Shared<List<i64>>) -> i64 {
+  let v = when a { view.View.all(a) } //~ ERROR E0422
+  v.len()
+}
+
+fn branches(a: sync.Shared<List<i64>>, b: sync.Shared<List<i64>>) -> i64 {
+  let v = when a, b {
+    if a.len() > b.len() {
+      view.View.all(a) //~ ERROR E0422
+    } else {
+      view.View.all(b) //~ ERROR E0422
+    }
+  }
+  v.len()
+}
+
+fn captured(a: sync.Shared<List<i64>>) -> i64 {
+  let g = when a {
+    let v = view.View.all(a)
+    || v.len() //~ ERROR E0422
+  }
+  g()
+}
+
+fn assigned(a: sync.Shared<List<i64>>) -> i64 {
+  var g = || 0
+  when a {
+    let v = view.View.all(a)
+    g = || v.len() //~ ERROR E0422
+  }
+  g()
+}
+
+fn main() / io {
+  let a = sync.Shared.new([1, 2, 3])
+  let b = sync.Shared.new([4, 5])
+  print("{length(a)} {length(b)}")
+}

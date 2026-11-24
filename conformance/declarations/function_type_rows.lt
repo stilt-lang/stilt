@@ -1,0 +1,33 @@
+//~ rule: syntax.rows, declarations.function-type-rows, effects.inference
+
+fn make() -> fn(i64) -> i64 / io {
+  |n| {
+    print("{n}")
+    n
+  }
+}
+
+fn loud() -> (fn(i64) -> i64) / io {
+  print("making")
+  (|n| n + 1)
+}
+
+fn quiet() -> fn(i64) -> i64 / io {
+  print("making") //~ ERROR E0502
+  (|n| n)
+}
+
+fn use_made() -> i64 {
+  let f = make()
+  f(1) //~ ERROR E0502
+}
+
+fn ignore(f: fn(i64)) -> i64 {
+  f(1) //~ ERROR E0311
+}
+
+fn update(f: fn(inout List<i64>)) -> List<i64> {
+  var xs = [1]
+  f(inout xs)
+  xs
+}

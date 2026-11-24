@@ -1,0 +1,24 @@
+//~ tier: meta
+//~ rule: meta.staged-loops, meta.annotated-code
+
+use std.array
+
+type Shape = | Circle(i64) | Square(i64)
+
+const UNIT: Shape = Circle(5)
+
+// A loop's variable is no type argument.
+fn arguments() {
+  comptime for i in 0..3 {
+    let a: array.Array<i64, i> = array.fill(0) //~ ERROR E0347
+  }
+}
+
+// A `comptime match` covers every value, as a `match` does.
+fn uncovered() -> i64 {
+  comptime match UNIT { //~ ERROR E0329
+    Circle(r) => r,
+  }
+}
+
+fn main() {}

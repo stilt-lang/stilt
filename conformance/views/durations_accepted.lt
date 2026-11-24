@@ -1,0 +1,27 @@
+//~ tier: advanced
+//~ rule: views.reads-that-last, views.change-while-viewed
+//~ run-output: "[1, 2] 4 [1, 2, 3, 4, 5, 6] 1 [\"a\"]"
+
+use std.view
+
+type Doc = { lines: List<str>, n: i64 }
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  xs.push(4)
+  // A view that no binding holds reads `xs` only until its statement ends.
+  let n = view.View.all(xs).len()
+  xs.push(5)
+  var copy = []
+  if true {
+    let v = view.View.of(xs, 0, 2)
+    copy = v.copy()
+  }
+  // The view's scope has ended.
+  xs.push(6)
+  var d = Doc { lines: ["a"], n: 0 }
+  let w = view.View.all(d.lines)
+  // `d.n` doesn't overlap `d.lines`.
+  d.n = 1
+  print("{copy} {n} {xs} {d.n} {w}")
+}

@@ -1,0 +1,4 @@
+//~ rule: program.forms, program.missing-main
+//~ exit: 2
+
+fn main() / io { print("not a module") }

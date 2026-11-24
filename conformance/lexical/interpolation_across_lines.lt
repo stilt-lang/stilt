@@ -1,0 +1,5 @@
+//~ rule: lexical.string-literals, lexical.nested-interpolation
+fn sum() -> str {
+  "{1 + //~ ERROR E0005
+    2}"
+}

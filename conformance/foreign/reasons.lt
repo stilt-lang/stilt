@@ -1,0 +1,12 @@
+//~ tier: systems
+//~ rule: c.unsafe-because
+
+// An `unsafe` block says why its code is sound, in a reason with a character that isn't
+// whitespace.
+
+fn main() / io {
+  let a = unsafe because "" { 1 } //~ ERROR E0437
+  let b = unsafe because " \t\n" { 2 } //~ ERROR E0437
+  let c = unsafe because "a reason" { 3 }
+  print("{a + b + c}")
+}

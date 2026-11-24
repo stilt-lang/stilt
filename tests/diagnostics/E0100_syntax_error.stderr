@@ -1,0 +1,9 @@
+── SYNTAX ERROR ───────────────────────────── E0100_syntax_error.lt:1:8  [E0100]
+
+Unexpected `>`:
+
+  1 │ type P<> = { x: i64 }
+    │        ^
+
+The code from this token on isn't Stilt. The cause is often just before it, such
+as a bracket left open or a word from another language.

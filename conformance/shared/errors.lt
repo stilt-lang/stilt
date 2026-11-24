@@ -1,0 +1,48 @@
+//~ tier: advanced
+//~ rule: shared.std-sync, shared.when, shared.tasks-and-modes, shared.locks
+
+use std.sync
+use std.task
+use std.view
+
+type Account = { balance: i64 }
+
+fn outside(a: sync.Shared<Account>) -> i64 {
+  a.balance //~ ERROR E0313
+}
+
+fn nested(a: sync.Shared<Account>, b: sync.Shared<Account>) {
+  when a {
+    when b { b.balance += 1 } //~ ERROR E0430
+  }
+}
+
+fn touch(b: sync.Shared<Account>) {
+  when b { b.balance += 1 }
+}
+
+fn through_call(a: sync.Shared<Account>, b: sync.Shared<Account>) {
+  when a {
+    touch(b) //~ ERROR E0430
+  }
+}
+
+fn promised(a: sync.Shared<Account>) without locks {
+  when a { a.balance += 1 } //~ ERROR E0204
+}
+
+fn not_shared(n: i64) {
+  when n { } //~ ERROR E0433
+}
+
+fn twice(a: sync.Shared<Account>) {
+  when a, a { } //~ ERROR E0433
+}
+
+fn viewed(xs: List<i64>) / async {
+  let v = view.View.all(xs)
+  let s = sync.Shared.new(v) //~ ERROR E0432
+  let t = task.spawn(|| v.len()) //~ ERROR E0432
+}
+
+fn main() {}

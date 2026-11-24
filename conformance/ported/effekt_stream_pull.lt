@@ -1,0 +1,62 @@
+//~ tier: advanced
+//~ rule: handlers.resuming, handlers.call-that-handler-ends, shared.when
+//~ run-output: "54"
+
+// Effekt, examples/pos/stream_pull.effekt: `sum` loops forever, adding each value it reads to a
+// state. `map` answers each read with the image of a read from the handler outside it. `range`
+// answers reads with 1 to 9, and then doesn't resume, which ends the `with` and with it the
+// loop. The state then holds 2 + 3 + … + 10 = 54. Effekt keeps the state and `range`'s counter
+// in local variables that its handlers assign; a Stilt handler captures by copy, so here they
+// are `Shared<i64>` values that the bodies reach in `when`.
+
+use std.sync
+
+effect Read {
+  fn read() -> i64
+}
+
+effect State {
+  fn get() -> i64
+  fn put(n: i64)
+}
+
+fn sum() / {State, Read} {
+  loop { State.put(State.get() + Read.read()) }
+}
+
+fn map(escaping f: fn(i64) -> i64, prog: fn() / Read) / Read {
+  let images = handler Read {
+    fn read() -> i64 { f(Read.read()) }
+  }
+  with images { prog() }
+}
+
+fn range(from: i64, to: i64, prog: fn() / Read) {
+  let next = sync.Shared.new(from)
+  let counts = handler Read -> () {
+    fn read() -> i64 {
+      let x = when next { next }
+      if x < to {
+        when next { next = x + 1 }
+        resume(x)
+      } else {
+        ()
+      }
+    }
+  }
+  with counts { prog() }
+}
+
+fn state(prog: fn() / State) -> i64 {
+  let s = sync.Shared.new(0)
+  let cell = handler State {
+    fn get() -> i64 { when s { s } }
+    fn put(n: i64) { when s { s = n } }
+  }
+  with cell { prog() }
+  when s { s }
+}
+
+fn main() / io {
+  print("{state(|| range(1, 10, || map(|n| n + 1, || sum())))}")
+}

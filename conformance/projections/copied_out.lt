@@ -1,0 +1,31 @@
+//~ tier: advanced
+//~ rule: projections.call-is-place, projections.what-view-writes, projections.results-that-write
+//~ run-output: "[\"p\", \"Q\", \"r\"] [1, 0, 0]"
+
+use std.view
+
+// A projection yielding a writable view of its `inout` parameter.
+fn names(inout xs: List<str>) -> inout view.View<List<str>> {
+  yield view.into(inout xs, 0, 2)
+}
+
+fn rest(inout xs: List<i64>) -> inout view.View<List<i64>> {
+  yield view.into(inout xs, 1, xs.len())
+}
+
+fn main() / io {
+  var ss = ["p", "q", "r"]
+  {
+    // Read, the call copies the view out: the copy writes `ss`, the argument passed `inout`,
+    // so a write through it reaches `ss` once the projection has resumed.
+    var v = names(inout ss)
+    v[1] = "Q"
+  }
+  var xs = [1, 2, 3]
+  {
+    var t = rest(inout xs)
+    t[0] = 0
+    t[1] = 0
+  }
+  print("{ss} {xs}")
+}

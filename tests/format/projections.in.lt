@@ -1,0 +1,17 @@
+// A projection's result, `-> inout T`, with one space on each side of `inout`, and `yield e`
+// as a statement on a line of its own, with one space after `yield` (projections.show).
+type Grid = { w: i64, cells: List<i64> }
+impl Grid {
+  fn at(inout self, x: i64, y: i64)->inout   i64 { yield   self.cells[y * self.w + x] }
+}
+trait Cell {
+  fn cell(inout self, i: i64) ->inout i64
+}
+fn first<T>(inout xs: List<T>) -> inout T / io {
+  print("first"); yield xs[0]
+}
+fn main() / io {
+  var g = Grid { w: 2, cells: [0, 0, 0, 0] }
+  g.at(1, 0) = 5; g.at(1, 0) += 1
+  print("{g.at(1, 0)}")
+}

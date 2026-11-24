@@ -1,0 +1,28 @@
+//~ tier: advanced
+//~ rule: shared.when-on-value-already-held
+//~ panic: deadlock
+//~ panic-at: deadlock_handler.lt:16:36
+//~ stdout:
+//~ | in
+
+use std.sync
+
+type Counter = { n: i64 }
+
+effect Tick {
+  fn tick()
+}
+
+fn bump(c: sync.Shared<Counter>) { when c { c.n += 1 } }
+
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 0 })
+  let h = handler Tick { fn tick() { bump(c) } }
+  with h {
+    when c {
+      print("in")
+      Tick.tick()
+      print("not reached")
+    }
+  }
+}

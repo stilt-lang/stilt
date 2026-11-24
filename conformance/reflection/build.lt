@@ -1,0 +1,72 @@
+//~ tier: meta
+//~ rule: meta.building, meta.reflects
+//~ stdout:
+//~ | Point { x: 10, y: 20 } (1, "b!", false)
+//~ | call x
+//~ | call y
+//~ | call z
+//~ | call x
+//~ | call y
+//~ | raised at y
+//~ | Point { x: 2, y: 4 }
+
+use std.meta
+
+type Point = { x: i64, y: i64 }
+type Triple = { x: i64, y: str, z: bool }
+
+// A field's value, changed where its type is `i64` or `str`.
+fn changed<F>(value: F) -> F {
+  match F.shape() {
+    Int(n) => n.parse("{n.text(value)}0") else value
+    Str(s) => s.make("{s.get(value)}!")
+    _ => value
+  }
+}
+
+// `build` makes a value of a record or a tuple type from what its argument
+// gives each field, as a generic function or a closure.
+fn rebuilt<T>(value: T) -> T {
+  match T.shape() {
+    Record(fields) => fields.build(|f| changed(f.get(value)))
+    Tuple(fields) => fields.build(|f| if f.index() == 0 { f.get(value) } else { changed(f.get(value)) })
+    _ => value
+  }
+}
+
+// `build` calls its argument once on each field, in order, and its effects
+// pass through: once a call raises, it calls it on no other field.
+fn visited<T>(value: T, stop: str) / {io, raise<str>} {
+  match T.shape() {
+    Record(fields) => {
+      let _ = try fields.build(|f| {
+        print("call {f.name()}")
+        if f.name() == stop { raise "raised at {stop}" }
+        f.get(value)
+      })
+    }
+    _ => {}
+  }
+}
+
+// A generic function given for `build`'s polymorphic argument.
+fn doubled<T>(value: T) -> T {
+  match T.shape() {
+    Record(fields) => fields.build(|f| twice(f.get(value)))
+    _ => value
+  }
+}
+
+fn twice<F>(value: F) -> F {
+  match F.shape() {
+    Int(n) => n.parse("{(n.text(value).to_i64() else 0) * 2}") else value
+    _ => value
+  }
+}
+
+fn main() / io {
+  print("{rebuilt(Point { x: 1, y: 2 })} {rebuilt((1, "b", false))}")
+  try visited(Triple { x: 1, y: "a", z: true }, "none") catch e => print(e)
+  try visited(Triple { x: 1, y: "a", z: true }, "y") catch e => print(e)
+  print("{doubled(Point { x: 1, y: 2 })}")
+}

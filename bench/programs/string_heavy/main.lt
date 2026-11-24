@@ -1,0 +1,33 @@
+// string-heavy: builds a text of words, then splits, searches, replaces, changes the case of
+// and joins it.
+
+use std.cli
+
+fn main() / io {
+  let size = (cli.arg(0) else "").to_i64() else 200000
+  var words = []
+  var x = 7
+  for _ in 0..size {
+    x = (x * 1103515245 + 12345) % 2147483648
+    words.push("w{x % 1000}")
+  }
+  let text = " ".join(words)
+  let parts = text.split(" ")
+  var lengths = 0
+  var sevens = 0
+  for p in parts {
+    lengths += p.len()
+    if p.ends_with("7") { sevens += 1 }
+  }
+  let replaced = text.replace("w1", "one-")
+  let upper = replaced.ascii_upper()
+  var digits = 0
+  for b in upper.bytes() { if b >= 48 && b <= 57 { digits += 1 } }
+  let found = upper.find("ONE-99 ") else -1
+  let lines = text.replace(" w5", "\nw5").lines()
+  var longest = 0
+  for line in lines { if line.len() > longest { longest = line.len() } }
+  print("{text.len()} bytes, {parts.len()} words, {lengths} letters, {sevens} sevens")
+  print("{replaced.len()} replaced, {digits} digits, found at {found}")
+  print("{lines.len()} lines, longest {longest}, trimmed {"  {upper.slice(0, 20)}  ".trim()}")
+}

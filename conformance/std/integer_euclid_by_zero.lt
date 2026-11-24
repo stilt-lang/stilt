@@ -1,0 +1,8 @@
+//~ rule: std.integers
+//~ panic: divide-by-zero
+//~ panic-at: integer_euclid_by_zero.lt:7:11
+
+fn main() / io {
+  let zero = 0
+  print("{i64.rem_euclid(5, zero)}")
+}

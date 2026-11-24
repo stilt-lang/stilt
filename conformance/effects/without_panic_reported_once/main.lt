@@ -1,0 +1,6 @@
+//~ rule: effects.without-panic, errors.error-type
+
+use lib
+use pure
+
+fn main() {}

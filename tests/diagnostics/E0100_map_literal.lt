@@ -1,0 +1,4 @@
+fn main() / io {
+  let ages = {"ada": 36, "alan": 41}
+  print("{ages}")
+}

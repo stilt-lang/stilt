@@ -1,0 +1,10 @@
+── MISMATCHED TYPES ──────────────────── E0311_mismatched_types.lt:1:44  [E0311]
+
+Expected `i64`, found `{float}`:
+
+  1 │ fn discounted(price: i64) -> i64 { price * 0.9 }
+    │                                            ^^^
+
+Stilt never converts a value to another type on its own. Give a value of the
+expected type, convert it with a method such as `to_f64()`, or change what
+expects it.

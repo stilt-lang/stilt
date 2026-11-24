@@ -1,0 +1,8 @@
+meta use keys
+
+type Login = { message: str, ok: bool, attempts: i64 }
+
+fn main() / io {
+  let login = Login { message: "login failed user=ana ip=10.0.0.4", ok: false, attempts: 3 }
+  if let Some(user) = keys.value!(login.attempts, "user") { print(user) }
+}

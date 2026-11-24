@@ -1,0 +1,5 @@
+city   sum(qty)  mean(price)  count
+-----  --------  -----------  -----
+Paris        13         6.58      3
+Lyon         11         6.06      4
+Nice          5         7.62      2

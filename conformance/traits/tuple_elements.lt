@@ -1,0 +1,17 @@
+//~ rule: types.field-access, traits.method-resolution, effects.function-values
+
+fn twice(pair: (fn(i64) -> i64, i64)) -> i64 {
+  let once = pair.0(pair.1)
+  (pair.0)(once)
+}
+
+fn label(pair: (str, i64)) -> str {
+  pair.0(1) //~ ERROR E0311
+}
+
+fn quiet() {}
+
+fn loud() / io {
+  let actions: (fn() / io, i64) = (quiet, 1)
+  actions.0()
+}

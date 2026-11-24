@@ -1,0 +1,136 @@
+// Tracing a ray through the scene: where it first hits, how that point is lit, and what its
+// reflection sees. Nothing here allocates, which the limits check.
+
+use scene
+use vec
+
+/// A ray, from a point in a direction of length one.
+pub type Ray = { from: vec.Vec3, dir: vec.Vec3 }
+
+/// Where a ray hits a surface, at distance `t`, and the surface's normal and material there.
+type Hit = { t: f64, point: vec.Vec3, normal: vec.Vec3, material: scene.Material }
+
+/// How far a ray must travel before it can hit a surface, so that a ray leaving a surface
+/// never hits that surface again at its start.
+const EPSILON: f64 = 0.0001
+
+/// The distance at which the ray first meets the sphere, if it does.
+fn meets(s: scene.Sphere, r: Ray) -> Option<f64>
+  without alloc, panic {
+  let oc = r.from.minus(s.center)
+  let b = oc.dot(r.dir)
+  let d = b * b - oc.dot(oc) + s.radius * s.radius
+  if d < 0.0 { return None }
+  let root = d.sqrt()
+  if -b - root > EPSILON {
+    Some(-b - root)
+  } else if -b + root > EPSILON {
+    Some(-b + root)
+  } else {
+    None
+  }
+}
+
+/// The floor's material at `p`: a checkerboard of unit squares.
+fn floor_at(p: vec.Vec3) -> scene.Material
+  without alloc, panic {
+  let half = (p.x.floor() + p.z.floor()) * 0.5
+  let color = if half.floor() == half { vec.v(0.85, 0.85, 0.8) } else { vec.v(0.25, 0.25, 0.3) }
+  scene.Material { color, mirror: 0.15, shine: 8 }
+}
+
+/// The surface the ray hits first: a sphere, or the floor at height 0.
+fn closest(sc: scene.Scene, r: Ray) -> Option<Hit>
+  without alloc, panic {
+  var best: Option<Hit> = None
+  var nearest = f64.INFINITY
+  for s in sc.spheres {
+    match meets(s, r) {
+      Some(t) if t < nearest => {
+        nearest = t
+        let p = r.from.plus(r.dir.times(t))
+        let normal = p.minus(s.center).times(1.0 / s.radius)
+        best = Some(Hit { t, point: p, normal, material: s.material })
+      }
+      _ => {}
+    }
+  }
+  if r.dir.y < 0.0 - EPSILON {
+    let t = 0.0 - r.from.y / r.dir.y
+    if t > EPSILON && t < nearest {
+      let p = r.from.plus(r.dir.times(t))
+      best = Some(Hit { t, point: p, normal: vec.v(0.0, 1.0, 0.0), material: floor_at(p) })
+    }
+  }
+  best
+}
+
+/// Whether something stands between the ray's start and a light at `distance` along it.
+fn shadowed(sc: scene.Scene, r: Ray, distance: f64) -> bool
+  without alloc, panic {
+  match closest(sc, r) {
+    Some(h) => h.t < distance
+    None => false
+  }
+}
+
+/// `x` to the power `n`, a power of two, by squaring.
+/// ex: power(0.5, 4) == 0.0625
+fn power(x: f64, n: i64) -> f64
+  without alloc, panic {
+  var p = x
+  var k = 1
+  while k < n {
+    p = p * p
+    k = k * 2
+  }
+  p
+}
+
+/// The light that the hit point sends back along the ray: ambient light, then for each light
+/// that reaches it, diffuse light and a highlight.
+fn shade(sc: scene.Scene, h: Hit, r: Ray) -> vec.Vec3
+  without alloc, panic {
+  var c = h.material.color.times(sc.ambient)
+  for l in sc.lights {
+    let to = l.at.minus(h.point)
+    let distance = to.length()
+    let dir = to.times(1.0 / distance)
+    let diffuse = h.normal.dot(dir)
+    if diffuse > 0.0 && !shadowed(sc, Ray { from: h.point, dir }, distance) {
+      c = c.plus(h.material.color.tint(l.color).times(diffuse))
+      let highlight = dir.times(-1.0).reflected(h.normal).dot(r.dir.times(-1.0))
+      if highlight > 0.0 { c = c.plus(l.color.times(power(highlight, h.material.shine))) }
+    }
+  }
+  c
+}
+
+/// The color that the ray sees, following its reflections `depth` times at most.
+pub fn trace(sc: scene.Scene, r: Ray, depth: i64) -> vec.Vec3
+  without alloc, panic {
+  match closest(sc, r) {
+    None => sc.sky.times(1.0 - 0.4 * r.dir.y.max(0.0))
+    Some(h) => {
+      let local = shade(sc, h, r)
+      let m = h.material.mirror
+      if depth > 0 && m > 0.0 {
+        let bounce = Ray { from: h.point, dir: r.dir.reflected(h.normal) }
+        local.times(1.0 - m).plus(trace(sc, bounce, depth - 1).times(m))
+      } else {
+        local
+      }
+    }
+  }
+}
+
+/// The color of the pixel at column `x` and row `y` of an image `width` by `height`, seen from
+/// a camera above the floor, looking along z.
+pub fn pixel(sc: scene.Scene, width: i64, height: i64, x: i64, y: i64) -> vec.Vec3 {
+  let w = width.to_f64()
+  let h = height.to_f64()
+  let u = (2.0 * (x.to_f64() + 0.5) / w - 1.0) * w / h
+  let up = 1.0 - 2.0 * (y.to_f64() + 0.5) / h
+  let dir = vec.v(u * 0.8, up * 0.8 - 0.1, 1.0).unit()
+  trace(sc, Ray { from: vec.v(0.0, 1.2, -1.0), dir }, 3)
+}

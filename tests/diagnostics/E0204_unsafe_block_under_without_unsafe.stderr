@@ -1,0 +1,13 @@
+── FACT BEYOND A `without` LIMIT ── E0204_unsafe_block_under_without_unsafe.lt:6:3  [E0204]
+
+This `unsafe` block may run C code and break the language's guarantees, but
+`length` says `without unsafe`:
+
+  5 │ pub fn length(text: str) -> u64 without unsafe {
+    │                                         ────── the limit
+  6 │   unsafe because "with_c_str ends s with a NUL" { text.with_c_str(|s| strlen(s)) }
+    │   ^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.

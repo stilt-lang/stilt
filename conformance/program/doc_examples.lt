@@ -1,0 +1,63 @@
+//~ rule: syntax.doc-comment-text, syntax.doc-examples, program.running-tests, program.doc-examples
+
+pub type Failure = | Failure(str)
+
+/// A point on the grid.
+/// ex: Point { x: 1, y: 2 }.x == 1 //~ PASS
+type Point = { x: i64, y: i64 }
+
+/// Things with an area.
+/// ex: Square(2).area() == 4 //~ PASS
+trait Area {
+  /// The area.
+  /// ex: Square(3).area() == 9 //~ PASS
+  fn area(self) -> i64
+}
+
+type Square = | Square(i64)
+
+impl Area for Square {
+  /// Squares the side.
+  /// ex: Square(1).area() == 1 //~ PASS
+  fn area(self) -> i64 {
+    let Square(side) = self
+    side * side
+  }
+}
+
+impl Point {
+  /// The origin.
+  /// ex: Point.ORIGIN.y == 0 //~ PASS
+  pub const ORIGIN: Point = Point { x: 0, y: 0 }
+
+  /// Moves right.
+  /// ex: Point.ORIGIN.right().x == 1 //~ PASS
+  pub fn right(self) -> Point { Point { x: self.x + 1, y: self.y } }
+}
+
+/// The answer.
+/// ex: ANSWER == 42 //~ PASS
+const ANSWER: i64 = 42
+
+/// Parses a number.
+///
+/// ex: try parse("7") == 7 //~ PASS
+/// ex: try parse("x") == 0 //~ FAIL
+/// ex: parse_or_panic("x") == 0 //~ FAIL
+/// ex: parse_or_panic("8") == 9 //~ FAIL
+/// ex: halt() //~ FAIL
+/// ex: secret() == "hidden" // a comment ends the example //~ PASS
+/// ex: "a//b".len() == 4 //~ PASS
+pub fn parse(s: str) -> i64 / raise<Failure> { s.to_i64() else raise Failure("not a number: {s}") }
+
+fn parse_or_panic(s: str) -> i64 { s.to_i64() else panic("not a number") }
+
+fn halt() -> bool / io { exit(0) }
+
+fn secret() -> str { "hidden" }
+
+/// Checks the answer.
+/// ex: ANSWER > 0 //~ PASS
+test "answer" { //~ PASS
+  assert ANSWER == 42
+}

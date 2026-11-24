@@ -1,0 +1,22 @@
+// A signature that doesn't fit in 100 columns has one parameter per line, a comma after each, and
+// its return type and row after the closing parenthesis. One that fits goes on one line, and so
+// does a body of one statement after it.
+fn area(width: f64, height: f64) -> f64 { width * height }
+
+pub fn describe_shipment(
+  customer: str,
+  address: Address,
+  weight_in_grams: i64,
+  express: bool,
+) -> str / io { "{customer}" }
+
+fn summarize(
+  self,
+  orders: List<(str, i64)>,
+  on_missing: fn(str) -> i64 / raise<Missing>,
+  verbose: bool,
+) -> i64 / raise<Missing> { 0 }
+
+type Event =
+  | Shipped(str, Address, i64, Option<Carrier>, Option<Insurance>, bool, bool, bool, f64)
+  | Lost

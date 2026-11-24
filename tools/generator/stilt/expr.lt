@@ -1,0 +1,193 @@
+// Expressions. Each is made for the type its context expects: a variable, a
+// field or a call that has the type, or one of the forms that make a value of
+// the type out of others. The modules of those forms take `expr` to make
+// their operands.
+
+use bools
+use closures
+use code
+use context
+use lists
+use lit
+use numbers
+use options
+use patterns
+use pick
+use texts
+use ty
+use values
+
+/// `expr`, as the modules of the forms take it.
+fn maker() -> context.Expr { context.Expr { make: expr } }
+
+/// The functions that an expression can call to get a `t`. A call that takes
+/// `inout` arguments is a statement of its own, so that no modification
+/// starts while an expression is reading (modes.overlap).
+fn callable(b: context.Body, sc: context.Scope, t: ty.Ty) -> List<context.FnSig> {
+  b.p.fns.filter(
+    |f| f.ret == t && f.params.all(|(inout_, _)| !inout_) && context.affordable(b, sc, f.cost),
+  )
+}
+
+/// The fields of variables in scope that have type `t`, as `v.f` or `v.0`.
+fn fields_of(b: context.Body, sc: context.Scope, t: ty.Ty) -> List<str> {
+  var out = []
+  for v in sc.vars {
+    match v.ty {
+      Named(name) => {
+        let Record(fields) = context.decl(b, name) else continue
+        for (f, u) in fields { if u == t { out.push("{v.name}.{f}") } }
+      }
+      Tuple(ts) => for (i, u) in ts.enumerate(0) { if u == t { out.push("{v.name}.{i}") } }
+      _ => {}
+    }
+  }
+  out
+}
+
+/// `c` in a block that fixes its type: `{ let k: T = c; k }`.
+fn annotated(inout b: context.Body, t: ty.Ty, c: code.Code) -> code.Code {
+  let k = context.fresh(inout b.p, "k")
+  code.compound("\{ let {k}: {ty.to_string(t)} = {c.text}; {k} }")
+}
+
+/// An expression of type `t`. When `known`, its type is fixed without an
+/// expected type.
+pub fn expr(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  t: ty.Ty,
+) -> code.Code {
+  let vars = context.typed(sc.vars, t)
+  let fields = fields_of(b, sc, t)
+  let calls = if depth > 0 { callable(b, sc, t) } else { [] }
+  let deeper = if depth > 0 { by_type(b, sc, depth, known, t) } else { [] }
+  let own: List<(i64, fn(inout context.Body) -> code.Code)> = [
+    (if vars.is_empty() { 0 } else { 8 }, |inout b| code.atom(pick.one(inout b.p.r, vars).name)),
+    (if fields.is_empty() { 0 } else { 3 }, |inout b| code.atom(pick.one(inout b.p.r, fields))),
+    (3, |inout b| values.value(maker(), inout b, sc, depth, known, t)),
+    (
+      if calls.is_empty() { 0 } else { 3 },
+      |inout b| {
+        let f = pick.one(inout b.p.r, calls)
+        call(inout b, sc, depth, f)
+      },
+    ),
+  ]
+  let c = context.run(inout b, own.concat(deeper))
+  if known && !c.known { annotated(inout b, t, c) } else { c }
+}
+
+/// A call of `f`, marked as effects.marking requires. Where a raise can't escape, the
+/// call is caught.
+fn call(inout b: context.Body, sc: context.Scope, depth: i64, f: context.FnSig) -> code.Code {
+  context.spend(inout b, sc, f.cost)
+  var args = []
+  for (_, u) in f.params { args.push(expr(inout b, sc, depth - 1, false, u).text) }
+  let text = code.call_text(f.fname, args)
+  if !f.raises { return code.atom(text) }
+  if sc.may_raise { return code.compound("try {text}") }
+  let arms = catch_arms(inout b, sc, depth, f.ret)
+  code.compound("try {text} catch {arms}")
+}
+
+/// The arms of a `catch` of `Fault` whose bodies have type `t`: a catch-all,
+/// which needs a reason (effects.catch-alls-need-reason), or an arm for each variant. The
+/// catch-all draws its body before its reason.
+pub fn catch_arms(inout b: context.Body, sc: context.Scope, depth: i64, t: ty.Ty) -> str {
+  let d = depth - 1
+  if pick.chance(inout b.p.r, 0.6) {
+    let body = expr(inout b, sc, d, false, t)
+    let reason = lit.string_body(inout b.p.r)
+    return "_ because \"{reason}\" => {body.text}"
+  }
+  let variants = b.p.fault_variants
+  var arms = []
+  for (case, payload) in variants {
+    var bound = []
+    for u in payload {
+      bound.push(context.Var { name: context.fresh(inout b.p, "e"), ty: u, mutable: false })
+    }
+    let pattern = if bound.is_empty() { case } else { code.call_text(case, bound.map(.name)) }
+    var inner = sc
+    inner.vars = bound.concat(sc.vars)
+    arms.push("{pattern} => {expr(inout b, inner, d, false, t).text}")
+  }
+  "\{ {", ".join(arms)} }"
+}
+
+/// The forms that make a `t` out of other values, each with its weight: those
+/// of every type, then those of `t`'s.
+fn by_type(
+  b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  t: ty.Ty,
+) -> List<(i64, fn(inout context.Body) -> code.Code)> {
+  let d = depth - 1
+  let ex = maker()
+  let common = [
+    (1, |inout b| if_expr(inout b, sc, depth, known, t)),
+    (1, |inout b| patterns.match_expr(ex, inout b, sc, depth, known, t)),
+    (
+      2,
+      |inout b| {
+        let o = expr(inout b, sc, d, known, ty.OptionOf(t))
+        let fallback = expr(inout b, sc, d, false, t)
+        code.compound_with("{code.operand(o)} else {code.operand(fallback)}", o.known)
+      },
+    ),
+    (1, |inout b| closures.fold(ex, inout b, sc, depth, t)),
+  ]
+  let specific = match t {
+    Int(k) => numbers.int_ops(ex, sc, depth, known, k)
+    Float(k) => numbers.float_ops(ex, sc, depth, known, k)
+    Bool => bools.ops(ex, sc, depth)
+    Str => texts.ops(ex, sc, depth)
+    ListOf(u) => lists.ops(ex, b, sc, depth, u)
+    OptionOf(u) => options.ops(ex, b, sc, depth, u)
+    _ => []
+  }
+  common.concat(specific)
+}
+
+pub fn cond(inout b: context.Body, sc: context.Scope, depth: i64) -> code.Code {
+  bools.cond(maker(), inout b, sc, depth)
+}
+
+fn if_expr(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  known: bool,
+  t: ty.Ty,
+) -> code.Code {
+  let d = depth - 1
+  let c = cond(inout b, sc, d)
+  let x = expr(inout b, sc, d, known, t)
+  let y = expr(inout b, sc, d, false, t)
+  code.compound_with("if {code.head(c.text)} \{ {x.text} } else \{ {y.text} }", x.known)
+}
+
+// The forms that statements use too.
+
+pub fn closure(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+  param: ty.Ty,
+  t: ty.Ty,
+) -> str { closures.closure(maker(), inout b, sc, depth, false, param, t) }
+
+pub fn interpolation(inout b: context.Body, sc: context.Scope, depth: i64) -> code.Code {
+  texts.interpolation(maker(), inout b, sc, depth)
+}
+
+pub fn scrutinee(
+  inout b: context.Body,
+  sc: context.Scope,
+  depth: i64,
+) -> (code.Code, List<(str, List<context.Var>)>) { patterns.scrutinee(maker(), inout b, sc, depth) }

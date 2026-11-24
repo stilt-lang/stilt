@@ -1,0 +1,15 @@
+[package]
+name = "stilt-diag"
+description = "The diagnostics of Stilt's compiler: their codes, model and renderings"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rowan.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

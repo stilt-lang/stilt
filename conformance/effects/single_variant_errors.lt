@@ -1,0 +1,21 @@
+//~ rule: effects.reasons-only-on-catch-alls
+
+type Timeout = | Timeout
+
+type ParseError = { line: i64 }
+
+fn wait() -> i64 / raise<Timeout> { raise Timeout }
+
+fn parse() -> i64 / raise<ParseError> { raise ParseError { line: 1 } }
+
+fn plain() -> i64 { try wait() catch Timeout => 0 }
+
+fn reasoned() -> i64 {
+  try wait() catch Timeout because "a timeout counts as zero" => 0 //~ ERROR E0504
+}
+
+fn record() -> i64 { try parse() catch ParseError { line } => line }
+
+fn record_reasoned() -> i64 {
+  try parse() catch ParseError { .. } because "every parse error counts as zero" => 0 //~ ERROR E0504
+}

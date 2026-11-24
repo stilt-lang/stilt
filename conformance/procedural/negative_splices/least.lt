@@ -1,0 +1,16 @@
+use std.meta
+
+/// The least `i8`, spliced as `(-128)`.
+pub macro least_i8() -> meta.Expr {
+  let n: i8 = -128
+  quote { $n }
+}
+
+/// The least `i64` and the number after it, spliced among a list's elements.
+pub macro least_i64() -> meta.Expr {
+  let n: i64 = -9223372036854775807 - 1
+  quote { [$n, $(n + 1)] }
+}
+
+/// The least `i16`, as the quote's own tokens write it.
+pub macro least_i16() -> meta.Expr { quote { -32768 } }

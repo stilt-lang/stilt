@@ -1,0 +1,14 @@
+//~ tier: advanced
+//~ rule: handlers.declaring-effect
+
+// An effect declares one or more operations: one with none could never be performed.
+effect Marker { //~ ERROR E0518
+}
+
+effect Log {
+  fn log(line: str)
+}
+
+fn main() / io {
+  print("ran")
+}

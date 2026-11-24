@@ -1,0 +1,7 @@
+type Dog = { name: str }
+
+impl Dog {
+  fn speak(self) -> str { "{name} barks" }
+}
+
+fn main() / io { print(Dog { name: "rex" }.speak()) }

@@ -1,0 +1,2 @@
+//~ rule: lexical.reserved-words, errors.syntax-errors
+fn main() {}

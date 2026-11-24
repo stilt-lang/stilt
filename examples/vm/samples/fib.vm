@@ -1,0 +1,40 @@
+; Prints fib(0) to fib(n), each by the naive recursion.
+
+fn main 1               ; slot 0: n
+  push 0
+  store 1               ; slot 1: i
+next:
+  load 1
+  load 0
+  le
+  jumpz done            ; while i <= n
+  load 1
+  call fib
+  print
+  load 1
+  push 1
+  add
+  store 1
+  jump next
+done:
+  push 0
+  ret
+
+fn fib 1                ; slot 0: n
+  load 0
+  push 2
+  lt
+  jumpz recurse
+  load 0
+  ret                   ; n, when n < 2
+recurse:
+  load 0
+  push 1
+  sub
+  call fib
+  load 0
+  push 2
+  sub
+  call fib
+  add
+  ret                   ; fib(n - 1) + fib(n - 2)

@@ -1,0 +1,17 @@
+── FACT BEYOND A `without` LIMIT ── E0204_assert_in_a_raising_function.lt:2:3  [E0204]
+
+This `assert` can panic, but `withdraw` says `without panic`:
+
+  1 │ pub fn withdraw(balance: i64, amount: i64) -> i64 / raise<str> without panic {
+    │                                                                        ───── the limit
+  2 │   assert amount <= balance
+    │   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+A `without` promises that the code, and everything it calls, never does what the
+limit names. Change the code so that it can't, or remove the limit if the code
+needs it.
+
+To fix it, raise an error instead:
+
+  2 │   if amount > balance { raise "assertion failed" }
+    │   ~~~      ~~~       +++++++++++++++++++++++++++++

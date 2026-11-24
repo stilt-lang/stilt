@@ -1,0 +1,18 @@
+//~ tier: advanced
+//~ rule: projections.what-view-writes, projections.reaching-written-source
+//~ run-output: "[9, 2, 3, 4] 4"
+
+use std.view
+
+fn main() / io {
+  var xs = [1, 2, 3]
+  // Before the view is made, `xs` is reached freely.
+  xs.push(4)
+  let n = xs.len()
+  {
+    var v = view.into(inout xs, 0, 1)
+    v[0] = 9
+  }
+  // The binding's scope has ended.
+  print("{xs} {n}")
+}

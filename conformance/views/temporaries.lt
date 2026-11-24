@@ -1,0 +1,34 @@
+//~ tier: advanced
+//~ rule: views.escaping, views.across-calls, views.reads-that-last, views.view-types
+//~ run-output: "6 2"
+
+// A view of a call's result has that temporary value as its source. A function's result, or a
+// closure's, may view only its parameters, so neither may give such a view back; a block's
+// value may, since the temporary lasts as long as what holds the view. A closure parameter and
+// a `let` may be written with a view type.
+
+use std.view
+
+fn name() -> str { "abc" }
+
+fn made() -> view.View<str> { view.View.all(name()) } //~ ERROR E0422
+
+fn inout_made(inout s: str) -> view.View<str> { view.View.all(name()) } //~ ERROR E0422
+
+fn held() -> i64 {
+  let v: view.View<str> = { view.View.all(name()) }
+  let lengths = view.Iter.of(["a", "bc"]).map(|w: str| view.View.all(w).len())
+  v.len() + lengths.fold(0, |n, k| n + k)
+}
+
+fn closure() -> i64 {
+  let g = || view.View.all(name()) //~ ERROR E0422
+  0
+}
+
+fn annotated(s: str) -> i64 {
+  let f = |v: view.View<str>| v.len()
+  f(view.View.all(s))
+}
+
+fn main() / io { print("{held()} {annotated("ab")}") }

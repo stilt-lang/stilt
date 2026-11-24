@@ -1,0 +1,1 @@
+pub fn main() / io { print("not the entry point") }

@@ -1,0 +1,10 @@
+── CONSTANT'S VALUE ISN'T A CONSTANT EXPRESSION ── E0326_constant_s_value_isn_t_a_constant_expression.lt:1:22  [E0326]
+
+A constant's value is built only from literals, constants, tuples, lists,
+records and variants:
+
+  1 │ const TIMEOUT: i64 = 10 * 60
+    │                      ^^^^^^^
+
+A constant is built from literals and other constants, with no arithmetic and no
+calls. Write the value itself, as `600`, or compute it in a function.

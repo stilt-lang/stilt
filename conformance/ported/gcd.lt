@@ -1,0 +1,21 @@
+//~ rule: std.integers, numbers.division-and-remainder, declarations.function-declarations
+//~ stdout:
+//~ | gcd(40902, 24140) = 34
+//~ | gcd(1071, 462) = 21
+//~ | gcd(-48, 18) = 6
+//~ | gcd(0, 5) = 5
+//~ | lcm(12, 18) = 36
+//~ | true
+
+// Rosetta Code, Greatest common divisor, by Euclid's algorithm: gcd(a, b) is gcd(b, a mod b),
+// and a when b is 0. Rosetta's solutions show gcd(40902, 24140) = 34, and Euclid's Elements
+// works gcd(1071, 462) = 21. The result is compared with the library's `gcd`.
+
+fn gcd(a: i64, b: i64) -> i64 { if b == 0 { a.abs() } else { gcd(b, a % b) } }
+
+fn main() / io {
+  let pairs = [(40902, 24140), (1071, 462), (-48, 18), (0, 5)]
+  for (a, b) in pairs { print("gcd({a}, {b}) = {gcd(a, b)}") }
+  print("lcm(12, 18) = {12 / gcd(12, 18) * 18}")
+  print("{pairs.all(|(a, b)| gcd(a, b) == a.gcd(b))}")
+}

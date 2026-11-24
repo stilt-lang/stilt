@@ -1,0 +1,38 @@
+// The bindings in scope of the type that the code expects where a mismatch is.
+
+fn label(n: i64, name: str, title: str) -> str {
+  let shown = n.show()
+  n //~ E0311
+  //~ alternative: binding name: str
+  //~ alternative: binding title: str
+  //~ alternative: binding shown: str
+}
+
+// A block's bindings end with it.
+fn pick(flag: bool, a: i64) -> i64 {
+  if flag {
+    let inner = 1
+  }
+  let b = 2
+  "no" //~ E0311
+  //~ alternative: binding a: i64
+  //~ alternative: binding b: i64
+}
+
+// The `let` hides the parameter of its name.
+fn twice(x: str) -> i64 {
+  let x = 3
+  let y = x
+  "a" //~ E0311
+  //~ alternative: binding x: i64
+  //~ alternative: binding y: i64
+}
+
+fn get(o: Option<i64>, fallback: i64) -> i64 {
+  match o {
+    Some(v) => "x" //~ E0311
+    //~ alternative: binding fallback: i64
+    //~ alternative: binding v: i64
+    None => fallback
+  }
+}

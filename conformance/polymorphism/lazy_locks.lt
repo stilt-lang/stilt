@@ -1,0 +1,30 @@
+//~ tier: advanced
+//~ rule: polymorphism.lazy-waits-for-nothing
+
+// The function that `Lazy.new` keeps waits for nothing: a `when` in it, or a call of a function
+// that has `locks`, is E0435, as the closure literal a `let` binds is when `new` is given it.
+
+use std.sync
+use std.lazy
+
+type Counter = { n: i64 }
+
+fn read(c: sync.Shared<Counter>) -> i64 { when c { c.n } }
+
+fn main() / io {
+  let c = sync.Shared.new(Counter { n: 1 })
+  let a = lazy.Lazy.new(|| when c { c.n }) //~ ERROR E0435
+  let b = lazy.Lazy.new(|| read(c) + 1) //~ ERROR E0435
+  let f = || when c { c.n * 2 } //~ ERROR E0435
+  let d = lazy.Lazy.new(f)
+  // Capturing a handle runs no `when`, so it is accepted.
+  let held = c
+  let e = lazy.Lazy.new(|| { let _ = held; 4 })
+  // Inside a `when`, the inner `when` is E0430 alone.
+  let other = sync.Shared.new(Counter { n: 2 })
+  when other {
+    let g = lazy.Lazy.new(|| when c { c.n }) //~ ERROR E0430
+    print("{g.get()}")
+  }
+  print("{a.get()} {b.get()} {d.get()} {e.get()}")
+}

@@ -1,0 +1,78 @@
+//~ tier: advanced
+//~ rule: handlers.handler-literals
+//~ stdout:
+//~ | logged 3
+//~ | 1 2 3
+
+// A handler literal implements each operation of its effect once, as the effect declares it:
+// the same parameters with the same types, and the same result. An operation written as a
+// generic function, with a limit, with another result, with a parameter more or twice, isn't
+// the effect's.
+
+effect Log {
+  fn log(msg: str)
+  fn count(n: i64) -> i64
+}
+
+fn twice() {
+  let h = handler Log { //~ ERROR E0511
+    fn log(msg: str) {}
+    fn count(n: i64) -> i64 { n }
+    fn log(msg: str) {}
+  }
+}
+
+fn generic() {
+  let h = handler Log { //~ ERROR E0511
+    fn log<T>(msg: str) {}
+    fn count(n: i64) -> i64 { n }
+  }
+}
+
+fn limited() {
+  let h = handler Log { //~ ERROR E0511
+    fn log(msg: str) without panic {}
+    fn count(n: i64) -> i64 { n }
+  }
+}
+
+fn result() {
+  let h = handler Log { //~ ERROR E0511
+    fn log(msg: str) -> i64 { 0 }
+    fn count(n: i64) -> i64 { n }
+  }
+}
+
+fn more() {
+  let h = handler Log { //~ ERROR E0511
+    fn log(msg: str) {}
+    fn count(n: i64, m: i64) -> i64 { n }
+  }
+}
+
+effect Trio {
+  fn a() -> i64
+  fn b() -> i64
+  fn c() -> i64
+}
+
+fn counted() -> i64 / Log { Log.count(2) }
+
+fn three() -> str / Trio { "{Trio.a()} {Trio.b()} {Trio.c()}" }
+
+fn main() / io {
+  let h = handler Log {
+    fn log(msg: str) { print(msg) }
+    fn count(n: i64) -> i64 { n + 1 }
+  }
+  with h {
+    let n = counted()
+    Log.log("logged {n}")
+  }
+  let t = handler Trio {
+    fn a() -> i64 { 1 }
+    fn b() -> i64 { 2 }
+    fn c() -> i64 { 3 }
+  }
+  with t { print(three()) }
+}

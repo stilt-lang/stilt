@@ -1,0 +1,30 @@
+//~ tier: meta
+//~ rule: meta.shape-and-name, traits.trait-parameters, traits.trait-arguments, traits.declaring-trait
+//~ stdout:
+//~ | i64 str
+
+// A trait's default method names its trait parameter, which is the argument that the impl for
+// the receiver's type gives it.
+use std.meta
+
+trait Measured<T> {
+  fn amount(self) -> T
+
+  fn unit(self) -> str { T.name() }
+}
+
+type Scale = { weight: i64 }
+
+type Label = { text: str }
+
+impl Measured<i64> for Scale {
+  fn amount(self) -> i64 { self.weight }
+}
+
+impl Measured<str> for Label {
+  fn amount(self) -> str { self.text }
+}
+
+fn main() / io {
+  print("{Scale { weight: 3 }.unit()} {Label { text: "kg" }.unit()}")
+}
