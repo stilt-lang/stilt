@@ -39,6 +39,9 @@ pub(crate) struct Memory {
     pub(crate) in_use: u64,
     /// What the system charges its process.
     pub(crate) footprint: u64,
+    /// Whether `in_use` is what the allocator holds in use, as on macOS, rather than the
+    /// resident set, which on Linux stands for it and overstates it.
+    pub(crate) heap: bool,
 }
 
 /// The engine's memory, once it is done with the last command.
@@ -52,6 +55,7 @@ fn memory(engine: &Engine) -> Result<Memory, String> {
         return Ok(Memory {
             in_use: resident,
             footprint: resident,
+            heap: false,
         });
     }
     let zones = output("vmmap", &["--summary", &pid])?;
@@ -59,6 +63,7 @@ fn memory(engine: &Engine) -> Result<Memory, String> {
     Ok(Memory {
         in_use: allocated(&zones)?,
         footprint: number_after(&footprint, "phys_footprint:")?,
+        heap: true,
     })
 }
 
@@ -152,7 +157,9 @@ pub(crate) fn measure(
 }
 
 /// Prints what the engine held, and returns the targets it misses: a cache of 500 MB or more, a
-/// footprint of 1 GB or more, or a cache that grows from the first replay to the last.
+/// footprint of 1 GB or more, or a cache that grows from the first replay to the last. The
+/// cache's two targets are judged only where it is the allocator's heap: a resident set also
+/// counts the pages the allocator keeps free, and moves with them.
 pub(crate) fn report(held: &Held) -> Vec<String> {
     let mb = |bytes: u64| bytes / 1_000_000;
     let line = |memory: &Memory, after: &str| {
@@ -167,13 +174,18 @@ pub(crate) fn report(held: &Held) -> Vec<String> {
         line(memory, &format!("replay {}", i + 1));
     }
     let mut missed = Vec::new();
+    if !held.built.heap {
+        println!(
+            "the cache is the resident set here, which overstates it: only the footprint is judged"
+        );
+    }
     let most = held
         .replays
         .iter()
         .chain([&held.built])
         .map(|m| m.in_use)
         .max();
-    if let Some(most) = most.filter(|&most| most >= BOUNDED_CACHE) {
+    if let Some(most) = most.filter(|&most| held.built.heap && most >= BOUNDED_CACHE) {
         missed.push(format!(
             "bounded-cache: the engine's cache is {} MB",
             mb(most)
@@ -189,6 +201,7 @@ pub(crate) fn report(held: &Held) -> Vec<String> {
         ));
     }
     if let (Some(first), Some(last)) = (held.replays.first(), held.replays.last())
+        && first.heap
         && last.in_use > first.in_use + NOISE
     {
         missed.push(format!(
