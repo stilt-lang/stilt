@@ -1,0 +1,8 @@
+[Unit]
+Description=Stilt fuzzing worker: targets
+
+[Service]
+ExecStart=%h/fuzz/bin/targets.sh
+Restart=always
+RestartSec=30
+Nice=10

@@ -1,0 +1,9 @@
+[Unit]
+Description=Stilt fuzzing machine: report every 1h
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target

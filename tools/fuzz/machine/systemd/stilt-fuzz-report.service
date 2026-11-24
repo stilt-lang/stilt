@@ -1,0 +1,6 @@
+[Unit]
+Description=Stilt fuzzing machine: report
+
+[Service]
+Type=oneshot
+ExecStart=%h/fuzz/bin/report.sh

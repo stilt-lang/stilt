@@ -32,3 +32,6 @@ The build goes under `target/`, as every other does. The new inputs go to `corpu
 input that panics or hangs to `artifacts/`; neither is tracked. A hang shows as a timeout.
 The sanitizer is off (`-s none`): the front end's crates hold no `unsafe` code, and on macOS the
 linker rejects the initializers that `salsa` registers when AddressSanitizer is on.
+
+A machine of its own runs these targets and the generated programs around the clock, and files
+what it finds as issues: [`machine/`](machine/README.md).

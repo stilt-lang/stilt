@@ -1,0 +1,8 @@
+[Unit]
+Description=Stilt fuzzing worker: differential
+
+[Service]
+ExecStart=%h/fuzz/bin/differential.sh
+Restart=always
+RestartSec=30
+Nice=10
