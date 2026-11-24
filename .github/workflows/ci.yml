@@ -112,7 +112,8 @@ jobs:
     name: Lean model
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # With no Lake cache the whole model builds, as the shards build everything: 45 minutes.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # `just formal` builds first, and the build assembles the toolchain, which links the pinned clang.
