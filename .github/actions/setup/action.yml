@@ -25,7 +25,8 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends libffi-dev zlib1g-dev pkg-config
+        # gdb: the debugger tests drive it on Linux, as lldb on macOS, and hosted runners have none.
+        sudo apt-get install -y --no-install-recommends libffi-dev zlib1g-dev pkg-config gdb
 
     - name: Install system libraries (macOS)
       if: runner.os == 'macOS'
