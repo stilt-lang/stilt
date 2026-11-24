@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-24.04, ubuntu-24.04-arm]
+        os: [macos-26, ubuntu-24.04, ubuntu-24.04-arm]
         shard:
           - name: unit tests
             recipes: test formatter facts holes alternatives diagnostics diagnostics-tokens
