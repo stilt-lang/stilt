@@ -16,6 +16,11 @@ compiler := "target/bin/stilt"
 # `just run` builds as a release build (builds.specialization, Required tests).
 specialized := "conformance/generics conformance/staging conformance/reflection conformance/json conformance/polymorphism conformance/variadics conformance/parameters"
 grammar-tool := "target/bin/stilt-grammar"
+# A Linux executable is static and loads no library (c.build-targets): a program that links one
+# doesn't build there, and a C function no library defines fails the link rather than its first
+# call (c.finding-functions). The built and release runs leave those two tests out on Linux;
+# `run` and `test` still check them, and compiler/stilt-cli/tests/foreign.rs the static builds.
+static-skips := if os() == "linux" { "--skip foreign/zlib --skip foreign/missing.lt" } else { "" }
 # The goals of the project's own loop, quick-suite and quick-ci, are the time a developer waits,
 # which another program on the machine stretches, so their wall-time budgets are judged only on
 # a machine that nothing else shares: set STILT_DEDICATED=1 there, as hosted CI's runners do.
@@ -800,9 +805,10 @@ run *args: build
         {{ args }}
     {{ runner }} --impl {{ compiler }} --kinds run,check,test --examples target/run-examples \
         --logs target/run-logs docs/guide
-    {{ runner }} --impl tools/runner/built.sh --kinds run,check --logs target/run-logs {{ args }}
+    {{ runner }} --impl tools/runner/built.sh --kinds run,check {{ static-skips }} --logs target/run-logs \
+        {{ args }}
     {{ runner }} --impl tools/runner/release.sh --kinds run --fast --sample-key release \
-        --logs target/run-logs {{ args }}
+        {{ static-skips }} --logs target/run-logs {{ args }}
     {{ runner }} --impl tools/runner/release.sh --kinds run --logs target/run-logs \
         {{ specialized }}
     rm -rf target/run-mutated target/run-broken
