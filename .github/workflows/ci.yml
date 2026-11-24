@@ -47,7 +47,9 @@ jobs:
     name: ${{ matrix.shard.name }} (${{ matrix.os }})
     if: ${{ !github.event.repository.private }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    # A run with no cache builds everything, which takes macOS runners some 17 minutes before
+    # the first recipe; it must still finish, since only a finished run on main saves the caches.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
