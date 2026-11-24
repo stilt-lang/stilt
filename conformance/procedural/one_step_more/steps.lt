@@ -1,0 +1,10 @@
+use std.meta
+
+/// Takes one step more than 10,000,000: its own body, then 10,000,000 turns of its loop.
+pub macro one_more() -> meta.Expr {
+  var n = 0
+  while n < 10000000 {
+    n += 1
+  }
+  quote { 1 }
+}
