@@ -95,7 +95,9 @@ jobs:
         env:
           # The build above is the only one, as in `just ci`.
           STILT_BUILT: '1'
-        run: just ${{ matrix.shard.recipes }}
+        # One recipe at a time, as `just ci` runs them: given at once, the words after a recipe
+        # with parameters, such as `generated`, would be its arguments.
+        run: for recipe in ${{ matrix.shard.recipes }}; do just "$recipe"; done
       - name: Keep the logs of a failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -111,9 +113,9 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # `just formal` builds first, and the build assembles the toolchain, which links the pinned clang.
       - uses: ./.github/actions/setup
         with:
-          clang: 'false'
           lean: 'true'
           cache-key: formal
           save-cache: ${{ github.ref == 'refs/heads/main' }}
