@@ -13,15 +13,14 @@
 //! The scope ends once its function and every task of it that the sequential run reaches have
 //! ended or stopped, with the first raise if there is one, and otherwise with the function's
 //! value or raise. It waits for nothing that a cut or a cancel put out of the sequential run
-//! (`crate::tasks::Waited`), which goes on unseen on its thread, holding its own reference to
-//! the scope's object.
+//! (`crate::tasks::Waited`), which goes on unseen on its thread, holding the scope's object.
 
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 
 use super::{error_room, scope_object};
 use crate::abi::{Ret, call1, call1_out};
 use crate::map::drop_words;
-use crate::object::{deep_copy, drop, dup};
+use crate::object::{deep_copy, drop};
 use crate::shape::Shape;
 use crate::std_task::{State, call, finish, handle};
 use crate::tasks::{self, Group, Here, Waited};
@@ -122,10 +121,9 @@ pub(super) unsafe fn scope(
         t,
         e,
     });
+    // The object is the function's thread's alone, which lets go of it once the function ends or
+    // stops for good: a cut may leave it running past the scope's end.
     let object = scope_object(Arc::as_ptr(&scope) as u64) as u64;
-    // SAFETY: the object was just made; the function's thread holds a reference of its own,
-    // since a cut may leave it running past the scope's end.
-    unsafe { dup(object) };
     let cut = Arc::clone(&scope);
     let waited = Waited::new(&place, move || {
         cut.inner().ended = Some(Ending::Stopped);
@@ -171,11 +169,9 @@ pub(super) unsafe fn scope(
     let (first, ended) = (inner.first.take(), inner.ended.take());
     std::mem::drop(inner);
     crate::watch::unblock();
-    // SAFETY: the caller holds a reference to the scope's object of its own.
-    unsafe {
-        drop(object);
-        result((first, ended), (t, e), (out, err))
-    }
+    // SAFETY: the words are the scope's, which own their references, and the caller of
+    // `task.scope` gave room for them.
+    unsafe { result((first, ended), (t, e), (out, err)) }
 }
 
 /// Lets go of what a function that a cut put out of the sequential run ended with.

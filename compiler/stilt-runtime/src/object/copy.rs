@@ -43,8 +43,13 @@ pub(crate) unsafe fn deep_copy(word: u64) -> Copied {
             let Some(object) = pointer(original) else {
                 continue;
             };
-            if (*object).rc == 0 || is_shared(object) {
-                handles |= (*object).rc != 0;
+            // Another thread may be changing the count of a shared object, which is never
+            // immortal, so whether it is shared comes first.
+            if is_shared(object) {
+                handles = true;
+                continue;
+            }
+            if (*object).rc == 0 {
                 continue;
             }
             if crate::std_task::is_task(object) {
