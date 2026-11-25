@@ -272,7 +272,9 @@ fn a_server_whose_executable_another_build_replaces_stops() {
     editor.change(SOURCE, true);
     assert_eq!(editor.hover(9, 6), "```stilt\nlet w: i64\n```");
     let later = SystemTime::now() + Duration::from_secs(60);
-    let file = std::fs::File::options().write(true).open(&exe).unwrap();
+    // Opened to read: Linux refuses to open a running executable to write (ETXTBSY), and setting
+    // the time needs only that the file is ours.
+    let file = std::fs::File::open(&exe).unwrap();
     file.set_modified(later).unwrap();
     let changed = json!({
         "textDocument": { "uri": editor.uri(), "version": 2 },
