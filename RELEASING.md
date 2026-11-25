@@ -8,7 +8,7 @@ Before tagging:
 
 - [ ] Every pull request that changes what a user sees has its file in [`changes/`](changes/), and `uv run tools/release/notes.py` prints notes that read well. Edit the files, not the output.
 - [ ] `VERSION` holds the version to release, and the workspace's `Cargo.toml` and `editors/vscode/package.json` have the same version (`just lint` checks them).
-- [ ] `just ci` passes on `main` on a dedicated machine with `STILT_DEDICATED=1`, and the latest nightly run is green: the million generated programs, the matrix, the sanitizers and the debuggers.
+- [ ] `just ci` passes on `main` on a dedicated machine with `STILT_DEDICATED=1`, and the latest nightly run is green: the million generated programs, every run test as a release build, the sanitizers and the debuggers. `just cross`, the matrix, passes on an aarch64 Mac with Docker, or in the nightly run where the repository's variable `DEDICATED_RUNNER` is `true`.
 - [ ] `just coverage` reports every paragraph of the Reference cited and every registered code tested or checked elsewhere; the report goes with the release.
 - [ ] `just covered` reports the lines and functions of each crate that the tests and the suites run, in `target/covered/README.md`; the table goes with the release, beside the report of `just coverage`.
 - [ ] `just dist` builds and installs this host's archive, and a release build from a fresh install works.

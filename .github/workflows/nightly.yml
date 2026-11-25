@@ -95,8 +95,10 @@ jobs:
 
   cross:
     name: the matrix of hosts and targets
-    # `just cross` runs on an aarch64 Mac with Docker, which hosted runners don't offer.
-    if: ${{ !github.event.repository.private }}
+    # `just cross` runs on an aarch64 Mac with Docker, which hosted runners don't offer. The job
+    # runs where the repository's variable says that such a runner is registered: without one it
+    # would wait for a day and fail the run, and the matrix is run by hand (RELEASING.md).
+    if: ${{ !github.event.repository.private && vars.DEDICATED_RUNNER == 'true' }}
     runs-on: [self-hosted, macOS, ARM64, stilt-dedicated]
     timeout-minutes: 240
     steps:
