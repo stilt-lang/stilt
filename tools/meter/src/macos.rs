@@ -28,14 +28,19 @@ pub(crate) fn counts(pid: u32) -> io::Result<Counts> {
         return Err(io::Error::last_os_error());
     }
     let field = |i: usize| info.fields[i];
+    let cpu = ticks(field(USER_TIME).saturating_add(field(SYSTEM_TIME)));
+    // A virtual machine, as a hosted runner is, keeps no counts of the processor: they stay 0
+    // while the CPU time grows, which no processor that counts allows. The meter then gives
+    // the CPU time alone, as on Linux.
+    let counted = field(INSTRUCTIONS) > 0 || field(CYCLES) > 0 || cpu.is_zero();
     Ok(Counts {
-        instructions: Some(field(INSTRUCTIONS)),
-        cycles: Some(field(CYCLES)),
-        performance: Some(Performance {
+        instructions: counted.then(|| field(INSTRUCTIONS)),
+        cycles: counted.then(|| field(CYCLES)),
+        performance: counted.then(|| Performance {
             instructions: field(P_INSTRUCTIONS),
             cycles: field(P_CYCLES),
         }),
-        cpu: ticks(field(USER_TIME).saturating_add(field(SYSTEM_TIME))),
+        cpu,
     })
 }
 

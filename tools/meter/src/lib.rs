@@ -14,8 +14,9 @@
 //! ([`Counts::performance_cycles`]), converted to time at [`REFERENCE_CLOCK`], or on the wall
 //! time when that is less, as for work spread over several cores ([`Counts::idle_time`]). Under
 //! load that errs on the strict side. Instructions are reported beside them, as the steadiest
-//! measure of the work. macOS counts all of these for every process; on Linux, where a process's
-//! counters need the kernel's leave, the meter gives the CPU time alone.
+//! measure of the work. macOS counts all of these for every process, but not in a virtual machine; on Linux, where
+//! a process's counters need the kernel's leave, and in a virtual machine, the meter gives the
+//! CPU time alone.
 
 #![warn(missing_docs)]
 
