@@ -38,3 +38,7 @@ Edit the SVG, then write the PNGs and the file icons of VS Code's extension, whi
 ```sh
 node brand/render.mjs
 ```
+
+## License
+
+The drawings, and their copies in the site and in the editors' extensions, are distributed under the [Creative Commons Attribution 4.0 International license](../LICENSE-CC-BY-4.0).

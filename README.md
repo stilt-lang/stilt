@@ -183,4 +183,6 @@ A program that `stilt build` writes holds Stilt's runtime library, under the lic
 
 The prose is distributed under the [Creative Commons Attribution 4.0 International license](LICENSE-CC-BY-4.0): the chapters of the Reference in [`reference/`](reference/), the guide in [`docs/guide/`](docs/guide/), the error index in [`docs/errors/`](docs/errors/), the design documents in [`docs/design/`](docs/design/), and [`docs/commands.md`](docs/commands.md) and [`docs/writing.md`](docs/writing.md). The Stilt programs in those documents are also available under the licenses of the code.
 
+The logo and the other drawings of [`brand/`](brand/), and the copies of them that the site and the editors' extensions hold, are under the same Creative Commons license.
+
 Unless you explicitly state otherwise, any contribution you intentionally submit for inclusion in this project is licensed as the files it changes are, without any additional terms or conditions: inbound equals outbound, and there is no contributor license agreement.
