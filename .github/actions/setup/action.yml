@@ -82,14 +82,17 @@ runs:
         opam install . --deps-only --with-test --with-dev-setup --yes
         echo "STILT_SWITCH=$(opam switch show)" >> "$GITHUB_ENV"
 
-    - name: Cache Lake
+    # The newest build of the model for this toolchain; the Lean job saves one as soon as the
+    # model builds, so a run that later fails or times out still leaves the next one its build.
+    - name: Restore Lake's build
       if: inputs.lean == 'true'
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/.elan
           formal/.lake
-        key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('formal/lean-toolchain', 'formal/lake-manifest.json') }}
+        key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('formal/lean-toolchain', 'formal/lake-manifest.json') }}-${{ github.sha }}
+        restore-keys: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('formal/lean-toolchain', 'formal/lake-manifest.json') }}-
 
     - name: Install Lean
       if: inputs.lean == 'true'
