@@ -1363,7 +1363,7 @@ formal: build
     if [ "$axioms" != "'Stilt.soundness' depends on axioms: [propext, Classical.choice, Quot.sound]" ]; then \
         echo "ERROR $axioms"; exit 1; \
     fi
-    {{ runner }} --impl tools/runner/model.sh --declines 77 --locations absent --time-limit 30 \
+    {{ runner }} --impl tools/runner/model.sh --declines 77 --locations absent --time-limit 90 \
         --known-declines tools/runner/model-declines.txt --kinds run --logs target/model-logs
     just proof-map --check
 

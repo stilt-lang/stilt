@@ -24,13 +24,14 @@ dir=$(mktemp -d)
 trap 'rm -rf "$dir"' EXIT
 "$reference" model "$program" > "$dir/program.json" || exit $?
 # The model evaluates by rewriting values, far slower than either implementation: a run that
-# needs more than 20 s of processor time is declined, not failed. `just formal` gives each test
-# 30 s, so a run near the limit, as std/random.lt's 7 s is, isn't cut short by a busy machine.
-(ulimit -t 20 && exec "$root/formal/.lake/build/bin/stilt-model" "$dir/program.json") \
+# needs more than 60 s of processor time is declined, not failed. `just formal` gives each test
+# 90 s. The longest run, std/random.lt's, needs 7 s on a fast machine, and took more than 20 on a
+# hosted runner shared with others.
+(ulimit -t 60 && exec "$root/formal/.lake/build/bin/stilt-model" "$dir/program.json") \
     > "$dir/out" 2> "$dir/err"
 status=$?
 if [ $status -gt 128 ]; then
-    echo "stilt-model: declined: a run that needs more than the model's 20 s of processor time" >&2
+    echo "stilt-model: declined: a run that needs more than the model's 60 s of processor time" >&2
     exit 77
 fi
 # The calculus keeps neither a panic's message nor its place, so its report names neither: a
