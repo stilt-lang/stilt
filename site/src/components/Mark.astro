@@ -1,18 +1,11 @@
 ---
-// Stilt's mark: the arc of the sky over the horizon, and a star above it, which moves out a
-// little when the wordmark is hovered.
+// Stilt's mark, a stilt that stoops to feed, in the cut for small sizes (brand/README.md). It
+// takes the text's colour, and its legs the accent.
+import { smallMark } from "../lib/brand";
 ---
 
-<svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-  <path d="M4 22a12 12 0 0 1 24 0" fill="none" stroke="currentColor" stroke-width="3.25" stroke-linecap="round"></path>
-  <circle class="star" cx="22.5" cy="7.5" r="2.9" fill="currentColor"></circle>
-</svg>
+<svg class="stilt-mark" viewBox="0 0 1000 1000" aria-hidden="true" set:html={smallMark} />
 
 <style>
-  .mark { width: 1.375rem; height: 1.375rem; flex: none; overflow: visible; }
-  .star { transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1); }
-  :global(a:hover) > .mark .star { transform: translate(1.6px, -1.6px); }
-  @media (prefers-reduced-motion: reduce) {
-    .star { transition: none; }
-  }
+  .stilt-mark { width: 1.375rem; height: 1.375rem; flex: none; }
 </style>

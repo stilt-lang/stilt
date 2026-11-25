@@ -27,7 +27,7 @@ Each is defused mainly by separating what a program means from how it gets compi
 
 Applied to performance, the same separation gives Stilt its character: **values with inferred costs**. Every value behaves as an independent copy. The compiler infers, reports and, on request, guarantees what Rust makes programmers prove by annotation: where values live, where they are updated in place, what may run in parallel, what authority a function holds, and which run-time checks can go. Rust's bargain is to prove aliasing safety by annotation and get speed in return. Stilt's is values by meaning, costs by inference, and guarantees by request. It is "infer, don't declare" applied to performance.
 
-The name is Latin: *stilt* means "heaven", and its homonym means "an engraver's chisel". A tool for building heaven felt right.
+The name is a bird's. A stilt wades through deep water on long legs and stays dry. Stilt keeps a program above memory management in the same way: its code names no lifetimes, and no tracing garbage collector runs.
 
 ## Design principles
 

@@ -1,4 +1,29 @@
-# Stilt
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/logo-on-dark.svg">
+    <img src="brand/logo.svg" alt="Stilt" width="340">
+  </picture>
+</h1>
+
+<p align="center">
+  <b>A compiled language whose compiler shows you what your code costs.</b>
+</p>
+
+<p align="center">
+  <a href="https://stilt.dev">Website</a> ·
+  <a href="https://stilt.dev/learn/tour/">Tour</a> ·
+  <a href="https://stilt.dev/playground/">Playground</a> ·
+  <a href="https://stilt.dev/learn/">Guide</a> ·
+  <a href="https://stilt.dev/reference/">Reference</a> ·
+  <a href="https://stilt.dev/library/">Library</a> ·
+  <a href="https://github.com/stilt-lang/stilt/discussions">Discussions</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/stilt-lang/stilt/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/stilt-lang/stilt/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20or%20Apache%202.0-0F1114" alt="License: MIT or Apache 2.0"></a>
+  <a href="docs/design/known-limitations.md"><img src="https://img.shields.io/badge/edition-2027-FF4A2E" alt="Edition 2027"></a>
+</p>
 
 Stilt is a compiled programming language. It aims for Go's compile speed, Rust's safety, C++'s performance, Haskell's types and Elm's error messages, with macros and compile-time code that run in your editor. Each feature has one meaning, and the compiler chooses how to build it: quickly in a debug build, for speed in a release build. What you don't write down, the compiler works out and shows you: where each function allocates or copies, whether it can panic or might not end, and which arguments it uses up.
 
@@ -22,6 +47,71 @@ fn count_above(xs: List<i64>, limit: i64) -> i64 without alloc [overflow] {
 }
 ```
 
+## What Stilt gives you
+
+Each of these is taught in the guide:
+
+- **Values, with no lifetimes to write.** Every value behaves as an independent copy. The compiler updates it in place when nothing else holds it, and no tracing garbage collector runs ([Values and types](docs/guide/02-values.md)).
+- **Facts you can ask for, and limits you can set.** `stilt show` prints what each function does that its types don't say, such as `panic`, `overflow`, `alloc` or `div`. A `without` clause turns a fact into a promise that the checker keeps.
+- **Effects in the signature.** A function that prints, raises an error or performs an effect of your own says so after a `/`. Handlers give your effects their meaning ([Errors and effects](docs/guide/05-errors.md), [Effects, tasks and parallelism](docs/guide/17-effects.md)).
+- **Changes without references.** An `inout` parameter changes the caller's place, and the compiler refuses two overlapping accesses at once ([Parameter modes](docs/guide/07-modes.md)).
+- **Macros and compile-time code that your editor understands.** Compile-time code is Stilt, run in a sandbox with the same result each time ([Pattern macros](docs/guide/16-macros.md), [Compile-time code](docs/guide/18-compile-time.md)).
+- **Two builds, one meaning.** A debug build goes through Cranelift, to compile fast. A release build goes through C, to run fast ([Builds](reference/20-builds.md)).
+
+An error says what went wrong, why the rule is there, and what to write instead:
+
+```console
+$ stilt check
+── EFFECT THAT DOESN'T FIT THE ROW ──────────────────── src/main.lt:5:3  [E0502]
+
+This performs `io`, which the row doesn't declare:
+
+  5 │   print(greeting("arena"))
+    │   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+A function's row lists the effects it performs, as `/ io` for printing, so that
+its callers see them. Add the effect to the row.
+
+To fix it, declare `io` in the signature:
+
+  4 │ fn main() / io {
+    │          +++++
+```
+
+## Get started
+
+[The playground](https://stilt.dev/playground/) checks, shows and runs a program in your browser, with nothing to install.
+
+The installer puts `stilt` in `~/.stilt/bin`, on macOS on ARM and on Linux on ARM and x86-64:
+
+```sh
+curl -sSf https://raw.githubusercontent.com/stilt-lang/stilt/main/install.sh | sh
+```
+
+It installs the latest [release](https://github.com/stilt-lang/stilt/releases). Until the first one, 2027.1.0, is published, [build Stilt from this repository](#building).
+
+Then create a program, run it, test it, and ask what the compiler worked out:
+
+```sh
+stilt new hello && cd hello
+stilt run
+stilt test
+stilt show main
+```
+
+Where you go next depends on what you know:
+
+| If you | Read |
+| --- | --- |
+| Want to build something | [A tour](docs/guide/01-tour.md), thirty minutes |
+| Know [Rust](docs/guide/for-rust-programmers.md), [Go](docs/guide/for-go-programmers.md), [Python](docs/guide/for-python-programmers.md), [TypeScript](docs/guide/for-typescript-programmers.md) or [Swift](docs/guide/for-swift-programmers.md) | The page that maps it onto Stilt |
+| Want to solve one task | [The cookbook](docs/guide/cookbook.md) |
+| Want to know why Stilt is this way | [Its design](docs/guide/10-design.md) |
+
+For highlighting, diagnostics and the facts beside your code, see [the editors](editors/): VS Code, Zed, Neovim, Helix and Emacs.
+
+## What is in this repository
+
 This repository holds all of Stilt:
 
 - [the Reference](reference/), which defines the language paragraph by paragraph;
@@ -31,9 +121,9 @@ This repository holds all of Stilt:
 
 The language has four tiers. `core`, `advanced` and `meta` are complete. Of `systems`, calls into C and functions exported to C are built. The first edition of the language is 2027.
 
-[The guide](docs/guide/) teaches the language, starting with [a tour](docs/guide/01-tour.md). [Known limitations](docs/design/known-limitations.md) lists what this release doesn't do yet, and [Versions and compatibility](reference/21-versions.md) says what each release keeps from the last.
+[Known limitations](docs/design/known-limitations.md) lists what this release doesn't do yet, and [Versions and compatibility](reference/21-versions.md) says what each release keeps from the last.
 
-## Repository
+### Folders
 
 Each top-level folder has one role, and a README that says what it holds.
 
@@ -43,6 +133,7 @@ Each top-level folder has one role, and a README that says what it holds.
 | [`std/`](std/) | The standard library's sources, which every implementation reads |
 | [`interpreter/`](interpreter/) | `stilt-ref`, the reference interpreter, in OCaml 5, which every other implementation is checked against |
 | [`compiler/`](compiler/) | `stilt`, the compiler, in Rust, one crate per phase |
+| [`brand/`](brand/) | The logo, the mark and its cuts for small sizes, and the images made from them |
 | [`editors/`](editors/) | The editor extensions, VS Code's and Zed's, which highlight Stilt and run `stilt lsp`, and the tree-sitter grammar that Zed, Neovim and Helix read |
 | [`playground/`](playground/) | The playground, the site's page that checks, shows and runs a program in the browser: the compiler's `check` and `show` built for WebAssembly, the reference interpreter built for JavaScript, and the page's scripts |
 | [`site/`](site/) | The website, built with Astro from the repository's documents and what the compiler prints: the guide, the Reference, the library, the error index and the playground |
@@ -82,7 +173,7 @@ just ci
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Language changes start as an [RFC](https://github.com/stilt-lang/stilt-rfcs), then in the Reference, and every paragraph needs tests.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Language changes start as an [RFC](https://github.com/stilt-lang/stilt-rfcs), then in the Reference, and every paragraph needs tests. Ask questions in [Discussions](https://github.com/stilt-lang/stilt/discussions), and report a vulnerability as [SECURITY.md](SECURITY.md) says. Everyone follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

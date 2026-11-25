@@ -2,7 +2,7 @@
    share. Components read the tokens only, so the reader's choice of theme, or their system's,
    changes every page at once. `prose.css` styles the documents and `code.css` the code.
 
-   Black and white, hairlines of 1px, the system's own faces. Spacing steps on a 4px base; the
+   Black and white, with the logo's accent on its legs alone, hairlines of 1px, the system's own faces. Spacing steps on a 4px base; the
    type scale is fixed: 12, 13, 14, 15, 16, 18, 23 and 28px, and 40px for the front page's name. */
 
 @import "tailwindcss";
@@ -23,6 +23,7 @@
   --invert-bg: #0a0a0a;
   --invert-fg: #ffffff;
   --sky: #0369a1;
+  --accent: #ff4a2e;
   --sky-wash: color-mix(in srgb, var(--sky) 9%, transparent);
   --error: #c62828;
   --warning: #a16207;

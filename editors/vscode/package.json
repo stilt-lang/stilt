@@ -32,7 +32,8 @@
         "id": "stilt",
         "aliases": ["Stilt", "stilt"],
         "extensions": [".lt"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": { "light": "./icons/stilt-light.svg", "dark": "./icons/stilt-dark.svg" }
       }
     ],
     "grammars": [

@@ -1,0 +1,19 @@
+---
+// Stilt's logo, the mark beside the word: large with the mark's bands, or small with the cut that
+// leaves them out, at the same height. The link or heading around it names it.
+import { LOGO_BOX, logo, smallMark, word } from "../lib/brand";
+
+interface Props {
+  size: "small" | "large";
+}
+const { size } = Astro.props;
+const small = `<g transform="translate(-29.87 -567.47) scale(0.5973)">${smallMark}</g>${word}`;
+---
+
+<svg class:list={["logo", size]} viewBox={LOGO_BOX} aria-hidden="true" set:html={size === "small" ? small : logo} />
+
+<style>
+  .logo { display: block; flex: none; aspect-ratio: 1164.95 / 558; }
+  .small { height: 1.875rem; }
+  .large { width: min(100%, 22rem); }
+</style>

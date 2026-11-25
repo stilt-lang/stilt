@@ -1,6 +1,7 @@
 ---
 // The front page: what Stilt is, in the README's first paragraph, an example with what the
 // compiler says of it, how to install it, and where to read on.
+import Logo from "../components/Logo.astro";
 import Hero from "../components/Hero.astro";
 import Base from "../layouts/Base.astro";
 import { install } from "../lib/stilt";
@@ -27,7 +28,7 @@ const docs = [
 <Base title="Stilt" section="home">
   <div class="shell front">
     <section class="intro">
-      <h1>Stilt</h1>
+      <h1><Logo size="large" /><span class="sr-only">Stilt</span></h1>
       <div class="pitch" set:html={pitch} />
       <div class="actions">
         <a class="button" href="/learn/tour/">Take the tour</a>

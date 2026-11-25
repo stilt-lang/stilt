@@ -4,6 +4,7 @@
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import Search from "../components/Search.astro";
+import { favicon } from "../lib/brand";
 import type { Section } from "../lib/map";
 import "../styles/global.css";
 
@@ -20,11 +21,7 @@ const full = section === "home" ? title : `${title} · Stilt`;
 const summary =
   description ??
   "Stilt is a compiled programming language. Its compiler shows you what each function costs: where it allocates, copies, or can panic.";
-const icon =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>.m{stroke:#0a0a0a}.d{fill:#0a0a0a}@media(prefers-color-scheme:dark){.m{stroke:#fafafa}.d{fill:#fafafa}}</style><path class="m" d="M4 22a12 12 0 0 1 24 0" fill="none" stroke-width="3.25" stroke-linecap="round"/><circle class="d" cx="22.5" cy="7.5" r="2.9"/></svg>`,
-  );
+const image = "https://stilt.dev/social.png";
 ---
 
 <!doctype html>
@@ -36,9 +33,16 @@ const icon =
     <meta name="description" content={summary} />
     <meta property="og:title" content={full} />
     <meta property="og:description" content={summary} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content={image} />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta property="og:image:alt" content="Stilt" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
-    <link rel="icon" href={icon} />
+    <link rel="icon" href={favicon()} />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <script is:inline>
       {
         const chosen = localStorage.getItem("theme");
