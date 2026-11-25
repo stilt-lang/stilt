@@ -860,8 +860,9 @@ engine: build
         conformance
     {{ runner }} --impl tools/runner/engine.sh --check {{ compiler }} \
         --examples target/engine-examples --logs target/engine-logs docs/guide
-    {{ runner }} --impl tools/runner/engine.sh --kinds run,check,test --logs target/engine-logs \
-        conformance
+    # Its runs are built executables, which on Linux can't load the C libraries of two tests.
+    {{ runner }} --impl tools/runner/engine.sh --kinds run,check,test {{ static-skips }} \
+        --logs target/engine-logs conformance
     {{ runner }} --impl tools/runner/engine-run.sh --kinds run,check --logs target/engine-logs \
         conformance
     rm -rf target/engine-generated target/engine-mutated
