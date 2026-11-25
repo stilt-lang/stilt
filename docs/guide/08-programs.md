@@ -582,7 +582,7 @@ pub extern fn collatz_steps(n: u64) -> i64 {
 $ stilt build --release --lib -o out/collatz collatz/
 $ ls out
 collatz.h  libcollatz.a
-$ cc -o steps steps.c out/libcollatz.a
+$ cc -o steps steps.c out/libcollatz.a        # on Linux, add -lm
 ```
 
 ```c

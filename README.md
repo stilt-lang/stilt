@@ -61,7 +61,7 @@ Each top-level folder has one role, and a README that says what it holds.
 You need:
 
 - Rust, through [rustup](https://rustup.rs), at the version and with the targets that [`rust-toolchain.toml`](rust-toolchain.toml) pins;
-- a C compiler, such as Xcode's command-line tools on macOS or `gcc` on Linux, which builds ring, the cryptography of `stilt`'s HTTPS. An installed `stilt` needs nothing else to check and run programs, and fetches its C compiler for the first release build, except on Linux on ARM, where `STILT_CC` names a clang;
+- a C compiler, such as Xcode's command-line tools on macOS or `gcc` on Linux, which builds ring, the cryptography of `stilt`'s HTTPS. An installed `stilt` needs nothing else to check and run programs, and fetches its C compiler for the first release build;
 - libffi, through which the reference interpreter calls C, which macOS's SDK holds and Linux's `libffi-dev` gives, and zlib, which the conformance tests of calling C link, which macOS holds and Linux's `zlib1g-dev` gives;
 - [opam](https://opam.ocaml.org) 2.2 or later;
 - Lean, at the version that [`formal/lean-toolchain`](formal/lean-toolchain) pins, which [elan](https://github.com/leanprover/elan) installs;

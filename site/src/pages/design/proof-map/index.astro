@@ -25,7 +25,8 @@ const parts = map ? meaningChapters(map) : { meaning: [], outside: [] };
 const meaning = counts(parts.meaning.flatMap((c) => c.paragraphs));
 const labels = { theorem: "In the theorem", model: "Modeled apart", described: "Described", none: "Not modeled" } as const;
 const statuses = ["theorem", "model", "described", "none"] as const;
-const headings = [
+// The sections exist only with a map, so without one the page lists none of them.
+const headings = !map ? [] : [
   { depth: 2, id: "map", text: "The map" },
   { depth: 2, id: "theorem", text: "The theorem" },
   { depth: 2, id: "reference", text: "The Reference" },

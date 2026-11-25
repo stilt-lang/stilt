@@ -60,7 +60,7 @@ A manifest grants each dependency its effects and capabilities ([packages.grants
 | Code with errors never runs | `stilt-meta/src/image/walk.rs` | `conformance/procedural/reaching_io/` |
 | No C | `stilt-meta/src/natives.rs` | `conformance/foreign/compile_time/` |
 | Named files | `stilt-db/src/extras.rs` | `conformance/procedural/file_errors/`, `compiler/stilt-cli/tests/macros.rs` |
-| Steps and frames | `stilt-meta/src/limits.rs` | `conformance/procedural/limits/` |
+| Steps and frames | `stilt-meta/src/limits.rs` | `conformance/procedural/limits/`, `all_steps/`, `one_step_more/` |
 | Memory | `stilt-meta/src/value/weight.rs`, `stilt-meta/src/fiber.rs` | `conformance/procedural/memory/`, `compiler/stilt-meta/src/tests.rs`, `compiler/stilt-meta/src/tests/limits.rs` |
 | Nesting and size of expansions | `stilt-hir/src/lower/expand/budget.rs` | `conformance/macros/exponential.lt`, `conformance/macros/expansion_size.lt`, `conformance/procedural/expansion_size/` |
 | Grants | `stilt-types/src/packages.rs` | `conformance/macros/ungranted/`, `conformance/packages/ungranted_quote/`, `conformance/packages/ungranted_trait/`, `conformance/packages/callback_effects/`, `conformance/packages/closure_and_value/` |

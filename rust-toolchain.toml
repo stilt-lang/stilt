@@ -1,6 +1,8 @@
 [toolchain]
 channel = "1.99"
-components = ["clippy", "rustfmt"]
+# llvm-tools: `just toolchain` strips the runtime libraries with rust-objcopy, which on Linux
+# loads LLVM only when the component is installed.
+components = ["clippy", "rustfmt", "llvm-tools"]
 profile = "minimal"
 # The targets of `stilt build`, whose runtime libraries `just toolchain` builds
 # (goal targets).

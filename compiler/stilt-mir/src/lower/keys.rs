@@ -41,7 +41,7 @@ pub(crate) const MAX_KNOWN: usize = 16;
 
 /// The most words of a type argument that an instance builds from its own type parameters
 /// and holds inline in its callee's instance.
-pub(crate) const MAX_WORDS: usize = 256;
+pub(crate) const MAX_WORDS: usize = 64;
 
 /// Whether a trait has a method with type parameters of its own, or is a constructor trait,
 /// whose constructor keys every instance.

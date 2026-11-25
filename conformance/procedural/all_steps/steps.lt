@@ -1,0 +1,10 @@
+use std.meta
+
+/// Takes 10,000,000 steps: its own body, then 9,999,999 turns of its loop.
+pub macro all_steps() -> meta.Expr {
+  var n = 0
+  while n < 9999999 {
+    n += 1
+  }
+  quote { 1 }
+}

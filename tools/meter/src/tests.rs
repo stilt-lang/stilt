@@ -16,41 +16,43 @@ fn own_counts_grow_with_work() {
     std::hint::black_box(spin(200_000_000));
     let spent = own().expect("the meter reads this process").since(before);
     assert!(spent.cpu > Duration::from_millis(10), "{spent:?}");
-    if cfg!(target_os = "macos") {
-        let instructions = spent.instructions.expect("macOS counts instructions");
-        let cycles = spent.cycles.expect("macOS counts cycles");
+    // macOS counts them, but not in a virtual machine, as a hosted runner is.
+    if let (Some(instructions), Some(cycles)) = (spent.instructions, spent.cycles) {
         assert!(instructions > 200_000_000, "{spent:?}");
         assert!(cycles > 0, "{spent:?}");
     }
 }
 
-/// The CPU time from the counts is the one `ps` reports, so the units of `rusage_info` are read
-/// right.
+/// The CPU time from the counts is the one `getrusage` reports, so the units the meter reads
+/// are read right. (`ps` would do on macOS, but on Linux it prints whole seconds.)
 #[test]
-fn cpu_time_agrees_with_ps() {
+fn cpu_time_agrees_with_getrusage() {
     std::hint::black_box(spin(300_000_000));
     let ours = own().expect("the meter reads this process").cpu;
     let usage = rusage_self();
     let ratio = ours.as_secs_f64() / usage.as_secs_f64();
-    assert!((0.8..1.25).contains(&ratio), "meter {ours:?}, ps {usage:?}");
+    assert!(
+        (0.8..1.25).contains(&ratio),
+        "meter {ours:?}, getrusage {usage:?}"
+    );
 }
 
-/// This process's CPU time as `ps` reports it.
+/// This process's CPU time, user and system, as `getrusage` reports it.
 fn rusage_self() -> Duration {
-    let output = Command::new("ps")
-        .args(["-o", "time=", "-p"])
-        .arg(std::process::id().to_string())
-        .output()
-        .expect("ps runs");
-    // `ps` writes `[[hh:]mm:]ss.cc`, with a comma for a decimal point in some locales.
-    let seconds = String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .replace(',', ".")
-        .split(':')
-        .fold(0.0, |acc, part| {
-            acc * 60.0 + part.parse::<f64>().unwrap_or(0.0)
-        });
-    Duration::from_secs_f64(seconds)
+    // SAFETY: `getrusage` writes a `struct rusage` into the zeroed one it is given, and reads
+    // nothing from it.
+    let usage = unsafe {
+        let mut usage: libc::rusage = std::mem::zeroed();
+        assert_eq!(libc::getrusage(libc::RUSAGE_SELF, &raw mut usage), 0);
+        usage
+    };
+    let time = |t: libc::timeval| {
+        Duration::new(
+            u64::try_from(t.tv_sec).unwrap_or(0),
+            u32::try_from(t.tv_usec).unwrap_or(0) * 1000,
+        )
+    };
+    time(usage.ru_utime) + time(usage.ru_stime)
 }
 
 #[test]
@@ -64,11 +66,8 @@ fn a_child_is_counted_once_it_ends() {
     assert!(output.status.success());
     assert_eq!(output.stdout, b"done\n");
     assert!(counts.cpu > Duration::ZERO, "{counts:?}");
-    if cfg!(target_os = "macos") {
-        assert!(
-            counts.instructions.is_some_and(|n| n > 1_000_000),
-            "{counts:?}"
-        );
+    if let Some(instructions) = counts.instructions {
+        assert!(instructions > 1_000_000, "{counts:?}");
     }
 }
 

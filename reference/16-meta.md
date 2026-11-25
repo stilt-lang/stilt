@@ -453,7 +453,7 @@ A run stops when it does one of these:
 
 A run that stops is E0226, *macro that didn't finish*, at the use. Its message names the reason, as a panic's kind and detail or the function through which the run reached C. It also names the frames of the macro's module's own functions that were running, innermost last. The use stands as a failed use ([macros.failed-uses](#macros.failed-uses)).
 
-Tests: [foreign/compile_time/main.lt](../conformance/foreign/compile_time/main.lt), [procedural/limits/main.lt](../conformance/procedural/limits/main.lt), [procedural/memory/main.lt](../conformance/procedural/memory/main.lt), [procedural/reaching_io/main.lt](../conformance/procedural/reaching_io/main.lt).
+Tests: [foreign/compile_time/main.lt](../conformance/foreign/compile_time/main.lt), [procedural/all_steps/main.lt](../conformance/procedural/all_steps/main.lt), [procedural/limits/main.lt](../conformance/procedural/limits/main.lt), [procedural/memory/main.lt](../conformance/procedural/memory/main.lt), [procedural/one_step_more/main.lt](../conformance/procedural/one_step_more/main.lt), [procedural/reaching_io/main.lt](../conformance/procedural/reaching_io/main.lt).
 
 Checked by: also the toolchain's tests of a run's memory, which every value it holds and the thread of each fiber count toward (`compiler/stilt-meta/src/value/weight.rs`, `compiler/stilt-meta/src/tests/limits.rs`).
 

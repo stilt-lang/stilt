@@ -4,7 +4,7 @@ This page lists what this release of Stilt doesn't do yet, or does only within a
 
 ## Platforms
 
-- **Hosts.** The toolchain runs on macOS on ARM, and on Linux on ARM and x86-64. There is no Windows toolchain yet: on Windows, use WSL or a Linux container. On Linux on ARM, a release build uses the clang that `STILT_CC` names, until a clang archive for it is published ([builds.finding-clang](../../reference/20-builds.md#builds.finding-clang)).
+- **Hosts.** The toolchain runs on macOS on ARM, and on Linux on ARM and x86-64. There is no Windows toolchain yet: on Windows, use WSL or a Linux container.
 - **Targets.** From any host, `stilt build --target` builds for macOS on ARM, Linux on ARM and x86-64, and WebAssembly (`wasm32-wasip1`). See [Builds](../../reference/20-builds.md).
 - **Release builds** download clang the first time they run, so the first one needs the network.
 

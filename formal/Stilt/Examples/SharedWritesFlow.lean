@@ -75,17 +75,29 @@ def loopCarries : Program := program <|
         (.seq (.assign ⟨"w", []⟩ (.var "x")) (.seq (.assign ⟨"y", []⟩ (.var "x"))
           (.assign ⟨"c", []⟩ (.bool true))))))
 
+/-- Whether an observation raises the integer `n`: a check the kernel evaluates by
+`decide +kernel`, where `rfl` would have the elaborator unfold a whole run, which took 20 s and
+14 GB. -/
+private def raisesInt (n : Int) : Observation → Bool
+  | .raised (.int m) => m == n
+  | _ => false
+
+private theorem of_raisesInt {o : Observation} {n : Int} (h : raisesInt n o = true) :
+    o = .raised (.int n) := by
+  cases o with
+  | raised e => cases e <;> simp_all [raisesInt]
+  | _ => simp [raisesInt] at h
+
 /-- At the head of the loop, `w` and `y` hold the copies the turn before gave them. -/
 theorem loopCarries_shared : loopCarries.sharedNames = ["w", "w"] := by decide +kernel
 
-set_option maxHeartbeats 4000000 in
 theorem loopCarries_runs :
     (loopCarries.runCopy 12).observe = .raised (.int 5) ∧
       (loopCarries.runSharing 12).observe = .raised (.int 5) := by
   refine ⟨rfl, ?_⟩
   unfold Program.runSharing
   rw [Program.isShared_of_nodup _ (by decide +kernel), loopCarries_shared]
-  rfl
+  exact of_raisesInt (by decide +kernel)
 
 /-- `try { raise [1, 2] } catch e => { var z = e; z[0] = 9; raise e[0] }`, the body raising a
 `List<i64>`. -/

@@ -15,11 +15,6 @@ fn within() -> i64 { endless.within!() }
 
 fn beyond() -> i64 { endless.beyond!() } //~ ERROR E0226
 
-// A macro's own body is the first of its steps too.
-fn all_steps() -> i64 { endless.all_steps!() }
-
-fn one_more() -> i64 { endless.one_more!() } //~ ERROR E0226
-
 fn past() -> i64 { endless.past!() } //~ ERROR E0226
 
 fn nan() -> f64 { endless.nan!() } //~ ERROR E0226

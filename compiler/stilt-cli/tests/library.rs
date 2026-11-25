@@ -46,6 +46,10 @@ fn link(dir: &Path, program: &str, source: &str, names: &[&str]) -> Output {
     for name in names {
         command.arg(dir.join("out").join(format!("lib{name}.a")));
     }
+    // c.static-library: glibc keeps the math library apart from the C library.
+    if cfg!(target_os = "linux") {
+        command.arg("-lm");
+    }
     command.output().expect("cc runs")
 }
 

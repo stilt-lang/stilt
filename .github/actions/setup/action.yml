@@ -25,28 +25,30 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends libffi-dev zlib1g-dev pkg-config
+        # gdb: the debugger tests drive it on Linux, as lldb on macOS, and hosted runners have none.
+        sudo apt-get install -y --no-install-recommends libffi-dev zlib1g-dev pkg-config gdb
 
     - name: Install system libraries (macOS)
       if: runner.os == 'macOS'
       shell: bash
       run: |
-        brew install pkgconf
+        # llvm: the playground's C for WebAssembly needs an LLVM clang, which Apple's isn't.
+        brew install pkgconf llvm
         sudo DevToolsSecurity -enable
 
-    - name: Install clang (Linux)
-      if: runner.os == 'Linux' && inputs.clang == 'true'
-      uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
-      with:
-        version: '23.1.5'
-
-    - name: Install clang (macOS)
-      if: runner.os == 'macOS' && inputs.clang == 'true'
+    - name: Install clang
+      if: inputs.clang == 'true'
       shell: bash
       run: |
         # The pinned clang of the release toolchains, checked by the digest toolchains.txt gives
-        # it, rather than whatever version Homebrew has.
-        read -r _ url digest < <(grep '^aarch64-macos ' compiler/stilt-cli/src/release/toolchains.txt)
+        # it, rather than whatever version the system's packages have.
+        case "$RUNNER_OS-$(uname -m)" in
+          macOS-arm64) host=aarch64-macos ;;
+          Linux-x86_64) host=x86_64-linux ;;
+          Linux-aarch64) host=aarch64-linux ;;
+          *) echo "::error::no pinned clang for $RUNNER_OS on $(uname -m)"; exit 1 ;;
+        esac
+        read -r _ url digest < <(grep "^$host " compiler/stilt-cli/src/release/toolchains.txt)
         curl -fsSL --retry 3 "$url" -o "$RUNNER_TEMP/clang.tar.gz"
         echo "$digest  $RUNNER_TEMP/clang.tar.gz" | shasum -a 256 -c -
         mkdir -p "$RUNNER_TEMP/clang"
@@ -80,14 +82,17 @@ runs:
         opam install . --deps-only --with-test --with-dev-setup --yes
         echo "STILT_SWITCH=$(opam switch show)" >> "$GITHUB_ENV"
 
-    - name: Cache Lake
+    # The newest build of the model for this toolchain; the Lean job saves one as soon as the
+    # model builds, so a run that later fails or times out still leaves the next one its build.
+    - name: Restore Lake's build
       if: inputs.lean == 'true'
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/.elan
           formal/.lake
-        key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('formal/lean-toolchain', 'formal/lake-manifest.json') }}
+        key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('formal/lean-toolchain', 'formal/lake-manifest.json') }}-${{ github.sha }}
+        restore-keys: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('formal/lean-toolchain', 'formal/lake-manifest.json') }}-
 
     - name: Install Lean
       if: inputs.lean == 'true'
