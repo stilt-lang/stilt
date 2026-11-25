@@ -200,36 +200,8 @@ jobs:
   site:
     name: Deploy the website
     needs: publish
-    if: ${{ !github.event.repository.private }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
     permissions:
+      contents: read
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: ./.github/actions/setup
-        with:
-          lean: 'true'
-          cache-key: site
-      # The website builds with Astro, which needs a newer Node than the runners hold.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: site/package-lock.json
-      - name: Build the model, its proof map, and the website
-        run: |
-          just build
-          (cd formal && lake build Stilt)
-          just proof-map
-          just site
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
-        with:
-          path: target/site
-      - id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+    uses: ./.github/workflows/site.yml
