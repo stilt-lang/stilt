@@ -28,7 +28,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.first.outputs.page_url || steps.again.outputs.page_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
@@ -51,5 +51,15 @@ jobs:
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: target/site
-      - id: deploy
+      # The deploy can miss an artifact uploaded a moment before in the same job
+      # (actions/deploy-pages#451), so it waits a little, and tries once more if it misses it.
+      - name: Wait for the artifact to be listed
+        run: sleep 15
+      - id: first
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        continue-on-error: true
+      - if: ${{ steps.first.outcome == 'failure' }}
+        run: sleep 60
+      - id: again
+        if: ${{ steps.first.outcome == 'failure' }}
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
