@@ -1,0 +1,6 @@
+[Unit]
+Description=Stilt fuzzing machine: sync
+
+[Service]
+Type=oneshot
+ExecStart=%h/fuzz/bin/sync.sh
