@@ -25,6 +25,6 @@ A link written in a document leads where it leads in the repository: to the page
 
 ## Building
 
-`just site` builds the compiler and the playground, installs the site's dependencies from `package-lock.json` when they changed, and runs `npm run build`. It needs Node 22.12 or later. The build fails on any link of a document that leads nowhere in the repository, any link of a page that leads to no file or `id` of the site, and any goal of [`docs/design/goals.md`](../docs/design/goals.md) that names nothing that checks it.
+`just site` builds the compiler and the playground, installs the site's dependencies from `package-lock.json` when they changed, and runs `npm run build`. It needs Node 22.23.4 or later. The build fails on any link of a document that leads nowhere in the repository, any link of a page that leads to no file or `id` of the site, and any goal of [`docs/design/goals.md`](../docs/design/goals.md) that names nothing that checks it.
 
 From `site/`, `npm run dev` serves the site as it is edited, and `npm run preview` serves what `npm run build` wrote. `STILT` names the compiler, `target/bin/stilt` by default, and `STILT_PLAYGROUND` the playground's builds, `target/playground` by default.

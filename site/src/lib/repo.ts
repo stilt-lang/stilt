@@ -28,11 +28,12 @@ export function kind(file: string): "file" | "directory" | null {
   }
 }
 
-/** The names of the entries of the repository's directory `dir`, hidden ones left out, sorted. */
+/** The names of the entries of the repository's directory `dir`, hidden ones and installed packages
+ * left out, sorted. */
 export function entries(dir: string): { name: string; dir: boolean }[] {
   return fs
     .readdirSync(path.join(ROOT, dir), { withFileTypes: true })
-    .filter((e) => !e.name.startsWith("."))
+    .filter((e) => !e.name.startsWith(".") && e.name !== "node_modules")
     .map((e) => ({ name: e.name, dir: e.isDirectory() }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

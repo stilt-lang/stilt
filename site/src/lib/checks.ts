@@ -27,10 +27,10 @@ export function repository(): string[] {
   return errors;
 }
 
-/** The values of the attribute `name` of the tags of the HTML `text`, its scripts' text left
- * out, unescaped. Text between tags is never read, so code that shows a link links nothing. */
+/** The values of the attribute `name` of the tags of the HTML `text`, its scripts left out,
+ * unescaped. Text between tags is never read, so code that shows a link links nothing. */
 function attributes(text: string, name: string): string[] {
-  const tags = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "").match(/<[a-z][^>]*>/gi) ?? [];
+  const tags = (text.match(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>|<[a-z][^>]*>/gi) ?? []).filter((t) => !/^<script\b/i.test(t));
   const pattern = new RegExp(`\\s${name}=(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "g");
   return tags.flatMap((tag) =>
     [...tag.matchAll(pattern)].map((m) =>

@@ -721,7 +721,7 @@ grammar-generate:
 site: build _playground
     #!/usr/bin/env bash
     set -euo pipefail
-    command -v node > /dev/null || { echo "ERROR the site builds under Node 22.12 or later"; exit 1; }
+    command -v node > /dev/null || { echo "ERROR the site builds under Node 22.23.4 or later"; exit 1; }
     cd site
     [ node_modules/.package-lock.json -nt package-lock.json ] || npm ci --silent --no-audit --no-fund
     STILT="{{ compiler }}" npm run --silent build
