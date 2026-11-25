@@ -22,7 +22,8 @@ while true; do
             tail -60 "$FUZZ/work/$t.log" > "$f/report"
             printf 'kind=%s\ncommit=%s\n' "$t" "$(cat "$STATE/built")" > "$f/finding"
         done
-        execs=$(grep -o 'stat::number_of_executed_units: *[0-9]*' "$FUZZ/work/$t.log" | grep -o '[0-9]*$' | tail -1)
+        # libFuzzer's last line, such as "Done 467620 runs in 3601 second(s)".
+        execs=$(grep -oE '^Done [0-9]+ runs' "$FUZZ/work/$t.log" | grep -oE '[0-9]+' | tail -1)
         echo "$(date -u +%FT%TZ) $t ${execs:-0}" >> "$STATE/progress"
     done
 done

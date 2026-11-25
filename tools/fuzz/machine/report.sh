@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Hourly (stilt-fuzz-report.timer): each new finding becomes an issue labelled `fuzz`, or a
 # comment on the open issue with the same signature (the kind, and where it panicked or what
-# the runner reported first); and the pinned issue "Fuzzing status" is rewritten. It needs a
+# the runner reported, without the programs' names and places); and the pinned issue "Fuzzing status" is rewritten. It needs a
 # token that may write issues on the repository alone, in ~/fuzz/token; without one, findings
 # wait in ~/fuzz/findings.
 set -euo pipefail
@@ -9,10 +9,22 @@ set -euo pipefail
 [ -s "$FUZZ/token" ] || { echo "no token: $(ls "$FINDINGS" | wc -l) findings wait"; exit 0; }
 api() { curl -fsS -H "Authorization: Bearer $(cat "$FUZZ/token")" \
     -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/$1" "${@:2}"; }
+# The kinds of error that the runner's report holds, each once.
+errors() {
+    sed -nE 's/^ERROR [^ ]+: (.*)$/\1/p' "$1" | sed -E 's/ \[log: .*//; s/ \(and [0-9]+ more\)$//; s/ at [^ ]+\.lt:[0-9:]+//g' \
+        | sort -u | paste -sd ';' - | sed 's/;/; /g' | cut -c1-200
+}
+# The issues this run opened, by signature: GitHub lists a new issue only some seconds later.
+declare -A opened
 for f in "$FINDINGS"/*/; do
     [ -f "$f/finding" ] || continue
     . "$f/finding"
-    where=$(grep -m1 -oE "panicked at [^ ]+|deadly signal|timeout|out-of-memory|FAIL[^ ]* [^ ]+" "$f/report" || echo failure)
+    if [ "$kind" = differential ]; then
+        where=$(errors "$f/report")
+    else
+        where=$(grep -m1 -oE "panicked at [^ ]+|deadly signal|timeout|out-of-memory" "$f/report" || true)
+    fi
+    where=${where:-failure}
     signature="$kind: $where"
     body=$(mktemp)
     {
@@ -26,11 +38,11 @@ for f in "$FINDINGS"/*/; do
         fi
         echo; echo '<details><summary>Report</summary>'; echo; echo '```'; tail -40 "$f/report"; echo '```'; echo '</details>'
     } > "$body"
-    open=$(api "issues?labels=fuzz&state=open&per_page=100" | jq -r --arg s "$signature" '.[] | select(.title == $s) | .number' | head -1)
+    open=${opened[$signature]:-$(api "issues?labels=fuzz&state=open&per_page=100" | jq -r --arg s "$signature" '.[] | select(.title == $s) | .number' | head -1)}
     if [ -n "$open" ]; then
         jq -Rs '{body: .}' < "$body" | api "issues/$open/comments" -X POST --data @- > /dev/null
     else
-        jq -Rs --arg t "$signature" '{title: $t, body: ., labels: ["fuzz"]}' < "$body" | api issues -X POST --data @- > /dev/null
+        opened[$signature]=$(jq -Rs --arg t "$signature" '{title: $t, body: ., labels: ["fuzz"]}' < "$body" | api issues -X POST --data @- | jq -r .number)
     fi
     rm -f "$body"
     mkdir -p "$FUZZ/reported"; mv "$f" "$FUZZ/reported/"
