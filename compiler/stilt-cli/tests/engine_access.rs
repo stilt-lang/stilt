@@ -27,10 +27,15 @@ struct Program {
 }
 
 impl Program {
-    /// The paths are kept short, since a socket's path is limited to about a hundred bytes.
+    /// The temporary directory is in the system's own, not in the repository, whose path may be
+    /// long: a socket's path is limited to about a hundred bytes.
     fn new(name: &str) -> Self {
         let dir = common::project("access", name, &[("main.lt", MAIN), ("shapes.lt", SHAPES)]);
-        let tmp = common::directory("access", &format!("{name}.t"));
+        let tmp = fs::canonicalize("/tmp")
+            .expect("the system has a temporary directory")
+            .join(format!("stilt-{}-{name}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir(&tmp).expect("the directory can be made");
         Self {
             dir: dir.canonicalize().expect("the directory exists"),
             tmp,
@@ -82,6 +87,7 @@ impl Drop for Program {
         for exe in &self.exes {
             let _ = self.command(exe, &["engine", "--stop", "."]);
         }
+        let _ = fs::remove_dir_all(&self.tmp);
     }
 }
 
