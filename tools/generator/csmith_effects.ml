@@ -457,7 +457,7 @@ let uses p sc seed =
   let effects, decls =
     List.split (Pick.times (Pick.between p.r 1 3) (fun () -> effect_decl p))
   in
-  let st = { b; k = Pick.between p.r 7 999_999; effects; fns = [] } in
+  let st = { b; k = Pick.mark p.r seed; effects; fns = [] } in
   let fns = Pick.times (Pick.between p.r 1 4) (fun () -> function_ st) in
   let share = shares seed in
   let scenes =

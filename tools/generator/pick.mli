@@ -25,6 +25,11 @@ val weighted : t -> (int * 'a) list -> 'a
 val times : int -> (unit -> 'a) -> 'a list
 (** [n] values made by [f], in order. *)
 
+val mark : t -> int -> int
+(** [mark r seed] is a number that marks the program made from [seed], unlike
+    that of any seed less than a thousand away, such as another program's of the
+    same bundle. *)
+
 val bits64 : t -> int64
 (** 64 random bits. *)
 

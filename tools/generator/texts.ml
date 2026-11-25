@@ -53,7 +53,7 @@ let str_ops expr b sc ~depth =
   let me ?(known = false) () = expr b sc ~depth:d ~known Str in
   let strs = typed sc.vars Str in
   [
-    (4, fun () -> interpolation expr b sc ~depth:d);
+    (4, fun () -> cap_str b.p (interpolation expr b sc ~depth:d));
     ( 2,
       fun () ->
         method_on (me ~known:true ())
@@ -72,13 +72,15 @@ let str_ops expr b sc ~depth =
         (* The replacement is a literal, so that a string can't grow faster
            than linearly in a loop or a fold. *)
         let from = if Pick.chance r 0.1 then "\"\"" else Lit.string r in
-        method_on (me ~known:true ())
-          (Pick.one r [ "replace"; "replace_first" ])
-          [ from; Lit.string r ] );
+        cap_str b.p
+        @@ method_on (me ~known:true ())
+             (Pick.one r [ "replace"; "replace_first" ])
+             [ from; Lit.string r ] );
     ( 1,
       fun () ->
-        method_on (me ~known:true ()) "join"
-          [ (expr b sc ~depth:d ~known:false (List Str)).text ] );
+        cap_str b.p
+        @@ method_on (me ~known:true ()) "join"
+             [ (expr b sc ~depth:d ~known:false (List Str)).text ] );
     ( (if strs = [] then 0 else 1),
       fun () ->
         (* Every string is ASCII, so every offset is on a UTF-8 boundary. *)

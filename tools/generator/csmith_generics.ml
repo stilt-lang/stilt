@@ -89,7 +89,7 @@ let calls b sc t =
 let uses p sc seed =
   let p = { p with r = Pick.make (Hashtbl.hash (seed, "generics")) } in
   let b = { p; budget = 2_000; spent = 0 } in
-  let k = Pick.between p.r 1 999 in
+  let k = Pick.mark p.r seed in
   let types = impl_types p in
   let impls = List.map (fun t -> impl b t k) types in
   let main =

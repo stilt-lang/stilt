@@ -191,4 +191,4 @@ let uses seed =
     block_lines "{" (recursions r k ~long) "}"
     @ block_lines "{" (large r k n ~some) "}"
   in
-  (helpers k (Pick.between r 7 999_999), lines)
+  (helpers k (Pick.mark r seed), lines)

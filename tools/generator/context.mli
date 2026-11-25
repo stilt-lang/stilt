@@ -23,10 +23,28 @@ type program = {
       (** Whether its arithmetic may panic: [+], [-] and [*] that may overflow,
           and [/] and [%] by any divisor, where every other program masks their
           operands so that they can't. *)
+  capped : bool;
+      (** Whether the strings and lists that its operations make are cut, so
+          that no value grows without bound. *)
 }
 
 val fresh : program -> string -> string
 (** A name made of [prefix] and a number that no other name has. *)
+
+val cap_str : program -> Code.code -> Code.code
+(** A string that an operation made, cut to [longest_str] bytes if the program
+    is capped. *)
+
+val cap_list : program -> Code.code -> Code.code
+(** A list that an operation made, cut to [longest_list] elements if the program
+    is capped. *)
+
+val mentions : string -> string -> bool
+(** [mentions word text] is whether [text] holds [word]. *)
+
+val caps : Code.line list list -> Code.line list list
+(** The declaration of the function [cap], which cuts a string, if the items
+    call it, and nothing otherwise. *)
 
 val fault : string
 (** The error type of every function that raises, as its own module writes it.

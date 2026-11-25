@@ -281,7 +281,7 @@ let uses p sc seed =
   let b = { p; budget = 4_000; spent = 0 } in
   let sc = { sc with weight = 1 } in
   let t = leaf_ty p.r in
-  let helpers = helpers t (Pick.between p.r 7 999_999) in
+  let helpers = helpers t (Pick.mark p.r seed) in
   ( helpers,
     List.concat
       (Pick.times

@@ -158,14 +158,6 @@ let exercise b (sc, lines) f =
    given the seeds [views], [unicode] and [deep], views the fields of that
    seed's records, uses its text beyond ASCII, and makes its deep recursions
    and large lists. *)
-(* Whether [text] holds [word]. *)
-let mentions word text =
-  let n = String.length word in
-  let rec from i =
-    i + n <= String.length text && (String.sub text i n = word || from (i + 1))
-  in
-  from 0
-
 (* [main]'s first statements, drawn again, up to [tries] times, while one of
    them would leave [main] with [return]: they come before the calls of every
    function and every feature's lines, which would then never run. *)
@@ -315,7 +307,8 @@ let panicking seed = Pick.chance (Pick.make (Hashtbl.hash (seed, "panics"))) 0.1
 
 let program_items ?pub ?(arrays = false) ?(reflect = false) ?macros
     ?(par = false) ?(cycles = false) ?(effects = false) ?(views = false)
-    ?(unicode = false) ?(deep = false) ?(generics = false) seed =
+    ?(unicode = false) ?(deep = false) ?(generics = false) ?(capped = false)
+    seed =
   let p =
     {
       r = Pick.make seed;
@@ -325,6 +318,7 @@ let program_items ?pub ?(arrays = false) ?(reflect = false) ?macros
       fault;
       fault_variants;
       panics = panicking seed;
+      capped;
     }
   in
   let types =
@@ -365,7 +359,7 @@ let text ?pub ?(macros = true) seed =
   let macros = if macros then make_macros seed else None in
   let p, items =
     program_items ?pub ~arrays ~reflect ?macros ~par ~cycles ~effects ~views
-      ~unicode ~deep ~generics seed
+      ~unicode ~deep ~generics ~capped:true seed
   in
   let uses =
     (if arrays then [ line "use std.array" ] else [])
@@ -377,7 +371,8 @@ let text ?pub ?(macros = true) seed =
     @ (if unicode then [ line "use std.text" ] else [])
     @ Option.fold ~none:[] ~some:(fun m -> [ meta_use m ]) macros
   in
-  (String.concat "\n" (List.map render (uses @ items @ tests p seed)), macros)
+  let items = items @ tests p seed in
+  (String.concat "\n" (List.map render (uses @ caps items @ items)), macros)
 
 let program ?macros seed = fst (text ?macros seed)
 

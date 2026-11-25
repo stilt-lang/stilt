@@ -159,9 +159,10 @@ let make seed =
       fault;
       fault_variants;
       panics = false;
+      capped = true;
     }
   in
-  let k = Pick.between mp.r 7 999_999 in
+  let k = Pick.mark mp.r seed in
   let helpers = Pick.times (Pick.between mp.r 1 2) (fun () -> helper mp) in
   let decls = List.map (declare mp k (List.map fst helpers)) (kinds mp.r) in
   let reads =
@@ -198,5 +199,6 @@ let render ?(planted = []) ?retyped d =
 
 let text ?(edit = fun _ -> None) m =
   let decl d = Option.value (edit d) ~default:(render d) in
-  let items = (line "use std.meta" :: m.helpers) @ List.map decl m.decls in
+  let items = m.helpers @ List.map decl m.decls in
+  let items = (line "use std.meta" :: caps items) @ items in
   String.concat "\n" (List.map Code.render items)

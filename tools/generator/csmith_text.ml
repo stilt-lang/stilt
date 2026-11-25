@@ -170,4 +170,4 @@ let uses p seed =
   let b = { p; budget = 0; spent = 0 } in
   let rounds = Pick.times (Pick.between p.r 1 2) (fun () -> round b) in
   let tail = print_of [ "{text.unicode_version()}" ] in
-  (helpers (Pick.between p.r 7 999_999), List.concat rounds @ tail)
+  (helpers (Pick.mark p.r seed), List.concat rounds @ tail)

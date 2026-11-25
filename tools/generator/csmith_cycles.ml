@@ -109,7 +109,7 @@ let uses p sc seed =
   let b = { p; budget = 4_000; spent = 0 } in
   let sc = { sc with weight = 1 } in
   let t = random_ty p ~maps:false 1 in
-  let helpers = helpers b t (Pick.between p.r 7 999_999) in
+  let helpers = helpers b t (Pick.mark p.r seed) in
   let rings =
     List.concat (Pick.times (Pick.between p.r 1 2) (fun () -> ring b sc t))
   in

@@ -50,8 +50,9 @@ let list_methods expr b sc ~depth t =
                   [ string_of_int (Pick.between r 0 4) ] );
             ( 1,
               fun () ->
-                method_on xs "concat"
-                  [ (expr b sc ~depth:d ~known:false (List t)).text ] );
+                cap_list b.p
+                @@ method_on xs "concat"
+                     [ (expr b sc ~depth:d ~known:false (List t)).text ] );
           ] );
     ( (if Ty.ordered ~decls:b.p.decls t then 1 else 0),
       fun () ->
@@ -84,15 +85,18 @@ let pieces expr b sc ~depth t =
     ( (if t = Str then 2 else 0),
       fun () ->
         let s = expr b sc ~depth:d ~known:true Str in
-        Pick.run r
-          [
-            (2, fun () -> method_on s "split" [ Lit.string r ]);
-            (1, fun () -> method_on s "chars" []);
-            (1, fun () -> method_on s "lines" []);
-            (1, fun () -> method_on s "split_whitespace" []);
-          ] );
+        cap_list b.p
+        @@ Pick.run r
+             [
+               (2, fun () -> method_on s "split" [ Lit.string r ]);
+               (1, fun () -> method_on s "chars" []);
+               (1, fun () -> method_on s "lines" []);
+               (1, fun () -> method_on s "split_whitespace" []);
+             ] );
     ( (if t = Int U8 then 1 else 0),
-      fun () -> method_on (expr b sc ~depth:d ~known:true Str) "bytes" [] );
+      fun () ->
+        cap_list b.p
+        @@ method_on (expr b sc ~depth:d ~known:true Str) "bytes" [] );
   ]
 
 (* Lists of pairs: a list enumerated, or two lists zipped. *)

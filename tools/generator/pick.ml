@@ -27,6 +27,10 @@ let weighted r choices =
 
 (* [n] values made by [f], in order. *)
 let times n f = List.init n (fun _ -> f ())
+
+(* A number that marks the program made from [seed], unlike that of any seed
+   less than a thousand away, such as another program's of the same bundle. *)
+let mark r seed = ((1 + (between r 7 999_999 mod 999)) * 1000) + (seed mod 1000)
 let bits64 r = Random.State.bits64 r
 
 (* Runs one of the thunks, each as likely as its weight. *)

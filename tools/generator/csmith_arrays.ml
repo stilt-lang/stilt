@@ -188,5 +188,5 @@ let uses p sc seed =
   let sc = { sc with weight = 1 } in
   let rounds = Pick.times (Pick.between p.r 1 3) (fun () -> round b sc) in
   let ring = rings b in
-  let k = Pick.between p.r 7 999_999 in
+  let k = Pick.mark p.r seed in
   (helpers k @ List.map fst rounds, List.concat_map snd rounds @ ring)

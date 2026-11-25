@@ -136,6 +136,7 @@ let project ~seed ~lines =
           (fun (c, payload) -> (qualify errors c, payload))
           fault_variants;
       panics = false;
+      capped = false;
     }
   in
   let file path items = (path, String.concat "\n" (List.map render items)) in

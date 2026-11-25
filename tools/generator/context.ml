@@ -22,11 +22,44 @@ type program = {
   fault : string;  (** The error type of every function that raises. *)
   fault_variants : (string * t list) list;  (** Its variants. *)
   panics : bool;  (** Whether its arithmetic may panic. *)
+  capped : bool;  (** Whether its strings and lists are capped. *)
 }
 
 let fresh p prefix =
   p.count <- p.count + 1;
   prefix ^ string_of_int p.count
+
+(* A string or a list that an operation makes grows with its operands, so that
+   a fold's accumulator, or two variables that a loop assigns from each other,
+   would double on each pass. Where a program is capped, each such operation's
+   result is cut. The cut takes no random choice, so a seed's program is the
+   same without it but for its values. *)
+let longest_str = 120
+let longest_list = 16
+let cap_str p c = if p.capped then atom (call_text "cap" [ c.text ]) else c
+
+let cap_list p c =
+  if p.capped then method_on c "take" [ string_of_int longest_list ] else c
+
+(* The function that cuts a string. Its body is too short for W0302 to compare
+   it with another module's (docs.body-size). Every string is ASCII, so every
+   offset is on a UTF-8 boundary. *)
+let cap_decl =
+  Printf.sprintf "fn cap(s: str) -> str { s.slice(0, s.len().min(%d)) }"
+    longest_str
+
+(* Whether [text] holds [word]. *)
+let mentions word text =
+  let n = String.length word in
+  let rec from i =
+    i + n <= String.length text && (String.sub text i n = word || from (i + 1))
+  in
+  from 0
+
+let caps items =
+  if List.exists (List.exists (fun (_, l) -> mentions "cap(" l)) items then
+    [ line cap_decl ]
+  else []
 
 (* The error type of every function that raises, as its own module writes it. *)
 let fault = "Fault"

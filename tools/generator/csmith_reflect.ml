@@ -163,7 +163,7 @@ let uses p sc seed =
   let lines =
     List.concat (Pick.times (Pick.between p.r 2 4) (fun () -> reflect b sc))
   in
-  let k = Pick.between p.r 7 999_999 in
+  let k = Pick.mark p.r seed in
   let items =
     [ show_r k; show_all k; copy_r k; copy_all k ] @ tagged k @ impls p k
   in
