@@ -77,7 +77,10 @@ jobs:
       - name: Build and run every run test
         env:
           STILT_BUILT: '1'
-        run: target/bin/stilt-test --impl tools/runner/release.sh --kinds run --logs target/run-logs
+        # A static executable, as Linux's are, can't load the C libraries of two of the tests.
+        run: |
+          target/bin/stilt-test --impl tools/runner/release.sh --kinds run \
+            $(just --evaluate static-skips) --logs target/run-logs
       - name: Commands answered by engines against the compiler alone
         env:
           STILT_BUILT: '1'
@@ -132,6 +135,13 @@ jobs:
           cargo build --release --workspace
           just differential 5000 1 25
           just sanitizers target/differential
+      - name: Keep the logs of a failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sanitizer-logs
+          path: target/sanitize-logs
+          if-no-files-found: ignore
 
   debuggers:
     name: debuggers
