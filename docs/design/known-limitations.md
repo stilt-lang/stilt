@@ -7,6 +7,7 @@ This page lists what this release of Stilt doesn't do yet, or does only within a
 - **Hosts.** The toolchain runs on macOS on ARM, and on Linux on ARM and x86-64. There is no Windows toolchain yet: on Windows, use WSL or a Linux container.
 - **Targets.** From any host, `stilt build --target` builds for macOS on ARM, Linux on ARM and x86-64, and WebAssembly (`wasm32-wasip1`). See [Builds](../../reference/20-builds.md).
 - **Release builds** download clang the first time they run, so the first one needs the network.
+- **Release builds on older Linux.** The clang they download needs glibc 2.34 or later, and the libstdc++ of GCC 12 or later (`GLIBCXX_3.4.30`), so it doesn't run on Ubuntu 20.04, on Debian 11 or on Alpine. There, set `STILT_CC` to a clang that runs on the machine ([builds.another-compiler](../../reference/20-builds.md#builds.another-compiler)), or build on a newer system.
 
 ## Memory and stacks
 

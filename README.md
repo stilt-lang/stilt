@@ -88,7 +88,7 @@ The installer puts `stilt` in `~/.stilt/bin`, on macOS on ARM and on Linux on AR
 curl -sSf https://raw.githubusercontent.com/stilt-lang/stilt/main/install.sh | sh
 ```
 
-It installs the latest [release](https://github.com/stilt-lang/stilt/releases). Until the first one, 2027.1.0, is published, [build Stilt from this repository](#building).
+It installs the latest [release](https://github.com/stilt-lang/stilt/releases). On Linux, the clang that release builds download needs glibc 2.34 and GCC 12's libstdc++ or later; [known limitations](docs/design/known-limitations.md#platforms) says what to do on older systems. Until the first one, 2027.1.0, is published, [build Stilt from this repository](#building).
 
 Then create a program, run it, test it, and ask what the compiler worked out:
 
