@@ -51,13 +51,14 @@ impl Session {
         })
     }
 
-    /// Ends the session once its run has ended: its image's code is freed, unless a task of the
-    /// run on a thread that hasn't ended may still run it, and
-    /// the program's thread waits until the process ends. A session kept so stays where a
-    /// leak check finds it.
+    /// Ends the session once its run has ended: its image's code is freed, with the values of
+    /// its constants, once the run's other threads have stopped, as a worker of `std.par` does at
+    /// its next poll when another part of its call panicked, unless one still may run it after
+    /// [`STOP_WAIT`], and the program's thread waits until the process ends. A session kept so
+    /// stays where a leak check finds it.
     pub(super) fn close(self) {
         static KEPT: Mutex<Vec<usize>> = Mutex::new(Vec::new());
-        if !self.running.quiet() {
+        if !self.running.stop(STOP_WAIT) {
             let kept = Box::into_raw(Box::new(self)) as usize;
             KEPT.lock()
                 .unwrap_or_else(PoisonError::into_inner)

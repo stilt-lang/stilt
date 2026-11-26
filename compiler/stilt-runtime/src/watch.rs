@@ -200,17 +200,16 @@ impl Running {
         *slot
     }
 
-    /// Stops the run at its next poll, waiting at most `timeout` for it, and tells whether it
-    /// has ended. A run that never polls, such as one in a loop of no calls or waiting for
+    /// Stops the run at its next poll, and the threads of a run that has ended, such as a
+    /// worker of `std.par` still running a part of the call whose other part panicked, waiting
+    /// at most `timeout` for them, and tells whether the run has ended with no thread left to
+    /// run its code. A run that never polls, such as one in a loop of no calls or waiting for
     /// input, goes on.
     #[must_use]
     pub fn stop(&self, timeout: Duration) -> bool {
-        if self.ended().is_some() {
-            return true;
-        }
         let deadline = std::time::Instant::now() + timeout;
         STOP.store(1, Ordering::SeqCst);
-        let ended = self.wait(timeout).is_some();
+        let ended = self.ended().is_some() || self.wait(timeout).is_some();
         // The workers still running parts of the run's calls of `std.par`, and the threads of
         // its tasks, stop at their next poll too, rather than run on for the run that ended.
         crate::workers::settle(deadline);
@@ -402,8 +401,10 @@ pub(crate) fn end(ended: Ended) -> ! {
     io::flush();
     match WATCHED.with_borrow(Clone::clone) {
         Some(shared) => {
-            shared.finish(ended);
+            // Counted out before the end is told, as a run that returns is: the caller frees
+            // the run's code once no thread may run it, which it checks when told.
             parked();
+            shared.finish(ended);
             threads::park()
         }
         None => crate::entry::exit_process(crate::entry::status(match ended {
