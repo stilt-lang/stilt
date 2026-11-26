@@ -1111,7 +1111,10 @@ differential count="5000" seed="1" release="25": build
     rm -rf target/differential
     {{ generator }} csmith --seed {{ seed }} --count {{ count }} --bundle 10 \
         --out target/differential
-    {{ runner }} --impl target/release/stilt --diff {{ interpreter }} --tests \
+    # The reference interpreter takes a few seconds of a bundle where the compiler takes a fraction
+    # of one, and the slowest bundles pass the default 10 s on a slow machine: the generated
+    # programs all end, so the limit only stops a bug that never does.
+    {{ runner }} --impl target/release/stilt --diff {{ interpreter }} --tests --time-limit 30 \
         --cache target/interpreter-cache --logs target/differential-logs target/differential
     # The release builds, by the optimized compiler, with the reference interpreter's runs from the cache.
     wrapper=target/differential-release.sh
