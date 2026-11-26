@@ -175,6 +175,14 @@ fn divisions_by_a_proved_divisor() {
 }
 
 #[test]
+fn divisions_in_code_that_cannot_run() {
+    // The divisor's interval is empty in the body of a loop over an empty range, which is
+    // verified all the same.
+    let body = "  var w = 0\n  loop {\n    w += 1\n    if w > 4 { break }\n    for n in 0..0 { w = 3 / w }\n  }\n  w";
+    checks(&limited("() -> i64", body), "f");
+}
+
+#[test]
 fn divisions_that_stay_checked() {
     let text = limited("(n: i64, d: i64) -> i64", "  n / d");
     assert_eq!(unproved(&text), ["5:3 no divide-by-zero"]);

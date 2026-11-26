@@ -61,8 +61,10 @@ impl Walker<'_> {
             let ok = leaves_out(left.interval(), ty.0) || leaves_out(right.interval(), -1);
             self.prove(expr.at, Check::Overflow, ok);
         }
+        // An empty interval, its least above its greatest, is the divisor's in code that can't
+        // run, such as the body of a loop over an empty range: nothing bounds the result there.
         let interval = match right.lo {
-            Some(bl) if bl >= 1 => {
+            Some(bl) if bl >= 1 && right.hi.is_none_or(|bh| bh >= bl) => {
                 if op == BinaryOp::Div {
                     values::quotient(left.interval(), bl, right.hi)
                 } else {
