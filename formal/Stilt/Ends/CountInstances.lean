@@ -22,7 +22,7 @@ theorem Expr.contFree_substTys : ∀ e : Expr, (e.substTys s).contFree = e.contF
   | .closure .. | .loop _ => rfl
   | .record _ _ fs => by simp [Expr.substTys, Expr.contFree, fieldsContFree_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.contFree, exprsContFree_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .return e | .for _ _ e _ | .while e _ => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .return e | .for _ _ e _ | .while e _ => by
     simp [Expr.substTys, Expr.contFree, Expr.contFree_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .tryCatch a _ _ b _ => by
     simp [Expr.substTys, Expr.contFree, Expr.contFree_substTys a, Expr.contFree_substTys b]
@@ -68,7 +68,7 @@ theorem Expr.bound?_substTys : ∀ e : Expr, (e.substTys s).bound? = e.bound?
   | .assign ⟨_, _⟩ _ => rfl
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .tryCatch ..
+  | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .view .. => rfl
 
 theorem Expr.countings_substTys : ∀ e : Expr, (e.substTys s).countings = e.countings
@@ -81,7 +81,7 @@ theorem Expr.countings_substTys : ∀ e : Expr, (e.substTys s).countings = e.cou
   | .assign ⟨_, _⟩ _ => rfl
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .tryCatch ..
+  | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .view .. => rfl
 
 theorem Expr.movesBy_substTys (v : Name) (grow : Bool) (e : Expr) :
@@ -114,7 +114,7 @@ theorem Expr.steps_substTys (v : Name) (grow : Bool) : ∀ e : Expr,
     exact Expr.isStep_substTys s v grow (.assign ⟨x, p⟩ value)
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .tryCatch ..
+  | .letIn .. | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. => rfl
 
 theorem Expr.countsIn_substTys (c body : Expr) :
@@ -134,7 +134,7 @@ theorem Expr.contFree_substRows : ∀ e : Expr, (e.substRows s).contFree = e.con
   | .closure .. | .loop _ => rfl
   | .record _ _ fs => by simp [Expr.substRows, Expr.contFree, fieldsContFree_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.contFree, exprsContFree_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .return e | .for _ _ e _ | .while e _ => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .return e | .for _ _ e _ | .while e _ => by
     simp [Expr.substRows, Expr.contFree, Expr.contFree_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .tryCatch a _ _ b _ => by
     simp [Expr.substRows, Expr.contFree, Expr.contFree_substRows a, Expr.contFree_substRows b]
@@ -179,7 +179,7 @@ theorem Expr.bound?_substRows : ∀ e : Expr, (e.substRows s).bound? = e.bound?
   | .assign ⟨_, _⟩ _ => rfl
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .tryCatch ..
+  | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .view .. => rfl
 
 theorem Expr.countings_substRows : ∀ e : Expr, (e.substRows s).countings = e.countings
@@ -191,7 +191,7 @@ theorem Expr.countings_substRows : ∀ e : Expr, (e.substRows s).countings = e.c
   | .assign ⟨_, _⟩ _ => rfl
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .tryCatch ..
+  | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .view .. => rfl
 
 theorem Expr.movesBy_substRows (v : Name) (grow : Bool) (e : Expr) :
@@ -223,7 +223,7 @@ theorem Expr.steps_substRows (v : Name) (grow : Bool) : ∀ e : Expr,
     exact Expr.isStep_substRows s v grow (.assign ⟨x, p⟩ value)
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .tryCatch ..
+  | .letIn .. | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. => rfl
 
 theorem Expr.countsIn_substRows (c body : Expr) :

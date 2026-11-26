@@ -26,7 +26,7 @@ theorem Expr.lockFree_substTys : ∀ e : Expr, (e.substTys s).lockFree D L = e.l
   | .record _ _ fs => by simp [Expr.substTys, Expr.lockFree, fieldsLockFree_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.lockFree, exprsLockFree_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.lockFree, Expr.lockFree_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ | .while a b => by
@@ -91,7 +91,7 @@ theorem Expr.lockFree_substRows : ∀ e : Expr, (e.substRows s).lockFree D L = e
   | .record _ _ fs => by simp [Expr.substRows, Expr.lockFree, fieldsLockFree_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.lockFree, exprsLockFree_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.lockFree, Expr.lockFree_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ | .while a b => by

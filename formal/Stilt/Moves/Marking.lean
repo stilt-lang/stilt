@@ -53,6 +53,7 @@ def Expr.markMoves (after : Live) (pos : Bool) : Expr → Expr
       (body.markMoves ((after.union body.mentions).erase x) false)
   | .raise e => .raise (e.markMoves after false)
   | .try e => .try (e.markMoves after false)
+  | .form fm e => .form fm (e.markMoves after false)
   | .tryCatch e E x h τ => .tryCatch (e.markMoves (after.union (h.mentions.erase x)) false) E x
       (h.markMoves (after.erase x) false) τ
   | .while c body =>
@@ -157,7 +158,7 @@ theorem Expr.mentions_markMoves :
     simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves e, armsMentions_mark arms]
   | .for x _ e b, L, _ => by
     simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves e, Expr.mentions_markMoves b]
-  | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ => by
+  | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ | .form _ e, L, _ => by
     simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves e]
   | .tryCatch e _ x h _, L, _ => by
     simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves e, Expr.mentions_markMoves h]
@@ -257,7 +258,7 @@ theorem Expr.movesOk_markMoves :
   | .for x _ e b, L, _ => by
     simp [Expr.markMoves, Expr.movesOk, mentions_markMoves, Expr.movesOk_markMoves e,
       Expr.movesOk_markMoves b]
-  | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ => Expr.movesOk_markMoves e L false
+  | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ | .form _ e, L, _ => Expr.movesOk_markMoves e L false
   | .tryCatch e _ x h _, L, _ => by
     simp [Expr.markMoves, Expr.movesOk, mentions_markMoves, Expr.movesOk_markMoves e,
       Expr.movesOk_markMoves h]

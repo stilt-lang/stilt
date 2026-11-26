@@ -365,6 +365,7 @@ theorem eval_noCont {σ : Type} (D : Decls) (M : Memory σ) : ∀ n, NoContRun (
     case «for» x τ e body => exact loop M ih x hc body
     case raise e => exact bind (ih e hc) fun v => throw v
     case «try» e => exact ih e hc
+    case form _ e => exact ih e hc
     case tryCatch e E x h τ => exact handle (ih e hc.1) fun err => withVar M x err (ih h hc.2)
     case «while» c body =>
       have hl := ih (.while c body) (by simpa [Expr.contFree] using hc)

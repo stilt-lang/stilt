@@ -131,6 +131,7 @@ theorem eval_agrees {D : Decls} (hD : InPlace.Sim.DeclsSafe D) {shared : Name �
     case «for» x τ e body => exact Sim.loop shared ih x ⟨⟨r, hex.1⟩, hdp.1⟩ ⟨⟨_, hex.2⟩, hdp.2⟩
     case raise e => exact Sim.bind (ih e ⟨⟨r, hex⟩, hdp⟩) fun _ hv => Sim.throw hv
     case «try» e => exact ih e ⟨⟨r, hex⟩, hdp⟩
+    case form _ e => exact ih e ⟨⟨r, hex⟩, hdp⟩
     case tryCatch e E x h τ =>
       exact Sim.handle (ih e ⟨⟨r, hex.1⟩, hdp.1⟩) fun _ he =>
         Sim.withVar shared x he (ih h ⟨⟨_, hex.2⟩, hdp.2⟩)

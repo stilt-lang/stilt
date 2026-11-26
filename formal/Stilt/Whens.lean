@@ -25,7 +25,7 @@ def Expr.whens : Expr → List When
   | .closure _ _ _ body => body.whens
   | .record _ _ fields => fieldsWhens fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsWhens es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.whens
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .loop e | .perform _ e => e.whens
   | .index a b | .seq a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ | .withH _ _ a b => a.whens ++ b.whens
   | .call callee args _ => callee.whens ++ argsWhens args

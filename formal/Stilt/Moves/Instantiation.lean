@@ -34,7 +34,7 @@ theorem Expr.mentions_substRows : ∀ e : Expr, (e.substRows s).mentions = e.men
   | .record _ _ fs => by simp [Expr.substRows, Expr.mentions, fieldsMentions_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.mentions, exprsMentions_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.mentions, Expr.mentions_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => by
@@ -93,7 +93,7 @@ theorem Expr.movesOk_substRows : ∀ (e : Expr) (L : Live), (e.substRows s).move
   | .var _, _ | .move _, _ | .int _, _ | .bool _, _ | .unit, _ | .break, _ | .continue, _ | .fnRef .., _ | .method .., _ => rfl
   | .record _ _ fs, L => fieldsMovesOk_substRows fs L
   | .variant _ _ _ es, L | .list _ es, L | .op _ es, L | .view es, L => exprsMovesOk_substRows es L
-  | .field e _, L | .raise e, L | .perform _ e, L | .try e, L | .return e, L => Expr.movesOk_substRows e L
+  | .field e _, L | .raise e, L | .perform _ e, L | .try e, L | .form _ e, L | .return e, L => Expr.movesOk_substRows e L
   | .closure ps _ _ b, _ => by
     simp [Expr.substRows, Expr.movesOk, inoutLive_substRows, Expr.movesOk_substRows b]
   | .index a b, L => by
@@ -187,7 +187,7 @@ theorem Expr.mentions_substTys : ∀ e : Expr, (e.substTys s).mentions = e.menti
   | .record _ _ fs => by simp [Expr.substTys, Expr.mentions, fieldsMentions_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.mentions, exprsMentions_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.mentions, Expr.mentions_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => by
@@ -246,7 +246,7 @@ theorem Expr.movesOk_substTys : ∀ (e : Expr) (L : Live), (e.substTys s).movesO
   | .var _, _ | .move _, _ | .int _, _ | .bool _, _ | .unit, _ | .break, _ | .continue, _ | .fnRef .., _ | .method .., _ => rfl
   | .record _ _ fs, L => fieldsMovesOk_substTys fs L
   | .variant _ _ _ es, L | .list _ es, L | .op _ es, L | .view es, L => exprsMovesOk_substTys es L
-  | .field e _, L | .raise e, L | .perform _ e, L | .try e, L | .return e, L => Expr.movesOk_substTys e L
+  | .field e _, L | .raise e, L | .perform _ e, L | .try e, L | .form _ e, L | .return e, L => Expr.movesOk_substTys e L
   | .closure ps _ _ b, _ => by
     simp [Expr.substTys, Expr.movesOk, inoutLive_substTys, Expr.movesOk_substTys b]
   | .index a b, L => by

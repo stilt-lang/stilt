@@ -30,7 +30,7 @@ theorem Expr.writes_substTys : ∀ e : Expr, (e.substTys s).writes = e.writes
   | .closure .. => rfl
   | .record _ _ fs => by simp [Expr.substTys, Expr.writes, fieldsWrites_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.writes, exprsWrites_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.writes, Expr.writes_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => by simp [Expr.substTys, Expr.writes, Expr.writes_substTys a, Expr.writes_substTys b]
@@ -77,7 +77,7 @@ theorem Expr.resizes_substTys : ∀ e : Expr, (e.substTys s).resizes = e.resizes
   | .closure .. => rfl
   | .record _ _ fs => by simp [Expr.substTys, Expr.resizes, fieldsResizes_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.resizes, exprsResizes_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.resizes, Expr.resizes_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => by simp [Expr.substTys, Expr.resizes, Expr.resizes_substTys a, Expr.resizes_substTys b]
@@ -228,7 +228,7 @@ theorem Expr.alwaysJumps_substTys : ∀ e : Expr, (e.substTys s).alwaysJumps = e
   | .assign ⟨_, _⟩ _ => rfl
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .closure .. | .call ..
-  | .for .. | .raise .. | .perform _ .. | .withH .. | .try .. | .tryCatch ..
+  | .for .. | .raise .. | .perform _ .. | .withH .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .held .. => rfl
 
 theorem armsAlwaysJump_substTys : ∀ arms : List Arm, armsAlwaysJump (substArmTys s arms) = armsAlwaysJump arms
@@ -259,7 +259,7 @@ theorem Expr.factsAs_substTys : ∀ (b : Bool) (e : Expr), (e.substTys s).factsA
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
   | _, .fnRef .. | _, .method .. | _, .record .. | _, .variant .. | _, .list .. | _, .field ..
   | _, .index .. | _, .closure .. | _, .call .. | _, .letIn .. | _, .varIn .. | _, .seq ..
-  | _, .match .. | _, .for .. | _, .raise .. | _, .try .. | _, .tryCatch .. | _, .while ..
+  | _, .match .. | _, .for .. | _, .raise .. | _, .try .. | _, .form .. | _, .tryCatch .. | _, .while ..
   | _, .loop .. | _, .return .. | _, .perform .. | _, .withH .. | _, .view .. | _, .held .. => rfl
 
 theorem opFacts_substTys : ∀ (b : Bool) (o : Op) (es : List Expr),
@@ -366,7 +366,7 @@ theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s
       literalDivisor_substTys s es, guardedDivisor_substTys s G es, guardedKey_substTys s G es,
       Op.panicFree, Op.byDivisor, Op.overflowFree]
   | _, .closure _ _ _ e => by simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys [] e]
-  | G, .field e _ | G, .raise e | G, .try e | G, .return e => by
+  | G, .field e _ | G, .raise e | G, .try e | G, .form _ e | G, .return e => by
     simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys G e]
   | _, .loop e => by simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys [] e]
   | G, .perform _ e => by simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys G e]

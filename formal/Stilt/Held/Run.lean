@@ -92,6 +92,7 @@ theorem eval_keepsHeld (D : Decls) {τ : Type} (F : Frames τ) (k : Ty × Nat) :
     case «for» x ty e body => exact loop F ih x e body
     case raise e => exact bind (ih e) fun v => throw v
     case «try» e => exact ih e
+    case form _ e => exact ih e
     case tryCatch e E x h ty => exact handle (ih e) fun err => withVar F x err (ih h)
     case «while» c body =>
       have hloop := ih (.while c body)

@@ -32,7 +32,7 @@ def Expr.gather (visit : κ → Expr → List β) (k : κ) (e : Expr) : List β 
     | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => []
     | .record _ _ fields => gatherFields visit (child k e) 0 fields
     | .variant _ _ _ es | .list _ es | .op _ es | .view es => gatherExprs visit (child k e) 0 es
-    | .field a _ | .closure _ _ _ a | .raise a | .try a | .loop a | .return a | .perform _ a =>
+    | .field a _ | .closure _ _ _ a | .raise a | .try a | .form _ a | .loop a | .return a | .perform _ a =>
       a.gather visit (child k e 0)
     | .index a b | .letIn _ _ a b | .varIn _ _ a b | .seq a b | .for _ _ a b | .while a b
     | .tryCatch a _ _ b _ | .withH _ _ a b =>
@@ -111,6 +111,7 @@ def Expr.gate (k : κ) (e : Expr) : Expr :=
   | .for x τ a b => .for x τ (a.gate (child k e 0)) (b.gate (child k e 1))
   | .raise a => .raise (a.gate (child k e 0))
   | .try a => .try (a.gate (child k e 0))
+  | .form fm a => .form fm (a.gate (child k e 0))
   | .tryCatch a E x h τ => .tryCatch (a.gate (child k e 0)) E x (h.gate (child k e 1)) τ
   | .while c b => .while (c.gate (child k e 0)) (b.gate (child k e 1))
   | .loop b => .loop (b.gate (child k e 0))
@@ -173,7 +174,7 @@ theorem Expr.gather_all (hv : ∀ k e, ∀ b ∈ visit k e, P b) :
   | .variant _ _ _ es, k, b, h | .list _ es, k, b, h | .op _ es, k, b, h | .view es, k, b, h => by
     simp only [Expr.gather, List.mem_append] at h
     exact h.elim (hv _ _ _) (gatherExprs_all hv es _ 0 b)
-  | .field a _, k, b, h | .closure _ _ _ a, k, b, h | .raise a, k, b, h | .try a, k, b, h
+  | .field a _, k, b, h | .closure _ _ _ a, k, b, h | .raise a, k, b, h | .try a, k, b, h | .form _ a, k, b, h
   | .loop a, k, b, h | .return a, k, b, h | .perform _ a, k, b, h => by
     simp only [Expr.gather, List.mem_append] at h
     exact h.elim (hv _ _ _) (Expr.gather_all hv a _ b)
@@ -294,7 +295,7 @@ theorem Expr.gather_map :
     simp only [Expr.gather, hv, gatherFields_map fs, comp_child child child' f hc]
   | .variant _ _ _ es, k | .list _ es, k | .op _ es, k | .view es, k => by
     simp only [Expr.gather, hv, gatherExprs_map es, comp_child child child' f hc]
-  | .field a _, k | .closure _ _ _ a, k | .raise a, k | .try a, k | .loop a, k | .return a, k
+  | .field a _, k | .closure _ _ _ a, k | .raise a, k | .try a, k | .form _ a, k | .loop a, k | .return a, k
   | .perform _ a, k => by simp only [Expr.gather, hv, Expr.gather_map a, hc]
   | .index a c, k | .letIn _ _ a c, k | .varIn _ _ a c, k | .seq a c, k | .for _ _ a c, k
   | .while a c, k | .tryCatch a _ _ c _, k | .withH _ _ a c, k => by

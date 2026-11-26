@@ -40,7 +40,7 @@ def Expr.distinctParams : Expr → Bool
   | .match e _ arms => e.distinctParams && armsDistinctParams arms
   | .for _ _ e body => e.distinctParams && body.distinctParams
   | .raise e => e.distinctParams
-  | .try e => e.distinctParams
+  | .try e | .form _ e => e.distinctParams
   | .tryCatch e _ _ handler _ => e.distinctParams && handler.distinctParams
   | .while c body => c.distinctParams && body.distinctParams
   | .loop body => body.distinctParams
@@ -241,7 +241,7 @@ theorem placeShape_substRows : ∀ e : Expr, (e.substRows s).placeShape = e.plac
       simp [Expr.substRows], placeShape_index, placeShape_index, placeShape_substRows e]
   | .int _ | .bool _ | .unit | .record .. | .variant .. | .list .. | .op .. | .view _ | .fnRef .. | .method .. | .closure ..
   | .call .. | .letIn .. | .varIn .. | .assign ⟨_, _⟩ _ | .seq .. | .if .. | .match .. | .for ..
-  | .raise _ | .perform _ _ | .try _ | .tryCatch .. | .while .. | .loop _ | .break | .continue
+  | .raise _ | .perform _ _ | .try _ | .form _ _ | .tryCatch .. | .while .. | .loop _ | .break | .continue
   | .return _ | .withH .. | .held .. => by
     simp [Expr.substRows, Expr.placeShape, Expr.place?]
 
@@ -295,7 +295,7 @@ theorem Expr.exclusive_substRows :
     simp [Expr.substRows, Expr.exclusive, Expr.exclusive_substRows e r, iterated_substRows,
       Expr.exclusive_substRows body (hide (iterated e ++ r) x)]
   | .raise e, r => by simpa [Expr.substRows, Expr.exclusive] using Expr.exclusive_substRows e r
-  | .try e, r => by simpa [Expr.substRows, Expr.exclusive] using Expr.exclusive_substRows e r
+  | .try e, r | .form _ e, r => by simpa [Expr.substRows, Expr.exclusive] using Expr.exclusive_substRows e r
   | .tryCatch e _ x h _, r => by
     simp [Expr.substRows, Expr.exclusive, Expr.exclusive_substRows e r,
       Expr.exclusive_substRows h (hide r x)]
@@ -398,7 +398,7 @@ theorem Expr.distinctParams_substRows :
       Expr.distinctParams_substRows body]
   | .raise e => by
     simpa [Expr.substRows, Expr.distinctParams] using Expr.distinctParams_substRows e
-  | .try e => by
+  | .try e | .form _ e => by
     simpa [Expr.substRows, Expr.distinctParams] using Expr.distinctParams_substRows e
   | .tryCatch e _ _ h _ => by
     simp [Expr.substRows, Expr.distinctParams, Expr.distinctParams_substRows e,

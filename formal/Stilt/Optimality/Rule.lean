@@ -62,7 +62,7 @@ def Expr.exclusiveWith (rule : CallRule) (reading : List Shape) : Expr → Bool
   | .for x _ e body =>
     e.exclusiveWith rule reading && body.exclusiveWith rule (hide (iterated e ++ reading) x)
   | .raise e => e.exclusiveWith rule reading
-  | .try e => e.exclusiveWith rule reading
+  | .try e | .form _ e => e.exclusiveWith rule reading
   | .tryCatch e _ x handler _ =>
     e.exclusiveWith rule reading && handler.exclusiveWith rule (hide reading x)
   | .while c body => c.exclusiveWith rule reading && body.exclusiveWith rule reading
@@ -166,7 +166,7 @@ theorem Expr.exclusive_eq_with :
     simp [Expr.exclusive, Expr.exclusiveWith, Expr.exclusive_eq_with e r,
       Expr.exclusive_eq_with body (hide (iterated e ++ r) x)]
   | .raise e, r => Expr.exclusive_eq_with e r
-  | .try e, r => Expr.exclusive_eq_with e r
+  | .try e, r | .form _ e, r => Expr.exclusive_eq_with e r
   | .tryCatch e _ x h _, r => by
     simp [Expr.exclusive, Expr.exclusiveWith, Expr.exclusive_eq_with e r,
       Expr.exclusive_eq_with h (hide r x)]
@@ -284,7 +284,7 @@ theorem Expr.exclusiveWith_mono (hle : ∀ ss, r₁ ss = true → r₂ ss = true
     simp only [Expr.exclusiveWith, Bool.and_eq_true] at h ⊢
     exact ⟨Expr.exclusiveWith_mono hle e r h.1,
       Expr.exclusiveWith_mono hle body (hide (iterated e ++ r) x) h.2⟩
-  | .raise e, r, h | .perform _ e, r, h | .try e, r, h => Expr.exclusiveWith_mono hle e r h
+  | .raise e, r, h | .perform _ e, r, h | .try e, r, h | .form _ e, r, h => Expr.exclusiveWith_mono hle e r h
   | .tryCatch e _ x hd _, r, h => by
     simp only [Expr.exclusiveWith, Bool.and_eq_true] at h ⊢
     exact ⟨Expr.exclusiveWith_mono hle e r h.1, Expr.exclusiveWith_mono hle hd (hide r x) h.2⟩

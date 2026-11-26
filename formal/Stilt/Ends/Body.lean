@@ -207,6 +207,7 @@ theorem eval_halts (hC : CallsHalt D w lim B me m) : ∀ k, HaltsRun D w lim B m
       exact loop ih x hd.1 hn.1 (hA.mono (List.subset_append_left _ _)) hd.2 hn.2 s hI
     case raise e => exact bind (ih e R hd hn hA s hI) fun v _ _ _ => const (Eval.Ends.throw v)
     case «try» e => exact ih e R hd hn hA s hI
+    case form _ e => exact ih e R hd hn hA s hI
     case tryCatch e E x h τ =>
       exact handle (ih e R hd.1 hn.1 (hA.mono (List.subset_append_left _ _)) s hI) fun err s' =>
         withVar _ x err (ih h [] hd.2 hn.2 (Roles.Avoids.nil _) _ (Roles.Inv.nil _ _))

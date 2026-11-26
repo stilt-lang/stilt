@@ -289,7 +289,7 @@ theorem Expr.free_substRows (θ : RowSubst) (x : Name) :
   | .record _ _ fs => by simp [Expr.substRows, Expr.free, fieldsFree_substRows θ x fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.free, exprsFree_substRows θ x es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.free, Expr.free_substRows θ x e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b
   | .for _ _ a b | .while a b | .tryCatch a _ _ b _ => by

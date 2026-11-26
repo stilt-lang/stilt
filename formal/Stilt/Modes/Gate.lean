@@ -29,7 +29,7 @@ theorem Expr.erase_gate : ∀ (e : Expr) (k : κ), (e.gate child keep k).erase =
     split <;> rfl
   | .record _ _ fs, k => by simp [Expr.gate, Expr.erase, eraseFields_gate fs]
   | .variant _ _ _ es, k | .list _ es, k | .op _ es, k | .view es, k => by simp [Expr.gate, Expr.erase, eraseExprs_gate es]
-  | .field a _, k | .closure _ _ _ a, k | .raise a, k | .perform _ a, k | .try a, k | .loop a, k | .return a, k => by
+  | .field a _, k | .closure _ _ _ a, k | .raise a, k | .perform _ a, k | .try a, k | .form _ a, k | .loop a, k | .return a, k => by
     simp [Expr.gate, Expr.erase, Expr.erase_gate a]
   | .index a b, k | .letIn _ _ a b, k | .varIn _ _ a b, k | .seq a b, k | .withH _ _ a b, k | .for _ _ a b, k
   | .while a b, k | .tryCatch a _ _ b _, k => by
@@ -86,7 +86,7 @@ theorem Expr.mentions_gate : ∀ (e : Expr) (k : κ), (e.gate child keep k).ment
   | .record _ _ fs, k => by simp [Expr.gate, Expr.mentions, fieldsMentions_gate fs]
   | .variant _ _ _ es, k | .list _ es, k | .op _ es, k | .view es, k => by
     simp [Expr.gate, Expr.mentions, exprsMentions_gate es]
-  | .field a _, k | .raise a, k | .perform _ a, k | .try a, k | .loop a, k | .return a, k => by
+  | .field a _, k | .raise a, k | .perform _ a, k | .try a, k | .form _ a, k | .loop a, k | .return a, k => by
     simp [Expr.gate, Expr.mentions, Expr.mentions_gate a]
   | .index a b, k | .letIn _ _ a b, k | .varIn _ _ a b, k | .seq a b, k | .withH _ _ a b, k | .for _ _ a b, k
   | .while a b, k | .tryCatch a _ _ b _, k => by
@@ -161,7 +161,7 @@ theorem Expr.movesOk_gate : ∀ (e : Expr) (k : κ) (L : Live), e.movesOk L = tr
   | .variant _ _ _ es, k, L, h | .list _ es, k, L, h | .op _ es, k, L, h | .view es, k, L, h => by
     simp only [Expr.gate, Expr.movesOk] at h ⊢
     exact exprsMovesOk_gate es _ 0 L h
-  | .field a _, k, L, h | .raise a, k, L, h | .perform _ a, k, L, h | .try a, k, L, h | .closure _ _ _ a, k, L, h
+  | .field a _, k, L, h | .raise a, k, L, h | .perform _ a, k, L, h | .try a, k, L, h | .form _ a, k, L, h | .closure _ _ _ a, k, L, h
   | .return a, k, L, h => by
     simp only [Expr.gate, Expr.movesOk] at h ⊢
     exact Expr.movesOk_gate a _ _ h

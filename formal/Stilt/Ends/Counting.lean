@@ -41,7 +41,7 @@ def Expr.contFree : Expr → Bool
   | .match e _ arms => e.contFree && armsContFree arms
   | .for _ _ e _ => e.contFree
   | .raise e => e.contFree
-  | .try e => e.contFree
+  | .try e | .form _ e => e.contFree
   | .tryCatch e _ _ handler _ => e.contFree && handler.contFree
   | .while c _ => c.contFree
   | .return e => e.contFree

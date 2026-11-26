@@ -123,7 +123,7 @@ theorem Expr.leaves_mono : ∀ (e : Expr) (L : Leaving) (C' : Consumed) (o o' : 
     exact h.imp (Expr.leaves_mono e L C' _ _ hC (OutLe.refl _))
       (And.imp_right (Expr.leaves_mono body (L.hide [y]) C' _ _ hC (OutLe.refl _)))
   | .raise e, L, C', _, _, hC, _, h => Expr.leaves_mono e L C' _ _ hC (OutLe.refl _) h
-  | .try e, L, C', o, o', hC, ho, h => Expr.leaves_mono e L C' o o' hC ho h
+  | .try e, L, C', o, o', hC, ho, h | .form _ e, L, C', o, o', hC, ho, h => Expr.leaves_mono e L C' o o' hC ho h
   | .tryCatch e _ y hd _, L, C', o, o', hC, ho, h => by
     simp only [Expr.leaves, Bool.or_eq_true, Bool.and_eq_true] at h ⊢
     exact h.imp (Expr.leaves_mono e L C' o o' hC ho)
@@ -223,7 +223,7 @@ theorem Expr.use_below : ∀ (e : Expr) (O O' : OnceParams) (f : Name), ParamSet
   | .method .., _, _, _, _ => Use.Below.refl _
   | .record _ _ fs, O, O', f, h => fieldsUse_below fs O O' f h
   | .variant _ _ _ es, O, O', f, h | .list _ es, O, O', f, h | .op _ es, O, O', f, h | .view es, O, O', f, h => exprsUse_below es O O' f h
-  | .field e _, O, O', f, h | .raise e, O, O', f, h | .perform _ e, O, O', f, h | .try e, O, O', f, h
+  | .field e _, O, O', f, h | .raise e, O, O', f, h | .perform _ e, O, O', f, h | .try e, O, O', f, h | .form _ e, O, O', f, h
   | .return e, O, O', f, h => Expr.use_below e O O' f h
   | .while c body, O, O', f, h =>
     ((Expr.use_below c O O' f h).add (Expr.use_below body O O' f h)).again

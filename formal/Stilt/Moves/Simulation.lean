@@ -94,6 +94,7 @@ theorem eval_msim {D : Decls} (hD : DeclsOk D) :
       exact MSim.bind (ih e L ⟨⟨r, hex⟩, hdp⟩ hm) (fun _ hv => MSim.throw hv) (by live_sub)
         (Live.Sub.refl _)
     case «try» e => exact ih e L ⟨⟨r, hex⟩, hdp⟩ hm
+    case form _ e => exact ih e L ⟨⟨r, hex⟩, hdp⟩ hm
     case tryCatch e E x h τ => exact catch_case ih ⟨⟨r, hex.1⟩, hdp.1⟩ ⟨⟨_, hex.2⟩, hdp.2⟩ hm.1 hm.2
     case «break» => exact MSim.jump trivial
     case «continue» => exact MSim.jump trivial

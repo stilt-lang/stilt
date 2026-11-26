@@ -23,7 +23,7 @@ theorem Expr.resumes_substTys : ∀ e : Expr, (e.substTys s).resumes = e.resumes
   | .record _ _ fs => by simp [Expr.substTys, Expr.resumes, fieldsResumes_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.resumes, exprsResumes_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.resumes, Expr.resumes_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ | .while a b => by
@@ -73,7 +73,7 @@ theorem Expr.oneShot_substTys : ∀ e : Expr, (e.substTys s).oneShot = e.oneShot
   | .record _ _ fs => by simp [Expr.substTys, Expr.oneShot, fieldsOneShot_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.oneShot, exprsOneShot_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.oneShot, Expr.oneShot_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ | .while a b => by
@@ -131,7 +131,7 @@ theorem Expr.resumes_substRows : ∀ e : Expr, (e.substRows s).resumes = e.resum
   | .record _ _ fs => by simp [Expr.substRows, Expr.resumes, fieldsResumes_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.resumes, exprsResumes_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.resumes, Expr.resumes_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ | .while a b => by
@@ -182,7 +182,7 @@ theorem Expr.oneShot_substRows : ∀ e : Expr, (e.substRows s).oneShot = e.oneSh
   | .record _ _ fs => by simp [Expr.substRows, Expr.oneShot, fieldsOneShot_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.oneShot, exprsOneShot_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.oneShot, Expr.oneShot_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ | .while a b => by

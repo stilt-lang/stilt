@@ -19,7 +19,7 @@ theorem Expr.distinctParams_erase : ∀ e : Expr, e.erase.distinctParams = e.dis
   | .record _ _ fs => by simp [Expr.erase, Expr.distinctParams, fieldsDistinctParams_erase fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.erase, Expr.distinctParams, exprsDistinctParams_erase es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.erase, Expr.distinctParams, Expr.distinctParams_erase e]
   | .index a b | .seq a b | .withH _ _ a b | .while a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ => by

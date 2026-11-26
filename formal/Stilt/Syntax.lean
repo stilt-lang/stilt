@@ -284,6 +284,15 @@ def fieldPatternsBinders : List (Name × Pattern) → List Name
 
 end
 
+/-- A form of the Reference whose typing has rules of its own beside those of the `match`
+it means, which `Expr.form` keeps with it: `let P = e else x` with a refutable `P`, a
+let-else (patterns.let-else), and `e₁ else e₂`, the `Option` fallback
+(expressions.option-fallback). -/
+inductive Form where
+  | letElse
+  | orElse
+  deriving DecidableEq, Repr
+
 mutual
 
 /-- Expressions, in elaborated form. Statements are expressions:
@@ -390,6 +399,10 @@ inductive Expr where
   expressions of the handles, and the block, in which each name is a `var` of its value
   (shared.when). -/
   | held (names : List (Name × Ty)) (handles : List Expr) (body : Expr)
+  /-- A let-else or an `Option` fallback, written as the `match` it means, `meaning`: typing
+  checks it by the form's own rules (`HasType.letElse` and `HasType.orElse`), and it runs as
+  `meaning` does (`eval_form`). -/
+  | form (form : Form) (meaning : Expr)
 
 /-- An argument. An `inout` argument is marked at the call and is a place
 (expressions.inout-arguments); any other argument is not marked (expressions.consumed-arguments). -/

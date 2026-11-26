@@ -173,7 +173,7 @@ def Expr.divFree : Roles → Expr → Bool
   | R, .match e _ arms => e.divFree R && armsDivFree R (e.roleIn R) arms
   | R, .for _ _ e body => e.divFree R && body.divFree []
   | R, .raise e => e.divFree R
-  | R, .try e => e.divFree R
+  | R, .try e | R, .form _ e => e.divFree R
   | R, .tryCatch e _ _ handler _ => e.divFree R && handler.divFree []
   | _, .while c body => c.divFree [] && body.divFree [] && Expr.countsIn c body
   | _, .loop _ => false
@@ -233,7 +233,7 @@ def Expr.depth : Expr → Nat
   | .match e _ arms => max e.depth (armsDepth arms) + 1
   | .for _ _ e body => max e.depth body.depth + 1
   | .raise e => e.depth + 1
-  | .try e => e.depth + 1
+  | .try e | .form _ e => e.depth + 1
   | .tryCatch e _ _ handler _ => max e.depth handler.depth + 1
   | .while c body => max c.depth body.depth + 1
   | .loop body => body.depth + 1

@@ -20,7 +20,7 @@ def Expr.free (x : Name) : Expr → Bool
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => false
   | .record _ _ fields => fieldsFree x fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsFree x es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.free x
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .loop e | .perform _ e => e.free x
   | .index a b | .seq a b | .while a b | .withH _ _ a b => a.free x || b.free x
   | .closure ps _ _ body => !(ps.any (·.name == x)) && body.free x
   | .call callee args _ => callee.free x || argsFree x args

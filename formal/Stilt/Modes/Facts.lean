@@ -176,7 +176,7 @@ def child (k : ModeCtx) : Expr → Nat → ModeCtx
   | .varIn y τ init body, _ =>
     { k.inner k.out with
       reuse := update k.reuse y (M.bindingReuse k y τ true init body), inouts := k.hide [y] }
-  | .seq .., 1 | .withH _ _ .., 1 | .if .., 1 | .if .., 2 | .try _, _ | .tryCatch .., 0 => k.inner k.out
+  | .seq .., 1 | .withH _ _ .., 1 | .if .., 1 | .if .., 2 | .try _, _ | .form _ _, _ | .tryCatch .., 0 => k.inner k.out
   | .match _ _ arms, n + 1 =>
     let binders := (arms[n]?.map (·.binders)).getD []
     { k.inner k.out with

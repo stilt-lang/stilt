@@ -128,7 +128,7 @@ def evalControl (D : Decls) (shared : Name → Bool) (run : Expr → Eval (State
   | .raise e => do
     let v ← run e
     Eval.throw v
-  | .try e => run e
+  | .try e | .form _ e => run e
   | .tryCatch e _ x handler _ =>
     Eval.handle (run e) fun err => Eval.withVar (memory shared) x err (run handler)
   | .while c body => do

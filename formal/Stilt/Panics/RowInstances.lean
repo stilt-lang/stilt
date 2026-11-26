@@ -28,7 +28,7 @@ theorem Expr.writes_substRows : ∀ e : Expr, (e.substRows s).writes = e.writes
   | .closure .. => rfl
   | .record _ _ fs => by simp [Expr.substRows, Expr.writes, fieldsWrites_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.writes, exprsWrites_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.writes, Expr.writes_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => by simp [Expr.substRows, Expr.writes, Expr.writes_substRows a, Expr.writes_substRows b]
@@ -75,7 +75,7 @@ theorem Expr.resizes_substRows : ∀ e : Expr, (e.substRows s).resizes = e.resiz
   | .closure .. => rfl
   | .record _ _ fs => by simp [Expr.substRows, Expr.resizes, fieldsResizes_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.resizes, exprsResizes_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.resizes, Expr.resizes_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => by simp [Expr.substRows, Expr.resizes, Expr.resizes_substRows a, Expr.resizes_substRows b]
@@ -226,7 +226,7 @@ theorem Expr.alwaysJumps_substRows : ∀ e : Expr, (e.substRows s).alwaysJumps =
   | .assign ⟨_, _⟩ _ => rfl
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .closure .. | .call ..
-  | .for .. | .raise .. | .perform _ .. | .withH .. | .try .. | .tryCatch ..
+  | .for .. | .raise .. | .perform _ .. | .withH .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .held .. => rfl
 
 theorem armsAlwaysJump_substRows : ∀ arms : List Arm, armsAlwaysJump (substArmRows s arms) = armsAlwaysJump arms
@@ -255,7 +255,7 @@ theorem Expr.factsAs_substRows : ∀ (b : Bool) (e : Expr), (e.substRows s).fact
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
   | _, .fnRef .. | _, .method .. | _, .record .. | _, .variant .. | _, .list .. | _, .field ..
   | _, .index .. | _, .closure .. | _, .call .. | _, .letIn .. | _, .varIn .. | _, .seq ..
-  | _, .match .. | _, .for .. | _, .raise .. | _, .try .. | _, .tryCatch .. | _, .while ..
+  | _, .match .. | _, .for .. | _, .raise .. | _, .try .. | _, .form .. | _, .tryCatch .. | _, .while ..
   | _, .loop .. | _, .return .. | _, .perform .. | _, .withH .. | _, .view .. | _, .held .. => rfl
 
 theorem opFacts_substRows : ∀ (b : Bool) (o : Op) (es : List Expr),
@@ -361,7 +361,7 @@ theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows
     simp [Expr.substRows, Expr.panicFreeIn, Op.panicFreeOn, exprsPanicFree_substRows G es,
       literalDivisor_substRows s es, guardedDivisor_substRows s G es, guardedKey_substRows s G es]
   | _, .closure _ _ _ e => by simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows [] e]
-  | G, .field e _ | G, .raise e | G, .try e | G, .return e => by
+  | G, .field e _ | G, .raise e | G, .try e | G, .form _ e | G, .return e => by
     simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows G e]
   | _, .loop e => by simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows [] e]
   | G, .perform _ e => by simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows G e]

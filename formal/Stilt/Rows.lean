@@ -44,6 +44,7 @@ def Expr.substRows (s : RowSubst) : Expr → Expr
   | .for x τ e body => .for x (τ.substRows s) (e.substRows s) (body.substRows s)
   | .raise e => .raise (e.substRows s)
   | .try e => .try (e.substRows s)
+  | .form fm e => .form fm (e.substRows s)
   | .tryCatch e E x h τ =>
     .tryCatch (e.substRows s) (E.substRows s) x (h.substRows s) (τ.substRows s)
   | .while c body => .while (c.substRows s) (body.substRows s)

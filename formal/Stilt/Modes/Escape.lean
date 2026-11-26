@@ -103,7 +103,7 @@ def Expr.leaves (L : Leaving) (out : Option (List Sel)) : Expr → Bool
   | .match e _ arms => e.leaves L none || armsLeave L out arms
   | .for y _ e body => e.leaves L none || (y != L.name && body.leaves (L.hide [y]) none)
   | .raise e => e.leaves L (if L.reading == .escape then some [] else none)
-  | .try e => e.leaves L out
+  | .try e | .form _ e => e.leaves L out
   | .tryCatch e _ y h _ => e.leaves L out || (y != L.name && h.leaves (L.hide [y]) out)
   | .while c body => c.leaves L none || body.leaves L none
   | .loop body => body.leaves L none

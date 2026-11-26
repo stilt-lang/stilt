@@ -50,7 +50,7 @@ theorem placeShape_substTys : ∀ e : Expr, (e.substTys s).placeShape = e.placeS
       simp [Expr.substTys], placeShape_index, placeShape_index, placeShape_substTys e]
   | .int _ | .bool _ | .unit | .break | .continue | .record .. | .variant .. | .list .. | .op .. | .view _ | .fnRef .. | .method .. | .closure ..
   | .call .. | .letIn .. | .varIn .. | .assign ⟨_, _⟩ _ | .seq .. | .if .. | .match .. | .for ..
-  | .raise _ | .perform _ _ | .try _ | .loop _ | .return _ | .tryCatch .. | .while .. | .withH ..
+  | .raise _ | .perform _ _ | .try _ | .form _ _ | .loop _ | .return _ | .tryCatch .. | .while .. | .withH ..
   | .held .. => by
     simp [Expr.substTys, Expr.placeShape, Expr.place?]
 
@@ -103,7 +103,7 @@ theorem Expr.exclusive_substTys :
     simp [Expr.substTys, Expr.exclusive, Expr.exclusive_substTys e r, iterated_substTys,
       Expr.exclusive_substTys body (hide (iterated e ++ r) x)]
   | .raise e, r => by simpa [Expr.substTys, Expr.exclusive] using Expr.exclusive_substTys e r
-  | .try e, r => by simpa [Expr.substTys, Expr.exclusive] using Expr.exclusive_substTys e r
+  | .try e, r | .form _ e, r => by simpa [Expr.substTys, Expr.exclusive] using Expr.exclusive_substTys e r
   | .tryCatch e _ x h _, r => by
     simp [Expr.substTys, Expr.exclusive, Expr.exclusive_substTys e r,
       Expr.exclusive_substTys h (hide r x)]
@@ -207,7 +207,7 @@ theorem Expr.distinctParams_substTys :
       Expr.distinctParams_substTys body]
   | .raise e => by
     simpa [Expr.substTys, Expr.distinctParams] using Expr.distinctParams_substTys e
-  | .try e => by
+  | .try e | .form _ e => by
     simpa [Expr.substTys, Expr.distinctParams] using Expr.distinctParams_substTys e
   | .tryCatch e _ _ h _ => by
     simp [Expr.substTys, Expr.distinctParams, Expr.distinctParams_substTys e,

@@ -94,6 +94,7 @@ theorem eval_oneShot {D : Decls} (hD : ∀ d ∈ D.fns, d.body.bodyOneShot d.row
       exact loop ih w x he.1 he.2 hn hb0
     case raise e => exact bindLe (b := 0) (ih e he hn) (fun _ hv => throw hv) (by omega)
     case «try» e => exact ih e he hn
+    case form _ e => exact ih e he hn
     case tryCatch e E x h τ => exact handle (ih e he.1 (by omega)) fun _ hv => withVar w hv (ih h he.2 (by omega))
     case «while» c body =>
       have h0 := loopResumes_le (n := c.resumes + body.resumes) hn

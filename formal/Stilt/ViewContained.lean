@@ -47,7 +47,7 @@ def Expr.contained (D : Decls) (Γ : ViewScope) (params : List Name) : Expr → 
   | .method _ _ _ => true
   | .record _ _ fields => fieldsContained D Γ params fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsContained D Γ params es
-  | .field e _ | .try e | .perform _ e | .loop e => e.contained D Γ params
+  | .field e _ | .try e | .form _ e | .perform _ e | .loop e => e.contained D Γ params
   | .raise e | .return e => e.contained D Γ params && leaves params (e.sources D Γ)
   | .index a b | .seq a b | .while a b | .withH _ _ a b =>
     a.contained D Γ params && b.contained D Γ params

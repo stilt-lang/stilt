@@ -199,7 +199,7 @@ def Expr.mentions : Expr → Live
   | .match e _ arms => e.mentions.union (armsMentions arms)
   | .for x _ e body => e.mentions.union (body.mentions.erase x)
   | .raise e => e.mentions
-  | .try e => e.mentions
+  | .try e | .form _ e => e.mentions
   | .tryCatch e _ x h _ => e.mentions.union (h.mentions.erase x)
   | .while c body => c.mentions.union body.mentions
   | .loop body => body.mentions
@@ -279,7 +279,7 @@ def Expr.movesOk (after : Live) : Expr → Bool
     e.movesOk (after.union (body.mentions.erase x)) &&
       body.movesOk ((after.union body.mentions).erase x)
   | .raise e => e.movesOk after
-  | .try e => e.movesOk after
+  | .try e | .form _ e => e.movesOk after
   | .tryCatch e _ x h _ => e.movesOk (after.union (h.mentions.erase x)) && h.movesOk (after.erase x)
   | .while c body =>
     let again := after.union (c.mentions.union body.mentions)
@@ -348,7 +348,7 @@ theorem Expr.mem_mentions (x : Name) : ∀ e : Expr, e.mentions.mem x = e.free x
   | .record _ _ fs => by have := fieldsMem_mentions x fs; mentions_case
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     have := exprsMem_mentions x es; mentions_case
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     have := Expr.mem_mentions x e; mentions_case
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b
   | .for _ _ a b | .while a b | .tryCatch a _ _ b _ => by

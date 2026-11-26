@@ -41,7 +41,7 @@ def Expr.indexFree : Expr → Bool
   | .match e _ arms => e.indexFree && armsIndexFree arms
   | .for _ _ e body => e.indexFree && body.indexFree
   | .raise e => e.indexFree
-  | .try e => e.indexFree
+  | .try e | .form _ e => e.indexFree
   | .tryCatch e _ _ handler _ => e.indexFree && handler.indexFree
   | .while c body => c.indexFree && body.indexFree
   | .loop body => body.indexFree

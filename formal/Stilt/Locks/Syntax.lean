@@ -47,7 +47,7 @@ def Expr.lockFree (D : Decls) (L : List Name) : Expr → Bool
   | .closure _ _ _ body => body.lockFree D L
   | .record _ _ fields => fieldsLockFree D L fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsLockFree D L es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.lockFree D L
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .loop e | .perform _ e => e.lockFree D L
   | .index a b | .seq a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ | .withH _ _ a b => a.lockFree D L && b.lockFree D L
   | .call callee args _ => callee.lockFree D L && argsLockFree D L args

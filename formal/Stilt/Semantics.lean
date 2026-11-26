@@ -401,7 +401,7 @@ def eval : Nat → Expr → Eval σ Value
     | .raise e => do
       let v ← run e
       Eval.throw v
-    | .try e => run e
+    | .try e | .form _ e => run e
     | .tryCatch e _ x handler _ => Eval.handle (run e) fun err => Eval.withVar M x err (run handler)
     | .while c body => do
       if ← run c >>= Eval.asBool then

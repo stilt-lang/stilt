@@ -84,6 +84,7 @@ inductive Expr.Inst (D : Decls) : Expr → Expr → Prop
       Expr.Inst D e e' → Expr.Inst D b b' → Expr.Inst D (.for x τ e b) (.for x τ' e' b')
   | raise {e e' : Expr} : Expr.Inst D e e' → Expr.Inst D (.raise e) (.raise e')
   | «try» {e e' : Expr} : Expr.Inst D e e' → Expr.Inst D (.try e) (.try e')
+  | form {e e' : Expr} (k : Form) : Expr.Inst D e e' → Expr.Inst D (.form k e) (.form k e')
   | tryCatch {e e' h h' : Expr} (E E' : Ty) (x : Name) (τ τ' : Ty) :
       Expr.Inst D e e' → Expr.Inst D h h' →
       Expr.Inst D (.tryCatch e E x h τ) (.tryCatch e' E' x h' τ')
@@ -294,6 +295,7 @@ theorem Expr.inst_subst : ∀ (e : Expr) (r : List Shape), e.distinctParams = tr
       (Expr.inst_subst b _ (both h).2 (both x).2)
   | .raise e, r, h, x => .raise (Expr.inst_subst e r h x)
   | .try e, r, h, x => .try (Expr.inst_subst e r h x)
+  | .form fm e, r, h, x => .form fm (Expr.inst_subst e r h x)
   | .tryCatch e E y hd τ, r, h, x =>
     .tryCatch _ _ y _ _ (Expr.inst_subst e r (both h).1 (both x).1)
       (Expr.inst_subst hd (hide r y) (both h).2 (both x).2)

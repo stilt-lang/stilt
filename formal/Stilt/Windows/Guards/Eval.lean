@@ -141,6 +141,7 @@ theorem eval_guards (D : Decls) (G : List Path) :
       exact loop x (ih e Γ R h.1) (ih body _ _ h.2) (hide_sub_hide _ R x)
     case raise e => exact bind (ih e Γ R h) fun v _ => throw v
     case «try» e => exact ih e Γ R h
+    case form _ e => exact ih e Γ R h
     case tryCatch e E x hd τ =>
       exact handle (ih e Γ R h.1) fun err => withVar x err (ih hd _ _ h.2) fun _ h => h
     case «while» c body => exact whileLoop (ih c Γ R h.1) (ih body Γ R h.2) (ih _ Γ R h0)

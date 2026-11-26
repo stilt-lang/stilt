@@ -36,7 +36,7 @@ def Expr.names (N : List Name) : Expr → Bool
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => false
   | .record _ _ fields => fieldsNames N fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsNames N es
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => e.names N
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => e.names N
   | .index a b | .seq a b | .withH _ _ a b | .while a b => a.names N || b.names N
   | .closure ps _ _ body => body.names (N.removeAll (ps.map Param.name))
   | .call f args _ => f.names N || argsNames N args
@@ -89,7 +89,7 @@ def Expr.noEscape (D : Decls) (N : List Name) (allowed : Bool) : Expr → Bool
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => true
   | .record _ _ fields => fieldsNoEscape D N fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsNoEscape D N es
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => e.noEscape D N false
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => e.noEscape D N false
   | .index a b | .seq a b | .withH _ _ a b | .while a b => a.noEscape D N false && b.noEscape D N false
   | .closure ps _ _ body =>
     let N' := N.removeAll (ps.map Param.name)
@@ -146,7 +146,7 @@ theorem Expr.names_nil : ∀ e : Expr, e.names [] = false
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => rfl
   | .record _ _ fields => fieldsNames_nil fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsNames_nil es
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => Expr.names_nil e
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => Expr.names_nil e
   | .index a b | .seq a b | .withH _ _ a b | .while a b => by simp [Expr.names, Expr.names_nil a, Expr.names_nil b]
   | .held _ hs b => by simp [Expr.names, exprsNames_nil hs, Expr.names_nil b]
   | .closure _ _ _ body => by simp [Expr.names, Expr.names_nil body]
@@ -190,7 +190,7 @@ theorem Expr.noEscape_nil (D : Decls) (allowed : Bool) :
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => rfl
   | .record _ _ fields => fieldsNoEscape_nil D fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsNoEscape_nil D es
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => Expr.noEscape_nil D false e
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => Expr.noEscape_nil D false e
   | .index a b | .seq a b | .withH _ _ a b | .while a b => by
     simp [Expr.noEscape, Expr.noEscape_nil D false a, Expr.noEscape_nil D false b]
   | .held _ hs b => by simp [Expr.noEscape, exprsNoEscape_nil D hs, Expr.noEscape_nil D false b]

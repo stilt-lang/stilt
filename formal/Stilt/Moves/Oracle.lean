@@ -64,7 +64,7 @@ theorem Expr.erase_substRows : ∀ e : Expr, (e.substRows s).erase = e.erase.sub
   | .record _ _ fs => by simp [Expr.substRows, Expr.erase, eraseFields_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.erase, eraseExprs_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.erase, Expr.erase_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .while a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ => by
@@ -128,7 +128,7 @@ theorem Expr.erase_substTys : ∀ e : Expr, (e.substTys s).erase = e.erase.subst
   | .record _ _ fs => by simp [Expr.substTys, Expr.erase, eraseFields_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.erase, eraseExprs_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.erase, Expr.erase_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .while a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .tryCatch a _ _ b _ => by
@@ -417,6 +417,7 @@ theorem eval_erase (D : Decls) : ∀ (n : Nat) (e : Expr),
     | «for» x τ e body => exact loop ih x e body
     | raise e => exact bind (ih e) fun v => throw _ v
     | «try» e => exact ih e
+    | form _ e => exact ih e
     | tryCatch e E x hd τ => exact handle (ih e) fun err => withVar x err (ih hd)
     | «while» c body =>
       exact bind (bind (ih c) asBool) fun v => ite v

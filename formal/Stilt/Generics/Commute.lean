@@ -288,6 +288,7 @@ def Expr.substTys (s : TySubst) : Expr → Expr
   | .for x τ e body => .for x (τ.substTys s) (e.substTys s) (body.substTys s)
   | .raise e => .raise (e.substTys s)
   | .try e => .try (e.substTys s)
+  | .form fm e => .form fm (e.substTys s)
   | .tryCatch e E x h τ =>
     .tryCatch (e.substTys s) (E.substTys s) x (h.substTys s) (τ.substTys s)
   | .while c body => .while (c.substTys s) (body.substTys s)
@@ -362,7 +363,7 @@ theorem Expr.substTys_nil : ∀ e : Expr, e.substTys [] = e
   | .for _ τ e body => by
     rw [Expr.substTys, Ty.substTys_nil τ, Expr.substTys_nil e, Expr.substTys_nil body]
   | .raise e => by rw [Expr.substTys, Expr.substTys_nil e]
-  | .try e => by rw [Expr.substTys, Expr.substTys_nil e]
+  | .try e | .form _ e => by rw [Expr.substTys, Expr.substTys_nil e]
   | .tryCatch e E _ h τ => by
     rw [Expr.substTys, Expr.substTys_nil e, Ty.substTys_nil E, Expr.substTys_nil h,
       Ty.substTys_nil τ]

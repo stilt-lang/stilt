@@ -80,6 +80,7 @@ theorem eval_sim (hk : Cases D) : ∀ n, RunsAll D n
     | «for» x τ₀ τ he hb => exact SimP.forLoop n hΓ' τ₀ τ he hb ih hr hc
     | raise he => exact SimP.raiseOf n hΓ' he ih hr hc
     | «try» he => exact ih c hΓ _ _ he X pend hr hc
+    | form _ he => exact ih c hΓ _ _ he X pend hr hc
     | tryCatch E₀ E x τ₀ τ he hh => exact SimP.catchOf n hΓ' E₀ E x τ₀ τ he hh ih hr hc
     | «while» hk' hb => exact SimP.whileLoop n hΓ' hk' hb ih hr hc
     | «loop» hb => exact SimP.loopBody n hΓ' hb ih hr hc

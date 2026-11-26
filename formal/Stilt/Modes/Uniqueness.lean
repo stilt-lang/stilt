@@ -240,7 +240,7 @@ def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
     let s := (W.holdAll (d + 1) r.1 elems).give y (d + 1) (elems.map Part.bound)
     ((W.inLoop (d + 1) body.targets s fun W s =>
       (body.copies (W.into y) (d + 2) (d + 2) again (s.into W y)).1).close (d + 1), [])
-  | .try e => e.copies W d h later s
+  | .try e | .form _ e => e.copies W d h later s
   | .tryCatch e _ y hd _ =>
     W.catchIn y d s.pending (e.copies { W with catching := true } d h
       (fun z => later z || (y != z && hd.occurs z)) { s with pending := [] })

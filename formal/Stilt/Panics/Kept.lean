@@ -248,6 +248,7 @@ theorem eval_keeps (D : Decls) (w : WriteBack) : ∀ n, KeepsRun (eval D (Copy.m
       exact loop w ih x hw.1 hw.2 hl.1 hl.2
     case raise e => exact bind (ih e W L hw hl) fun v _ => throw v
     case «try» e => exact ih e W L hw hl
+    case form _ e => exact ih e W L hw hl
     case tryCatch e E x h τ =>
       simp only [Expr.writes, Expr.resizes, List.append_subset] at hw hl
       exact handle (ih e W L hw.1 hl.1) fun err => withVar w x err (ih h W L hw.2 hl.2)

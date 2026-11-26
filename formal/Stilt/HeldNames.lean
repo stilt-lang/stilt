@@ -33,7 +33,7 @@ def Expr.bindsNone (P : Name → Bool) : Expr → Bool
   | .method _ _ _ => true
   | .record _ _ fields => fieldsBindsNone P fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsBindsNone P es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .loop e | .perform _ e
   | .closure _ _ _ e => e.bindsNone P
   | .index a b | .seq a b | .while a b | .withH _ _ a b => a.bindsNone P && b.bindsNone P
   | .letIn x _ a b | .varIn x _ a b | .for x _ a b | .tryCatch a _ x b _ =>
@@ -117,7 +117,7 @@ theorem placeShape_rename (g : Name → Name) : ∀ e : Expr,
   | .assign ⟨_, _⟩ _ => rfl
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. | .record ..
   | .variant .. | .list .. | .op .. | .view .. | .closure .. | .call .. | .letIn .. | .varIn ..
-  | .seq .. | .if .. | .match .. | .for .. | .raise .. | .try .. | .tryCatch ..
+  | .seq .. | .if .. | .match .. | .for .. | .raise .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. | .perform .. | .withH .. | .held .. => rfl
 
 theorem iterated_rename (g : Name → Name) (e : Expr) :

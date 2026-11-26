@@ -35,7 +35,7 @@ def Expr.writes : Expr → List Name
   | .match e _ arms => e.writes ++ armsWrites arms
   | .for _ _ e body => e.writes ++ body.writes
   | .raise e => e.writes
-  | .try e => e.writes
+  | .try e | .form _ e => e.writes
   | .tryCatch e _ _ handler _ => e.writes ++ handler.writes
   | .while c body => c.writes ++ body.writes
   | .loop body => body.writes
@@ -91,7 +91,7 @@ def Expr.resizes : Expr → List Name
   | .match e _ arms => e.resizes ++ armsResizes arms
   | .for _ _ e body => e.resizes ++ body.resizes
   | .raise e => e.resizes
-  | .try e => e.resizes
+  | .try e | .form _ e => e.resizes
   | .tryCatch e _ _ handler _ => e.resizes ++ handler.resizes
   | .while c body => c.resizes ++ body.resizes
   | .loop body => body.resizes
@@ -141,7 +141,7 @@ theorem Expr.resizes_subset : ∀ e : Expr, e.resizes ⊆ e.writes
   | .method _ _ _ | .closure _ _ _ _ => List.Subset.refl _
   | .record _ _ fields => fieldsResizes_subset fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsResizes_subset es
-  | .field e _ | .raise e | .perform _ e | .try e | .return e | .loop e => Expr.resizes_subset e
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .return e | .loop e => Expr.resizes_subset e
   | .index e i => append_subset_append (Expr.resizes_subset e) (Expr.resizes_subset i)
   | .call c args _ => append_subset_append (Expr.resizes_subset c) (argsResizes_subset args)
   | .letIn _ _ a b | .varIn _ _ a b | .seq a b | .withH _ _ a b | .for _ _ a b | .while a b =>

@@ -87,7 +87,7 @@ def Expr.use (O : OnceParams) (f : Name) : Expr → Use
   | .if c _ a b => (c.use O f).add ((a.use O f).add (b.use O f))
   | .match e _ arms => (e.use O f).add (armsUse O f arms)
   | .for y _ e body => (e.use O f).add (if y == f then .none else (body.use O f).again)
-  | .raise e | .perform _ e | .try e | .return e => e.use O f
+  | .raise e | .perform _ e | .try e | .form _ e | .return e => e.use O f
   | .while c body => ((c.use O f).add (body.use O f)).again
   | .loop body => (body.use O f).again
   | .tryCatch e _ y h _ => (e.use O f).add (if y == f then .none else h.use O f)

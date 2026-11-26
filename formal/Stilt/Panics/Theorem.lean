@@ -205,6 +205,7 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
         (fun _ _ _ hz h vs hv u hu s'' hm => range_elem n x body e hz h vs hv u hu s'' hm)
     case raise e => exact bind (ih G e he) (keep e) fun _ hv => throw hv
     case «try» e => exact ih G e he
+    case form _ e => exact ih G e he
     case tryCatch e E x h τ => exact handle (ih G e he.1) (keep e) fun _ he' => withVar w he' (ih _ h he.2)
     case «while» c body =>
       have hl := ih [] (.while c body) (by simp [Expr.panicFreeIn, he.1, he.2])

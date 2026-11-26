@@ -84,7 +84,7 @@ def Expr.exclusive (reading : List Shape) : Expr → Bool
   | .match e _ arms => e.exclusive reading && armsExclusive reading arms
   | .for x _ e body => e.exclusive reading && body.exclusive (hide (iterated e ++ reading) x)
   | .raise e => e.exclusive reading
-  | .try e => e.exclusive reading
+  | .try e | .form _ e => e.exclusive reading
   | .tryCatch e _ x handler _ => e.exclusive reading && handler.exclusive (hide reading x)
   | .while c body => c.exclusive reading && body.exclusive reading
   | .loop body => body.exclusive reading

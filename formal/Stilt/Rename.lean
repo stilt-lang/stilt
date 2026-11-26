@@ -45,6 +45,7 @@ def Expr.rename (g : Name → Name) : Expr → Expr
   | .for x τ e body => .for (g x) τ (e.rename g) (body.rename g)
   | .raise e => .raise (e.rename g)
   | .try e => .try (e.rename g)
+  | .form fm e => .form fm (e.rename g)
   | .tryCatch e E x h τ => .tryCatch (e.rename g) E (g x) (h.rename g) τ
   | .while c body => .while (c.rename g) (body.rename g)
   | .loop body => .loop (body.rename g)

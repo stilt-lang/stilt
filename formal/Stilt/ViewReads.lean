@@ -45,7 +45,7 @@ def Expr.viewsRead (D : Decls) (Γ : ViewScope) (reading : List Shape) : Expr �
   | .view [] => true
   | .view (e :: es) =>
     e.viewsRead D Γ reading && exprsViewsRead D Γ (headSources D Γ [e] ++ reading) es
-  | .field e _ | .raise e | .try e | .return e | .perform _ e | .loop e =>
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .perform _ e | .loop e =>
     e.viewsRead D Γ reading
   | .index e i => e.viewsRead D Γ reading && i.viewsRead D Γ (e.sources D Γ ++ reading)
   | .closure ps _ _ body => body.viewsRead D (Γ.enter D ps) []

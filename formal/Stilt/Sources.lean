@@ -148,7 +148,7 @@ def Expr.sources (D : Decls) (Γ : ViewScope) : Expr → List Shape
   | .call callee args τ =>
     if τ.mayBeView D then callee.sources D Γ ++ argsSources D Γ args else []
   | .letIn x τ init body | .varIn x τ init body => body.sources D (Γ.bind D x τ (init.sources D Γ))
-  | .seq _ b | .try b | .withH _ _ _ b => b.sources D Γ
+  | .seq _ b | .try b | .form _ b | .withH _ _ _ b => b.sources D Γ
   | .if _ _ a b => a.sources D Γ ++ b.sources D Γ
   | .match e _ arms => armsSources D Γ (e.sources D Γ) arms
   | .tryCatch e E x h _ => e.sources D Γ ++ h.sources D (Γ.bind D x E [])

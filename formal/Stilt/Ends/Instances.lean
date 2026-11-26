@@ -26,7 +26,7 @@ theorem Expr.roleIn_substTys (R : Roles) : ∀ e : Expr, (e.substTys s).roleIn R
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .index .. | .call .. | .letIn ..
   | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH ..
-  | .held .. | .try .. | .tryCatch .. | .closure .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
+  | .held .. | .try .. | .form .. | .tryCatch .. | .closure .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
   | .return _ => rfl
 
 theorem argPart_substTys (R : Roles) : ∀ (k : Nat) (args : List Arg),
@@ -79,7 +79,7 @@ theorem Expr.negated_substTys : ∀ e : Expr, (e.substTys s).negated.countings =
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
   | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH ..
-  | .held .. | .try .. | .tryCatch .. | .while .. | .loop .. | .return .. | .view .. | .if .. => rfl
+  | .held .. | .try .. | .form .. | .tryCatch .. | .while .. | .loop .. | .return .. | .view .. | .if .. => rfl
 
 theorem Roles.held_substTys (R : Roles) (c : Expr) : R.held me (c.substTys s) = R.held me c := by
   unfold Roles.held; rw [Expr.countings_substTys]
@@ -98,7 +98,7 @@ theorem Expr.divFree_substTys : ∀ (R : Roles) (e : Expr),
   | R, .variant _ _ _ es | R, .list _ es | R, .op _ es | R, .view es => by
     simp [Expr.substTys, Expr.divFree, exprsDivFree_substTys R es]
   | _, .closure _ _ _ e => by simp [Expr.substTys, Expr.divFree, Expr.divFree_substTys [] e]
-  | R, .field e _ | R, .raise e | R, .try e | R, .return e => by
+  | R, .field e _ | R, .raise e | R, .try e | R, .form _ e | R, .return e => by
     simp [Expr.substTys, Expr.divFree, Expr.divFree_substTys R e]
   | _, .perform _ _ | _, .loop _ => rfl
   | R, .index a b | R, .seq a b | R, .withH _ _ a b => by
@@ -171,7 +171,7 @@ theorem Expr.depth_substTys : ∀ e : Expr, (e.substTys s).depth = e.depth
   | .record _ _ fs => by simp [Expr.substTys, Expr.depth, fieldsDepth_substTys fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.depth, exprsDepth_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substTys, Expr.depth, Expr.depth_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .while a b | .tryCatch a _ _ b _ => by
@@ -194,7 +194,7 @@ theorem Expr.bodyDepth_substTys : ∀ e : Expr, (e.substTys s).bodyDepth = e.bod
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .call ..
   | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ ..
-  | .withH .. | .held .. | .try .. | .tryCatch .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
+  | .withH .. | .held .. | .try .. | .form .. | .tryCatch .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
   | .return _ => rfl
 
 theorem exprsDepth_substTys : ∀ es : List Expr, exprsDepth (substExprTys s es) = exprsDepth es
@@ -243,7 +243,7 @@ theorem Expr.roleIn_substRows (R : Roles) : ∀ e : Expr, (e.substRows s).roleIn
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .index .. | .call .. | .letIn ..
   | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH ..
-  | .held .. | .try .. | .tryCatch .. | .closure .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
+  | .held .. | .try .. | .form .. | .tryCatch .. | .closure .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
   | .return _ => rfl
 
 theorem argPart_substRows (R : Roles) : ∀ (k : Nat) (args : List Arg),
@@ -296,7 +296,7 @@ theorem Expr.negated_substRows : ∀ e : Expr, (e.substRows s).negated.countings
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
   | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH ..
-  | .held .. | .try .. | .tryCatch .. | .while .. | .loop .. | .return .. | .view .. | .if .. => rfl
+  | .held .. | .try .. | .form .. | .tryCatch .. | .while .. | .loop .. | .return .. | .view .. | .if .. => rfl
 
 theorem Roles.held_substRows (R : Roles) (c : Expr) : R.held me (c.substRows s) = R.held me c := by
   unfold Roles.held; rw [Expr.countings_substRows]
@@ -315,7 +315,7 @@ theorem Expr.divFree_substRows : ∀ (R : Roles) (e : Expr),
   | R, .variant _ _ _ es | R, .list _ es | R, .op _ es | R, .view es => by
     simp [Expr.substRows, Expr.divFree, exprsDivFree_substRows R es]
   | _, .closure _ _ _ e => by simp [Expr.substRows, Expr.divFree, Expr.divFree_substRows [] e]
-  | R, .field e _ | R, .raise e | R, .try e | R, .return e => by
+  | R, .field e _ | R, .raise e | R, .try e | R, .form _ e | R, .return e => by
     simp [Expr.substRows, Expr.divFree, Expr.divFree_substRows R e]
   | _, .perform _ _ | _, .loop _ => rfl
   | R, .index a b | R, .seq a b | R, .withH _ _ a b => by
@@ -388,7 +388,7 @@ theorem Expr.depth_substRows : ∀ e : Expr, (e.substRows s).depth = e.depth
   | .record _ _ fs => by simp [Expr.substRows, Expr.depth, fieldsDepth_substRows fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.depth, exprsDepth_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.substRows, Expr.depth, Expr.depth_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
   | .while a b | .tryCatch a _ _ b _ => by
@@ -411,7 +411,7 @@ theorem Expr.bodyDepth_substRows : ∀ e : Expr, (e.substRows s).bodyDepth = e.b
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .call ..
   | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ ..
-  | .withH .. | .held .. | .try .. | .tryCatch .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
+  | .withH .. | .held .. | .try .. | .form .. | .tryCatch .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
   | .return _ => rfl
 
 theorem exprsDepth_substRows : ∀ es : List Expr, exprsDepth (substExprRows s es) = exprsDepth es

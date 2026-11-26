@@ -75,7 +75,7 @@ theorem Expr.substRows_nil : ∀ e : Expr, e.substRows [] = e
   | .for _ τ e body => by
     rw [Expr.substRows, Ty.substRows_nil τ, Expr.substRows_nil e, Expr.substRows_nil body]
   | .raise e => by rw [Expr.substRows, Expr.substRows_nil e]
-  | .try e => by rw [Expr.substRows, Expr.substRows_nil e]
+  | .try e | .form _ e => by rw [Expr.substRows, Expr.substRows_nil e]
   | .tryCatch e E _ h τ => by
     rw [Expr.substRows, Expr.substRows_nil e, Ty.substRows_nil E, Expr.substRows_nil h,
       Ty.substRows_nil τ]

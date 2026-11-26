@@ -368,6 +368,7 @@ theorem eval_mono (D : Decls) (M : Memory σ) :
     | «for» x τ e body => exact loop M ih x e body
     | raise e => exact bind (ih e) fun _ => refl _
     | «try» e => exact ih e
+    | form _ e => exact ih e
     | tryCatch e E x hd τ => exact handle (ih e) fun _ => withVar M x _ (ih hd)
     | «while» c body =>
       exact bind (bind (ih c) fun _ => refl _) fun v =>

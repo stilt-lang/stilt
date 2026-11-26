@@ -94,6 +94,7 @@ theorem eval_writes (D : Decls) :
     case «for» x τ e body => exact loop x (ih e) (ih body) (hide_nil_sub x _)
     case raise e => exact bind (ih e) fun v _ => throw v
     case «try» e => exact ih e
+    case form _ e => exact ih e
     case tryCatch e E x h τ =>
       exact handle (ih e) fun err => withVar x err (ih h) (hide_nil_sub x _)
     case «while» c body => exact whileLoop (ih c) (ih body) (ih _)

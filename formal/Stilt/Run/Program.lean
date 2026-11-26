@@ -146,7 +146,7 @@ def _root_.Stilt.Expr.makesView : Expr → Bool
     false
   | .record _ _ fields => fieldsMakeView fields
   | .variant _ _ _ es | .list _ es | .op _ es => exprsMakeView es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.makesView
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .loop e | .perform _ e => e.makesView
   | .index a b | .seq a b | .while a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b
   | .for _ _ a b | .tryCatch a _ _ b _ => a.makesView || b.makesView
   | .closure _ _ _ body => body.makesView

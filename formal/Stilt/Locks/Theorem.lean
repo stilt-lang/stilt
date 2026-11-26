@@ -72,6 +72,7 @@ theorem eval_takesNone {D : Decls} {L : List Name} (hD : D.LocksClosed L) (w : W
     case «for» x τ e body => exact loop ih w x he.1 he.2
     case raise e => exact bind (ih e he) (fun _ hv => throw hv)
     case «try» e => exact ih e he
+    case form _ e => exact ih e he
     case tryCatch e E x h τ => exact handle (ih e he.1) fun _ hv => withVar w hv (ih h he.2)
     case «while» c body =>
       have hl := ih (.while c body) (by simp [Expr.lockFree, he.1, he.2])

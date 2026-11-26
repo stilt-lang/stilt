@@ -42,6 +42,7 @@ def Expr.erase : Expr → Expr
   | .for x τ e body => .for x τ e.erase body.erase
   | .raise e => .raise e.erase
   | .try e => .try e.erase
+  | .form fm e => .form fm e.erase
   | .tryCatch e E x h τ => .tryCatch e.erase E x h.erase τ
   | .while c body => .while c.erase body.erase
   | .loop body => .loop body.erase
@@ -110,7 +111,7 @@ theorem Expr.erase_markMoves :
   | .record _ _ fs, L, _ => by simp [Expr.markMoves, Expr.erase, eraseFields_mark fs L]
   | .variant _ _ _ es, L, _ | .list _ es, L, _ | .op _ es, L, _ | .view es, L, _ => by
     simp [Expr.markMoves, Expr.erase, eraseExprs_mark es L]
-  | .field e _, L, _ | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ | .loop e, L, _ | .return e, L, _ => by
+  | .field e _, L, _ | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ | .form _ e, L, _ | .loop e, L, _ | .return e, L, _ => by
     simp [Expr.markMoves, Expr.erase, Expr.erase_markMoves e]
   | .index a b, L, _ | .seq a b, L, _ | .withH _ _ a b, L, _ | .letIn _ _ a b, L, _ | .varIn _ _ a b, L, _
   | .for _ _ a b, L, _ | .while a b, L, _ | .tryCatch a _ _ b _, L, _ => by
@@ -190,7 +191,7 @@ theorem placeShape_erase : ∀ e : Expr, e.erase.placeShape = e.placeShape
       placeShape_index, placeShape_erase e]
   | .int _ | .bool _ | .unit | .record .. | .variant .. | .list .. | .op .. | .view _ | .fnRef .. | .method .. | .closure ..
   | .call .. | .letIn .. | .varIn .. | .assign ⟨_, _⟩ _ | .seq .. | .if .. | .match .. | .for ..
-  | .raise _ | .perform _ _ | .try _ | .tryCatch .. | .while .. | .loop _ | .break | .continue
+  | .raise _ | .perform _ _ | .try _ | .form _ _ | .tryCatch .. | .while .. | .loop _ | .break | .continue
   | .return _ | .withH .. | .held .. => by
     simp [Expr.erase, Expr.placeShape, Expr.place?]
 
@@ -207,7 +208,7 @@ theorem Expr.exclusive_erase : ∀ (e : Expr) (r : List Shape), e.erase.exclusiv
   | .record _ _ fs, r => by simp [Expr.erase, Expr.exclusive, fieldsExclusive_erase fs r]
   | .variant _ _ _ es, r | .list _ es, r | .op _ es, r | .view es, r => by
     simp [Expr.erase, Expr.exclusive, exprsExclusive_erase es r]
-  | .field e _, r | .raise e, r | .perform _ e, r | .try e, r | .loop e, r | .return e, r => by
+  | .field e _, r | .raise e, r | .perform _ e, r | .try e, r | .form _ e, r | .loop e, r | .return e, r => by
     simp [Expr.erase, Expr.exclusive, Expr.exclusive_erase e r]
   | .index e i, r | .seq e i, r | .withH _ _ e i, r | .while e i, r => by
     simp [Expr.erase, Expr.exclusive, Expr.exclusive_erase e r, Expr.exclusive_erase i r]
@@ -280,7 +281,7 @@ theorem Expr.free_erase (x : Name) : ∀ e : Expr, e.erase.free x = e.free x
   | .closure _ _ _ body => by simp [Expr.erase, Expr.free, Expr.free_erase x body]
   | .record _ _ fs => by simp [Expr.erase, Expr.free, fieldsFree_erase x fs]
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.erase, Expr.free, exprsFree_erase x es]
-  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
     simp [Expr.erase, Expr.free, Expr.free_erase x e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b
   | .for _ _ a b | .while a b | .tryCatch a _ _ b _ => by

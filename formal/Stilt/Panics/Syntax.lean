@@ -191,7 +191,7 @@ def Expr.panicFreeIn : List Known → Expr → Bool
       body.panicFreeIn (withoutNames (withoutNames (withoutNames G e.writes) body.writes) [x] ++
         e.rangeFacts G x body)
   | G, .raise e => e.panicFreeIn G
-  | G, .try e => e.panicFreeIn G
+  | G, .try e | G, .form _ e => e.panicFreeIn G
   | G, .tryCatch e _ x handler _ =>
     e.panicFreeIn G && handler.panicFreeIn (withoutNames (withoutNames G e.writes) [x])
   | _, .while c body => c.panicFreeIn [] && body.panicFreeIn c.facts

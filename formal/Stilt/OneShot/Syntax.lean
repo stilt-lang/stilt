@@ -34,7 +34,7 @@ def Expr.resumes : Expr → Nat
   | .method _ _ _ | .closure _ _ _ _ => 0
   | .record _ _ fields => fieldsResumes fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsResumes es
-  | .field e _ | .raise e | .try e | .return e => e.resumes
+  | .field e _ | .raise e | .try e | .form _ e | .return e => e.resumes
   | .index e i => e.resumes + i.resumes
   | .call callee args _ => callee.resumes + argsResumes args
   | .letIn _ _ init body | .varIn _ _ init body => init.resumes + body.resumes
@@ -86,7 +86,7 @@ def Expr.oneShot : Expr → Bool
   | .closure _ _ ρ body => body.oneShot && decide (body.resumes ≤ ρ.resumes)
   | .record _ _ fields => fieldsOneShot fields
   | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsOneShot es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.oneShot
+  | .field e _ | .raise e | .try e | .form _ e | .return e | .loop e | .perform _ e => e.oneShot
   | .index a b | .seq a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => a.oneShot && b.oneShot
   | .call callee args _ => callee.oneShot && argsOneShot args
