@@ -1,6 +1,6 @@
 {
   "name": "stilt",
-  "displayName": "Stilt",
+  "displayName": "Stilt Language",
   "description": "Stilt for Visual Studio Code: highlighting, and a language server that shows each function's inferred facts with the lines that cause them, explains every keyword and diagnostic, and runs and debugs programs and their tests",
   "version": "2027.1.0",
   "publisher": "stilt-lang",
