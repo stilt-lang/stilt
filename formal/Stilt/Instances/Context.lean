@@ -222,6 +222,22 @@ theorem Op.Sig.substTys {o : Op} {τs : List Ty} {τ : Ty} (h : Op.Sig o τs τ)
     | _ => exact .world (by constructor)
   | _ => constructor
 
+/-- An instance of an operation finds keys of the same key types: a key type names no
+type parameter. -/
+theorem Op.KeysIn.substTys {D : Decls} {o : Op} {τs : List Ty} {τ : Ty} (hk : o.KeysIn D τs τ)
+    (h : Op.Sig o τs τ) (s : TySubst) :
+    (o.substTys s).KeysIn D (τs.map (Ty.substTys s)) (τ.substTys s) := by
+  cases h with
+  | map h =>
+    cases h with
+    | equal hκ hυ =>
+      simpa [Op.KeysIn, Op.keyTypes, Op.substTys, Ty.substTys, hκ.substTys, hυ.substTys] using hk
+    | _ hk' => simpa [Op.KeysIn, Op.keyTypes, Op.substTys, Ty.substTys, hk'.substTys] using hk
+  | set h =>
+    cases h <;> rename_i hk' <;>
+      simpa [Op.KeysIn, Op.keyTypes, Op.substTys, Ty.substTys, hk'.substTys] using hk
+  | _ => intro κ hκ; simp [Op.keyTypes, Op.substTys] at hκ
+
 /-- A place with its indexes' types instantiated. -/
 def Place.substTys (s : TySubst) (p : Place) : Place := ⟨p.root, substPathTys s p.path⟩
 

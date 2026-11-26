@@ -160,7 +160,7 @@ theorem HasType.strengthen :
   | _, _, _, _, .record hr hp hfs, _, h => .record hr hp (FieldsFit.strengthen hfs (part h))
   | _, _, _, _, .variant ht hc hes, _, h => .variant ht hc (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .list hwf hes, _, h => .list hwf (ExprsFit.strengthen hes (part h))
-  | _, _, _, _, .op ho hes, _, h => .op ho (ExprsFit.strengthen hes (part h))
+  | _, _, _, _, .op ho hes hk, _, h => .op ho (ExprsFit.strengthen hes (part h)) hk
   | _, _, _, _, .view ho hes, _, h => .view ho (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .field he hr hf, _, h => .field (HasType.strengthen he (part h)) hr hf
   | _, _, _, _, .elem he hf, _, h => .elem (HasType.strengthen he (part h)) hf

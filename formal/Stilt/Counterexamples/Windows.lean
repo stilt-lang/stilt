@@ -57,7 +57,7 @@ theorem viewChanged_wellTyped : viewChanged.WellTyped where
           (.cons (hint _ (by decide)) (.refl _) .nil)))) (.refl _)
         (.seq (.assign (.mk rfl (.index (hint _ (by decide)) (.refl _) .nil)) (hint _ (by decide))
           (.refl _)) (.refl _)
-          (.raise rfl (.index (.op .copy (.cons (.var rfl) (.refl _) .nil))
+          (.raise rfl (.index (.op .copy (.cons (.var rfl) (.refl _) .nil) (Op.keysIn_of_nil rfl))
             (hint _ (by decide)) (.refl _)) (.refl _)))), .never _⟩
   noEscape := noEscape_of_check (by decide)
 
@@ -130,8 +130,8 @@ theorem viewEscaped_wellTyped : viewEscaped.WellTyped where
       .fnRef (types := []) rfl rfl (instantiable_of_check (by decide)) (by decide)
         (wellFormed_of_check (by decide)) (passesOn_of_check (by decide)) .nil
     exact ⟨.never, .raise rfl (.op .copy (.cons (.call hcallee .nil
-      ⟨Row.pure_within _, fun h => (nomatch h), fun h => (nomatch h), rfl⟩) (.refl _) .nil))
-      (.refl _), .never _⟩
+      ⟨Row.pure_within _, fun h => (nomatch h), fun h => (nomatch h), rfl⟩) (.refl _) .nil)
+      (Op.keysIn_of_nil rfl)) (.refl _), .never _⟩
   noEscape := noEscape_of_check (by decide)
 
 theorem viewEscaped_exclusive : viewEscaped.Exclusive := by

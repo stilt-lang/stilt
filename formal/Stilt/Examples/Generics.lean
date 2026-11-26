@@ -89,7 +89,7 @@ example : twice.WellTyped decls twice.scope := by
       (sizeOf (.param "T") (.var "v")) .i64 :=
     .call hm (.value (by decide) (.var rfl) (.refl _) .nil)
       ⟨Row.pure_within _, fun h => by simp at h, fun h => (nomatch h), rfl⟩
-  exact ⟨.i64, .op .arith (.cons hcall (.refl _) (.cons hcall (.refl _) .nil)), .refl _⟩
+  exact ⟨.i64, .op .arith (.cons hcall (.refl _) (.cons hcall (.refl _) .nil)) (Op.keysIn_of_nil rfl), .refl _⟩
 
 /-- `twice(true)` has no type: `bool` has no impl of `Size`, so the bound is
 unsatisfied (traits.unsatisfied-bounds). -/

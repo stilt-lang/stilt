@@ -211,7 +211,8 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
   | _, _, _, _, .variant hT hC hp, hfx =>
     HasType.variant_substTys hD hT hC (ExprsFit.substTys hD hs hp hfx)
   | _, _, _, _, .list hwf hes, hfx => HasType.list_substTys hs hwf (ExprsFit.substTys hD hs hes hfx)
-  | _, _, _, _, .op ho hes, hfx => .op (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx)
+  | _, _, _, _, .op ho hes hk, hfx =>
+    .op (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx) (hk.substTys ho s)
   | _, _, _, _, .view ho hes, hfx => .view (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx)
   | _, _, _, _, .field he hR hf, hfx => HasType.field_substTys hD (HasType.substTys hD hs he hfx) hR hf
   | _, _, _, _, .elem he hf, hfx => HasType.elem_substTys (HasType.substTys hD hs he hfx) hf

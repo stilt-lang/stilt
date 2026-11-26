@@ -59,7 +59,7 @@ theorem HasType.weaken (Δ : Ctx) :
   | _, _, _, _, .record hr hperm hfs => .record hr hperm (FieldsFit.weaken Δ hfs)
   | _, _, _, _, .variant ht hc hes => .variant ht hc (ExprsFit.weaken Δ hes)
   | _, _, _, _, .list hwf hes => .list hwf (ExprsFit.weaken Δ hes)
-  | _, _, _, _, .op ho hes => .op ho (ExprsFit.weaken Δ hes)
+  | _, _, _, _, .op ho hes hk => .op ho (ExprsFit.weaken Δ hes) hk
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.weaken Δ hes)
   | _, _, _, _, .field he hr hf => .field (HasType.weaken Δ he) hr hf
   | _, _, _, _, .elem he hf => .elem (HasType.weaken Δ he) hf
@@ -192,7 +192,7 @@ theorem HasType.of_le (hs : s.Le s') :
   | _, _, _, _, .record hr hperm hfs => .record hr hperm (FieldsFit.of_le hs hfs)
   | _, _, _, _, .variant ht hc hes => .variant ht hc (ExprsFit.of_le hs hes)
   | _, _, _, _, .list hwf hes => .list (hwf.of_le hs) (ExprsFit.of_le hs hes)
-  | _, _, _, _, .op ho hes => .op ho (ExprsFit.of_le hs hes)
+  | _, _, _, _, .op ho hes hk => .op ho (ExprsFit.of_le hs hes) hk
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.of_le hs hes)
   | _, _, _, _, .field he hr hf => .field (HasType.of_le hs he) hr hf
   | _, _, _, _, .elem he hf => .elem (HasType.of_le hs he) hf

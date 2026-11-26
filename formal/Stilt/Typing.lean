@@ -206,10 +206,12 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       ExprsFit Γ fx es (List.replicate es.length τ) →
       HasType Γ fx (.list τ es) (.list τ)
   /-- A built-in operation's operands fit the types its signature gives them
-  (values.left-to-right). -/
+  (values.left-to-right). A function of maps or sets finds keys of key types of the
+  program (std.map-key-bounds). -/
   | op {Γ fx o es τs τ} :
       o.Sig τs τ →
       ExprsFit Γ fx es τs →
+      o.KeysIn D τs τ →
       HasType Γ fx (.op o es) τ
   /-- A view's operands fit `View.all`, `View.of` or `v.view` (views.making-view). -/
   | view {Γ fx es τs τ} :

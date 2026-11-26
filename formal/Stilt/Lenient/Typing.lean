@@ -89,6 +89,7 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
   | op {N Γ fx o es τs τ} :
       o.Sig τs τ →
       ExprsFit N Γ fx es τs →
+      o.KeysIn D τs τ →
       HasType N Γ fx (.op o es) τ
   | view {N Γ fx es τs τ} :
       Op.Sig .view τs τ →

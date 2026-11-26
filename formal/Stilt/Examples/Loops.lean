@@ -95,14 +95,14 @@ example : (Program.mk decls (.seq (.return .unit) (.raise (.int 1))) ⟨false, s
 example : firstAbove.WellTyped decls firstAbove.scope := by
   have hlt : ∀ {Γ fx} {a b : Expr}, HasType decls firstAbove.scope Γ fx a .i64 →
       HasType decls firstAbove.scope Γ fx b .i64 → HasType decls firstAbove.scope Γ fx (lt a b) .bool :=
-    fun ha hb => .op .compare (.cons ha (.refl _) (.cons hb (.refl _) .nil))
+    fun ha hb => .op .compare (.cons ha (.refl _) (.cons hb (.refl _) .nil)) (Op.keysIn_of_nil rfl)
   have hturn : HasType decls firstAbove.scope ((Ctx.params [] firstAbove.params).bind "i" ⟨.i64, true⟩)
       (Effects.inLoop { Effects.body Row.pure .i64 with continues := true, breaks := false })
       turn .never :=
     .seq (.if (Counterexamples.wellFormed_of_check (by decide)) (hlt (.var rfl) (.var rfl)) (.refl _)
         (.return (.var rfl) (.refl _)) (.never _) .unit (.refl _)) (.refl _)
       (.seq (.assign (.mk rfl .nil) (.op .arith (.cons (.var rfl) (.refl _)
-          (.cons (.int (by decide)) (.refl _) .nil))) (.refl _)) (.refl _) (.break rfl))
+          (.cons (.int (by decide)) (.refl _) .nil)) (Op.keysIn_of_nil rfl)) (.refl _)) (.refl _) (.break rfl))
   exact ⟨.never, .varIn (Counterexamples.wellFormed_of_check (by decide)) (.int (by decide)) (.refl _)
     (.loopForever (.loopBreaks hturn (.never _)) (.refl _)), .never _⟩
 

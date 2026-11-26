@@ -59,7 +59,7 @@ theorem Lenient.HasType.strict :
     .record hr hperm (Lenient.FieldsFit.strict hfs hne)
   | _, _, _, _, _, _, .variant ht hc hes, hne => .variant ht hc (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .list hwf hes, hne => .list hwf (Lenient.ExprsFit.strict hes hne)
-  | _, _, _, _, _, _, .op ho hes, hne => .op ho (Lenient.ExprsFit.strict hes hne)
+  | _, _, _, _, _, _, .op ho hes hk, hne => .op ho (Lenient.ExprsFit.strict hes hne) hk
   | _, _, _, _, _, _, .view ho hes, hne => .view ho (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .field he hr hf, hne => .field (Lenient.HasType.strict he hne) hr hf
   | _, _, _, _, _, _, .elem he hf, hne => .elem (Lenient.HasType.strict he hne) hf
@@ -207,7 +207,7 @@ theorem HasType.lenient :
   | _, _, _, _, _, .record hr hperm hfs => .record hr hperm (FieldsFit.lenient hfs)
   | _, _, _, _, _, .variant ht hc hes => .variant ht hc (ExprsFit.lenient hes)
   | _, _, _, _, _, .list hwf hes => .list hwf (ExprsFit.lenient hes)
-  | _, _, _, _, _, .op ho hes => .op ho (ExprsFit.lenient hes)
+  | _, _, _, _, _, .op ho hes hk => .op ho (ExprsFit.lenient hes) hk
   | _, _, _, _, _, .view ho hes => .view ho (ExprsFit.lenient hes)
   | _, _, _, _, _, .field he hr hf => .field (HasType.lenient he) hr hf
   | _, _, _, _, _, .elem he hf => .elem (HasType.lenient he) hf

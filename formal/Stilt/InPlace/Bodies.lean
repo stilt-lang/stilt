@@ -98,7 +98,7 @@ theorem HasType.distinctParams :
   | _, _, _, _, .record _ _ hfs => FieldsFit.distinctParams hfs
   | _, _, _, _, .variant _ _ hes => ExprsFit.distinctParams hes
   | _, _, _, _, .list _ hes => ExprsFit.distinctParams hes
-  | _, _, _, _, .op _ hes => ExprsFit.distinctParams hes
+  | _, _, _, _, .op _ hes _ => ExprsFit.distinctParams hes
   | _, _, _, _, .view _ hes => ExprsFit.distinctParams hes
   | _, _, _, _, .field he _ _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
   | _, _, _, _, .elem he _ => by simpa [Expr.distinctParams] using HasType.distinctParams he

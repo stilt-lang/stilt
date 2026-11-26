@@ -55,18 +55,19 @@ def Value.setOf (ks : List Value) : Value := .record setName [(elementsField, .l
 integer type, `bool`, `str` or `()`, whose impls are built in (traits.built-in-impls
 and std.map-key-bounds), and the tuples, lists, records and variant types whose
 impls are the structural ones (traits.structural-impls), which compare their parts
-in order. The export takes a record or variant type as a key only when the
-program writes no `Eq` or `Hash` for it or its parts; keys of a type with a
-written impl, and of type parameters, are outside the calculus. -/
+in order. A use of a function of maps or sets asks more of a record or variant
+type, that its parts be key types too and that the program write no `Eq` or `Hash`
+for it (`Decls.Key`, in `HasType.op`). Keys of type parameters are outside the
+calculus. -/
 inductive Ty.Key : Ty → Prop
   | int (k : IntTy) : Ty.Key (.int k)
   | bool : Ty.Key .bool
   | str : Ty.Key .str
   | unit : Ty.Key .unit
   | tuple {κs : List Ty} : (∀ κ ∈ κs, Ty.Key κ) → Ty.Key (.tuple κs)
-  /-- A record or a variant type whose `Eq` and `Hash` are the structural ones,
-  which the export checks: its values compare part by part. -/
   | list {κ : Ty} : Ty.Key κ → Ty.Key (.list κ)
+  /-- A record or a variant type, whose parts `Decls.Key` checks: its values compare
+  part by part. -/
   | record (R : Name) : Ty.Key (.record R)
   | variant (T : Name) : Ty.Key (.variant T)
 
@@ -409,5 +410,54 @@ theorem Ty.Key.substTys {κ : Ty} (h : κ.Key) (s : TySubst) : κ.substTys s = �
     exact (List.map_congr_left ih).trans (List.map_id _)
   | list _ ih => simp only [Ty.substTys, ih]
   | _ => rfl
+
+/-! ## Key types of a program -/
+
+/-- What a key type of the program is at its outermost type, given the types `S` its
+parts must be: an integer type, `bool`, `str` or `()`, whose `Eq` and `Hash` are built
+in (traits.built-in-impls); a tuple or a list of parts; or a record or variant type for
+which the program writes no `Eq` or `Hash`, whose structural impls are those of its fields
+or payloads (traits.structural-impls). A float is none, since floats don't implement
+`Hash` (std.map-key-bounds), and neither is a function type, which implements no trait
+(traits.built-in-impls). -/
+def Decls.KeyStep (D : Decls) (S : Ty → Prop) : Ty → Prop
+  | .int _ | .bool | .str | .unit => True
+  | .tuple κs => ∀ κ ∈ κs, S κ
+  | .list κ => S κ
+  | .record R => (D.traitImpl? "Eq" (.record R)).isNone ∧ (D.traitImpl? "Hash" (.record R)).isNone ∧
+      ∃ r, D.record? R = some r ∧ ∀ f ∈ r.fields, S f.2
+  | .variant T => (D.traitImpl? "Eq" (.variant T)).isNone ∧
+      (D.traitImpl? "Hash" (.variant T)).isNone ∧
+      ∃ t, D.variant? T = some t ∧ ∀ c ∈ t.ctors, ∀ τ ∈ c.2, S τ
+  | _ => False
+
+/-- A type that implements `Eq` and `Hash` in the program, part by part, as every
+operation that finds a key requires (std.map-key-bounds and traits.structural-impls): some
+set of types holds it, and each of them is a key type at its outermost type with its parts
+in the set. A recursive type is a key type when its parts are. Its values are equal as
+`Value.keyEq` finds them, by their parts. -/
+def Decls.Key (D : Decls) (κ : Ty) : Prop :=
+  ∃ S : Ty → Prop, S κ ∧ ∀ τ, S τ → D.KeyStep S τ
+
+/-- The key types that a function of maps or sets finds keys of, as its signature gives
+them: a map's or a set's key type, and for `==` on maps the value type too, which it
+compares. Every other operation finds no key. -/
+def Op.keyTypes : Op → List Ty → Ty → List Ty
+  | .map .new, _, .map κ _ | .map .withDefault, _, .map κ _ => [κ]
+  | .map .equal, .map κ υ :: _, _ => [κ, υ]
+  | .map _, .map κ _ :: _, _ => [κ]
+  | .set .new, _, .set κ | .set .fromList, _, .set κ => [κ]
+  | .set _, .set κ :: _, _ => [κ]
+  | _, _, _ => []
+
+/-- The key types of an operation are key types of the program: a use whose key type
+doesn't meet `Eq + Hash` is E0318 (std.map-key-bounds). -/
+def Op.KeysIn (D : Decls) (o : Op) (τs : List Ty) (τ : Ty) : Prop :=
+  ∀ κ ∈ o.keyTypes τs τ, D.Key κ
+
+/-- An operation that finds no key needs no key type. -/
+theorem Op.keysIn_of_nil {D : Decls} {o : Op} {τs : List Ty} {τ : Ty}
+    (h : o.keyTypes τs τ = []) : o.KeysIn D τs τ :=
+  fun _ hκ => by rw [h] at hκ; exact nomatch hκ
 
 end Stilt
