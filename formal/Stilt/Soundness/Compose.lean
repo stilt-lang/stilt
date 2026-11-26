@@ -156,8 +156,9 @@ theorem Ty.close_substRows (s : RowSubst) (η : REnv) :
   | .str, _ => .str
   | .unit, _ => .unit
   | .never, _ => .never
-  | .record R, _ => .record R
-  | .variant T, _ => .variant T
+  | .record R τs, h => .record R (closeTys_substRows s η τs fun σ hσ => h σ (by simpa [Ty.rows] using hσ))
+  | .variant T τs, h =>
+    .variant T (closeTys_substRows s η τs fun σ hσ => h σ (by simpa [Ty.rows] using hσ))
   | .param T, _ => .param T
   | .list τ, h => .list (Ty.close_substRows s η τ h)
   | .tuple τs, h => .tuple (closeTys_substRows s η τs fun σ hσ => h σ (by simpa [Ty.rows] using hσ))

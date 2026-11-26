@@ -24,8 +24,8 @@ mutual
 def Expr.distinctParams : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
-  | .record _ fields => fieldsDistinctParams fields
-  | .variant _ _ es => exprsDistinctParams es
+  | .record _ _ fields => fieldsDistinctParams fields
+  | .variant _ _ _ es => exprsDistinctParams es
   | .list _ es => exprsDistinctParams es
   | .op _ es | .view es => exprsDistinctParams es
   | .field e _ => e.distinctParams
@@ -95,12 +95,12 @@ theorem HasType.distinctParams :
   | _, _, _, _, .int _ => rfl
   | _, _, _, _, .bool => rfl
   | _, _, _, _, .unit => rfl
-  | _, _, _, _, .record _ _ hfs => FieldsFit.distinctParams hfs
-  | _, _, _, _, .variant _ _ hes => ExprsFit.distinctParams hes
+  | _, _, _, _, .record _ _ _ _ hfs => FieldsFit.distinctParams hfs
+  | _, _, _, _, .variant _ _ _ _ hes => ExprsFit.distinctParams hes
   | _, _, _, _, .list _ hes => ExprsFit.distinctParams hes
   | _, _, _, _, .op _ hes _ => ExprsFit.distinctParams hes
   | _, _, _, _, .view _ hes => ExprsFit.distinctParams hes
-  | _, _, _, _, .field he _ _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
+  | _, _, _, _, .field he _ _ _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
   | _, _, _, _, .elem he _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
   | _, _, _, _, .index he hi _ => by
     simp [Expr.distinctParams, HasType.distinctParams he, HasType.distinctParams hi]
@@ -169,7 +169,7 @@ theorem PlaceFits.distinctParams :
 theorem PathFits.distinctParams :
     ∀ {Γ fx σ path τ}, PathFits D s Γ fx σ path τ → pathDistinctParams path = true
   | _, _, _, _, _, .nil => rfl
-  | _, _, _, _, _, .field _ _ hp => by
+  | _, _, _, _, _, .field _ _ _ hp => by
     simpa [pathDistinctParams] using PathFits.distinctParams hp
   | _, _, _, _, _, .index hi _ hp => by
     simp [pathDistinctParams, HasType.distinctParams hi, PathFits.distinctParams hp]
@@ -257,8 +257,8 @@ theorem Expr.exclusive_substRows :
     ∀ (e : Expr) (r : List Shape), (e.substRows s).exclusive r = e.exclusive r
   | .var _, _ | .move _, _ | .int _, _ | .bool _, _ | .unit, _ | .break, _ | .continue, _
   | .fnRef .., _ | .method .., _ => rfl
-  | .record _ fields, r => fieldsExclusive_substRows fields r
-  | .variant _ _ es, r => exprsExclusive_substRows es r
+  | .record _ _ fields, r => fieldsExclusive_substRows fields r
+  | .variant _ _ _ es, r => exprsExclusive_substRows es r
   | .list _ es, r => exprsExclusive_substRows es r
   | .op _ es, r | .view es, r => exprsExclusive_substRows es r
   | .field e _, r => by simpa [Expr.substRows, Expr.exclusive] using Expr.exclusive_substRows e r
@@ -357,8 +357,8 @@ mutual
 theorem Expr.distinctParams_substRows :
     ∀ e : Expr, (e.substRows s).distinctParams = e.distinctParams
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
-  | .record _ fields => fieldsDistinctParams_substRows fields
-  | .variant _ _ es => exprsDistinctParams_substRows es
+  | .record _ _ fields => fieldsDistinctParams_substRows fields
+  | .variant _ _ _ es => exprsDistinctParams_substRows es
   | .list _ es => exprsDistinctParams_substRows es
   | .op _ es | .view es => exprsDistinctParams_substRows es
   | .field e _ => by

@@ -30,8 +30,8 @@ def Expr.gather (visit : κ → Expr → List β) (k : κ) (e : Expr) : List β 
   visit k e ++
     match e with
     | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => []
-    | .record _ fields => gatherFields visit (child k e) 0 fields
-    | .variant _ _ es | .list _ es | .op _ es | .view es => gatherExprs visit (child k e) 0 es
+    | .record _ _ fields => gatherFields visit (child k e) 0 fields
+    | .variant _ _ _ es | .list _ es | .op _ es | .view es => gatherExprs visit (child k e) 0 es
     | .field a _ | .closure _ _ _ a | .raise a | .try a | .loop a | .return a | .perform _ a =>
       a.gather visit (child k e 0)
     | .index a b | .letIn _ _ a b | .varIn _ _ a b | .seq a b | .for _ _ a b | .while a b
@@ -93,8 +93,8 @@ def Expr.gate (k : κ) (e : Expr) : Expr :=
   | .continue => .continue
   | .fnRef f types rows => .fnRef f types rows
   | .method t m τ => .method t m τ
-  | .record R fields => .record R (gateFields (child k e) 0 fields)
-  | .variant T C es => .variant T C (gateExprs (child k e) 0 es)
+  | .record R τs fields => .record R τs (gateFields (child k e) 0 fields)
+  | .variant T τs C es => .variant T τs C (gateExprs (child k e) 0 es)
   | .list τ es => .list τ (gateExprs (child k e) 0 es)
   | .op o es => .op o (gateExprs (child k e) 0 es)
   | .view es => .view (gateExprs (child k e) 0 es)
@@ -167,10 +167,10 @@ theorem Expr.gather_all (hv : ∀ k e, ∀ b ∈ visit k e, P b) :
   | .break, k, b, h | .continue, k, b, h | .fnRef .., k, b, h | .method .., k, b, h => by
     simp only [Expr.gather, List.append_nil] at h
     exact hv _ _ _ h
-  | .record _ fs, k, b, h => by
+  | .record _ _ fs, k, b, h => by
     simp only [Expr.gather, List.mem_append] at h
     exact h.elim (hv _ _ _) (gatherFields_all hv fs _ 0 b)
-  | .variant _ _ es, k, b, h | .list _ es, k, b, h | .op _ es, k, b, h | .view es, k, b, h => by
+  | .variant _ _ _ es, k, b, h | .list _ es, k, b, h | .op _ es, k, b, h | .view es, k, b, h => by
     simp only [Expr.gather, List.mem_append] at h
     exact h.elim (hv _ _ _) (gatherExprs_all hv es _ 0 b)
   | .field a _, k, b, h | .closure _ _ _ a, k, b, h | .raise a, k, b, h | .try a, k, b, h
@@ -290,9 +290,9 @@ theorem Expr.gather_map :
     ∀ (e : Expr) (k : κ), e.gather child visit k = e.gather child' visit' (f k)
   | .var _, k | .move _, k | .int _, k | .bool _, k | .unit, k | .break, k | .continue, k
   | .fnRef .., k | .method .., k => by simp only [Expr.gather, hv]
-  | .record _ fs, k => by
+  | .record _ _ fs, k => by
     simp only [Expr.gather, hv, gatherFields_map fs, comp_child child child' f hc]
-  | .variant _ _ es, k | .list _ es, k | .op _ es, k | .view es, k => by
+  | .variant _ _ _ es, k | .list _ es, k | .op _ es, k | .view es, k => by
     simp only [Expr.gather, hv, gatherExprs_map es, comp_child child child' f hc]
   | .field a _, k | .closure _ _ _ a, k | .raise a, k | .try a, k | .loop a, k | .return a, k
   | .perform _ a, k => by simp only [Expr.gather, hv, Expr.gather_map a, hc]

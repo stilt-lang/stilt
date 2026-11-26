@@ -44,15 +44,19 @@ inductive PatFits : Pattern → Ty → List Ty → Prop
   | unit : PatFits .unit .unit []
   | tuple {ps : List Pattern} {τs σs : List Ty} :
       PatsFit ps τs σs → PatFits (.tuple ps) (.tuple τs) σs
-  /-- A record pattern lists each field once, each a field of the record. -/
-  | record {R : Name} {r : RecordDecl} {fps : List (Name × Pattern)} {σs : List Ty} :
-      D.record? R = some r → (fps.map Prod.fst).Nodup → FieldPatsFit r.fields fps σs →
-      PatFits (.record R fps) (.record R) σs
-  /-- A variant pattern gives one pattern for each payload field. -/
-  | variant {T : Name} {t : VariantDecl} {C : Name} {τs : List Ty} {ps : List Pattern}
+  /-- A record pattern lists each field once, each a field of the record, at the
+  scrutinee's type arguments. -/
+  | record {R : Name} {args : List Ty} {r : RecordDecl} {fps : List (Name × Pattern)}
       {σs : List Ty} :
-      D.variant? T = some t → t.ctors.lookup C = some τs → PatsFit ps τs σs →
-      PatFits (.variant T C ps) (.variant T) σs
+      D.record? R = some r → args.length = r.typeParams.length → (fps.map Prod.fst).Nodup →
+      FieldPatsFit (r.fieldsAt args) fps σs → PatFits (.record R fps) (.record R args) σs
+  /-- A variant pattern gives one pattern for each payload field, at the scrutinee's
+  type arguments. -/
+  | variant {T : Name} {args : List Ty} {t : VariantDecl} {C : Name} {τs : List Ty}
+      {ps : List Pattern} {σs : List Ty} :
+      D.variant? T = some t → args.length = t.typeParams.length →
+      (t.ctorsAt args).lookup C = some τs → PatsFit ps τs σs →
+      PatFits (.variant T C ps) (.variant T args) σs
   | or {p q : Pattern} {τ : Ty} {σs : List Ty} :
       PatFits p τ σs → PatFits q τ σs → q.binders = p.binders → PatFits (.or p q) τ σs
   /-- A list pattern's elements each fit the list's element type, and its rest,
@@ -178,15 +182,16 @@ inductive Exhaustive (D : Decls) : Rows → List Ty → Prop
       Exhaustive D (specialize unitRow P) τs → Exhaustive D P (.unit :: τs)
   | tuple {P : Rows} {σs τs : List Ty} :
       Exhaustive D (specialize (tupleRow σs.length) P) (σs ++ τs) → Exhaustive D P (.tuple σs :: τs)
-  | record {P : Rows} {R : Name} {r : RecordDecl} {τs : List Ty} :
-      D.record? R = some r →
+  | record {P : Rows} {R : Name} {args : List Ty} {r : RecordDecl} {τs : List Ty} :
+      D.record? R = some r → args.length = r.typeParams.length →
       Exhaustive D (specialize (recordRow (r.fields.map Prod.fst)) P)
-        (r.fields.map Prod.snd ++ τs) →
-      Exhaustive D P (.record R :: τs)
-  | variant {P : Rows} {T : Name} {t : VariantDecl} {τs : List Ty} :
-      D.variant? T = some t →
-      (∀ c ∈ t.ctors, Exhaustive D (specialize (variantRow c.1 c.2.length) P) (c.2 ++ τs)) →
-      Exhaustive D P (.variant T :: τs)
+        ((r.fieldsAt args).map Prod.snd ++ τs) →
+      Exhaustive D P (.record R args :: τs)
+  | variant {P : Rows} {T : Name} {args : List Ty} {t : VariantDecl} {τs : List Ty} :
+      D.variant? T = some t → args.length = t.typeParams.length →
+      (∀ c ∈ t.ctorsAt args,
+        Exhaustive D (specialize (variantRow c.1 c.2.length) P) (c.2 ++ τs)) →
+      Exhaustive D P (.variant T args :: τs)
   /-- A list's constructors are its lengths: each length up to `m` is covered by
   the rows of that length, and every longer one by the rows whose rest allows
   it (patterns.algorithm). -/
@@ -216,8 +221,8 @@ theorem PatFits.length : ∀ {p : Pattern} {τ : Ty} {σs : List Ty}, PatFits D 
     p.binders.length = σs.length
   | _, _, _, .wild | _, _, _, .bind | _, _, _, .int _ | _, _, _, .bool | _, _, _, .str
   | _, _, _, .unit => rfl
-  | _, _, _, .tuple h | _, _, _, .variant _ _ h => PatsFit.length h
-  | _, _, _, .record _ _ h => FieldPatsFit.length h
+  | _, _, _, .tuple h | _, _, _, .variant _ _ _ h => PatsFit.length h
+  | _, _, _, .record _ _ _ h => FieldPatsFit.length h
   | _, _, _, .or h _ _ => by rw [Pattern.binders]; exact PatFits.length h
   | _, _, _, .list h => by simp [Pattern.binders, PatsFit.length h]
 

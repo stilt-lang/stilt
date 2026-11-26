@@ -25,8 +25,8 @@ that isn't a place reads no place. -/
 def Expr.indexFree : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
-  | .record _ fields => fieldsIndexFree fields
-  | .variant _ _ es => exprsIndexFree es
+  | .record _ _ fields => fieldsIndexFree fields
+  | .variant _ _ _ es => exprsIndexFree es
   | .list _ es => exprsIndexFree es
   | .op _ es | .view es => exprsIndexFree es
   | .field e _ => e.indexFree

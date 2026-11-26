@@ -64,8 +64,8 @@ A closure captures by copy and can't modify what it captures (modes.closures), s
 body starts with no place being read. -/
 def Expr.exclusive (reading : List Shape) : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => true
-  | .record _ fields => fieldsExclusive reading fields
-  | .variant _ _ es => exprsExclusive reading es
+  | .record _ _ fields => fieldsExclusive reading fields
+  | .variant _ _ _ es => exprsExclusive reading es
   | .list _ es => exprsExclusive reading es
   | .op _ es | .view es => exprsExclusive reading es
   | .field e _ => e.exclusive reading
@@ -259,7 +259,7 @@ example :
 
 /-- `a` and `b`, the names of one `when` of `Shared<Account>` values, and `c` of a
 `Shared<i64>`. -/
-private def accounts : List (Name × Ty) := [("a", .record "Account"), ("b", .record "Account"), ("c", .i64)]
+private def accounts : List (Name × Ty) := [("a", .record "Account" []), ("b", .record "Account" []), ("c", .i64)]
 
 /-- The block of a `when` of `accounts`, checked with names that may be one place as one. -/
 private def heldExclusive (body : Expr) : Bool := (body.rename (Held.one accounts)).exclusive []

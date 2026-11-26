@@ -56,12 +56,12 @@ theorem HasType.weaken (Δ : Ctx) :
   | _, _, _, _, .int h => .int h
   | _, _, _, _, .bool => .bool
   | _, _, _, _, .unit => .unit
-  | _, _, _, _, .record hr hperm hfs => .record hr hperm (FieldsFit.weaken Δ hfs)
-  | _, _, _, _, .variant ht hc hes => .variant ht hc (ExprsFit.weaken Δ hes)
+  | _, _, _, _, .record hr hl hw hperm hfs => .record hr hl hw hperm (FieldsFit.weaken Δ hfs)
+  | _, _, _, _, .variant ht hl hw hc hes => .variant ht hl hw hc (ExprsFit.weaken Δ hes)
   | _, _, _, _, .list hwf hes => .list hwf (ExprsFit.weaken Δ hes)
   | _, _, _, _, .op ho hes hk => .op ho (ExprsFit.weaken Δ hes) hk
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.weaken Δ hes)
-  | _, _, _, _, .field he hr hf => .field (HasType.weaken Δ he) hr hf
+  | _, _, _, _, .field he hr hl hf => .field (HasType.weaken Δ he) hr hl hf
   | _, _, _, _, .elem he hf => .elem (HasType.weaken Δ he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.weaken Δ he) (HasType.weaken Δ hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
@@ -127,7 +127,7 @@ theorem PlaceFits.weaken (Δ : Ctx) :
 theorem PathFits.weaken (Δ : Ctx) :
     ∀ {Γ fx σ path τ}, PathFits D s Γ fx σ path τ → PathFits D s (Γ ++ Δ) fx σ path τ
   | _, _, _, _, _, .nil => .nil
-  | _, _, _, _, _, .field hr hf hp => .field hr hf (PathFits.weaken Δ hp)
+  | _, _, _, _, _, .field hr hl hf hp => .field hr hl hf (PathFits.weaken Δ hp)
   | _, _, _, _, _, .elem hf hp => .elem hf (PathFits.weaken Δ hp)
   | _, _, _, _, _, .index hi hfit hp =>
     .index (HasType.weaken Δ hi) hfit (PathFits.weaken Δ hp)
@@ -189,12 +189,12 @@ theorem HasType.of_le (hs : s.Le s') :
   | _, _, _, _, .int h => .int h
   | _, _, _, _, .bool => .bool
   | _, _, _, _, .unit => .unit
-  | _, _, _, _, .record hr hperm hfs => .record hr hperm (FieldsFit.of_le hs hfs)
-  | _, _, _, _, .variant ht hc hes => .variant ht hc (ExprsFit.of_le hs hes)
+  | _, _, _, _, .record hr hl hw hperm hfs => .record hr hl (fun τ h => (hw τ h).of_le hs) hperm (FieldsFit.of_le hs hfs)
+  | _, _, _, _, .variant ht hl hw hc hes => .variant ht hl (fun τ h => (hw τ h).of_le hs) hc (ExprsFit.of_le hs hes)
   | _, _, _, _, .list hwf hes => .list (hwf.of_le hs) (ExprsFit.of_le hs hes)
   | _, _, _, _, .op ho hes hk => .op ho (ExprsFit.of_le hs hes) hk
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.of_le hs hes)
-  | _, _, _, _, .field he hr hf => .field (HasType.of_le hs he) hr hf
+  | _, _, _, _, .field he hr hl hf => .field (HasType.of_le hs he) hr hl hf
   | _, _, _, _, .elem he hf => .elem (HasType.of_le hs he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.of_le hs he) (HasType.of_le hs hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys =>
@@ -264,7 +264,7 @@ theorem PlaceFits.of_le (hs : s.Le s') :
 theorem PathFits.of_le (hs : s.Le s') :
     ∀ {Γ fx σ path τ}, PathFits D s Γ fx σ path τ → PathFits D s' Γ fx σ path τ
   | _, _, _, _, _, .nil => .nil
-  | _, _, _, _, _, .field hr hf hp => .field hr hf (PathFits.of_le hs hp)
+  | _, _, _, _, _, .field hr hl hf hp => .field hr hl hf (PathFits.of_le hs hp)
   | _, _, _, _, _, .elem hf hp => .elem hf (PathFits.of_le hs hp)
   | _, _, _, _, _, .index hi hfit hp => .index (HasType.of_le hs hi) hfit (PathFits.of_le hs hp)
 

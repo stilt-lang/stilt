@@ -69,8 +69,8 @@ program's functions (modes.once-closures and modes.once-parameters). -/
 def Expr.use (O : OnceParams) (f : Name) : Expr → Use
   | .var y | .move y => if y == f then .many else .none
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => .none
-  | .record _ fields => fieldsUse O f fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsUse O f es
+  | .record _ _ fields => fieldsUse O f fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsUse O f es
   | .field e _ => e.use O f
   | .index e i => (e.use O f).add (i.use O f)
   | .closure ps _ _ body => if hides ps f then .none else (body.use O f).again

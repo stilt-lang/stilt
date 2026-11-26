@@ -65,8 +65,8 @@ mutual
 theorem Expr.exclusive_substTys :
     ∀ (e : Expr) (r : List Shape), (e.substTys s).exclusive r = e.exclusive r
   | .var _, _ | .move _, _ | .int _, _ | .bool _, _ | .unit, _ | .fnRef .., _ | .method .., _ => rfl
-  | .record _ fields, r => fieldsExclusive_substTys fields r
-  | .variant _ _ es, r => exprsExclusive_substTys es r
+  | .record _ _ fields, r => fieldsExclusive_substTys fields r
+  | .variant _ _ _ es, r => exprsExclusive_substTys es r
   | .list _ es, r => exprsExclusive_substTys es r
   | .op _ es, r | .view es, r => exprsExclusive_substTys es r
   | .field e _, r => by simpa [Expr.substTys, Expr.exclusive] using Expr.exclusive_substTys e r
@@ -166,8 +166,8 @@ mutual
 theorem Expr.distinctParams_substTys :
     ∀ e : Expr, (e.substTys s).distinctParams = e.distinctParams
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
-  | .record _ fields => fieldsDistinctParams_substTys fields
-  | .variant _ _ es => exprsDistinctParams_substTys es
+  | .record _ _ fields => fieldsDistinctParams_substTys fields
+  | .variant _ _ _ es => exprsDistinctParams_substTys es
   | .list _ es => exprsDistinctParams_substTys es
   | .op _ es | .view es => exprsDistinctParams_substTys es
   | .field e _ => by

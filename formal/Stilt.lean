@@ -6,6 +6,7 @@ import Stilt.Rows.Types
 import Stilt.Rows
 import Stilt.Generics
 import Stilt.Generics.Commute
+import Stilt.Typing.Uses
 import Stilt.Typing
 import Stilt.Inhabited
 import Stilt.Patterns
@@ -80,6 +81,7 @@ import Stilt.Counterexamples.Aliasing
 import Stilt.Counterexamples.Receiver
 import Stilt.Soundness.Types
 import Stilt.Soundness.Close
+import Stilt.Soundness.Arguments
 import Stilt.Soundness.Compose
 import Stilt.Soundness.Values
 import Stilt.Soundness.Paths

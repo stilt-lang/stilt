@@ -25,8 +25,8 @@ theorem Expr.exclusive_unmerge (h : Merges P f m) :
     (e.rename f).exclusive (r.map (Shape.rename f)) = true
   | .var _, _, _, _ | .move _, _, _, _ | .int _, _, _, _ | .bool _, _, _, _ | .unit, _, _, _
   | .break, _, _, _ | .continue, _, _, _ | .fnRef .., _, _, _ | .method .., _, _, _ => rfl
-  | .record _ fs, r, hb, he => fieldsExclusive_unmerge h fs r hb he
-  | .variant _ _ es, r, hb, he | .list _ es, r, hb, he | .op _ es, r, hb, he
+  | .record _ _ fs, r, hb, he => fieldsExclusive_unmerge h fs r hb he
+  | .variant _ _ _ es, r, hb, he | .list _ es, r, hb, he | .op _ es, r, hb, he
   | .view es, r, hb, he => exprsExclusive_unmerge h es r hb he
   | .field e _, r, hb, he | .raise e, r, hb, he | .try e, r, hb, he | .return e, r, hb, he
   | .loop e, r, hb, he | .perform _ e, r, hb, he => Expr.exclusive_unmerge h e r hb he

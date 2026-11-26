@@ -31,8 +31,8 @@ nothing. -/
 def Expr.bindsNone (P : Name → Bool) : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
-  | .record _ fields => fieldsBindsNone P fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsBindsNone P es
+  | .record _ _ fields => fieldsBindsNone P fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsBindsNone P es
   | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e
   | .closure _ _ _ e => e.bindsNone P
   | .index a b | .seq a b | .while a b | .withH _ _ a b => a.bindsNone P && b.bindsNone P

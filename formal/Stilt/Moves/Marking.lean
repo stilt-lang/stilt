@@ -20,8 +20,8 @@ def Expr.markMoves (after : Live) (pos : Bool) : Expr → Expr
   | .int n => .int n
   | .bool b => .bool b
   | .unit => .unit
-  | .record R fields => .record R (markFields after fields)
-  | .variant T C es => .variant T C (markExprs after es)
+  | .record R τs fields => .record R τs (markFields after fields)
+  | .variant T τs C es => .variant T τs C (markExprs after es)
   | .list τ es => .list τ (markExprs after es)
   | .op o es => .op o (markExprs after es)
   | .view es => .view (markExprs after es)
@@ -133,8 +133,8 @@ theorem Expr.mentions_markMoves :
     split <;> rfl
   | .int _, _, _ | .bool _, _, _ | .unit, _, _ | .fnRef .., _, _ | .method .., _, _ => rfl
   | .closure _ _ _ body, _, _ => by simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves body]
-  | .record _ fs, L, _ => by simp [Expr.markMoves, Expr.mentions, fieldsMentions_mark fs L]
-  | .variant _ _ es, L, _ => by simp [Expr.markMoves, Expr.mentions, exprsMentions_mark es L]
+  | .record _ _ fs, L, _ => by simp [Expr.markMoves, Expr.mentions, fieldsMentions_mark fs L]
+  | .variant _ _ _ es, L, _ => by simp [Expr.markMoves, Expr.mentions, exprsMentions_mark es L]
   | .list _ es, L, _ => by simp [Expr.markMoves, Expr.mentions, exprsMentions_mark es L]
   | .op _ es, L, _ | .view es, L, _ => by simp [Expr.markMoves, Expr.mentions, exprsMentions_mark es L]
   | .field e _, L, _ => by simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves e]
@@ -227,8 +227,8 @@ theorem Expr.movesOk_markMoves :
     · rfl
   | .int _, _, _ | .bool _, _, _ | .unit, _, _ | .fnRef .., _, _ | .method .., _, _ => rfl
   | .closure _ _ _ body, _, _ => Expr.movesOk_markMoves body _ false
-  | .record _ fs, L, _ => fieldsMovesOk_mark fs L
-  | .variant _ _ es, L, _ | .list _ es, L, _ | .op _ es, L, _ | .view es, L, _ => exprsMovesOk_mark es L
+  | .record _ _ fs, L, _ => fieldsMovesOk_mark fs L
+  | .variant _ _ _ es, L, _ | .list _ es, L, _ | .op _ es, L, _ | .view es, L, _ => exprsMovesOk_mark es L
   | .field e _, L, _ => Expr.movesOk_markMoves e L false
   | .index e i, L, _ => by
     simp [Expr.markMoves, Expr.movesOk, mentions_markMoves, Expr.movesOk_markMoves e,

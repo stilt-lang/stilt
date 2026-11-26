@@ -345,8 +345,8 @@ theorem eval_mono (D : Decls) (M : Memory σ) :
     | int k => exact refl _
     | bool b => exact refl _
     | unit => exact refl _
-    | record R fs => exact bind (fields ih fs) fun _ => refl _
-    | variant T C es => exact bind (list ih es) fun _ => refl _
+    | record R _ fs => exact bind (fields ih fs) fun _ => refl _
+    | variant T _ C es => exact bind (list ih es) fun _ => refl _
     | list τ es => exact bind (list ih es) fun _ => refl _
     | op o es => exact bind (list ih es) fun _ => refl _
     | view es => exact bind (list ih es) fun _ => refl _

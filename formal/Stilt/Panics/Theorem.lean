@@ -103,10 +103,10 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
     case int k => exact pure .int
     case bool b => exact pure .bool
     case unit => exact pure .unit
-    case record R fs =>
+    case record R _ fs =>
       exact bind (fields ih hk fs he) (Eval.Keeps.fields hk fs (List.Subset.refl _) (List.Subset.refl _))
         fun _ hw => declare D R hw
-    case variant T C es =>
+    case variant T _ C es =>
       exact bind (list ih hk es he) (Eval.Keeps.list hk es (List.Subset.refl _) (List.Subset.refl _))
         fun _ hvs => pure (.variant hvs)
     case list τ es =>

@@ -1,6 +1,7 @@
 import Stilt.Generics
 import Stilt.Ops
 import Stilt.Patterns
+import Stilt.Typing.Uses
 
 /-!
 # Typing
@@ -21,6 +22,7 @@ unchecked where the variable meets them (`Stilt.Lenient.Typing`), and on a
 body that passes the no-escape rule the two agree (`Stilt.Lenient.Strict`).
 Type soundness is proved of this judgment.
 
+What a use of a generic function asks of its arguments is in `Stilt.Typing.Uses`.
 `Stilt.Weakening` shows that the judgment survives a larger context and a
 larger row scope, and `Stilt.WellTyped` types declarations and programs with
 it.
@@ -115,41 +117,6 @@ structure CallAllowed (scope : RowScope) (fx : Effects) (σ : Row) : Prop where
   handlers.resume-at-most-once). -/
   resume : σ.resume = none
 
-/-- The signature pairs `v` with `E`: some row of its parameter types, at any
-depth, or its own row holds both `v` and `raise<E>` (effects.paired-row-variables). The rows
-are those of the elaborated signature, so a non-escaping parameter's implicit
-variable, which its own row and the function's hold, is paired with `E` when
-either names `raise<E>`. -/
-def FnDecl.pairs (d : FnDecl) (v : Name) (E : Ty) : Prop :=
-  ∃ ρ ∈ paramRows (d.params.map Param.sig) ++ [d.row], v ∈ ρ.vars ∧ ρ.raise = some E
-
-/-- A use of `d` that instantiates its row variables with `s` passes on a row
-variable of the enclosing function only with its pairing: where `d` pairs `v`
-with `E` and `s` gives `v` a row that holds `r`, written or implicit, the
-enclosing scope pairs `r` with the type the use gives `E` (effects.passing-to-paired-variables).
-
-With effects.one-error-type, which leaves each row of the instantiated signature one
-`raise` label, this keeps `v` from adding any error type but `E`: a concrete
-instantiation is limited by effects.one-error-type, and one that holds `r` is limited by the
-pairing of `r`, which every use of the enclosing function checks in turn. -/
-def PassesOnPairs (scope : RowScope) (d : FnDecl) (s : RowSubst) : Prop :=
-  ∀ v E ρ r, d.pairs v E → s.lookup v = some ρ → r ∈ ρ.vars →
-    scope.passOn r (E.substRows s)
-
-/-- `τ` implements the trait `B`, as far as a body whose type parameters
-`scope` describes knows: a type parameter through its bounds, which are all
-the body knows of it, and a type with a head through the program's impl of `B`
-for that head (traits.unsatisfied-bounds and traits.implementing-trait). -/
-def Satisfies (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) : Prop :=
-  (∃ p ∈ scope.types, τ = .param p.name ∧ B ∈ p.bounds) ∨
-    ∃ h, τ.head? = some h ∧ (D.traitImpl? B h).isSome
-
-/-- The type arguments of a use of a function, one for each of its type
-parameters: closed, well formed where the use is, and meeting the parameter's
-bounds (traits.unsatisfied-bounds). -/
-def TypeArgsFit (D : Decls) (scope : RowScope) (ps : List TypeParam) (τs : List Ty) : Prop :=
-  Forall₂ (fun p τ => τ.Closed ∧ τ.WellFormed scope ∧ ∀ B ∈ p.bounds, Satisfies D scope τ B) ps τs
-
 /-- The row of a `with`'s block: the row around it, with the handler's effect
 (handlers.with). -/
 def Row.withEffect (ρ : Row) (E : Name) : Row := { ρ with effects := E :: ρ.effects }
@@ -190,17 +157,23 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   | bool {Γ fx b} : HasType Γ fx (.bool b) .bool
   | unit {Γ fx} : HasType Γ fx .unit .unit
   /-- Every field is given exactly once (expressions.struct-literal-fields), each checked
-  against its declared type. -/
-  | record {Γ fx R r fields} :
+  against its declared type at the literal's type arguments, one for each of the record's
+  type parameters (declarations.type-parameters and declarations.type-arguments). -/
+  | record {Γ fx R args r fields} :
       D.record? R = some r →
+      args.length = r.typeParams.length → (∀ τ ∈ args, τ.WellFormed scope) →
       (fields.map Prod.fst).Perm (r.fields.map Prod.fst) →
-      FieldsFit Γ fx fields r.fields →
-      HasType Γ fx (.record R fields) (.record R)
-  | variant {Γ fx T t C τs payload} :
+      FieldsFit Γ fx fields (r.fieldsAt args) →
+      HasType Γ fx (.record R args fields) (.record R args)
+  /-- A variant's payload fits its declared types at the literal's type arguments, one
+  for each of the variant type's type parameters (declarations.type-parameters and
+  declarations.type-arguments). -/
+  | variant {Γ fx T args t C τs payload} :
       D.variant? T = some t →
-      t.ctors.lookup C = some τs →
+      args.length = t.typeParams.length → (∀ τ ∈ args, τ.WellFormed scope) →
+      (t.ctorsAt args).lookup C = some τs →
       ExprsFit Γ fx payload τs →
-      HasType Γ fx (.variant T C payload) (.variant T)
+      HasType Γ fx (.variant T args C payload) (.variant T args)
   | list {Γ fx τ es} :
       τ.WellFormed scope →
       ExprsFit Γ fx es (List.replicate es.length τ) →
@@ -216,11 +189,12 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       Op.Sig .view τs τ →
       ExprsFit Γ fx es τs →
       HasType Γ fx (.view es) τ
-  /-- `e.f` requires a record type with a field `f` (types.field-access). -/
-  | field {Γ fx e R r f τ} :
-      HasType Γ fx e (.record R) →
-      D.record? R = some r →
-      r.fields.lookup f = some τ →
+  /-- `e.f` requires a record type with a field `f` (types.field-access), whose type is
+  its declared type at the record type's arguments. -/
+  | field {Γ fx e R args r f τ} :
+      HasType Γ fx e (.record R args) →
+      D.record? R = some r → args.length = r.typeParams.length →
+      (r.fieldsAt args).lookup f = some τ →
       HasType Γ fx (.field e f) τ
   /-- `e.n` requires a tuple type with more than `n` elements, whose field
   `n` is the element at that position (types.field-access). -/
@@ -391,7 +365,7 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   handlers.handler-literals). -/
   | withH {Γ fx E eff h R r b τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
-      HasType Γ fx h (.record R) → D.record? R = some r →
+      HasType Γ fx h (.record R []) → D.record? R = some r →
       HandlerFits scope fx eff r.fields none →
       HasType Γ { fx with row := fx.row.withEffect E } b τ → (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType Γ fx (.withH E false h b) τ
@@ -400,7 +374,7 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   effect doesn't declare (E0511, handlers.handler-literals). -/
   | withControl {Γ fx E eff h R r b σ τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
-      HasType Γ fx h (.record R) → D.record? R = some r →
+      HasType Γ fx h (.record R []) → D.record? R = some r →
       HandlerFits scope fx eff r.fields (some τ) →
       HasType Γ { fx with row := fx.row.withEffect E } b σ → Fits σ τ → τ.Ground →
       (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
@@ -462,11 +436,11 @@ value of type `τ`. No projection reaches into a `str`, so no part of a string c
 assigned (values.strings). -/
 inductive PathFits : Ctx → Effects → Ty → List Projection → Ty → Prop
   | nil {Γ fx τ} : PathFits Γ fx τ [] τ
-  | field {Γ fx R r f path τ τ'} :
-      D.record? R = some r →
-      r.fields.lookup f = some τ →
+  | field {Γ fx R args r f path τ τ'} :
+      D.record? R = some r → args.length = r.typeParams.length →
+      (r.fieldsAt args).lookup f = some τ →
       PathFits Γ fx τ path τ' →
-      PathFits Γ fx (.record R) (.field f :: path) τ'
+      PathFits Γ fx (.record R args) (.field f :: path) τ'
   | index {Γ fx i path σ τ τ'} :
       HasType Γ fx i σ → Fits σ .i64 →
       PathFits Γ fx τ path τ' →

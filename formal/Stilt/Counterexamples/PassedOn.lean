@@ -60,7 +60,7 @@ def passedOn : Program :=
   ⟨⟨[box], [], [pairedF, unpairedCaller], [], [], [], []⟩, callRaisingBool "caller", raisesBool, {}⟩
 
 /-- `f`'s signature pairs `e` with `Box`, in `k`'s type. -/
-private theorem pairedF_pairs : pairedF.pairs "e" (.record "Box") :=
+private theorem pairedF_pairs : pairedF.pairs "e" (.record "Box" []) :=
   ⟨boxE, by simp [paramRows, Ty.rows, Row.rows, Param.sig, pairedF], by simp, rfl⟩
 
 /-- `f`'s body checks: the call `h()` in the `catch` operand ends in `e`, which
@@ -71,9 +71,9 @@ private theorem pairedF_wellTyped {D : Decls} (hbox : D.record? "Box" = some box
     (.letIn (wellFormed_of_check (by decide)) (.var rfl)
       (.fn ⟨id, fun _ h => (nomatch h), fun _ => id, fun _ h => (nomatch h), fun _ h => (nomatch h)⟩)
       (.seq (.call (.var rfl) .nil ⟨.refl _, fun _ => rfl, fun _ _ hv =>
-          ⟨.record "Box", rfl, by simp at hv; exact hv ▸ pairedF_pairs⟩, rfl⟩)
+          ⟨.record "Box" [], rfl, by simp at hv; exact hv ▸ pairedF_pairs⟩, rfl⟩)
         (.refl _) (.int (by decide))))
-    (.refl _) (.field (.var rfl) hbox rfl) (.refl _), .refl _⟩
+    (.refl _) (.field (.var rfl) hbox rfl rfl) (.refl _), .refl _⟩
 
 /-- effects.paired-row-variables accepts `passedOn`: instantiating `e` with `r` leaves every row of
 `f`'s type one `raise` label (effects.one-error-type), and `f` pairs `e` with `Box`. -/
@@ -128,8 +128,8 @@ theorem passedOn_not_wellTyped : ¬passedOn.WellTyped := by
   | call hcallee _ _ =>
     obtain ⟨d, hd, _, hpass⟩ := fnRef_inv hcallee
     obtain rfl : pairedF = d := Option.some.inj (Eq.trans rfl hd)
-    exact pairs_nothing (d := unpairedCaller) (by decide) "r" (.record "Box")
-      (hpass "e" (.record "Box") rRow "r" pairedF_pairs rfl (by simp))
+    exact pairs_nothing (d := unpairedCaller) (by decide) "r" (.record "Box" [])
+      (hpass "e" (.record "Box" []) rRow "r" pairedF_pairs rfl (by simp))
 
 /-- `fn caller<r>(escaping g: fn() / {raise<Box>, r}) -> i64 / {raise<Box>, r}
 { try f<{raise<Box>, r}>(g, || ()) }`: `caller` pairs `r` with `Box`, in `g`'s
@@ -147,7 +147,7 @@ def passedOnPaired : Program :=
     .letIn "n" .i64
       (.tryCatch
         (.call (.fnRef "caller" [] [Row.pure]) [.value (.closure [] .unit raisesBox raiseBox)] .i64)
-        (.record "Box") "x" (.int 0) .i64)
+        (.record "Box" []) "x" (.int 0) .i64)
       (.raise (.var "n")),
     raisesI64, {}⟩
 
@@ -162,7 +162,7 @@ private theorem pairedF_instantiable :
   simp only [List.mem_cons, List.not_mem_nil, or_false] at hρ
   have hl : (pairedF.rowParams.zip [boxR]).lookup "e" = some boxR := rfl
   refine ⟨fun E hE F hF => ?_, fun v hv σ hσ => ?_⟩
-  · rcases hρ with rfl | rfl | rfl <;> simp_all [Row.labels, Ty.substRows]
+  · rcases hρ with rfl | rfl | rfl <;> simp_all [Row.labels, Ty.substRows, substTysRows]
   · rcases hρ with rfl | rfl | rfl <;> simp_all <;> subst_vars <;> rfl
 
 /-- The use `f<{raise<Box>, r}>` passes `r` on with its pairing: `f` pairs only
@@ -219,7 +219,7 @@ theorem passedOnPaired_wellTyped : passedOnPaired.WellTyped where
       (.tryCatch (wellFormed_of_check (by decide)) (wellFormed_of_check (by decide))
         (.call hcallee
           (.value (by decide) (.closure .nil rfl (wellFormed_of_check (by decide))
-            (.raise rfl (.record rfl (.refl _) (.cons rfl (.int (by decide)) (.refl _) .nil)) (.refl _))
+            (.raise rfl (.record rfl rfl (fun _ h => nomatch h) (.refl _) (.cons rfl (.int (by decide)) (.refl _) .nil)) (.refl _))
             (.never _)) (.refl _) .nil)
           ⟨.refl _, fun _ => rfl, fun _ _ hv => (nomatch hv), rfl⟩)
         (.refl _) (.int (by decide)) (.refl _))

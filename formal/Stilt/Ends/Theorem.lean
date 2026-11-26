@@ -43,8 +43,8 @@ theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked
     case int k => exact const (Eval.Ends.pure trivial)
     case bool b => exact const (Eval.Ends.pure trivial)
     case unit => exact const (Eval.Ends.pure trivial)
-    case record R fs => exact bind (fields ih fs hd hn s) fun _ _ _ _ => const (Eval.Ends.declare D R _)
-    case variant T C es => exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.pure trivial)
+    case record R _ fs => exact bind (fields ih fs hd hn s) fun _ _ _ _ => const (Eval.Ends.declare D R _)
+    case variant T _ C es => exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.pure trivial)
     case list τ es => exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.pure trivial)
     case op o es =>
       exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.world _ _)

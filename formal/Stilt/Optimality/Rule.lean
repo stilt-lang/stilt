@@ -37,8 +37,8 @@ ones. A modification of a place that a loop around it reads is still rejected
 def Expr.exclusiveWith (rule : CallRule) (reading : List Shape) : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
-  | .record _ fields => fieldsExclusiveWith rule reading fields
-  | .variant _ _ es => exprsExclusiveWith rule reading es
+  | .record _ _ fields => fieldsExclusiveWith rule reading fields
+  | .variant _ _ _ es => exprsExclusiveWith rule reading es
   | .list _ es => exprsExclusiveWith rule reading es
   | .op _ es | .view es => exprsExclusiveWith rule reading es
   | .field e _ => e.exclusiveWith rule reading
@@ -122,7 +122,7 @@ theorem Expr.exclusive_eq_with :
     ∀ (e : Expr) (r : List Shape), e.exclusive r = e.exclusiveWith pairwiseDisjoint r
   | .var _, _ | .move _, _ | .int _, _ | .bool _, _ | .unit, _ | .fnRef .., _ | .method .., _
   | .break, _ | .continue, _ => rfl
-  | .record _ fields, r => fieldsExclusive_eq_with fields r
+  | .record _ _ fields, r => fieldsExclusive_eq_with fields r
   | .loop e, r | .return e, r | .perform _ e, r => Expr.exclusive_eq_with e r
   | .withH _ _ h b, r => by
     simp [Expr.exclusive, Expr.exclusiveWith, Expr.exclusive_eq_with h r,
@@ -133,7 +133,7 @@ theorem Expr.exclusive_eq_with :
   | .while c body, r => by
     simp [Expr.exclusive, Expr.exclusiveWith, Expr.exclusive_eq_with c r,
       Expr.exclusive_eq_with body r]
-  | .variant _ _ es, r => exprsExclusive_eq_with es r
+  | .variant _ _ _ es, r => exprsExclusive_eq_with es r
   | .list _ es, r => exprsExclusive_eq_with es r
   | .op _ es, r | .view es, r => exprsExclusive_eq_with es r
   | .field e _, r => Expr.exclusive_eq_with e r
@@ -249,8 +249,8 @@ theorem Expr.exclusiveWith_mono (hle : ∀ ss, r₁ ss = true → r₂ ss = true
   | .held _ hs b, r, h => by
     simp only [Expr.exclusiveWith, Bool.and_eq_true] at h ⊢
     exact ⟨exprsExclusiveWith_mono hle hs r h.1, Expr.exclusiveWith_mono hle b _ h.2⟩
-  | .record _ fields, r, h => fieldsExclusiveWith_mono hle fields r h
-  | .variant _ _ es, r, h => exprsExclusiveWith_mono hle es r h
+  | .record _ _ fields, r, h => fieldsExclusiveWith_mono hle fields r h
+  | .variant _ _ _ es, r, h => exprsExclusiveWith_mono hle es r h
   | .list _ es, r, h => exprsExclusiveWith_mono hle es r h
   | .op _ es, r, h | .view es, r, h => exprsExclusiveWith_mono hle es r h
   | .field e _, r, h => Expr.exclusiveWith_mono hle e r h

@@ -12,7 +12,8 @@ namespace Stilt
 mutual
 
 theorem Ty.substRows_nil : ∀ τ : Ty, τ.substRows [] = τ
-  | .int _ | .float _ | .bool | .str | .unit | .never | .record _ | .variant _ | .param _ => rfl
+  | .int _ | .float _ | .bool | .str | .unit | .never | .param _ => rfl
+  | .record _ τs | .variant _ τs => by rw [Ty.substRows, substTysRows_nil τs]
   | .list τ => by rw [Ty.substRows, Ty.substRows_nil τ]
   | .tuple τs => by rw [Ty.substRows, substTysRows_nil τs]
   | .map κ τ => by rw [Ty.substRows, Ty.substRows_nil κ, Ty.substRows_nil τ]
@@ -43,8 +44,8 @@ mutual
 
 theorem Expr.substRows_nil : ∀ e : Expr, e.substRows [] = e
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue => rfl
-  | .record _ fields => by rw [Expr.substRows, substFieldRows_nil fields]
-  | .variant _ _ es => by rw [Expr.substRows, substExprRows_nil es]
+  | .record _ τs fields => by rw [Expr.substRows, substTysRows_nil τs, substFieldRows_nil fields]
+  | .variant _ τs _ es => by rw [Expr.substRows, substTysRows_nil τs, substExprRows_nil es]
   | .list τ es => by rw [Expr.substRows, Ty.substRows_nil τ, substExprRows_nil es]
   | .op _ es | .view es => by rw [Expr.substRows, substExprRows_nil es]
   | .field e _ => by rw [Expr.substRows, Expr.substRows_nil e]

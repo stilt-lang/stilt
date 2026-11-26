@@ -51,7 +51,7 @@ theorem Row.Within.close {a b : Row} (h : a.Within b) (η : REnv) :
 /-- A type read under an environment is no label. -/
 theorem Ty.close_not_label (η : REnv) : ∀ τ : Ty, ¬ (τ.close η).IsLabel
   | .view τ => by simpa [Ty.close] using Ty.close_not_label η τ
-  | .int _ | .float _ | .bool | .str | .unit | .never | .record _ | .variant _ | .list _
+  | .int _ | .float _ | .bool | .str | .unit | .never | .record _ _ | .variant _ _ | .list _
   | .tuple _ | .map _ _ | .set _ | .shared _ | .param _ | .fn _ _ _ => by simp [Ty.close, STy.IsLabel]
 
 /-- A row and the row of a `catch` operand built from it hold the same labels. -/
@@ -81,8 +81,9 @@ mutual
 
 theorem Ty.close_closed (η η' : REnv) :
     ∀ τ : Ty, (∀ ρ ∈ τ.rows, ρ.vars = []) → τ.close η = τ.close η'
-  | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ | .record _, _ | .variant _, _
-  | .param _, _ => rfl
+  | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ | .param _, _ => rfl
+  | .record _ τs, h | .variant _ τs, h => by
+    simp [Ty.close, closeTys_closed η η' τs (by simpa [Ty.rows] using h)]
   | .list τ, h => by simp [Ty.close, Ty.close_closed η η' τ (by simpa [Ty.rows] using h)]
   | .tuple τs, h => by
     simp [Ty.close, closeTys_closed η η' τs (by simpa [Ty.rows] using h)]

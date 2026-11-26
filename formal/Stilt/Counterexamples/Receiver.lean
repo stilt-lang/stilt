@@ -17,11 +17,11 @@ method call, with the others is therefore unsound.
 namespace Stilt.Counterexamples
 
 /-- `type A = { b: i64 }`. -/
-def aType : RecordDecl := ⟨"A", [("b", .i64)]⟩
+def aType : RecordDecl := ⟨"A", [("b", .i64)], []⟩
 
 /-- `fn f(inout self, inout b: i64) -> i64 { b = 1; self.b }`. -/
 def peek : FnDecl :=
-  ⟨"f", [], [], [⟨.inout, selfName, .record "A", none⟩, ⟨.inout, "b", .i64, none⟩], .i64,
+  ⟨"f", [], [], [⟨.inout, selfName, .record "A" [], none⟩, ⟨.inout, "b", .i64, none⟩], .i64,
     Row.pure, .seq (.assign ⟨"b", []⟩ (.int 1)) (.field (.var selfName) "b"), {}⟩
 
 /-- `impl A { fn f(inout self, inout b: i64) -> i64 { … } }` (traits.impl-blocks). -/
@@ -31,7 +31,7 @@ def aImpl : ImplDecl := ⟨"A", [peek]⟩
 `raise<i64>`. modes.overlapping-inout rejects the call. -/
 def receiverAliased : Program :=
   ⟨⟨[aType], [], [], [aImpl], [], [], []⟩,
-    .varIn "a" (.record "A") (.record "A" [("b", .int 0)])
+    .varIn "a" (.record "A" []) (.record "A" [] [("b", .int 0)])
       (.raise (Expr.methodCall "A" "f" [] (.inout ⟨"a", []⟩) [.inout ⟨"a", [.field "b"]⟩] .i64)),
     ⟨false, some .i64, [], [], none⟩, {}⟩
 
@@ -60,20 +60,20 @@ theorem receiverAliased_wellTyped : receiverAliased.WellTyped where
       List.mem_singleton] at hd
     subst hd
     exact ⟨.i64, .seq (.assign (.mk rfl .nil) (.int (by decide)) (.refl _)) (.refl _)
-      (.field (.var rfl) rfl rfl), .refl _⟩
+      (.field (.var rfl) rfl rfl rfl), .refl _⟩
   closed := by unfold Ty.Closed; decide
   unhandled := ⟨rfl, rfl⟩
   main := by
     have hcallee :
-        HasType receiverAliased.decls .closed [("a", ⟨.record "A", true⟩)]
+        HasType receiverAliased.decls .closed [("a", ⟨.record "A" [], true⟩)]
           ⟨receiverAliased.row, false, false, .unit, false, false⟩ (.fnRef (qualify "A" "f") [] [])
           ((peek.qualify "A").type.substRows ((peek.qualify "A").rowParams.zip [])) :=
       .fnRef (types := []) rfl rfl (instantiable_of_check (by decide)) (by decide) (wellFormed_of_check (by decide))
         (passesOn_of_check (by decide)) .nil
     exact ⟨.never, .varIn (wellFormed_of_check (by decide))
-      (.record rfl (List.Perm.refl _) (.cons rfl (.int (by decide)) (.refl _) .nil)) (.refl _)
+      (.record rfl rfl (fun _ h => nomatch h) (List.Perm.refl _) (.cons rfl (.int (by decide)) (.refl _) .nil)) (.refl _)
       (.raise rfl (.call hcallee
-        (.inout (.mk rfl .nil) (.inout (.mk rfl (.field rfl rfl .nil)) .nil))
+        (.inout (.mk rfl .nil) (.inout (.mk rfl (.field rfl rfl rfl .nil)) .nil))
         ⟨Row.pure_within _, fun h => (nomatch h), fun h => (nomatch h), rfl⟩) (.refl _)), .never _⟩
   noEscape := noEscape_of_check (by decide)
 

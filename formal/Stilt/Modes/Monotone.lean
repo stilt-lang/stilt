@@ -75,8 +75,8 @@ theorem Expr.leaves_mono : ∀ (e : Expr) (L : Leaving) (C' : Consumed) (o o' : 
   | .int _, _, _, _, _, _, _, h | .bool _, _, _, _, _, _, _, h | .unit, _, _, _, _, _, _, h
   | .break, _, _, _, _, _, _, h | .continue, _, _, _, _, _, _, h
   | .fnRef .., _, _, _, _, _, _, h => by simp [Expr.leaves] at h
-  | .record _ fs, L, C', _, _, hC, _, h => fieldsLeave_mono fs L C' hC h
-  | .variant _ _ es, L, C', _, _, hC, _, h | .list _ es, L, C', _, _, hC, _, h | .op _ es, L, C', _, _, hC, _, h | .view es, L, C', _, _, hC, _, h =>
+  | .record _ _ fs, L, C', _, _, hC, _, h => fieldsLeave_mono fs L C' hC h
+  | .variant _ _ _ es, L, C', _, _, hC, _, h | .list _ es, L, C', _, _, hC, _, h | .op _ es, L, C', _, _, hC, _, h | .view es, L, C', _, _, hC, _, h =>
     exprsLeave_mono es L C' hC h
   | .field e f, L, C', o, o', hC, ho, h => Expr.leaves_mono e L C' _ _ hC (ho.map _) h
   | .index e i, L, C', o, o', hC, ho, h => by
@@ -221,8 +221,8 @@ theorem Expr.use_below : ∀ (e : Expr) (O O' : OnceParams) (f : Name), ParamSet
   | .var _, _, _, _, _ | .move _, _, _, _, _ | .int _, _, _, _, _ | .bool _, _, _, _, _
   | .unit, _, _, _, _ | .break, _, _, _, _ | .continue, _, _, _, _ | .fnRef .., _, _, _, _
   | .method .., _, _, _, _ => Use.Below.refl _
-  | .record _ fs, O, O', f, h => fieldsUse_below fs O O' f h
-  | .variant _ _ es, O, O', f, h | .list _ es, O, O', f, h | .op _ es, O, O', f, h | .view es, O, O', f, h => exprsUse_below es O O' f h
+  | .record _ _ fs, O, O', f, h => fieldsUse_below fs O O' f h
+  | .variant _ _ _ es, O, O', f, h | .list _ es, O, O', f, h | .op _ es, O, O', f, h | .view es, O, O', f, h => exprsUse_below es O O' f h
   | .field e _, O, O', f, h | .raise e, O, O', f, h | .perform _ e, O, O', f, h | .try e, O, O', f, h
   | .return e, O, O', f, h => Expr.use_below e O O' f h
   | .while c body, O, O', f, h =>

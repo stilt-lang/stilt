@@ -21,8 +21,8 @@ namespace Stilt
 inductive FieldPath (D : Decls) : Ty → List Name → Ty → Prop
   | nil {τ : Ty} : FieldPath D τ [] τ
   | cons {R : Name} {r : RecordDecl} {f : Name} {σ : Ty} {fs : List Name} {τ : Ty} :
-      D.record? R = some r → r.fields.lookup f = some σ → FieldPath D σ fs τ →
-      FieldPath D (.record R) (f :: fs) τ
+      D.record? R = some r → r.typeParams = [] → r.fields.lookup f = some σ →
+      FieldPath D σ fs τ → FieldPath D (.record R []) (f :: fs) τ
 
 /-- `e.f₁.f₂…`: the expression that reads the fields `fs` of `e` in turn
 (types.field-access). -/
@@ -36,14 +36,14 @@ theorem append {τ σ ρ : Ty} {fs gs : List Name} (h : FieldPath D τ fs σ)
     (h' : FieldPath D σ gs ρ) : FieldPath D τ (fs ++ gs) ρ := by
   induction h with
   | nil => exact h'
-  | cons hR hf _ ih => exact .cons hR hf (ih h')
+  | cons hR hp hf _ ih => exact .cons hR hp hf (ih h')
 
 /-- A field path types the place that follows it (expressions.places). -/
 theorem pathFits {scope : RowScope} {Γ : Ctx} {fx : Effects} {τ τ' : Ty} {fs : List Name}
     (h : FieldPath D τ fs τ') : PathFits D scope Γ fx τ (fs.map .field) τ' := by
   induction h with
   | nil => exact .nil
-  | cons hR hf _ ih => exact .field hR hf ih
+  | cons hR hp hf _ ih => exact .field hR (by rw [hp]; rfl) (by rw [RecordDecl.fieldsAt_nil]; exact hf) ih
 
 /-- A field path types the expression that reads its fields (types.field-access). -/
 theorem hasType {scope : RowScope} {Γ : Ctx} {fx : Effects} {τ τ' : Ty} {fs : List Name}
@@ -51,14 +51,15 @@ theorem hasType {scope : RowScope} {Γ : Ctx} {fx : Effects} {τ τ' : Ty} {fs :
     ∀ {e : Expr}, HasType D scope Γ fx e τ → HasType D scope Γ fx (e.project fs) τ' := by
   induction h with
   | nil => exact fun he => he
-  | cons hR hf _ ih => exact fun he => ih (.field he hR hf)
+  | cons hR hp hf _ ih =>
+    exact fun he => ih (.field he hR (by rw [hp]; rfl) (by rw [RecordDecl.fieldsAt_nil]; exact hf))
 
 end FieldPath
 
 /-! ## Values along field paths -/
 
-theorem Fits.record_inv {σ : Ty} {R : Name} (h : Fits σ (.record R)) :
-    σ = .record R ∨ σ = .never := by
+theorem Fits.record_inv {σ : Ty} {R : Name} (h : Fits σ (.record R [])) :
+    σ = .record R [] ∨ σ = .never := by
   cases h with
   | refl => exact .inl rfl
   | never => exact .inr rfl
@@ -66,11 +67,11 @@ theorem Fits.record_inv {σ : Ty} {R : Name} (h : Fits σ (.record R)) :
 /-- What a value of a record type is: a record of that type, whose fields
 have the types its declaration gives them (declarations.records). -/
 theorem ValueHasType.record_inv {D : Decls} {w : Value} {R : Name}
-    (h : ValueHasType D w (.record R)) :
+    (h : ValueHasType D w (.record R [])) :
     ∃ r fields, w = .record R fields ∧ D.record? R = some r ∧
       FieldValuesHaveTypes D fields r.fields := by
   cases h with
-  | record hR hfs => exact ⟨_, _, rfl, hR, hfs⟩
+  | record hR hfs => exact ⟨_, _, rfl, hR, by simpa using hfs⟩
   | closure hfit => rcases Fits.record_inv hfit with h | h <;> cases h
   | function _ _ _ _ hfit =>
     rcases Fits.record_inv hfit with h | h <;> simp [FnDecl.type, Ty.substRows, Ty.substTys] at h
@@ -128,7 +129,7 @@ theorem get {τ τ' : Ty} {fs : List Name} (h : FieldPath D τ fs τ') :
       ∃ u, w.get (fs.map Step.field) = .ok u ∧ ValueHasType D u τ' := by
   induction h with
   | nil => exact fun hw => ⟨_, rfl, hw⟩
-  | cons hR hf _ ih =>
+  | cons hR _ hf _ ih =>
     intro w hw
     obtain ⟨r, fields, rfl, hR', hfs⟩ := hw.record_inv
     rw [hR] at hR'
@@ -145,14 +146,14 @@ theorem set {τ τ' : Ty} {fs : List Name} (h : FieldPath D τ fs τ') {u : Valu
       ∃ w', w.set (fs.map Step.field) u = .ok w' ∧ ValueHasType D w' τ := by
   induction h with
   | nil => exact fun _ => ⟨u, rfl, hu⟩
-  | cons hR hf _ ih =>
+  | cons hR _ hf _ ih =>
     intro w hw
     obtain ⟨r, fields, rfl, hR', hfs⟩ := hw.record_inv
     rw [hR] at hR'
     cases hR'
     obtain ⟨u₀, hu₀, hty⟩ := hfs.lookup hf
     obtain ⟨u', hu', hty'⟩ := ih hu hty
-    refine ⟨_, ?_, .record hR (hfs.assocSet hty' hf)⟩
+    refine ⟨_, ?_, .record hR (by rw [RecordDecl.fieldsAt_nil]; exact hfs.assocSet hty' hf)⟩
     simp [Value.set, hu₀, hu', Functor.map, Except.map]
 
 end FieldPath
@@ -178,13 +179,13 @@ theorem fieldPath_recTy (hD : D.records = recDecls F v K) (hv : v ∉ F) :
     obtain ⟨b, rfl⟩ : ∃ b', b = b' + 1 := ⟨b - 1, by simp at hlen; omega⟩
     have := fieldPath_recTy hD hv (fs := fs) (b := b)
       (fun g hg => hfs g (List.mem_cons_of_mem _ hg)) (by simp at hlen; omega) (by omega)
-    refine .cons (record?_recName hD hb) ?_ (by simpa using this)
+    refine .cons (record?_recName hD hb) rfl ?_ (by simpa using this)
     exact lookup_recFields_field hv (hfs f List.mem_cons_self) b
 
 /-- Every record type of the witness has the field `v`, an `i64`. -/
 theorem fieldPath_leaf (hD : D.records = recDecls F v K) {b : Nat} (hb : b ≤ K) :
     FieldPath D (recTy b) [v] .i64 :=
-  .cons (record?_recName hD hb) (lookup_recFields_leaf b) .nil
+  .cons (record?_recName hD hb) rfl (lookup_recFields_leaf b) .nil
 
 theorem fieldValues_const {w : Value} {τ : Ty} (hw : ValueHasType D w τ) :
     ∀ G : List Name, FieldValuesHaveTypes D (G.map fun f => (f, w)) (G.map fun f => (f, τ))
@@ -194,10 +195,11 @@ theorem fieldValues_const {w : Value} {τ : Ty} (hw : ValueHasType D w τ) :
 /-- A literal's value has the type of its budget. -/
 theorem litv_hasType (hD : D.records = recDecls F v K) :
     ∀ {b : Nat}, b ≤ K → ValueHasType D (litv F v b) (recTy b)
-  | 0, hb => .record (record?_recName hD hb) (.cons (.int (by decide)) .nil)
+  | 0, hb => .record (record?_recName hD hb) (by rw [RecordDecl.fieldsAt_nil]; exact .cons (.int (by decide)) .nil)
   | b + 1, hb =>
-    .record (record?_recName hD hb)
-      (.cons (.int (by decide)) (fieldValues_const (litv_hasType hD (by omega)) F))
+    .record (record?_recName hD hb) (by
+      rw [RecordDecl.fieldsAt_nil]
+      exact .cons (.int (by decide)) (fieldValues_const (litv_hasType hD (by omega)) F))
 
 end Optimality
 

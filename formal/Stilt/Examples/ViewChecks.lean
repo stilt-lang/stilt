@@ -15,7 +15,7 @@ namespace Stilt.Examples.ViewChecks
 
 /-- `type Doc = { lines: List<str>, n: i64 }` and `fn bump(inout xs: List<i64>)`. -/
 private def decls : Decls :=
-  ⟨[⟨"Doc", [("lines", .list .str), ("n", .i64)]⟩], [],
+  ⟨[⟨"Doc", [("lines", .list .str), ("n", .i64)], []⟩], [],
     [⟨"bump", [], [], [⟨.inout, "xs", .list .i64, none⟩], .unit, Row.pure, .unit, {}⟩],
     [], [], [], []⟩
 
@@ -32,7 +32,7 @@ private def withView (rest : Expr) : Expr :=
 
 /-- `var d = Doc { lines: ["a"], n: 0 }` and `let w = View.all(d.lines)`, then `rest`. -/
 private def withDoc (rest : Expr) : Expr :=
-  .varIn "d" (.record "Doc") (.record "Doc" [("lines", .list .str [.op (.str "a") []]), ("n", .int 0)])
+  .varIn "d" (.record "Doc" []) (.record "Doc" [] [("lines", .list .str [.op (.str "a") []]), ("n", .int 0)])
     (.letIn "w" (.view (.list .str)) (.view [.field (.var "d") "lines"]) rest)
 
 /-- Whether a `main` passes the check of E0423. -/
@@ -48,7 +48,7 @@ example : reads (withXs (withView (.call (.fnRef "bump" [] []) [.inout ⟨"xs", 
   rfl
 
 /-- `d = Doc { … }` and `d.lines[0] = "b"` while `w` views `d.lines`. -/
-example : reads (withDoc (.assign ⟨"d", []⟩ (.record "Doc" [("lines", .list .str []), ("n", .int 1)])))
+example : reads (withDoc (.assign ⟨"d", []⟩ (.record "Doc" [] [("lines", .list .str []), ("n", .int 1)])))
     = false := rfl
 example : reads (withDoc (.assign ⟨"d", [.field "lines", .index (.int 0)]⟩ (.op (.str "b") [])))
     = false := rfl
@@ -115,7 +115,7 @@ example : contained [] .i64
 
 /-- `fn of_field(b: Bag) -> View<List<i64>> { View.all(b.items) }`: a view of a part of a
 parameter views the callee's copy (views.across-calls). -/
-example : contained [letParam "b" (.record "Doc")] (.view (.list .str))
+example : contained [letParam "b" (.record "Doc" [])] (.view (.list .str))
     (.view [.field (.var "b") "lines"]) = false := rfl
 
 /-- `var w = View.all(xs)` outside a block that binds `ys`, then `w = View.all(ys)` in it: the

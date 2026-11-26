@@ -37,8 +37,8 @@ theorem eval_takesNone {D : Decls} {L : List Name} (hD : D.LocksClosed L) (w : W
     case int k => exact pure .int
     case bool b => exact pure .bool
     case unit => exact pure .unit
-    case record R fs => exact bind (fields ih fs he) (fun _ hw => declare D R hw)
-    case variant T C es => exact bind (list ih es he) (fun _ hvs => pure (.variant hvs))
+    case record R _ fs => exact bind (fields ih fs he) (fun _ hw => declare D R hw)
+    case variant T _ C es => exact bind (list ih es he) (fun _ hvs => pure (.variant hvs))
     case list τ es => exact bind (list ih es he) (fun _ hvs => pure (.list hvs))
     case op o es => exact bind (list ih es he) (fun _ hvs => run w hvs)
     case view es =>

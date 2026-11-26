@@ -119,11 +119,11 @@ theorem Value.Typed.leads : ∀ {v : Value} {σ : STy}, Value.Typed D v σ →
     ∀ {c : Ty × Nat}, Value.Holds v c → σ.Leads D c.1
   | _, _, .int _, _, h | _, _, .float, _, h | _, _, .str, _, h | _, _, .bool, _, h
   | _, _, .unit, _, h | _, _, .function .., _, h => nomatch h
-  | _, _, .record hr hf, _, h =>
+  | _, _, .record hr _ hf, _, h =>
     let ⟨_, hp, hh⟩ := h.record_inv
     let ⟨q, hq, hl⟩ := Fields.Typed.leads hf hp hh
     hl.lift (.record hr hq .refl)
-  | _, _, .variant ht hC hp, _, h => by
+  | _, _, .variant ht _ hC hp, _, h => by
     cases h with
     | variant hm hh =>
       obtain ⟨τ, hτ, hl⟩ := Values.Typed.leads hp hm hh
@@ -160,21 +160,22 @@ theorem Elems.Typed.leads : ∀ {vs : List Value} {σs : List STy}, Elems.Typed 
       let ⟨σ, hσ, hl⟩ := Elems.Typed.leads hvs hm hh
       ⟨σ, List.mem_cons_of_mem _ hσ, hl⟩
 
-theorem Fields.Typed.leads : ∀ {fields : List (Name × Value)} {declared : List (Name × Ty)},
-    Fields.Typed D fields declared → ∀ {p : Name × Value} {c : Ty × Nat}, p ∈ fields →
-      Value.Holds p.2 c → ∃ q ∈ declared, q.2.sem.Leads D c.1
-  | _, _, .nil, _, _, hm, _ => nomatch hm
-  | _, _, .cons hv hfs, _, _, hm, hh =>
+theorem Fields.Typed.leads : ∀ {fields : List (Name × Value)} {declared : List (Name × Ty)}
+    {π : SParams}, Fields.Typed D fields declared π → ∀ {p : Name × Value} {c : Ty × Nat},
+      p ∈ fields → Value.Holds p.2 c → ∃ q ∈ declared, (q.2.semAt π).Leads D c.1
+  | _, _, _, .nil, _, _, hm, _ => nomatch hm
+  | _, _, _, .cons hv hfs, _, _, hm, hh =>
     match List.mem_cons.1 hm with
     | .inl he => ⟨_, List.mem_cons_self, Value.Typed.leads hv (by subst he; exact hh)⟩
     | .inr hm =>
       let ⟨q, hq, hl⟩ := Fields.Typed.leads hfs hm hh
       ⟨q, List.mem_cons_of_mem _ hq, hl⟩
 
-theorem Values.Typed.leads : ∀ {vs : List Value} {τs : List Ty}, Values.Typed D vs τs →
-    ∀ {v : Value} {c : Ty × Nat}, v ∈ vs → Value.Holds v c → ∃ τ ∈ τs, τ.sem.Leads D c.1
-  | _, _, .nil, _, _, hm, _ => nomatch hm
-  | _, _, .cons hv hvs, _, _, hm, hh =>
+theorem Values.Typed.leads : ∀ {vs : List Value} {τs : List Ty} {π : SParams},
+    Values.Typed D vs τs π → ∀ {v : Value} {c : Ty × Nat}, v ∈ vs → Value.Holds v c →
+      ∃ τ ∈ τs, (τ.semAt π).Leads D c.1
+  | _, _, _, .nil, _, _, hm, _ => nomatch hm
+  | _, _, _, .cons hv hvs, _, _, hm, hh =>
     match List.mem_cons.1 hm with
     | .inl he => ⟨_, List.mem_cons_self, Value.Typed.leads hv (he ▸ hh)⟩
     | .inr hm =>

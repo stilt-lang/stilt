@@ -42,7 +42,7 @@ private def grownBody : Expr := .varIn "out" lst (v "xs") (.seq (push "out" (v "
 programs call: `len` reads, `push` writes, `grown` consumes its first
 parameter, `run` calls its parameter once and `repeat` in a loop. -/
 private def D : Decls :=
-  ⟨[⟨"Pair", [("left", lst), ("right", lst)]⟩], [],
+  ⟨[⟨"Pair", [("left", lst), ("right", lst)], []⟩], [],
     [decl "len" [param "xs"] (.int 0) .i64,
      decl "push" [param "xs" lst .inout, param "x" .i64]
        (.assign ⟨"xs", [.index (.int 0)]⟩ (v "x")) .unit,
@@ -83,7 +83,7 @@ passed to a consumed parameter, it escapes; read, it is local. -/
 example : (modes (.param "xs") (v "xs") [param "xs"]).map (·.locality) = some .escapes := by
   decide
 
-example : (modes (.param "xs") (.record "Pair" [("left", v "xs"), ("right", ints [])])
+example : (modes (.param "xs") (.record "Pair" [] [("left", v "xs"), ("right", ints [])])
     [param "xs"]).map (·.locality) = some .escapes := by decide
 
 example : (modes (.param "xs") (lam (call "len" [v "xs"])) [param "xs"]).map (·.locality) =
@@ -111,12 +111,12 @@ example : xsLocality (v "xs") = some .escapes := by decide
 
 example : xsLocality (.raise (v "xs")) = some .escapes := by decide
 
-example : xsLocality (.seq (.record "Pair" [("left", v "xs"), ("right", ints [])]) (.int 0)) =
+example : xsLocality (.seq (.record "Pair" [] [("left", v "xs"), ("right", ints [])]) (.int 0)) =
     some .escapes := by decide
 
 example : xsLocality (.seq (.list lst [v "xs"]) (.int 0)) = some .escapes := by decide
 
-example : xsLocality (.seq (.variant "Option" "Some" [v "xs"]) (.int 0)) = some .escapes := by
+example : xsLocality (.seq (.variant "Option" [] "Some" [v "xs"]) (.int 0)) = some .escapes := by
   decide
 
 example : xsLocality (.varIn "m" (.list lst) (.list lst [])
@@ -129,7 +129,7 @@ example : xsLocality (.seq (call "grown" [v "xs", .int 2]) (.int 0)) = some .esc
 
 /-- Assigned to a part of another binding, or to an `inout` parameter: each
 escapes, as through an index. -/
-example : xsLocality (.varIn "r" (.record "Pair") (.record "Pair" [("left", ints []),
+example : xsLocality (.varIn "r" (.record "Pair" []) (.record "Pair" [] [("left", ints []),
     ("right", ints [])]) (.seq (.assign ⟨"r", [.field "left"]⟩ (v "xs")) (.int 0))) =
     some .escapes := by decide
 
@@ -171,7 +171,7 @@ example : xsUniqueness (.letIn "ys" lst (v "xs") (.seq (push "xs" (.int 2)) both
 example : xsUniqueness (.letIn "f" thunk (lam (call "len" [v "xs"]))
     (.seq (push "xs" (.int 2)) (.call (v "f") [] .i64))) = some .shared := by decide
 
-example : xsUniqueness (.letIn "p" (.record "Pair") (.record "Pair" [("left", v "xs"),
+example : xsUniqueness (.letIn "p" (.record "Pair" []) (.record "Pair" [] [("left", v "xs"),
     ("right", ints [])]) (.seq (push "xs" (.int 2)) (.int 0))) = some .shared := by decide
 
 example : xsUniqueness (.letIn "ys" lst (call "grown" [v "xs", .int 2])
@@ -214,7 +214,7 @@ example : xsUniqueness (.letIn "ys" lst (v "xs") (.seq (.assign ⟨"xs", []⟩ (
       (.seq (push "xs" (.int 2)) (call "len" [v "ws"])))))) = some .unique := by decide
 
 /-- A copy of one part doesn't share another. -/
-example : (modes (.var "p") (.varIn "p" (.record "Pair") (v "q")
+example : (modes (.var "p") (.varIn "p" (.record "Pair" []) (v "q")
     (.letIn "l" lst (.field (v "p") "left")
       (.seq (.call (.fnRef "push" [] []) [.inout ⟨"p", [.field "right"]⟩, .value (.int 1)] .unit)
         (call "len" [v "l"]))))).map (·.uniqueness) = some .unique := by decide
@@ -270,8 +270,8 @@ private def pushAt (y : Name) (path : List Projection) : Expr :=
 
 /-- The uniqueness of `p` in `let xs = [1]; var p = Pair { left: l, right: [] }; e`. -/
 private def pUniqueness (l e : Expr) : Option Uniqueness :=
-  (modes (.var "p") (withXs (.varIn "p" (.record "Pair")
-    (.record "Pair" [("left", l), ("right", ints [])]) e))).map (·.uniqueness)
+  (modes (.var "p") (withXs (.varIn "p" (.record "Pair" [])
+    (.record "Pair" [] [("left", l), ("right", ints [])]) e))).map (·.uniqueness)
 
 /-- `in_a_field`: a write inside the field that holds the copy is shared while
 `xs` is read after it; one beside it, to `right`, is not. -/
@@ -308,7 +308,7 @@ that holds a copy of `a` holds a copy of `a` itself, so a write to it is
 shared while `a` is read after it; a part beside the copy holds none of it. -/
 
 /-- `Pair { left: l, right: r }`. -/
-private def pair (l r : Expr) : Expr := .record "Pair" [("left", l), ("right", r)]
+private def pair (l r : Expr) : Expr := .record "Pair" [] [("left", l), ("right", r)]
 
 /-- `push(inout z, 1); len(z) + rest`. -/
 private def writeZ (rest : Expr) : Expr :=
@@ -319,7 +319,7 @@ private def zUniqueness (body : Expr) (ps : List Param := [param "a"]) : Option 
   (modes (.var "z") body ps).map (·.uniqueness)
 
 /-- `through_a_field` and `through_an_index`. -/
-example : zUniqueness (.letIn "p" (.record "Pair") (pair (v "a") (ints []))
+example : zUniqueness (.letIn "p" (.record "Pair" []) (pair (v "a") (ints []))
     (.varIn "z" lst (.field (v "p") "left") (writeZ (call "len" [v "a"])))) =
     some .shared := by decide
 
@@ -329,7 +329,7 @@ example : zUniqueness (.letIn "xs" (.list lst) (.list lst [v "a"])
 
 /-- `through_a_pattern`, and `through_if_let` on a tuple: a binder holds the
 copy at the place of the value it matches; one beside it holds none. -/
-example : zUniqueness (.letIn "p" (.record "Pair") (pair (v "a") (ints []))
+example : zUniqueness (.letIn "p" (.record "Pair" []) (pair (v "a") (ints []))
     (.match (v "p") .i64 [⟨.record "Pair" [("left", .bind "left"), ("right", .wild)], ["left"],
       .varIn "z" lst (v "left") (writeZ (call "len" [v "a"]))⟩])) = some .shared := by decide
 
@@ -338,7 +338,7 @@ example : zUniqueness (.letIn "p" (.tuple [.list lst, .i64])
       .varIn "z" lst (v "l") (writeZ (call "len" [v "a"]))⟩, ⟨.wild, [], .int 0⟩])) =
     some .shared := by decide
 
-example : zUniqueness (.letIn "p" (.record "Pair") (pair (v "a") (ints []))
+example : zUniqueness (.letIn "p" (.record "Pair" []) (pair (v "a") (ints []))
     (.match (v "p") .i64 [⟨.record "Pair" [("left", .wild), ("right", .bind "right")], ["right"],
       .varIn "z" lst (v "right") (writeZ (call "len" [v "a"]))⟩])) = some .unique := by decide
 
@@ -358,16 +358,16 @@ example : zUniqueness (.letIn "xs" (.list lst) (.list lst [v "a"]) (.varIn "z" l
 
 /-- `inside_the_copy`: a part inside the copy, here held by a tuple's field,
 is a copy of a part of `a`. -/
-example : zUniqueness (.letIn "t" (.tuple [.record "Pair", .i64]) (.op .tuple [v "a", .int 1])
+example : zUniqueness (.letIn "t" (.tuple [.record "Pair" [], .i64]) (.op .tuple [v "a", .int 1])
     (.varIn "z" lst (.field (.field (v "t") "0") "left")
-      (writeZ (call "len" [.field (v "a") "left"])))) [param "a" (.record "Pair")] =
+      (writeZ (call "len" [.field (v "a") "left"])))) [param "a" (.record "Pair" [])] =
     some .shared := by decide
 
 /-- `var a = q; var z = []; { let p = Pair { left: a, right: [2] }; z = p.f };
 push(inout a, 1); len(z) + len(a)`. -/
 private def heldAfter (f : Name) : Expr :=
   .varIn "a" lst (v "q") (.varIn "z" lst (ints [])
-    (.seq (.letIn "p" (.record "Pair") (pair (v "a") (ints [2]))
+    (.seq (.letIn "p" (.record "Pair" []) (pair (v "a") (ints [2]))
         (.assign ⟨"z", []⟩ (.field (v "p") f)))
       (.seq (push "a" (.int 1)) (.seq (call "len" [v "z"]) (call "len" [v "a"])))))
 

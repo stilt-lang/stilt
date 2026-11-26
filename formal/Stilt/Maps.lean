@@ -66,10 +66,10 @@ inductive Ty.Key : Ty → Prop
   | unit : Ty.Key .unit
   | tuple {κs : List Ty} : (∀ κ ∈ κs, Ty.Key κ) → Ty.Key (.tuple κs)
   | list {κ : Ty} : Ty.Key κ → Ty.Key (.list κ)
-  /-- A record or a variant type, whose parts `Decls.Key` checks: its values compare
-  part by part. -/
-  | record (R : Name) : Ty.Key (.record R)
-  | variant (T : Name) : Ty.Key (.variant T)
+  /-- A record or a variant type at key types, whose parts `Decls.Key` checks: its values
+  compare part by part. -/
+  | record (R : Name) {args : List Ty} : (∀ κ ∈ args, Ty.Key κ) → Ty.Key (.record R args)
+  | variant (T : Name) {args : List Ty} : (∀ κ ∈ args, Ty.Key κ) → Ty.Key (.variant T args)
 
 /-! ## Reading maps and sets -/
 
@@ -409,6 +409,12 @@ theorem Ty.Key.substTys {κ : Ty} (h : κ.Key) (s : TySubst) : κ.substTys s = �
     simp only [Ty.substTys, substTyList_eq_map, Ty.tuple.injEq]
     exact (List.map_congr_left ih).trans (List.map_id _)
   | list _ ih => simp only [Ty.substTys, ih]
+  | record _ _ ih =>
+    simp only [Ty.substTys, substTyList_eq_map, Ty.record.injEq, true_and]
+    exact (List.map_congr_left ih).trans (List.map_id _)
+  | variant _ _ ih =>
+    simp only [Ty.substTys, substTyList_eq_map, Ty.variant.injEq, true_and]
+    exact (List.map_congr_left ih).trans (List.map_id _)
   | _ => rfl
 
 /-! ## Key types of a program -/
@@ -416,19 +422,20 @@ theorem Ty.Key.substTys {κ : Ty} (h : κ.Key) (s : TySubst) : κ.substTys s = �
 /-- What a key type of the program is at its outermost type, given the types `S` its
 parts must be: an integer type, `bool`, `str` or `()`, whose `Eq` and `Hash` are built
 in (traits.built-in-impls); a tuple or a list of parts; or a record or variant type for
-which the program writes no `Eq` or `Hash`, whose structural impls are those of its fields
-or payloads (traits.structural-impls). A float is none, since floats don't implement
+which the program writes no `Eq` or `Hash`, at key types, whose structural impls are those
+of its fields or payloads at its arguments (traits.structural-impls). A float is none, since floats don't implement
 `Hash` (std.map-key-bounds), and neither is a function type, which implements no trait
 (traits.built-in-impls). -/
 def Decls.KeyStep (D : Decls) (S : Ty → Prop) : Ty → Prop
   | .int _ | .bool | .str | .unit => True
   | .tuple κs => ∀ κ ∈ κs, S κ
   | .list κ => S κ
-  | .record R => (D.traitImpl? "Eq" (.record R)).isNone ∧ (D.traitImpl? "Hash" (.record R)).isNone ∧
-      ∃ r, D.record? R = some r ∧ ∀ f ∈ r.fields, S f.2
-  | .variant T => (D.traitImpl? "Eq" (.variant T)).isNone ∧
-      (D.traitImpl? "Hash" (.variant T)).isNone ∧
-      ∃ t, D.variant? T = some t ∧ ∀ c ∈ t.ctors, ∀ τ ∈ c.2, S τ
+  | .record R args => (D.traitImpl? "Eq" (.record R)).isNone ∧
+      (D.traitImpl? "Hash" (.record R)).isNone ∧ (∀ κ ∈ args, S κ) ∧
+      ∃ r, D.record? R = some r ∧ ∀ f ∈ r.fieldsAt args, S f.2
+  | .variant T args => (D.traitImpl? "Eq" (.variant T)).isNone ∧
+      (D.traitImpl? "Hash" (.variant T)).isNone ∧ (∀ κ ∈ args, S κ) ∧
+      ∃ t, D.variant? T = some t ∧ ∀ c ∈ t.ctorsAt args, ∀ τ ∈ c.2, S τ
   | _ => False
 
 /-- A type that implements `Eq` and `Hash` in the program, part by part, as every

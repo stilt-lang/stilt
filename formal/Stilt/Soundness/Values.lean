@@ -1,4 +1,5 @@
 import Stilt.Soundness.Compose
+import Stilt.Soundness.Arguments
 import Stilt.Values
 import Stilt.Instances
 
@@ -48,12 +49,19 @@ inductive Value.Typed : Value → STy → Prop
   | str {s : String} : Value.Typed (.str s) .str
   | bool {b : Bool} : Value.Typed (.bool b) .bool
   | unit : Value.Typed .unit .unit
-  | record {R : Name} {r : RecordDecl} {fields : List (Name × Value)} :
-      D.record? R = some r → Fields.Typed fields r.fields →
-      Value.Typed (.record R fields) (.record R)
-  | variant {T : Name} {t : VariantDecl} {C : Name} {τs : List Ty} {payload : List Value} :
-      D.variant? T = some t → t.ctors.lookup C = some τs → Values.Typed payload τs →
-      Value.Typed (.variant T C payload) (.variant T)
+  /-- A record of a type at run-time arguments, one for each of its type parameters, whose
+  fields have their declared types at those arguments (declarations.type-parameters). -/
+  | record {R : Name} {args : List STy} {r : RecordDecl} {fields : List (Name × Value)} :
+      D.record? R = some r → args.length = r.typeParams.length →
+      Fields.Typed fields r.fields (r.typeParams.zip args) →
+      Value.Typed (.record R fields) (.record R args)
+  /-- A variant of a type at run-time arguments, whose payload has its declared types at
+  those arguments (declarations.type-parameters). -/
+  | variant {T : Name} {args : List STy} {t : VariantDecl} {C : Name} {τs : List Ty}
+      {payload : List Value} :
+      D.variant? T = some t → args.length = t.typeParams.length → t.ctors.lookup C = some τs →
+      Values.Typed payload τs (t.typeParams.zip args) →
+      Value.Typed (.variant T C payload) (.variant T args)
   | list {σ : STy} {vs : List Value} :
       (∀ v ∈ vs, Value.Typed v σ) → Value.Typed (.list vs) (.list σ)
   | tuple {vs : List Value} {σs : List STy} :
@@ -102,20 +110,22 @@ inductive Frame.Typed : List (Name × Value) → Ctx → REnv → Prop
       Frame.Typed ((x, v) :: γ) ((x, b) :: Γ) η
 
 /-- A record's fields, in the order they are declared, with values of their
-closed types (declarations.records; effects.row-variables). -/
-inductive Fields.Typed : List (Name × Value) → List (Name × Ty) → Prop
-  | nil : Fields.Typed [] []
+closed types, their type parameters the run-time arguments `π` (declarations.records,
+declarations.type-parameters; effects.row-variables). -/
+inductive Fields.Typed : List (Name × Value) → List (Name × Ty) → SParams → Prop
+  | nil {π : SParams} : Fields.Typed [] [] π
   | cons {f : Name} {v : Value} {τ : Ty} {fields : List (Name × Value)}
-      {declared : List (Name × Ty)} :
-      Value.Typed v τ.sem → Fields.Typed fields declared →
-      Fields.Typed ((f, v) :: fields) ((f, τ) :: declared)
+      {declared : List (Name × Ty)} {π : SParams} :
+      Value.Typed v (τ.semAt π) → Fields.Typed fields declared π →
+      Fields.Typed ((f, v) :: fields) ((f, τ) :: declared) π
 
-/-- A variant's payload, with values of its closed types (declarations.variant-types;
+/-- A variant's payload, with values of its closed types, their type parameters the
+run-time arguments `π` (declarations.variant-types, declarations.type-parameters;
 effects.row-variables). -/
-inductive Values.Typed : List Value → List Ty → Prop
-  | nil : Values.Typed [] []
-  | cons {v : Value} {τ : Ty} {vs : List Value} {τs : List Ty} :
-      Value.Typed v τ.sem → Values.Typed vs τs → Values.Typed (v :: vs) (τ :: τs)
+inductive Values.Typed : List Value → List Ty → SParams → Prop
+  | nil {π : SParams} : Values.Typed [] [] π
+  | cons {v : Value} {τ : Ty} {vs : List Value} {τs : List Ty} {π : SParams} :
+      Value.Typed v (τ.semAt π) → Values.Typed vs τs π → Values.Typed (v :: vs) (τ :: τs) π
 
 end
 
@@ -160,8 +170,14 @@ theorem Value.Typed.eqv : ∀ {v : Value} {a b : STy}, Value.Typed D v a → a.E
   | _, _, _, .str, h => by cases h; exact .str
   | _, _, _, .bool, h => by cases h; exact .bool
   | _, _, _, .unit, h => by cases h; exact .unit
-  | _, _, _, .record hr hf, h => by cases h; exact .record hr hf
-  | _, _, _, .variant ht hc hp, h => by cases h; exact .variant ht hc hp
+  | _, _, _, .record hr hl hf, h => by
+    cases h with
+    | record _ hab =>
+      exact .record hr (hab.length ▸ hl) (Fields.Typed.eqv hf (SParams.Eqv.zip _ hab))
+  | _, _, _, .variant ht hl hc hp, h => by
+    cases h with
+    | variant _ hab =>
+      exact .variant ht (hab.length ▸ hl) hc (Values.Typed.eqv hp (SParams.Eqv.zip _ hab))
   | _, _, _, .list hvs, h => by
     obtain ⟨b', rfl, hab⟩ := h.list_inv
     exact .list fun v hv => Value.Typed.eqv (hvs v hv) hab
@@ -184,6 +200,18 @@ theorem Elems.Typed.eqv : ∀ {vs : List Value} {as bs : List STy}, Elems.Typed 
     STysEqv as bs → Elems.Typed D vs bs
   | _, _, _, .nil, .nil => .nil
   | _, _, _, .cons hv hvs, .cons h hs => .cons (Value.Typed.eqv hv h) (Elems.Typed.eqv hvs hs)
+
+theorem Fields.Typed.eqv : ∀ {fs : List (Name × Value)} {declared : List (Name × Ty)}
+    {π π' : SParams}, Fields.Typed D fs declared π → π.Eqv π' → Fields.Typed D fs declared π'
+  | _, _, _, _, .nil, _ => .nil
+  | _, _, _, _, .cons (τ := τ) hv hfs, h =>
+    .cons (Value.Typed.eqv hv (Ty.semAt_eqv h τ)) (Fields.Typed.eqv hfs h)
+
+theorem Values.Typed.eqv : ∀ {vs : List Value} {τs : List Ty} {π π' : SParams},
+    Values.Typed D vs τs π → π.Eqv π' → Values.Typed D vs τs π'
+  | _, _, _, _, .nil, _ => .nil
+  | _, _, _, _, .cons (τ := τ) hv hvs, h =>
+    .cons (Value.Typed.eqv hv (Ty.semAt_eqv h τ)) (Values.Typed.eqv hvs h)
 
 end
 
@@ -282,19 +310,23 @@ theorem Value.Typed.unit_inv {v : Value} (hv : Value.Typed D v .unit) : v = .uni
   | function _ _ _ h => obtain ⟨_, _, _, h⟩ := h.fn_fn rfl; exact nomatch h
   | handle h => obtain ⟨_, h⟩ := h.shared_shared rfl; exact nomatch h
 
-theorem Value.Typed.record_inv {v : Value} {R : Name} (hv : Value.Typed D v (.record R)) :
-    ∃ r fields, v = .record R fields ∧ D.record? R = some r ∧ Fields.Typed D fields r.fields := by
+theorem Value.Typed.record_inv {v : Value} {R : Name} {args : List STy}
+    (hv : Value.Typed D v (.record R args)) :
+    ∃ r fields, v = .record R fields ∧ D.record? R = some r ∧ args.length = r.typeParams.length ∧
+      Fields.Typed D fields r.fields (r.typeParams.zip args) := by
   cases hv with
-  | record hr hfs => exact ⟨_, _, rfl, hr, hfs⟩
+  | record hr hl hfs => exact ⟨_, _, rfl, hr, hl, hfs⟩
   | closure _ _ _ _ _ _ _ h _ => exact absurd (h.fn_fn rfl) (by simp)
   | function _ _ _ h => obtain ⟨_, _, _, h⟩ := h.fn_fn rfl; exact nomatch h
   | handle h => obtain ⟨_, h⟩ := h.shared_shared rfl; exact nomatch h
 
-theorem Value.Typed.variant_inv {v : Value} {T : Name} (hv : Value.Typed D v (.variant T)) :
+theorem Value.Typed.variant_inv {v : Value} {T : Name} {args : List STy}
+    (hv : Value.Typed D v (.variant T args)) :
     ∃ t C τs payload, v = .variant T C payload ∧ D.variant? T = some t ∧
-      t.ctors.lookup C = some τs ∧ Values.Typed D payload τs := by
+      args.length = t.typeParams.length ∧ t.ctors.lookup C = some τs ∧
+      Values.Typed D payload τs (t.typeParams.zip args) := by
   cases hv with
-  | variant ht hc hp => exact ⟨_, _, _, _, rfl, ht, hc, hp⟩
+  | variant ht hl hc hp => exact ⟨_, _, _, _, rfl, ht, hl, hc, hp⟩
   | closure _ _ _ _ _ _ _ h _ => exact absurd (h.fn_fn rfl) (by simp)
   | function _ _ _ h => obtain ⟨_, _, _, h⟩ := h.fn_fn rfl; exact nomatch h
   | handle h => obtain ⟨_, h⟩ := h.shared_shared rfl; exact nomatch h

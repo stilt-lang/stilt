@@ -39,7 +39,7 @@ private def controlRow (B R : Ty) : Row := ⟨false, none, [], [], some (B, R)�
 
 /-- A handler of `Ask` or `Fail`: the record of its one closure. -/
 private def handler (R op : Name) (A : Ty) (x : Name) (r : Row) (body : Expr) : Expr :=
-  .record R [(op, .closure [⟨.let, x, A, none⟩] .i64 r body)]
+  .record R [] [(op, .closure [⟨.let, x, A, none⟩] .i64 r body)]
 
 /-- `handler Ask -> i64 { fn ask() -> i64 { let r = resume(10); r } }`. -/
 private def around : Expr :=
@@ -68,9 +68,9 @@ private def fns : List FnDecl := [
   ⟨"deep", [], [], [], .i64, row "Ask", add (.call (.fnRef "once" [] []) [] .i64) (.int 100), {}⟩]
 
 private def decls : Decls :=
-  ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 (controlRow .i64 .i64))]⟩,
-      ⟨"ToDefault", [("fail", .fn [(.let, .i64)] .i64 (controlRow .i64 .i64))]⟩,
-      ⟨"Answer", [("ask", .fn [(.let, .unit)] .i64 (row "Ask"))]⟩],
+  ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 (controlRow .i64 .i64))], []⟩,
+      ⟨"ToDefault", [("fail", .fn [(.let, .i64)] .i64 (controlRow .i64 .i64))], []⟩,
+      ⟨"Answer", [("ask", .fn [(.let, .unit)] .i64 (row "Ask"))], []⟩],
     [], fns, [], [], [], [⟨"Ask", [("ask", .unit, .i64)]⟩, ⟨"Fail", [("fail", .i64, .i64)]⟩]⟩
 
 /-- A call of one of the functions. -/

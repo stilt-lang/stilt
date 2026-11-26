@@ -92,14 +92,14 @@ theorem writtenBack_runs :
 
 /-! ## A binding assigned a part of its own value -/
 
-private def treeTy : Ty := .record "Tree"
+private def treeTy : Ty := .record "Tree" []
 
 /-- `type Tree = { items: List<i64>, kids: List<Tree> }`. -/
-def treeDecl : RecordDecl := ⟨"Tree", [("items", listTy), ("kids", .list treeTy)]⟩
+def treeDecl : RecordDecl := ⟨"Tree", [("items", listTy), ("kids", .list treeTy)], []⟩
 
 /-- `Tree { items: [i], kids }`. -/
 private def tree (i : Int) (kids : List Expr) : Expr :=
-  .record "Tree" [("items", ints [i]), ("kids", .list treeTy kids)]
+  .record "Tree" [] [("items", ints [i]), ("kids", .list treeTy kids)]
 
 /-- The rest of `selfPart` after `z` is bound: `x = x.kids[0]; x.items[0] = 9;
 raise z.kids[0].items[0]`. -/
@@ -130,18 +130,18 @@ theorem selfPart_wellTyped : selfPart.WellTyped where
         IntTy.i64.Contains i →
         ExprsFit selfPart.decls .closed Γ fx kids (List.replicate kids.length treeTy) →
         HasType selfPart.decls .closed Γ fx (tree i kids) treeTy := fun i kids hi hk =>
-      .record rfl (.refl _) (.cons rfl (.list (wellFormed_of_check (by decide))
+      .record rfl rfl (fun _ h => nomatch h) (.refl _) (.cons rfl (.list (wellFormed_of_check (by decide))
         (.cons (hint i hi) (.refl _) .nil)) (.refl _)
         (.cons rfl (.list (wellFormed_of_check (by decide)) hk) (.refl _) .nil))
     exact ⟨.never, .varIn (wellFormed_of_check (by decide))
       (htree 1 _ (by decide) (.cons (htree 2 [] (by decide) .nil) (.refl _) .nil)) (.refl _)
       (.letIn (wellFormed_of_check (by decide)) (.var rfl) (.refl _)
-        (.seq (.assign (.mk rfl .nil) (.index (.field (.var rfl) rfl rfl) (hint _ (by decide))
+        (.seq (.assign (.mk rfl .nil) (.index (.field (.var rfl) rfl rfl rfl) (hint _ (by decide))
             (.refl _)) (.refl _)) (.refl _)
-          (.seq (.assign (.mk rfl (.field rfl rfl (.index (hint _ (by decide)) (.refl _) .nil)))
+          (.seq (.assign (.mk rfl (.field rfl rfl rfl (.index (hint _ (by decide)) (.refl _) .nil)))
               (hint _ (by decide)) (.refl _)) (.refl _)
-            (.raise rfl (.index (.field (.index (.field (.var rfl) rfl rfl) (hint _ (by decide))
-              (.refl _)) rfl rfl) (hint _ (by decide)) (.refl _)) (.refl _))))), .never _⟩
+            (.raise rfl (.index (.field (.index (.field (.var rfl) rfl rfl rfl) (hint _ (by decide))
+              (.refl _)) rfl rfl rfl) (hint _ (by decide)) (.refl _)) (.refl _))))), .never _⟩
   noEscape := noEscape_of_check (by decide)
 
 theorem selfPart_exclusive : selfPart.Exclusive :=

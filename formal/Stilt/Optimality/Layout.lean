@@ -141,7 +141,7 @@ theorem lookup_of_mem_keys {β : Type} {k : Name} :
 def recName (b : Nat) : Name := nameOf 'T' b
 
 /-- The record type with budget `b` (declarations.records). -/
-def recTy (b : Nat) : Ty := .record (recName b)
+def recTy (b : Nat) : Ty := .record (recName b) []
 
 section
 
@@ -154,7 +154,7 @@ def recFields : Nat → List (Name × Ty)
   | b + 1 => (v, .i64) :: F.map fun f => (f, recTy b)
 
 /-- The declaration of the record type with budget `b` (declarations.records). -/
-def recDecl (b : Nat) : RecordDecl := ⟨recName b, recFields F v b⟩
+def recDecl (b : Nat) : RecordDecl := ⟨recName b, recFields F v b, []⟩
 
 /-- The declarations of the record types with budgets `K` down to `0`, with
 distinct names (declarations.records and declarations.unique-names). -/
@@ -165,8 +165,8 @@ def recDecls : Nat → List RecordDecl
 /-- A literal of the record type with budget `b`, whose `i64` fields are all
 `0` (expressions.struct-literal-fields). -/
 def lit : Nat → Expr
-  | 0 => .record (recName 0) [(v, .int 0)]
-  | b + 1 => .record (recName (b + 1)) ((v, .int 0) :: F.map fun f => (f, lit b))
+  | 0 => .record (recName 0) [] [(v, .int 0)]
+  | b + 1 => .record (recName (b + 1)) [] ((v, .int 0) :: F.map fun f => (f, lit b))
 
 /-- The value of `lit F v b`, its fields in the order they are declared
 (values.left-to-right). -/
@@ -241,6 +241,6 @@ theorem closed_recFields : ∀ (b : Nat), ∀ f ∈ recFields F v b, f.2.Closed
       simp [Ty.rows] at hρ
     · obtain ⟨g, -, rfl⟩ := List.mem_map.1 h
       intro ρ hρ
-      simp [recTy, Ty.rows] at hρ
+      simp [recTy, Ty.rows, tysRows] at hρ
 
 end Stilt.Optimality

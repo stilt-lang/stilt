@@ -93,14 +93,15 @@ theorem tryCatch_ok {e h : Expr} {E x τ σ σ'}
     ((hs hh hη θ).mono (fun v hv => hv.fits (hfh.close η)) (fun _ F hF he => ⟨F, hF, he⟩)
       fun _ h => h)
 
-theorem field_ok (hD : D.WellFormed) {e : Expr} {R : Name} {r : RecordDecl} {f : Name} {τ : Ty}
-    (he : HasType D scope Γ fx e (.record R)) (hR : D.record? R = some r)
-    (hf : r.fields.lookup f = some τ) :
+theorem field_ok (hD : D.WellFormed) {e : Expr} {R : Name} {args : List Ty} {r : RecordDecl}
+    {f : Name} {τ : Ty} (he : HasType D scope Γ fx e (.record R args)) (hR : D.record? R = some r)
+    (hf : (r.fieldsAt args).lookup f = some τ) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
       (eval D Copy.memory (n + 1) ((Expr.field e f).substRows θ)) := by
   refine Eval.Ok.bind (hs he hη θ) fun v hv => Eval.Ok.ofExcept ?_
-  rw [(hD.fieldsClosed _ (Decls.mem_of_record? hR) _ (List.mem_of_lookup hf)).close η]
-  exact (PathTyped.field hR hf .nil).get hv
+  obtain ⟨τ₀, hf₀, hτ⟩ := hD.close_fieldsAt hR hf η
+  rw [hτ]
+  exact (PathTyped.field hR hf₀ .nil).get hv
 
 theorem index_ok {e i : Expr} {τ σ : Ty} (he : HasType D scope Γ fx e (.list τ))
     (hi : HasType D scope Γ fx i σ) (hfit : Fits σ .i64) :

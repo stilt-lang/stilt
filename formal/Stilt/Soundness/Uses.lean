@@ -22,6 +22,7 @@ theorem Ty.rows_raise : ∀ (τ : Ty) {ρ : Row} {E : Ty}, ρ ∈ τ.rows → ρ
     ∀ ρ' ∈ E.rows, ρ' ∈ τ.rows
   | .list τ, _, _, h, hE => Ty.rows_raise τ h hE
   | .tuple τs, _, _, h, hE => tysRows_raise τs h hE
+  | .record _ τs, _, _, h, hE | .variant _ τs, _, _, h, hE => tysRows_raise τs h hE
   | .map κ τ, _, _, h, hE => by
     simp only [Ty.rows, List.mem_append] at h ⊢
     rcases h with h | h
@@ -36,8 +37,7 @@ theorem Ty.rows_raise : ∀ (τ : Ty) {ρ : Row} {E : Ty}, ρ ∈ τ.rows → ρ
     · exact fun ρ' h' => .inl (.inl (paramRows_raise ps h hE ρ' h'))
     · exact fun ρ' h' => .inl (.inr (Ty.rows_raise r h hE ρ' h'))
     · exact fun ρ' h' => .inr (Row.rows_raise σ h hE ρ' h')
-  | .i64, _, _, h, _ | .bool, _, _, h, _ | .unit, _, _, h, _ | .never, _, _, h, _
-  | .record _, _, _, h, _ | .variant _, _, _, h, _ => nomatch h
+  | .i64, _, _, h, _ | .bool, _, _, h, _ | .unit, _, _, h, _ | .never, _, _, h, _ => nomatch h
 
 theorem tysRows_raise : ∀ (τs : List Ty) {ρ : Row} {E : Ty}, ρ ∈ tysRows τs →
     ρ.raise = some E → ∀ ρ' ∈ E.rows, ρ' ∈ tysRows τs

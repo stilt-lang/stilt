@@ -74,6 +74,7 @@ types. -/
 def Ty.rows : Ty → List Row
   | .list τ => τ.rows
   | .tuple τs => tysRows τs
+  | .record _ τs | .variant _ τs => tysRows τs
   | .map κ τ => κ.rows ++ τ.rows
   | .set τ => τ.rows
   | .view τ => τ.rows
@@ -139,6 +140,7 @@ def Ty.params : Ty → List Name
   | .param T => [T]
   | .list τ => τ.params
   | .tuple τs => tysParams τs
+  | .record _ τs | .variant _ τs => tysParams τs
   | .map κ τ => κ.params ++ τ.params
   | .set τ => τ.params
   | .view τ => τ.params
@@ -217,6 +219,8 @@ mutual
 def Ty.substRows (s : RowSubst) : Ty → Ty
   | .list τ => .list (τ.substRows s)
   | .tuple τs => .tuple (substTysRows s τs)
+  | .record R τs => .record R (substTysRows s τs)
+  | .variant T τs => .variant T (substTysRows s τs)
   | .map κ τ => .map (κ.substRows s) (τ.substRows s)
   | .set τ => .set (τ.substRows s)
   | .view τ => .view (τ.substRows s)

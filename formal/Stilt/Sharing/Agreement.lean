@@ -74,9 +74,9 @@ theorem eval_agrees {D : Decls} (hD : InPlace.Sim.DeclsSafe D) {shared : Name â†
     case int k => exact Sim.pure .int
     case bool b => exact Sim.pure .bool
     case unit => exact Sim.pure .unit
-    case record R fs =>
+    case record R _ fs =>
       exact Sim.bind (Sim.fields ih fs (fields_safe hex hdp)) fun _ hw => Sim.declare D R hw
-    case variant T C es =>
+    case variant T _ C es =>
       exact Sim.bind (Sim.list ih es (exprs_safe hex hdp)) fun _ hvs => Sim.pure (.variant hvs)
     case list Ï„ es =>
       exact Sim.bind (Sim.list ih es (exprs_safe hex hdp)) fun _ hvs => Sim.pure (.list hvs)

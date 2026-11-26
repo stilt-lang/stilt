@@ -45,10 +45,10 @@ inductive Expr.Inst (D : Decls) : Expr → Expr → Prop
   | int (k : Int) : Expr.Inst D (.int k) (.int k)
   | bool (b : Bool) : Expr.Inst D (.bool b) (.bool b)
   | unit : Expr.Inst D .unit .unit
-  | record (R : Name) {fs fs' : List (Name × Expr)} :
-      FieldsInst D fs fs' → Expr.Inst D (.record R fs) (.record R fs')
-  | variant (T C : Name) {es es' : List Expr} :
-      ExprsInst D es es' → Expr.Inst D (.variant T C es) (.variant T C es')
+  | record (R : Name) (τs τs' : List Ty) {fs fs' : List (Name × Expr)} :
+      FieldsInst D fs fs' → Expr.Inst D (.record R τs fs) (.record R τs' fs')
+  | variant (T : Name) (τs τs' : List Ty) (C : Name) {es es' : List Expr} :
+      ExprsInst D es es' → Expr.Inst D (.variant T τs C es) (.variant T τs' C es')
   | list (τ τ' : Ty) {es es' : List Expr} :
       ExprsInst D es es' → Expr.Inst D (.list τ es) (.list τ' es')
   | op (o o' : Op) {es es' : List Expr} : ExprsInst D es es' → Expr.Inst D (.op o es) (.op o' es')
@@ -141,23 +141,84 @@ end
 
 /-! ## Types -/
 
+/-- A payload type at arguments that a change `f` of types maps to arguments is a view or
+a parameter as it is at the arguments themselves, when `f` keeps each type one or not. -/
+theorem Ty.viewOrParam_substTys_zip {f : Ty → Ty} (hf : ∀ τ, (f τ).viewOrParam = τ.viewOrParam)
+    (names : List Name) (args : List Ty) (p : Ty) :
+    (p.substTys (names.zip (args.map f))).viewOrParam = (p.substTys (names.zip args)).viewOrParam := by
+  cases p with
+  | param U =>
+    simp only [Ty.substTys, List.zip_map_right, lookup_map_snd]
+    cases (names.zip args).lookup U with
+    | none => rfl
+    | some τ => exact hf τ
+  | _ => rfl
+
+/-- An instance of a payload type at arguments is a view or a parameter only if the type is
+at the arguments themselves. -/
+theorem Ty.viewOrParam_substTys_zip_of (s : TySubst) (names : List Name) (args : List Ty) (p : Ty)
+    (h : (p.substTys (names.zip (args.map (Ty.substTys s)))).viewOrParam = true) :
+    (p.substTys (names.zip args)).viewOrParam = true := by
+  cases p with
+  | param U =>
+    simp only [Ty.substTys, List.zip_map_right, lookup_map_snd] at h ⊢
+    cases hl : (names.zip args).lookup U with
+    | none => rfl
+    | some τ =>
+      simp only [hl, Option.map_some, Option.getD_some] at h ⊢
+      cases τ <;> simp_all [Ty.substTys, Ty.viewOrParam]
+  | view _ => rfl
+  | _ => simp [Ty.substTys, Ty.viewOrParam] at h
+
+theorem Ty.viewOrParam_substRows (s : RowSubst) (τ : Ty) :
+    (τ.substRows s).viewOrParam = τ.viewOrParam := by
+  cases τ <;> rfl
+
+/-- Whether some payload of a variant type at its arguments is a view or a parameter. -/
+theorem VariantDecl.any_ctorsAt (t : VariantDecl) (args : List Ty) :
+    ((t.ctorsAt args).any fun c => c.2.any Ty.viewOrParam) =
+      t.ctors.any fun c => c.2.any fun p => (p.substTys (t.typeArgs args)).viewOrParam := by
+  simp [VariantDecl.ctorsAt, List.any_map, Function.comp_def]
+
 theorem Ty.isView_substRows (D : Decls) (s : RowSubst) (τ : Ty) :
     (τ.substRows s).isView D = τ.isView D := by
-  cases τ <;> rfl
+  cases τ with
+  | variant T args =>
+    simp only [Ty.substRows, Ty.isView]
+    split
+    · simp only [VariantDecl.any_ctorsAt, VariantDecl.typeArgs, substTysRows_eq_map,
+        Ty.viewOrParam_substTys_zip (Ty.viewOrParam_substRows s)]
+    · rfl
+  | _ => rfl
 
 theorem Ty.holdsView_substRows (D : Decls) (s : RowSubst) (τ : Ty) :
     (τ.substRows s).holdsView D = τ.holdsView D := by
-  cases τ <;> rfl
+  cases τ with
+  | variant T args => simp only [Ty.holdsView, Ty.substRows, ← Ty.isView_substRows D s (.variant T args)]
+  | _ => rfl
+
+theorem Ty.isView_variant_of_substTys (D : Decls) (s : TySubst) (T : Name) (args : List Ty)
+    (h : ((Ty.variant T args).substTys s).isView D = true) : (Ty.variant T args).isView D = true := by
+  simp only [Ty.substTys, Ty.isView, substTyList_eq_map] at h ⊢
+  cases ht : D.variant? T with
+  | none => rw [ht] at h; exact nomatch h
+  | some t =>
+    rw [ht] at h
+    simp only [VariantDecl.any_ctorsAt, VariantDecl.typeArgs, List.any_eq_true] at h ⊢
+    obtain ⟨c, hc, p, hp, h⟩ := h
+    exact ⟨c, hc, p, hp, Ty.viewOrParam_substTys_zip_of s _ _ p h⟩
 
 theorem Ty.holdsView_of_substTys (D : Decls) (s : TySubst) (τ : Ty)
     (h : (τ.substTys s).holdsView D = true) : τ.holdsView D = true := by
-  revert h
-  cases τ <;> simp [Ty.holdsView, Ty.isView, Ty.substTys]
+  cases τ with
+  | variant T args => exact Ty.isView_variant_of_substTys D s T args h
+  | _ => revert h; simp [Ty.holdsView, Ty.isView, Ty.substTys]
 
 theorem Ty.mayBeView_of_substTys (D : Decls) (s : TySubst) (τ : Ty)
     (h : (τ.substTys s).isView D = true) : τ.mayBeView D = true := by
-  revert h
-  cases τ <;> simp [Ty.mayBeView, Ty.isView, Ty.substTys]
+  cases τ with
+  | variant T args => exact Ty.isView_variant_of_substTys D s T args h
+  | _ => revert h; simp [Ty.mayBeView, Ty.isView, Ty.substTys]
 
 /-- Instantiating the type parameters and the row variables of a type gives an instance. -/
 theorem TyInst.subst (D : Decls) (σ : TySubst) (ρ : RowSubst) (τ : Ty) :
@@ -196,8 +257,8 @@ theorem Expr.inst_subst : ∀ (e : Expr) (r : List Shape), e.distinctParams = tr
   | .int k, _, _, _ => .int k
   | .bool b, _, _, _ => .bool b
   | .unit, _, _, _ => .unit
-  | .record R fs, r, h, x => .record R (fieldsInst_subst fs r h x)
-  | .variant T C es, r, h, x => .variant T C (exprsInst_subst es r h x)
+  | .record R _ fs, r, h, x => .record R _ _ (fieldsInst_subst fs r h x)
+  | .variant T _ C es, r, h, x => .variant T _ _ C (exprsInst_subst es r h x)
   | .list τ es, r, h, x => .list _ _ (exprsInst_subst es r h x)
   | .op o es, r, h, x => .op _ _ (exprsInst_subst es r h x)
   | .view es, r, h, x => .view (exprsInst_subst es r h x)

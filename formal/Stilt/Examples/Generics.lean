@@ -18,7 +18,7 @@ namespace Stilt.Examples.Generics
 private def size : TraitDecl := ⟨"Size", [("size", .fn [(.let, .param selfParam)] .i64 Row.pure)]⟩
 
 /-- `type Point = { x: i64, y: i64 }`. -/
-private def point : RecordDecl := ⟨"Point", [("x", .i64), ("y", .i64)]⟩
+private def point : RecordDecl := ⟨"Point", [("x", .i64), ("y", .i64)], []⟩
 
 /-- A method `size` of a trait impl, whose receiver has the type `τ`. -/
 private def sizeFn (τ : Ty) (body : Expr) : FnDecl :=
@@ -29,7 +29,7 @@ private def sizeI64 : TraitImpl := ⟨"Size", .int .i64, [sizeFn .i64 (.var self
 
 /-- `impl Size for Point { fn size(self) -> i64 { self.x + self.y } }`. -/
 private def sizePoint : TraitImpl :=
-  ⟨"Size", .record "Point", [sizeFn (.record "Point")
+  ⟨"Size", .record "Point", [sizeFn (.record "Point" [])
     (.op (.arith .add .i64) [.field (.var selfName) "x", .field (.var selfName) "y"])]⟩
 
 /-- `e.size()` on a value of type `τ`, which calls `Size.size` at `τ`. -/
@@ -61,8 +61,8 @@ private def twiceOf (τ : Ty) (e : Expr) (result : Ty :=
 example : agree (program (.raise (twiceOf .i64 (.int 5)))) (.raised (.int 10)) := ⟨rfl, rfl⟩
 
 /-- `twice(Point { x: 1, y: 2 })` takes `T` to be `Point`. -/
-example : agree (program (.raise (twiceOf (.record "Point")
-    (.record "Point" [("x", .int 1), ("y", .int 2)])))) (.raised (.int 6)) := ⟨rfl, rfl⟩
+example : agree (program (.raise (twiceOf (.record "Point" [])
+    (.record "Point" [] [("x", .int 1), ("y", .int 2)])))) (.raised (.int 6)) := ⟨rfl, rfl⟩
 
 /-- `Size.size(7)`, the qualified form, calls the impl for `i64`
 (traits.qualified-calls). -/

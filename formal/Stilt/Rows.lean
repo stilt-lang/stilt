@@ -23,8 +23,8 @@ def Expr.substRows (s : RowSubst) : Expr → Expr
   | .int n => .int n
   | .bool b => .bool b
   | .unit => .unit
-  | .record R fields => .record R (substFieldRows s fields)
-  | .variant T C es => .variant T C (substExprRows s es)
+  | .record R τs fields => .record R (substTysRows s τs) (substFieldRows s fields)
+  | .variant T τs C es => .variant T (substTysRows s τs) C (substExprRows s es)
   | .list τ es => .list (τ.substRows s) (substExprRows s es)
   | .op o es => .op o (substExprRows s es)
   | .view es => .view (substExprRows s es)
@@ -90,6 +90,10 @@ end
 theorem length_substExprRows (s : RowSubst) : ∀ es : List Expr, (substExprRows s es).length = es.length
   | [] => rfl
   | _ :: es => by simp [substExprRows, length_substExprRows s es]
+
+theorem substTysRows_eq_map (s : RowSubst) : ∀ τs : List Ty, substTysRows s τs = τs.map (Ty.substRows s)
+  | [] => rfl
+  | τ :: τs => by simp [substTysRows, substTysRows_eq_map s τs]
 
 namespace Row
 

@@ -161,6 +161,12 @@ def setOp (j : Json) : Except String SetOp := do
 
 mutual
 
+/-- A declared type's arguments, its second field, which a type without them leaves out. -/
+partial def typeArgs (fs : Array Json) : Except String (List Ty) :=
+  match fs[1]? with
+  | some a => list ty a
+  | none => pure []
+
 partial def ty (j : Json) : Except String Ty := do
   let (tag, fs) ← tagged j
   let f := field fs
@@ -171,8 +177,8 @@ partial def ty (j : Json) : Except String Ty := do
   | "str" => pure .str
   | "unit" => pure .unit
   | "never" => pure .never
-  | "record" => .record <$> (f 0 >>= str)
-  | "variant" => .variant <$> (f 0 >>= str)
+  | "record" => return .record (← f 0 >>= str) (← typeArgs fs)
+  | "variant" => return .variant (← f 0 >>= str) (← typeArgs fs)
   | "list" => .list <$> (f 0 >>= ty)
   | "tuple" => .tuple <$> (f 0 >>= list ty)
   | "map" => return .map (← f 0 >>= ty) (← f 1 >>= ty)
@@ -346,8 +352,13 @@ partial def expr (j : Json) : Except String Expr := do
   | "int" => .int <$> (f 0 >>= int)
   | "bool" => .bool <$> (f 0 >>= bool)
   | "unit" => pure .unit
-  | "record" => return .record (← f 0 >>= str) (← f 1 >>= list (pair str expr))
-  | "variant" => return .variant (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= list expr)
+  | "record" =>
+    if fs.size < 3 then return .record (← f 0 >>= str) [] (← f 1 >>= list (pair str expr))
+    else return .record (← f 0 >>= str) (← f 1 >>= list ty) (← f 2 >>= list (pair str expr))
+  | "variant" =>
+    if fs.size < 4 then return .variant (← f 0 >>= str) [] (← f 1 >>= str) (← f 2 >>= list expr)
+    else
+      return .variant (← f 0 >>= str) (← f 1 >>= list ty) (← f 2 >>= str) (← f 3 >>= list expr)
   | "list" => return .list (← f 0 >>= ty) (← f 1 >>= list expr)
   | "op" => return .op (← f 0 >>= op) (← f 1 >>= list expr)
   | "view" => return .view (← f 0 >>= list expr)

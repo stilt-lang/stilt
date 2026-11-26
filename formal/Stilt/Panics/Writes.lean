@@ -19,8 +19,8 @@ mutual
 def Expr.writes : Expr → List Name
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => []
-  | .record _ fields => fieldsWrites fields
-  | .variant _ _ es => exprsWrites es
+  | .record _ _ fields => fieldsWrites fields
+  | .variant _ _ _ es => exprsWrites es
   | .list _ es => exprsWrites es
   | .op _ es | .view es => exprsWrites es
   | .field e _ => e.writes
@@ -75,8 +75,8 @@ variable, `xs[i] = v` or `f(inout xs[i])`, keeps its list's length (`Value.set_s
 def Expr.resizes : Expr → List Name
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => []
-  | .record _ fields => fieldsResizes fields
-  | .variant _ _ es => exprsResizes es
+  | .record _ _ fields => fieldsResizes fields
+  | .variant _ _ _ es => exprsResizes es
   | .list _ es => exprsResizes es
   | .op _ es | .view es => exprsResizes es
   | .field e _ => e.resizes
@@ -139,8 +139,8 @@ mutual
 theorem Expr.resizes_subset : ∀ e : Expr, e.resizes ⊆ e.writes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => List.Subset.refl _
-  | .record _ fields => fieldsResizes_subset fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsResizes_subset es
+  | .record _ _ fields => fieldsResizes_subset fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsResizes_subset es
   | .field e _ | .raise e | .perform _ e | .try e | .return e | .loop e => Expr.resizes_subset e
   | .index e i => append_subset_append (Expr.resizes_subset e) (Expr.resizes_subset i)
   | .call c args _ => append_subset_append (Expr.resizes_subset c) (argsResizes_subset args)

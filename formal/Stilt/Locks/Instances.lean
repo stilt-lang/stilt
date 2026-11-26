@@ -23,8 +23,8 @@ theorem Expr.lockFree_substTys : ∀ e : Expr, (e.substTys s).lockFree D L = e.l
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .held .. => rfl
   | .closure _ _ _ b => by simp only [Expr.substTys, Expr.lockFree, Expr.lockFree_substTys b]
-  | .record _ fs => by simp [Expr.substTys, Expr.lockFree, fieldsLockFree_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substTys, Expr.lockFree, fieldsLockFree_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.lockFree, exprsLockFree_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.lockFree, Expr.lockFree_substTys e]
@@ -88,8 +88,8 @@ theorem Expr.lockFree_substRows : ∀ e : Expr, (e.substRows s).lockFree D L = e
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .held .. => rfl
   | .closure _ _ _ b => by simp only [Expr.substRows, Expr.lockFree, Expr.lockFree_substRows b]
-  | .record _ fs => by simp [Expr.substRows, Expr.lockFree, fieldsLockFree_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substRows, Expr.lockFree, fieldsLockFree_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.lockFree, exprsLockFree_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.lockFree, Expr.lockFree_substRows e]

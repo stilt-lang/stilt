@@ -39,8 +39,8 @@ theorem eval_oneShot {D : Decls} (hD : ∀ d ∈ D.fns, d.body.bodyOneShot d.row
     case int k => exact pure .int
     case bool b => exact pure .bool
     case unit => exact pure .unit
-    case record R fs => exact bindLe (b := 0) (fields ih fs he hn) (fun _ hw => declare D R hw) (by omega)
-    case variant T C es => exact bindLe (b := 0) (list ih es he hn) (fun _ hvs => pure (.variant hvs)) (by omega)
+    case record R _ fs => exact bindLe (b := 0) (fields ih fs he hn) (fun _ hw => declare D R hw) (by omega)
+    case variant T _ C es => exact bindLe (b := 0) (list ih es he hn) (fun _ hvs => pure (.variant hvs)) (by omega)
     case list τ es => exact bindLe (b := 0) (list ih es he hn) (fun _ hvs => pure (.list hvs)) (by omega)
     case op o es =>
       exact bindLe (b := 0) (list ih es he hn) (fun _ hvs => world w _ fun _ _ _ hx h =>

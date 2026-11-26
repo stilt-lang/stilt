@@ -32,8 +32,8 @@ mutual
 def Expr.resumes : Expr → Nat
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => 0
-  | .record _ fields => fieldsResumes fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsResumes es
+  | .record _ _ fields => fieldsResumes fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsResumes es
   | .field e _ | .raise e | .try e | .return e => e.resumes
   | .index e i => e.resumes + i.resumes
   | .call callee args _ => callee.resumes + argsResumes args
@@ -84,8 +84,8 @@ def Expr.oneShot : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
   | .closure _ _ ρ body => body.oneShot && decide (body.resumes ≤ ρ.resumes)
-  | .record _ fields => fieldsOneShot fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsOneShot es
+  | .record _ _ fields => fieldsOneShot fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsOneShot es
   | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.oneShot
   | .index a b | .seq a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ => a.oneShot && b.oneShot

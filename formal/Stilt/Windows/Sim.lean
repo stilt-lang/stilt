@@ -56,8 +56,8 @@ theorem eval_sim (hk : Cases D) : ∀ n, RunsAll D n
     | int k => exact SimP.int n k
     | bool b => exact SimP.bool n b
     | unit => exact SimP.unit n
-    | record R h => exact SimP.record n hΓ' R h ih hr hc
-    | variant T C h => exact SimP.variant n hΓ' T C h ih hr hc
+    | record R _ _ h => exact SimP.record n hΓ' R h ih hr hc
+    | variant T _ _ C h => exact SimP.variant n hΓ' T C h ih hr hc
     | list τ₀ τ h => exact SimP.listLit n hΓ' τ₀ τ h ih hr hc
     | op o₀ o h => exact SimP.opOf n hΓ' o₀ o h ih hr hc
     | view h =>

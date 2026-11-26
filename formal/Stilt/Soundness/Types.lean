@@ -34,8 +34,10 @@ inductive STy where
   | str
   | unit
   | never
-  | record (name : Name)
-  | variant (name : Name)
+  /-- A record type, with its type arguments at run time. -/
+  | record (name : Name) (args : List STy)
+  /-- A variant type, with its type arguments at run time. -/
+  | variant (name : Name) (args : List STy)
   | list (elem : STy)
   | tuple (elems : List STy)
   | map (key value : STy)
@@ -80,8 +82,8 @@ def Ty.close (η : REnv) : Ty → STy
   | .str => .str
   | .unit => .unit
   | .never => .never
-  | .record R => .record R
-  | .variant T => .variant T
+  | .record R τs => .record R (closeTys η τs)
+  | .variant T τs => .variant T (closeTys η τs)
   | .list τ => .list (τ.close η)
   | .tuple τs => .tuple (closeTys η τs)
   | .map κ τ => .map (κ.close η) (τ.close η)
@@ -123,8 +125,8 @@ inductive STy.Eqv : STy → STy → Prop
   | str : STy.Eqv .str .str
   | unit : STy.Eqv .unit .unit
   | never : STy.Eqv .never .never
-  | record (R : Name) : STy.Eqv (.record R) (.record R)
-  | variant (T : Name) : STy.Eqv (.variant T) (.variant T)
+  | record (R : Name) {as bs : List STy} : STysEqv as bs → STy.Eqv (.record R as) (.record R bs)
+  | variant (T : Name) {as bs : List STy} : STysEqv as bs → STy.Eqv (.variant T as) (.variant T bs)
   | list {a b : STy} : STy.Eqv a b → STy.Eqv (.list a) (.list b)
   | tuple {as bs : List STy} : STysEqv as bs → STy.Eqv (.tuple as) (.tuple bs)
   | map {a a' b b' : STy} : STy.Eqv a a' → STy.Eqv b b' → STy.Eqv (.map a b) (.map a' b')
@@ -213,8 +215,8 @@ theorem STy.Eqv.refl : ∀ a : STy, a.Eqv a
   | .str => .str
   | .unit => .unit
   | .never => .never
-  | .record R => .record R
-  | .variant T => .variant T
+  | .record R as => .record R (STysEqv.refl as)
+  | .variant T as => .variant T (STysEqv.refl as)
   | .list a => .list (STy.Eqv.refl a)
   | .tuple as => .tuple (STysEqv.refl as)
   | .map a b => .map (STy.Eqv.refl a) (STy.Eqv.refl b)
@@ -254,8 +256,8 @@ theorem STy.Eqv.symm : ∀ {a b : STy}, a.Eqv b → b.Eqv a
   | _, _, .str => .str
   | _, _, .unit => .unit
   | _, _, .never => .never
-  | _, _, .record R => .record R
-  | _, _, .variant T => .variant T
+  | _, _, .record R h => .record R (STysEqv.symm h)
+  | _, _, .variant T h => .variant T (STysEqv.symm h)
   | _, _, .list h => .list (STy.Eqv.symm h)
   | _, _, .tuple h => .tuple (STysEqv.symm h)
   | _, _, .map h h' => .map (STy.Eqv.symm h) (STy.Eqv.symm h')

@@ -28,7 +28,7 @@ private def controlRow : Row := ⟨false, none, [], [], some (.i64, .i64)⟩
 
 /-- `handler E -> i64 { fn op(x: A) -> i64 { body } }`, as the record of its one closure. -/
 private def handler (R op : Name) (A : Ty) (body : Expr) : Expr :=
-  .record R [(op, .closure [⟨.let, "x", A, none⟩] .i64 controlRow body)]
+  .record R [] [(op, .closure [⟨.let, "x", A, none⟩] .i64 controlRow body)]
 
 /-- `handler Ask -> i64 { fn ask() -> i64 { let r = resume(10); r + 100 } }`. -/
 private def around : Expr :=
@@ -47,8 +47,8 @@ private def fns : List FnDecl := [
       (.seq (.perform fail (.var "x")) (.assign ⟨"x", []⟩ (.int 0))), {}⟩]
 
 private def decls : Decls :=
-  ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 controlRow)]⟩,
-      ⟨"ToDefault", [("fail", .fn [(.let, .i64)] .i64 controlRow)]⟩],
+  ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 controlRow)], []⟩,
+      ⟨"ToDefault", [("fail", .fn [(.let, .i64)] .i64 controlRow)], []⟩],
     [], fns, [], [], [], [⟨"Ask", [("ask", .unit, .i64)]⟩, ⟨"Fail", [("fail", .i64, .i64)]⟩]⟩
 
 /-- `f(inout n)`. -/

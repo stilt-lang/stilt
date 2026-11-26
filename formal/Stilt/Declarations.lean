@@ -10,15 +10,20 @@ their impls, and programs.
 
 namespace Stilt
 
-/-- `type Name = { field: T, … }` (declarations.records). -/
+/-- `type Name<A, …> = { field: T, … }` (declarations.records): its fields, whose types may
+name its type parameters, which take no bounds (declarations.type-parameters). -/
 structure RecordDecl where
   name : Name
   fields : List (Name × Ty)
+  typeParams : List Name
 
-/-- `type Name = | C(T, …) | …` (declarations.variant-types). -/
+/-- `type Name<A, …> = | C(T, …) | …` (declarations.variant-types): its variants, whose
+payload types may name its type parameters, which take no bounds
+(declarations.type-parameters). -/
 structure VariantDecl where
   name : Name
   ctors : List (Name × List Ty)
+  typeParams : List Name
 
 /-- A type parameter of a function, with its bounds, the traits that the
 types it stands for implement (declarations.function-declarations and traits.bounds). -/
@@ -114,18 +119,19 @@ def Head.type : Head → Ty
   | .bool => .bool
   | .str => .str
   | .unit => .unit
-  | .record R => .record R
-  | .variant T => .variant T
+  | .record R => .record R []
+  | .variant T => .variant T []
 
-/-- The head of a type, if a trait impl can be for it. -/
+/-- The head of a type, if a trait impl can be for it: impls for a generic type's
+instances are outside the calculus. -/
 def Ty.head? : Ty → Option Head
   | .int k => some (.int k)
   | .float k => some (.float k)
   | .bool => some .bool
   | .str => some .str
   | .unit => some .unit
-  | .record R => some (.record R)
-  | .variant T => some (.variant T)
+  | .record R [] => some (.record R)
+  | .variant T [] => some (.variant T)
   | _ => none
 
 /-- `Self`, the type parameter of a trait's signatures (traits.declaring-trait). -/

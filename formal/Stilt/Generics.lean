@@ -24,6 +24,8 @@ def Ty.substTys (s : TySubst) : Ty → Ty
   | .param T => (s.lookup T).getD (.param T)
   | .list τ => .list (τ.substTys s)
   | .tuple τs => .tuple (substTyList s τs)
+  | .record R τs => .record R (substTyList s τs)
+  | .variant T τs => .variant T (substTyList s τs)
   | .map κ τ => .map (κ.substTys s) (τ.substTys s)
   | .set τ => .set (τ.substTys s)
   | .view τ => .view (τ.substTys s)
@@ -70,6 +72,24 @@ def FnDecl.typeArgs (d : FnDecl) (τs : List Ty) : TySubst := (d.typeParams.map 
 
 /-- Replaces the type parameters of a parameter's type. -/
 def Param.substTys (s : TySubst) (p : Param) : Param := { p with type := p.type.substTys s }
+
+/-- The instantiation of a record type's parameters by the type arguments of a use
+(declarations.type-arguments). -/
+def RecordDecl.typeArgs (r : RecordDecl) (τs : List Ty) : TySubst := r.typeParams.zip τs
+
+/-- A record type's fields at type arguments: each declared type with the record's type
+parameters replaced by the arguments (declarations.type-parameters). -/
+def RecordDecl.fieldsAt (r : RecordDecl) (τs : List Ty) : List (Name × Ty) :=
+  r.fields.map (Prod.map id (Ty.substTys (r.typeArgs τs)))
+
+/-- The instantiation of a variant type's parameters by the type arguments of a use
+(declarations.type-arguments). -/
+def VariantDecl.typeArgs (t : VariantDecl) (τs : List Ty) : TySubst := t.typeParams.zip τs
+
+/-- A variant type's variants at type arguments: each payload type with the type's
+parameters replaced by the arguments (declarations.type-parameters). -/
+def VariantDecl.ctorsAt (t : VariantDecl) (τs : List Ty) : List (Name × List Ty) :=
+  t.ctors.map (Prod.map id (List.map (Ty.substTys (t.typeArgs τs))))
 
 /-! ## Lookups -/
 
@@ -146,10 +166,10 @@ mutual
 theorem Ty.substTys_eq_self (s : TySubst) :
     ∀ τ : Ty, (∀ T ∈ τ.params, s.lookup T = none) → τ.substTys s = τ
   | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => rfl
-  | .record _, _ | .variant _, _ => rfl
   | .param T, h => by simp [Ty.substTys, h T (by simp [Ty.params])]
   | .list τ, h => by rw [Ty.substTys, Ty.substTys_eq_self s τ h]
   | .tuple τs, h => by rw [Ty.substTys, substTyList_eq_self s τs h]
+  | .record _ τs, h | .variant _ τs, h => by rw [Ty.substTys, substTyList_eq_self s τs h]
   | .map κ τ, h => by
     rw [Ty.substTys, Ty.substTys_eq_self s κ fun T hT => h T (by simp [Ty.params, hT]),
       Ty.substTys_eq_self s τ fun T hT => h T (by simp [Ty.params, hT])]
@@ -184,6 +204,23 @@ theorem Ty.substTys_of_params {τ : Ty} (h : τ.params = []) (s : TySubst) : τ.
 @[simp] theorem Ty.substTys_nil (τ : Ty) : τ.substTys [] = τ :=
   τ.substTys_eq_self [] fun _ _ => rfl
 
+@[simp] theorem substTyList_nil : ∀ τs : List Ty, substTyList [] τs = τs
+  | [] => rfl
+  | τ :: τs => by rw [substTyList, Ty.substTys_nil, substTyList_nil τs]
+
+/-- A record type at no arguments has its declared fields. -/
+@[simp] theorem RecordDecl.fieldsAt_nil (r : RecordDecl) : r.fieldsAt [] = r.fields := by
+  simp only [RecordDecl.fieldsAt, RecordDecl.typeArgs, List.zip_nil_right]
+  exact (List.map_congr_left fun f _ => by simp [Prod.map]).trans (List.map_id _)
+
+/-- A variant type at no arguments has its declared variants. -/
+@[simp] theorem VariantDecl.ctorsAt_nil (t : VariantDecl) : t.ctorsAt [] = t.ctors := by
+  simp only [VariantDecl.ctorsAt, VariantDecl.typeArgs, List.zip_nil_right]
+  refine (List.map_congr_left fun c _ => ?_).trans (List.map_id _)
+  obtain ⟨C, τs⟩ := c
+  simp only [Prod.map, id, Prod.mk.injEq, true_and]
+  exact (List.map_congr_left fun τ _ => Ty.substTys_nil τ).trans (List.map_id _)
+
 @[simp] theorem Param.substTys_nil (p : Param) : p.substTys [] = p := by
   simp [Param.substTys]
 
@@ -191,7 +228,10 @@ theorem Head.params_type (h : Head) : h.type.params = [] := by
   cases h <;> rfl
 
 theorem Ty.eq_of_head? {τ : Ty} {h : Head} (hh : τ.head? = some h) : τ = h.type := by
-  cases τ <;> simp [Ty.head?] at hh <;> subst hh <;> rfl
+  cases τ with
+  | record R args | variant R args =>
+    cases args <;> simp [Ty.head?] at hh; subst hh; rfl
+  | _ => simp [Ty.head?] at hh <;> subst hh <;> rfl
 
 /-! ## Rows and type parameters of an instance -/
 
@@ -200,7 +240,7 @@ mutual
 theorem Ty.mem_rows_substTys (s : TySubst) {ρ : Row} :
     ∀ τ : Ty, ρ ∈ (τ.substTys s).rows → ρ ∈ τ.rows ∨ ∃ p ∈ s, ρ ∈ p.2.rows
   | .int _, h | .float _, h | .bool, h | .str, h | .unit, h | .never, h => .inl h
-  | .record _, h | .variant _, h => .inl h
+  | .record _ τs, h | .variant _ τs, h => tysRows_substTys s τs h
   | .param T, h => by
     simp only [Ty.substTys] at h
     cases hl : s.lookup T with
@@ -252,7 +292,7 @@ theorem Ty.params_substTys (s : TySubst) :
     ∀ τ : Ty, (∀ T ∈ τ.params, ∃ σ, s.lookup T = some σ ∧ σ.params = []) →
       (τ.substTys s).params = []
   | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => rfl
-  | .record _, _ | .variant _, _ => rfl
+  | .record _ τs, h | .variant _ τs, h => tysParams_substTys s τs h
   | .param T, h => by
     obtain ⟨σ, hl, hσ⟩ := h T (by simp [Ty.params])
     simp [Ty.substTys, hl, hσ]
@@ -304,7 +344,7 @@ mutual
 theorem Ty.ViewsViewable.substTys (s : TySubst) (hs : ∀ p ∈ s, p.2.ViewsViewable) :
     ∀ τ : Ty, τ.ViewsViewable → (τ.substTys s).ViewsViewable
   | .int _, h | .float _, h | .bool, h | .str, h | .unit, h | .never, h => h
-  | .record _, h | .variant _, h => h
+  | .record _ _, h | .variant _ _, h => h
   | .param T, h => by
     simp only [Ty.substTys]
     cases hl : s.lookup T with

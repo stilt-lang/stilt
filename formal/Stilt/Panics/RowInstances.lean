@@ -26,8 +26,8 @@ mutual
 theorem Expr.writes_substRows : ∀ e : Expr, (e.substRows s).writes = e.writes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.writes, fieldsWrites_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.writes, exprsWrites_substRows es]
+  | .record _ _ fs => by simp [Expr.substRows, Expr.writes, fieldsWrites_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.writes, exprsWrites_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.writes, Expr.writes_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
@@ -73,8 +73,8 @@ mutual
 theorem Expr.resizes_substRows : ∀ e : Expr, (e.substRows s).resizes = e.resizes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.resizes, fieldsResizes_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.resizes, exprsResizes_substRows es]
+  | .record _ _ fs => by simp [Expr.substRows, Expr.resizes, fieldsResizes_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.resizes, exprsResizes_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.resizes, Expr.resizes_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
@@ -352,8 +352,8 @@ theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows
       Expr.panicFree_substRows (withoutNames (withoutNames G (exprsWrites hs)) (ns.map fun x => x.fst)) b]
   | G, .index e i => by
     simp [Expr.substRows, Expr.panicFreeIn, guardedIndex_substRows s G e i, Expr.isVar_substRows]
-  | G, .record _ fs => by simp [Expr.substRows, Expr.panicFreeIn, fieldsPanicFree_substRows G fs]
-  | G, .variant _ _ es | G, .list _ es => by
+  | G, .record _ _ fs => by simp [Expr.substRows, Expr.panicFreeIn, fieldsPanicFree_substRows G fs]
+  | G, .variant _ _ _ es | G, .list _ es => by
     simp [Expr.substRows, Expr.panicFreeIn, exprsPanicFree_substRows G es]
   | G, .view es => by
     simp [Expr.substRows, Expr.panicFreeIn, exprsPanicFree_substRows G es, length_substExprRows]

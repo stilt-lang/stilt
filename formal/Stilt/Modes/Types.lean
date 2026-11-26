@@ -1,5 +1,6 @@
 import Stilt.Modes.Lattice
 import Stilt.Places
+import Stilt.Generics
 
 /-!
 # Copy-on-write types
@@ -52,15 +53,15 @@ def cowStep (D : Decls) (step : List Name → Ty → Bool) (seen : List Name) : 
   | .str | .list _ | .map _ _ | .set _ | .fn _ _ _ | .param _ => true
   | .view _ | .shared _ => false
   | .tuple τs => cowSteps D step seen τs
-  | .record R =>
+  | .record R args =>
     seen.contains R ||
       match D.record? R with
-      | some r => r.fields.any fun (_, τ) => step (R :: seen) τ
+      | some r => (r.fieldsAt args).any fun (_, τ) => step (R :: seen) τ
       | none => false
-  | .variant T =>
+  | .variant T args =>
     seen.contains T ||
       match D.variant? T with
-      | some t => t.ctors.any fun (_, τs) => τs.any (step (T :: seen))
+      | some t => (t.ctorsAt args).any fun (_, τs) => τs.any (step (T :: seen))
       | none => false
 
 /-- Whether some type of a list is a copy-on-write type. -/
@@ -86,8 +87,8 @@ def cow (D : Decls) (τ : Ty) : Bool := D.cowIn (D.records.length + D.variants.l
 /-- The type of the part of a value of type `τ` that `sels` reaches. -/
 def partType (D : Decls) : Ty → List Sel → Option Ty
   | τ, [] => some τ
-  | .record R, .field f :: sels =>
-    match (D.record? R).bind (·.fields.lookup f) with
+  | .record R args, .field f :: sels =>
+    match (D.record? R).bind ((·.fieldsAt args |>.lookup f)) with
     | some τ => D.partType τ sels
     | none => none
   | .tuple τs, .field f :: sels =>

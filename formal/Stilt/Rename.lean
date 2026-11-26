@@ -27,8 +27,8 @@ def Expr.rename (g : Name → Name) : Expr → Expr
   | .continue => .continue
   | .fnRef f tys rows => .fnRef f tys rows
   | .method t m τ => .method t m τ
-  | .record R fields => .record R (renameFields g fields)
-  | .variant T C es => .variant T C (renameExprs g es)
+  | .record R τs fields => .record R τs (renameFields g fields)
+  | .variant T τs C es => .variant T τs C (renameExprs g es)
   | .list τ es => .list τ (renameExprs g es)
   | .op o es => .op o (renameExprs g es)
   | .view es => .view (renameExprs g es)

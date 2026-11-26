@@ -20,13 +20,14 @@ section
 variable {D : Decls}
 
 /-- Following a path from a value of run-time type `σ` reaches one of type
-`σ'`: each field step is a field of a record type (types.field-access), and each
-index step an element of a list (std.lists). -/
+`σ'`: each field step is a field of a record type, at the type's run-time arguments
+(types.field-access), and each index step an element of a list (std.lists). -/
 inductive PathTyped (D : Decls) : STy → Path → STy → Prop
   | nil {σ : STy} : PathTyped D σ [] σ
-  | field {R : Name} {r : RecordDecl} {f : Name} {τ : Ty} {p : Path} {σ' : STy} :
-      D.record? R = some r → r.fields.lookup f = some τ → PathTyped D τ.sem p σ' →
-      PathTyped D (.record R) (.field f :: p) σ'
+  | field {R : Name} {as : List STy} {r : RecordDecl} {f : Name} {τ : Ty} {p : Path} {σ' : STy} :
+      D.record? R = some r → r.fields.lookup f = some τ →
+      PathTyped D (τ.semAt (r.typeParams.zip as)) p σ' →
+      PathTyped D (.record R as) (.field f :: p) σ'
   | index {σ : STy} {k : Int} {p : Path} {σ' : STy} :
       PathTyped D σ p σ' → PathTyped D (.list σ) (.index k :: p) σ'
   /-- A tuple field is the element at its position (types.field-access). -/
@@ -35,11 +36,11 @@ inductive PathTyped (D : Decls) : STy → Path → STy → Prop
       PathTyped D (.tuple σs) (.field f :: p) σ'
 
 theorem Fields.Typed.lookup :
-    ∀ {fields : List (Name × Value)} {declared : List (Name × Ty)} {f : Name} {τ : Ty},
-      Fields.Typed D fields declared → declared.lookup f = some τ →
-        ∃ v, fields.lookup f = some v ∧ Value.Typed D v τ.sem
-  | _, _, _, _, .nil, h => nomatch h
-  | _, _, f, _, .cons (f := g) hv hrest, h => by
+    ∀ {fields : List (Name × Value)} {declared : List (Name × Ty)} {π : SParams} {f : Name}
+      {τ : Ty}, Fields.Typed D fields declared π → declared.lookup f = some τ →
+        ∃ v, fields.lookup f = some v ∧ Value.Typed D v (τ.semAt π)
+  | _, _, _, _, _, .nil, h => nomatch h
+  | _, _, _, f, _, .cons (f := g) hv hrest, h => by
     by_cases hfg : f = g
     · subst hfg
       simp only [List.lookup_cons_self, Option.some.injEq] at h ⊢
@@ -47,10 +48,11 @@ theorem Fields.Typed.lookup :
     · rw [lookup_cons_ne hfg] at h ⊢
       exact Fields.Typed.lookup hrest h
 
-theorem Fields.Typed.assocSet {u : Value} {f : Name} {τ : Ty} (hu : Value.Typed D u τ.sem) :
+theorem Fields.Typed.assocSet {u : Value} {f : Name} {τ : Ty} {π : SParams}
+    (hu : Value.Typed D u (τ.semAt π)) :
     ∀ {fields : List (Name × Value)} {declared : List (Name × Ty)},
-      Fields.Typed D fields declared → declared.lookup f = some τ →
-        Fields.Typed D (Stilt.assocSet fields f u) declared
+      Fields.Typed D fields declared π → declared.lookup f = some τ →
+        Fields.Typed D (Stilt.assocSet fields f u) declared π
   | _, _, .nil, _ => .nil
   | _, _, .cons (f := g) hv hrest, h => by
     by_cases hfg : f = g
@@ -75,7 +77,7 @@ theorem PathTyped.get {σ σ' : STy} {p : Path} (hp : PathTyped D σ p σ') :
   | nil => intro v hv; exact .inl ⟨v, rfl, hv⟩
   | field hR hf _ ih =>
     intro v hv
-    obtain ⟨r', fields, rfl, hR', hfs⟩ := hv.record_inv
+    obtain ⟨r', fields, rfl, hR', -, hfs⟩ := hv.record_inv
     obtain rfl := Option.some.inj (hR'.symm.trans hR)
     obtain ⟨u, hu, hut⟩ := hfs.lookup hf
     simpa [Value.get, hu] using ih hut
@@ -100,11 +102,11 @@ theorem PathTyped.set {σ σ' : STy} {p : Path} (hp : PathTyped D σ p σ') {w :
   | nil => intro v _; exact .inl ⟨w, rfl, hw⟩
   | field hR hf _ ih =>
     intro v hv
-    obtain ⟨r', fields, rfl, hR', hfs⟩ := hv.record_inv
+    obtain ⟨r', fields, rfl, hR', hl, hfs⟩ := hv.record_inv
     obtain rfl := Option.some.inj (hR'.symm.trans hR)
     obtain ⟨u, hu, hut⟩ := hfs.lookup hf
     rcases ih hw hut with ⟨u', hset, hu'⟩ | hset
-    · exact .inl ⟨_, by simp [Value.set, hu, hset]; rfl, .record hR' (hfs.assocSet hu' hf)⟩
+    · exact .inl ⟨_, by simp [Value.set, hu, hset]; rfl, .record hR' hl (hfs.assocSet hu' hf)⟩
     · exact .inr (by simp [Value.set, hu, hset]; rfl)
   | @index _ k _ _ _ ih =>
     intro v hv

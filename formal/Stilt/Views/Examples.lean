@@ -88,7 +88,7 @@ example :
     lawful (withList (withView 0 2 (.seq (.assign (.index xs (.int 0)) (.int 1)) (.len v)))) =
       false := by decide
 example :
-    lawful (.varIn "r" (.record "R") (.record "R" [("a", list [1]), ("b", list [2])])
+    lawful (.varIn "r" (.record "R" []) (.record "R" [("a", list [1]), ("b", list [2])])
       (.letIn "v" (.view (.list .i64)) (.viewOf (.field (.var "r") "a") (.int 0) (.int 1))
         (.seq (.assign (.var "r") (.record "R" [("a", list []), ("b", list [])])) (.len v)))) =
       false := by decide
@@ -115,7 +115,7 @@ example :
     lawful (withList (.seq (.assign (.index xs (.int 0)) (.int 1)) (withView 0 2 (.len v)))) =
       true := by decide
 example :
-    lawful (.varIn "r" (.record "R") (.record "R" [("a", list [1]), ("b", list [2])])
+    lawful (.varIn "r" (.record "R" []) (.record "R" [("a", list [1]), ("b", list [2])])
       (.letIn "v" (.view (.list .i64)) (.viewOf (.field (.var "r") "a") (.int 0) (.int 1))
         (.seq (.assign (.index (.field (.var "r") "b") (.int 0)) (.int 3)) (.len v)))) =
       true := by decide

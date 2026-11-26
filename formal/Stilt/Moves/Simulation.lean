@@ -36,10 +36,10 @@ theorem eval_msim {D : Decls} (hD : DeclsOk D) :
     case int k => exact MSim.pure ⟨.int, .int⟩
     case bool b => exact MSim.pure ⟨.bool, .bool⟩
     case unit => exact MSim.pure ⟨.unit, .unit⟩
-    case record R fs =>
+    case record R _ fs =>
       exact MSim.bind (MSim.fields ih L fs (fields_safe hex hdp) hm)
         (fun _ hw => MSim.declare D R hw) (by live_sub) (Live.Sub.refl _)
-    case variant T C es =>
+    case variant T _ C es =>
       exact MSim.bind (MSim.list ih L es (exprs_safe hex hdp) hm) (fun _ hvs => MSim.pure
         ⟨.variant fun v h => (hvs v h).1, .variant fun v h => (hvs v h).2⟩) (by live_sub)
         (Live.Sub.refl _)

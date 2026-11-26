@@ -19,7 +19,9 @@ mutual
 /-- A closed type has no row variable for an instantiation to replace. -/
 theorem Ty.substRows_of_closed (θ : RowSubst) : ∀ τ : Ty, τ.Closed → τ.substRows θ = τ
   | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => rfl
-  | .record _, _ | .variant _, _ | .param _, _ => rfl
+  | .param _, _ => rfl
+  | .record _ τs, h | .variant _ τs, h => by
+    rw [Ty.substRows, substTysRows_of_closed θ τs fun ρ hρ => h ρ (by simpa [Ty.rows] using hρ)]
   | .list τ, h => by
     rw [Ty.substRows, Ty.substRows_of_closed θ τ fun ρ hρ => h ρ (by simpa [Ty.rows] using hρ)]
   | .tuple τs, h => by
@@ -71,7 +73,9 @@ mutual
 row variables in either order gives the same type. -/
 theorem Ty.substTys_substRows {s : TySubst} (hs : s.Ground) (θ : RowSubst) :
     ∀ τ : Ty, (τ.substTys s).substRows θ = (τ.substRows θ).substTys s
-  | .int _ | .float _ | .bool | .str | .unit | .never | .record _ | .variant _ => rfl
+  | .int _ | .float _ | .bool | .str | .unit | .never => rfl
+  | .record _ τs | .variant _ τs => by
+    rw [Ty.substTys, Ty.substRows, Ty.substRows, Ty.substTys, substTyList_substRows hs θ τs]
   | .param T => by
     cases hl : s.lookup T with
     | none => simp [Ty.substTys, Ty.substRows, hl]
@@ -120,7 +124,8 @@ theorem Ty.substTys_substTys (s s' : TySubst) :
     ∀ τ : Ty, (∀ T ∈ τ.params, (s.lookup T).isSome) →
       (τ.substTys s).substTys s' = τ.substTys (s.then s')
   | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => rfl
-  | .record _, _ | .variant _, _ => rfl
+  | .record _ τs, h | .variant _ τs, h => by
+    rw [Ty.substTys, Ty.substTys, Ty.substTys, substTyList_substTys s s' τs h]
   | .param T, h => by
     obtain ⟨σ, hl⟩ := Option.isSome_iff_exists.1 (h T (by simp [Ty.params]))
     simp [Ty.substTys, TySubst.then, hl, lookup_map_snd]
@@ -165,6 +170,61 @@ theorem TySubst.then_zip (names : List Name) (τs : List Ty) (s' : TySubst) :
     TySubst.then (names.zip τs) s' = names.zip (τs.map (Ty.substTys s')) := by
   simp [TySubst.then, List.zip_map_right]
 
+/-! ## Declared types at instances -/
+
+/-- Every field and payload type names only the type parameters of its declaration
+(declarations.type-parameters). -/
+structure Decls.ParamsDeclared (D : Decls) : Prop where
+  fields : ∀ r ∈ D.records, ∀ f ∈ r.fields, ∀ T ∈ f.2.params, T ∈ r.typeParams
+  payloads : ∀ t ∈ D.variants, ∀ c ∈ t.ctors, ∀ τ ∈ c.2, ∀ T ∈ τ.params, T ∈ t.typeParams
+
+/-- A type that names only the parameters `names`, instantiated by as many types, then by
+`s`, is the type instantiated by those types' instances. -/
+theorem Ty.substTys_zip_substTys {names : List Name} {τ : Ty} (h : ∀ T ∈ τ.params, T ∈ names)
+    {τs : List Ty} (hlen : τs.length = names.length) (s : TySubst) :
+    (τ.substTys (names.zip τs)).substTys s = τ.substTys (names.zip (τs.map (Ty.substTys s))) := by
+  rw [Ty.substTys_substTys _ _ _ fun T hT => List.lookup_zip_isSome (h T hT) hlen,
+    TySubst.then_zip]
+
+/-- A record type's fields at type arguments, instantiated, are its fields at the
+arguments' instances. -/
+theorem RecordDecl.fieldsAt_substTys {r : RecordDecl}
+    (h : ∀ f ∈ r.fields, ∀ T ∈ f.2.params, T ∈ r.typeParams) {τs : List Ty}
+    (hlen : τs.length = r.typeParams.length) (s : TySubst) :
+    (r.fieldsAt τs).map (Prod.map id (Ty.substTys s)) = r.fieldsAt (τs.map (Ty.substTys s)) := by
+  simp only [RecordDecl.fieldsAt, RecordDecl.typeArgs, List.map_map]
+  refine List.map_congr_left fun f hf => ?_
+  obtain ⟨g, τ⟩ := f
+  simp only [Function.comp_apply, Prod.map, id]
+  rw [Ty.substTys_zip_substTys (h _ hf) hlen s]
+
+/-- A variant type's payloads at type arguments, instantiated, are its payloads at the
+arguments' instances. -/
+theorem VariantDecl.ctorsAt_substTys {t : VariantDecl}
+    (h : ∀ c ∈ t.ctors, ∀ τ ∈ c.2, ∀ T ∈ τ.params, T ∈ t.typeParams) {τs : List Ty}
+    (hlen : τs.length = t.typeParams.length) (s : TySubst) :
+    (t.ctorsAt τs).map (Prod.map id (List.map (Ty.substTys s))) =
+      t.ctorsAt (τs.map (Ty.substTys s)) := by
+  simp only [VariantDecl.ctorsAt, VariantDecl.typeArgs, List.map_map]
+  refine List.map_congr_left fun c hc => ?_
+  simp only [Function.comp_apply, Prod.map, id, Prod.mk.injEq, true_and, List.map_map]
+  exact List.map_congr_left fun τ hτ => Ty.substTys_zip_substTys (h c hc τ hτ) hlen s
+
+/-- The field names of a record type are the same at every list of arguments. -/
+@[simp] theorem RecordDecl.names_fieldsAt (r : RecordDecl) (τs : List Ty) :
+    (r.fieldsAt τs).map Prod.fst = r.fields.map Prod.fst := by
+  simp [RecordDecl.fieldsAt, Function.comp_def]
+
+/-- A field of a record type at arguments is its declared field at them. -/
+theorem RecordDecl.lookup_fieldsAt (r : RecordDecl) (τs : List Ty) (f : Name) :
+    (r.fieldsAt τs).lookup f = (r.fields.lookup f).map (Ty.substTys (r.typeArgs τs)) :=
+  lookup_map_snd _ f r.fields
+
+/-- A variant of a variant type at arguments is its declared variant at them. -/
+theorem VariantDecl.lookup_ctorsAt (t : VariantDecl) (τs : List Ty) (C : Name) :
+    (t.ctorsAt τs).lookup C = (t.ctors.lookup C).map (List.map (Ty.substTys (t.typeArgs τs))) :=
+  lookup_map_snd _ C t.ctors
+
 /-! ## Expressions -/
 
 /-- Replaces the type parameters in the type an operation on the world names, the type of
@@ -208,8 +268,8 @@ def Expr.substTys (s : TySubst) : Expr → Expr
   | .int n => .int n
   | .bool b => .bool b
   | .unit => .unit
-  | .record R fields => .record R (substFieldTys s fields)
-  | .variant T C es => .variant T C (substExprTys s es)
+  | .record R τs fields => .record R (substTyList s τs) (substFieldTys s fields)
+  | .variant T τs C es => .variant T (substTyList s τs) C (substExprTys s es)
   | .list τ es => .list (τ.substTys s) (substExprTys s es)
   | .op o es => .op (o.substTys s) (substExprTys s es)
   | .view es => .view (substExprTys s es)
@@ -273,8 +333,8 @@ mutual
 
 theorem Expr.substTys_nil : ∀ e : Expr, e.substTys [] = e
   | .var _ | .move _ | .int _ | .bool _ | .unit => rfl
-  | .record _ fields => by rw [Expr.substTys, substFieldTys_nil fields]
-  | .variant _ _ es => by rw [Expr.substTys, substExprTys_nil es]
+  | .record _ τs fields => by rw [Expr.substTys, substFieldTys_nil fields, substTyList_nil]
+  | .variant _ τs _ es => by rw [Expr.substTys, substExprTys_nil es, substTyList_nil]
   | .list τ es => by rw [Expr.substTys, Ty.substTys_nil τ, substExprTys_nil es]
   | .op o es => by rw [Expr.substTys, substExprTys_nil es, Op.substTys_nil]
   | .view es => by rw [Expr.substTys, substExprTys_nil es]

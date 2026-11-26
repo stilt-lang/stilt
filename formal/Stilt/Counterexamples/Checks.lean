@@ -174,8 +174,11 @@ theorem declsWellFormed {D : Decls}
   have hf := fun r hr => List.all_eq_true.1 hfields r hr
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true] at hf
   exact ⟨hrecords, fun r hr => (hf r hr).1, hfieldsClosed,
-    fun r hr f hfm => Ty.concrete_of_check ((hf r hr).2 f hfm).1, by simp [hv], by simp [hv],
-    by simp [hv], by simp [hv], hfns, hparams, hrowParams,
+    fun r hr f hfm => (Ty.concrete_of_check ((hf r hr).2 f hfm).1).2, by simp [hv], by simp [hv],
+    by simp [hv], by simp [hv],
+    ⟨fun r hr f hfm T hT => (by
+      rw [(Ty.concrete_of_check ((hf r hr).2 f hfm).1).1] at hT
+      exact nomatch hT), by simp [hv]⟩, hfns, hparams, hrowParams,
     fun d hd => by simp [(signatures_of_check hsigs d hd).1], fun d hd => (signatures_of_check hsigs d hd).2,
     fun d hd => implicitRows_of_check (List.all_eq_true.1 himplicit d hd), hreceivers,
     by simp [ht], by simp [hti], by simpa [Decls.typeNames, hv, ht, he] using hrecords,

@@ -97,28 +97,30 @@ theorem SimP.declare {S : List Shape} (R : Name) (vs ws : List (Name × Value)) 
       exact ⟨hp, rfl, VRel.free hv.free, fun w hw => (by rw [hv.free] at hw; cases hw), hv⟩
 
 /-- A record literal. -/
-theorem SimP.record (n : Nat) (hΓ : ScopeKeeps D c.Γ) (R : Name) {fs₀ fs : List (Name × Expr)}
+theorem SimP.record (n : Nat) (hΓ : ScopeKeeps D c.Γ) (R : Name) {τs₀ τs : List Ty}
+    {fs₀ fs : List (Name × Expr)}
     (his : FieldsInst D fs₀ fs)
     (ih : ∀ c' : Ctx, ScopeKeeps D c'.Γ → ∀ e₀ e, Expr.Inst D e₀ e →
       RunsIn D c' (Stilt.eval D InPlace.memory n) (Windows.eval D n) e₀ e)
-    (hr : (Expr.record R fs₀).viewsRead D c.Γ c.R = true)
-    (hc : (Expr.record R fs₀).contained D c.Γ c.P = true) :
-    Sim D c pend ((Expr.record R fs₀).sources D c.Γ)
-      (Stilt.eval D InPlace.memory (n + 1) (.record R fs))
-      (Windows.eval D (n + 1) (.record R fs)) :=
+    (hr : (Expr.record R τs₀ fs₀).viewsRead D c.Γ c.R = true)
+    (hc : (Expr.record R τs₀ fs₀).contained D c.Γ c.P = true) :
+    Sim D c pend ((Expr.record R τs₀ fs₀).sources D c.Γ)
+      (Stilt.eval D InPlace.memory (n + 1) (.record R τs fs))
+      (Windows.eval D (n + 1) (.record R τs fs)) :=
   SimP.bind (SimP.fields his c pend (fun _ e₀ e _ hi => ih c hΓ e₀ e hi) hr hc) fun vs ws =>
     SimP.declare R vs ws
 
 /-- A variant: its payload's values, read alike, their windows tracked by their sources. -/
-theorem SimP.variant (n : Nat) (hΓ : ScopeKeeps D c.Γ) (T C : Name) {es₀ es : List Expr}
+theorem SimP.variant (n : Nat) (hΓ : ScopeKeeps D c.Γ) (T C : Name) {τs₀ τs : List Ty}
+    {es₀ es : List Expr}
     (his : ExprsInst D es₀ es)
     (ih : ∀ c' : Ctx, ScopeKeeps D c'.Γ → ∀ e₀ e, Expr.Inst D e₀ e →
       RunsIn D c' (Stilt.eval D InPlace.memory n) (Windows.eval D n) e₀ e)
-    (hr : (Expr.variant T C es₀).viewsRead D c.Γ c.R = true)
-    (hc : (Expr.variant T C es₀).contained D c.Γ c.P = true) :
-    Sim D c pend ((Expr.variant T C es₀).sources D c.Γ)
-      (Stilt.eval D InPlace.memory (n + 1) (.variant T C es))
-      (Windows.eval D (n + 1) (.variant T C es)) :=
+    (hr : (Expr.variant T τs₀ C es₀).viewsRead D c.Γ c.R = true)
+    (hc : (Expr.variant T τs₀ C es₀).contained D c.Γ c.P = true) :
+    Sim D c pend ((Expr.variant T τs₀ C es₀).sources D c.Γ)
+      (Stilt.eval D InPlace.memory (n + 1) (.variant T τs C es))
+      (Windows.eval D (n + 1) (.variant T τs C es)) :=
   SimP.bind (SimP.list his c pend (fun e₀ e _ hi => ih c hΓ e₀ e hi) hr hc) fun vs _ =>
     SimP.pure fun _ _ _ h => ⟨⟨mapWindows_variant.2 ⟨vs, h.1, rfl⟩,
       fun win hw => (h.2.1 win hw).1⟩, fun win hw => (h.2.1 win hw).2, .variant h.2.2⟩

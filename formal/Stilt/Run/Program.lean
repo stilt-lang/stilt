@@ -55,12 +55,16 @@ def head (j : Json) : Except String Head := do
 def decls (j : Json) : Except String Decls := do
   let get (k : String) : Except String Json := j.getObjVal? k
   return {
-    records := ← get "records" >>= list (fun r => do
-      let (n, fs) ← pair str (list (pair str ty)) r
-      pure ⟨n, fs⟩)
-    variants := ← get "variants" >>= list (fun v => do
-      let (n, cs) ← pair str (list (pair str (list ty))) v
-      pure ⟨n, cs⟩)
+    records := ← get "records" >>= list (fun r => match r with
+      | .arr #[n, fs, ps] => return ⟨← str n, ← list (pair str ty) fs, ← list str ps⟩
+      | _ => do
+        let (n, fs) ← pair str (list (pair str ty)) r
+        pure ⟨n, fs, []⟩)
+    variants := ← get "variants" >>= list (fun v => match v with
+      | .arr #[n, cs, ps] => return ⟨← str n, ← list (pair str (list ty)) cs, ← list str ps⟩
+      | _ => do
+        let (n, cs) ← pair str (list (pair str (list ty))) v
+        pure ⟨n, cs, []⟩)
     functions := ← get "functions" >>= list fnDecl
     impls := ← get "impls" >>= list (fun i => do
       let (t, fs) ← pair str (list fnDecl) i
@@ -140,8 +144,8 @@ def _root_.Stilt.Expr.makesView : Expr → Bool
   | .view _ => true
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. =>
     false
-  | .record _ fields => fieldsMakeView fields
-  | .variant _ _ es | .list _ es | .op _ es => exprsMakeView es
+  | .record _ _ fields => fieldsMakeView fields
+  | .variant _ _ _ es | .list _ es | .op _ es => exprsMakeView es
   | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.makesView
   | .index a b | .seq a b | .while a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b
   | .for _ _ a b | .tryCatch a _ _ b _ => a.makesView || b.makesView

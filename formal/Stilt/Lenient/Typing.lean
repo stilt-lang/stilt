@@ -72,16 +72,18 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
   | int {N Γ fx k n} : k.Contains n → HasType N Γ fx (.int n) (.int k)
   | bool {N Γ fx b} : HasType N Γ fx (.bool b) .bool
   | unit {N Γ fx} : HasType N Γ fx .unit .unit
-  | record {N Γ fx R r fields} :
+  | record {N Γ fx R args r fields} :
       D.record? R = some r →
+      args.length = r.typeParams.length → (∀ τ ∈ args, τ.WellFormed scope) →
       (fields.map Prod.fst).Perm (r.fields.map Prod.fst) →
-      FieldsFit N Γ fx fields r.fields →
-      HasType N Γ fx (.record R fields) (.record R)
-  | variant {N Γ fx T t C τs payload} :
+      FieldsFit N Γ fx fields (r.fieldsAt args) →
+      HasType N Γ fx (.record R args fields) (.record R args)
+  | variant {N Γ fx T args t C τs payload} :
       D.variant? T = some t →
-      t.ctors.lookup C = some τs →
+      args.length = t.typeParams.length → (∀ τ ∈ args, τ.WellFormed scope) →
+      (t.ctorsAt args).lookup C = some τs →
       ExprsFit N Γ fx payload τs →
-      HasType N Γ fx (.variant T C payload) (.variant T)
+      HasType N Γ fx (.variant T args C payload) (.variant T args)
   | list {N Γ fx τ es} :
       τ.WellFormed scope →
       ExprsFit N Γ fx es (List.replicate es.length τ) →
@@ -95,10 +97,10 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       Op.Sig .view τs τ →
       ExprsFit N Γ fx es τs →
       HasType N Γ fx (.view es) τ
-  | field {N Γ fx e R r f τ} :
-      HasType N Γ fx e (.record R) →
-      D.record? R = some r →
-      r.fields.lookup f = some τ →
+  | field {N Γ fx e R args r f τ} :
+      HasType N Γ fx e (.record R args) →
+      D.record? R = some r → args.length = r.typeParams.length →
+      (r.fieldsAt args).lookup f = some τ →
       HasType N Γ fx (.field e f) τ
   | elem {N Γ fx e τs f τ} :
       HasType N Γ fx e (.tuple τs) →
@@ -217,14 +219,14 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       HasType N Γ fx (.perform Operation.resume e) R
   | withH {N Γ fx E eff h R r b τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
-      HasType N Γ fx h (.record R) → D.record? R = some r →
+      HasType N Γ fx h (.record R []) → D.record? R = some r →
       HandlerFits scope fx eff r.fields none →
       HasType N Γ { fx with row := fx.row.withEffect E } b τ →
       (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType N Γ fx (.withH E false h b) τ
   | withControl {N Γ fx E eff h R r b σ τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
-      HasType N Γ fx h (.record R) → D.record? R = some r →
+      HasType N Γ fx h (.record R []) → D.record? R = some r →
       HandlerFits scope fx eff r.fields (some τ) →
       HasType N Γ { fx with row := fx.row.withEffect E } b σ → LenientFits vs N b σ τ →
       τ.Ground → (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
@@ -291,11 +293,11 @@ inductive PlaceFits : List Name → Ctx → Effects → Place → Ty → Prop
 value of type `τ`. -/
 inductive PathFits : List Name → Ctx → Effects → Ty → List Projection → Ty → Prop
   | nil {N Γ fx τ} : PathFits N Γ fx τ [] τ
-  | field {N Γ fx R r f path τ τ'} :
-      D.record? R = some r →
-      r.fields.lookup f = some τ →
+  | field {N Γ fx R args r f path τ τ'} :
+      D.record? R = some r → args.length = r.typeParams.length →
+      (r.fieldsAt args).lookup f = some τ →
       PathFits N Γ fx τ path τ' →
-      PathFits N Γ fx (.record R) (.field f :: path) τ'
+      PathFits N Γ fx (.record R args) (.field f :: path) τ'
   | index {N Γ fx i path σ τ τ'} :
       HasType N Γ fx i σ → LenientFits vs N i σ .i64 →
       PathFits N Γ fx τ path τ' →

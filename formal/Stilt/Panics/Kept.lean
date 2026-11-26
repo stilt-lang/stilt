@@ -192,7 +192,7 @@ theorem eval_keeps (D : Decls) (w : WriteBack) : ∀ n, KeepsRun (eval D (Copy.m
     case int k => exact pure trivial
     case bool b => exact pure trivial
     case unit => exact pure trivial
-    case record R fs =>
+    case record R _ fs =>
       exact bind (fields ih fs hw hl) fun _ _ => by
         show Eval.Keeps W L _ (Eval.declare D R _)
         unfold Eval.declare
@@ -201,7 +201,7 @@ theorem eval_keeps (D : Decls) (w : WriteBack) : ∀ n, KeepsRun (eval D (Copy.m
           · exact pure trivial
           · exact fail _
         · exact fail _
-    case variant T C es => exact bind (list ih es hw hl) fun _ _ => pure trivial
+    case variant T _ C es => exact bind (list ih es hw hl) fun _ _ => pure trivial
     case list τ es => exact bind (list ih es hw hl) fun _ _ => pure trivial
     case op o es => exact bind (list ih es hw hl) fun _ _ => world w _
     case view es => exact bind (list ih es hw hl) fun _ _ => ofExcept _ fun _ _ => trivial

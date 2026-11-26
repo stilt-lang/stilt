@@ -117,8 +117,8 @@ theorem FnDecl.implicitRows_of_none {d : FnDecl} (h : ∀ p ∈ d.params, p.impl
 /-- `Self` in an `impl` block of the type named `T`: the record or variant
 type of that name (traits.impl-blocks). -/
 def Decls.selfType? (D : Decls) (T : Name) : Option Ty :=
-  if (D.record? T).isSome then some (.record T)
-  else if (D.variant? T).isSome then some (.variant T) else none
+  if (D.record? T).isSome then some (.record T [])
+  else if (D.variant? T).isSome then some (.variant T []) else none
 
 /-- Where `self` stands, as traits.impl-blocks and traits.methods puts it: an `impl` block is for a
 type of the program, a function at the top level takes no `self`, and a
@@ -181,7 +181,9 @@ structure Decls.EffectsDeclared (D : Decls) : Prop where
 /-- The conditions on declarations that declarations.function-declarations and declarations.unique-names states, as far as the calculus
 needs them: names are unique where declarations.unique-names says so, so a type's `impl` blocks
 define each name once (traits.inherent-names), only functions declare row variables
-(effects.row-variables) and type parameters (declarations.function-declarations), their non-escaping parameters have implicit ones (effects.non-escaping-parameters),
+(effects.row-variables), a record or variant type's fields and payloads name only its own type
+parameters, outside their rows (declarations.type-parameters), functions declare type
+parameters (declarations.function-declarations), their non-escaping parameters have implicit ones (effects.non-escaping-parameters),
 only methods take `self` (traits.methods), each trait impl implements its
 trait and holds no other member (traits.impl-members), a trait has one impl per type
 (traits.coherence), and each effect declares operations, each once
@@ -191,11 +193,12 @@ structure Decls.WellFormed (D : Decls) : Prop where
   recordNames : (D.records.map (·.name)).Nodup
   fieldNames : ∀ r ∈ D.records, (r.fields.map Prod.fst).Nodup
   fieldsClosed : ∀ r ∈ D.records, ∀ f ∈ r.fields, f.2.Closed
-  fieldsConcrete : ∀ r ∈ D.records, ∀ f ∈ r.fields, f.2.Concrete
+  fieldRows : ∀ r ∈ D.records, ∀ f ∈ r.fields, ∀ ρ ∈ f.2.rows, ρ.ParamFree
   variantNames : (D.variants.map (·.name)).Nodup
   ctorNames : ∀ t ∈ D.variants, (t.ctors.map Prod.fst).Nodup
   payloadsClosed : ∀ t ∈ D.variants, ∀ c ∈ t.ctors, ∀ τ ∈ c.2, τ.Closed
-  payloadsConcrete : ∀ t ∈ D.variants, ∀ c ∈ t.ctors, ∀ τ ∈ c.2, τ.Concrete
+  payloadRows : ∀ t ∈ D.variants, ∀ c ∈ t.ctors, ∀ τ ∈ c.2, ∀ ρ ∈ τ.rows, ρ.ParamFree
+  paramsDeclared : D.ParamsDeclared
   fnNames : (D.fns.map (·.name)).Nodup
   paramNames : ∀ d ∈ D.fns, (d.params.map Param.name).Nodup
   rowParams : ∀ d ∈ D.fns, d.rowParams.Nodup

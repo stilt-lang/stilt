@@ -56,23 +56,23 @@ namespace Stilt.Counterexamples
 /-! ## The programs -/
 
 /-- `type Box = { v: i64 }`. -/
-def box : RecordDecl := ⟨"Box", [("v", .i64)]⟩
+def box : RecordDecl := ⟨"Box", [("v", .i64)], []⟩
 
 /-- The row `/ e`. -/
 abbrev eRow : Row := ⟨false, none, ["e"], [], none⟩
 
 /-- The row `/ {raise<Box>, e}`. -/
-abbrev boxE : Row := ⟨false, some (.record "Box"), ["e"], [], none⟩
+abbrev boxE : Row := ⟨false, some (.record "Box" []), ["e"], [], none⟩
 
 /-- The row `/ {raise<Box>, r}`. -/
-abbrev boxR : Row := ⟨false, some (.record "Box"), ["r"], [], none⟩
+abbrev boxR : Row := ⟨false, some (.record "Box" []), ["r"], [], none⟩
 
 /-- The row `/ raise<bool>`. -/
 abbrev raisesBool : Row := ⟨false, some .bool, [], [], none⟩
 
 /-- `try operand catch x => x.v`, where the operand raises `Box`. -/
 def catchBox (operand : Expr) : Expr :=
-  .tryCatch operand (.record "Box") "x" (.field (.var "x") "v") .i64
+  .tryCatch operand (.record "Box" []) "x" (.field (.var "x") "v") .i64
 
 /-- `try { let h: fn() / {raise<Box>, e} = g; h(); 0 } catch x => x.v`. -/
 def annotatedBody : Expr :=
@@ -154,7 +154,7 @@ theorem annotated_wellTypedAsRecorded : annotated.WellTypedAsRecorded where
         (.seq
           (.call (.var rfl) .nil ⟨.refl _, fun _ => rfl, fun _ _ _ => ⟨_, rfl, trivial⟩, rfl⟩)
           (.refl _) (.int (by decide))))
-      (.refl _) (.field (.var rfl) rfl rfl) (.refl _), .refl _⟩
+      (.refl _) (.field (.var rfl) rfl rfl rfl) (.refl _), .refl _⟩
   closed := by unfold Ty.Closed; decide
   unhandled := ⟨rfl, rfl⟩
   main := ⟨.unit,
@@ -174,7 +174,7 @@ theorem generic_wellTypedAsRecorded : generic.WellTypedAsRecorded where
     · exact ⟨.unit, .try (.call (.var rfl) .nil ⟨.refl _, fun _ => rfl, fun h => (nomatch h), rfl⟩),
         .refl _⟩
     · have hcallee : HasType generic.decls genericF.recordedScope
-          (Ctx.params [] genericF.params) ⟨eRow.withRaise (.record "Box"), true, true, .i64, false, false⟩
+          (Ctx.params [] genericF.params) ⟨eRow.withRaise (.record "Box" []), true, true, .i64, false, false⟩
           (.fnRef "apply" [] [eRow]) (apply.type.substRows (apply.rowParams.zip [eRow])) :=
         .fnRef (types := []) rfl rfl (instantiable_of_check (by decide)) (by decide) (wellFormed_of_check (by decide))
           (fun _ _ _ _ _ _ _ => trivial) .nil
@@ -183,7 +183,7 @@ theorem generic_wellTypedAsRecorded : generic.WellTypedAsRecorded where
             (.value (by decide) (.var rfl) (.fn ⟨id, fun _ h => (nomatch h), fun _ => id, fun _ h => (nomatch h), fun _ h => (nomatch h)⟩) .nil)
             ⟨.refl _, fun _ => rfl, fun _ _ _ => ⟨_, rfl, trivial⟩, rfl⟩)
           (.refl _) (.int (by decide)))
-        (.refl _) (.field (.var rfl) rfl rfl) (.refl _), .refl _⟩
+        (.refl _) (.field (.var rfl) rfl rfl rfl) (.refl _), .refl _⟩
   closed := by unfold Ty.Closed; decide
   unhandled := ⟨rfl, rfl⟩
   main := ⟨.unit,
@@ -265,7 +265,7 @@ theorem generic_not_wellTyped : ¬generic.WellTyped :=
 
 /-- The row `/ {raise<Box>, f'}`, where `f'` is the implicit row variable of a
 non-escaping parameter `f`, which no program writes (effects.non-escaping-parameters). -/
-abbrev boxF : Row := ⟨false, some (.record "Box"), ["f'"], [], none⟩
+abbrev boxF : Row := ⟨false, some (.record "Box" []), ["f'"], [], none⟩
 
 /-- `fn or_zero(f: fn() -> i64 / raise<Box>) -> i64 { try f() catch x => x.v }`,
 the guide's `or_zero` with `Box` for `E`. Its parameter is non-escaping, so its
@@ -275,10 +275,10 @@ def orZero : FnDecl :=
     catchBox (.call (.var "f") [] .i64), {}⟩
 
 /-- The row `/ raise<Box>`. -/
-abbrev raisesBox : Row := ⟨false, some (.record "Box"), [], [], none⟩
+abbrev raisesBox : Row := ⟨false, some (.record "Box" []), [], [], none⟩
 
 /-- `raise Box { v: 7 }`. -/
-def raiseBox : Expr := .raise (.record "Box" [("v", .int 7)])
+def raiseBox : Expr := .raise (.record "Box" [] [("v", .int 7)])
 
 /-- The row `/ raise<i64>`. -/
 abbrev raisesI64 : Row := ⟨false, some .i64, [], [], none⟩
@@ -303,9 +303,9 @@ theorem paired_wellTyped : paired.WellTyped where
     simp only [paired, Decls.fns_mk, List.mem_singleton] at hd
     subst hd
     exact ⟨.i64, .tryCatch (wellFormed_of_check (by decide)) (wellFormed_of_check (by decide))
-      (.call (.var rfl) .nil ⟨.refl _, fun _ => rfl, fun _ _ hv => ⟨.record "Box", rfl,
+      (.call (.var rfl) .nil ⟨.refl _, fun _ => rfl, fun _ _ hv => ⟨.record "Box" [], rfl,
         ⟨boxF, by simp [paramRows, Ty.rows, Row.rows, Param.sig, orZero], hv, rfl⟩⟩, rfl⟩)
-      (.refl _) (.field (.var rfl) rfl rfl) (.refl _), .refl _⟩
+      (.refl _) (.field (.var rfl) rfl rfl rfl) (.refl _), .refl _⟩
   closed := by unfold Ty.Closed; decide
   unhandled := ⟨rfl, rfl⟩
   main := by
@@ -315,7 +315,7 @@ theorem paired_wellTyped : paired.WellTyped where
         (passesOn_of_check (by decide)) .nil
     exact ⟨.never, .raise rfl (.call hcallee
       (.value (by decide) (.closure .nil rfl (wellFormed_of_check (by decide))
-        (.raise rfl (.record rfl (.refl _) (.cons rfl (.int (by decide)) (.refl _) .nil)) (.refl _)) (.never _))
+        (.raise rfl (.record rfl rfl (fun _ h => nomatch h) (.refl _) (.cons rfl (.int (by decide)) (.refl _) .nil)) (.refl _)) (.never _))
         (.refl _) .nil)
       ⟨Row.pure_within _, fun h => (nomatch h), fun h => (nomatch h), rfl⟩) (.refl _), .never _⟩
   noEscape := noEscape_of_check (by decide)

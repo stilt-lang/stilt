@@ -198,10 +198,10 @@ def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
   | .int _ | .bool _ | .unit | .fnRef _ _ _ | .method _ _ _ => (s, [])
   | .break => (s.leave .brk, [])
   | .continue => (s.leave .cont, [])
-  | .record _ fields => fieldsCopies W d h later s fields
+  | .record _ _ fields => fieldsCopies W d h later s fields
   | .list _ es => exprsCopies W d h later (fun _ => some .elem) 0 s es
   | .op .tuple es => exprsCopies W d h later (fun n => some (.field (tupleField n))) 0 s es
-  | .variant _ _ es | .op _ es | .view es => exprsCopies W d h later (fun _ => none) 0 s es
+  | .variant _ _ _ es | .op _ es | .view es => exprsCopies W d h later (fun _ => none) 0 s es
   | .field e f => let r := e.copies W d h later s; (r.1, Part.into (some (.field f)) r.2)
   | .index e i =>
     let r := e.copies W d h (thenUses later i) s

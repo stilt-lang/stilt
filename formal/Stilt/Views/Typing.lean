@@ -35,10 +35,10 @@ inductive HasType (D : Decls) : Ctx → VExpr → VTy → Prop
   | record {Γ R r fields} : D.record? R = some r →
       fields.map Prod.fst = r.fields.map Prod.fst →
       (∀ fe ∈ fields, ∀ τ, r.fields.lookup fe.1 = some τ → HasType D Γ fe.2 (.base τ)) →
-      HasType D Γ (.record R fields) (.base (.record R))
+      HasType D Γ (.record R fields) (.base (.record R []))
   | list {Γ τ es} : (∀ e ∈ es, HasType D Γ e (.base τ)) →
       HasType D Γ (.list τ es) (.base (.list τ))
-  | field {Γ e R r f τ} : HasType D Γ e (.base (.record R)) → D.record? R = some r →
+  | field {Γ e R r f τ} : HasType D Γ e (.base (.record R [])) → D.record? R = some r →
       r.fields.lookup f = some τ → HasType D Γ (.field e f) (.base τ)
   | index {Γ e i τ} : HasType D Γ e (.base (.list τ)) → HasType D Γ i (.base .i64) →
       HasType D Γ (.index e i) (.base τ)
@@ -78,7 +78,7 @@ inductive HasType (D : Decls) : Ctx → VExpr → VTy → Prop
 `var` binding followed by fields and indexes (expressions.mutable-places; modes.what-can-be-modified). A view is no place (projections.places-through-views). -/
 inductive Mutable (D : Decls) : Ctx → VExpr → Ty → Prop
   | var {Γ x τ} : Γ.lookup x = some (.base τ, true) → Mutable D Γ (.var x) τ
-  | field {Γ e R r f τ} : Mutable D Γ e (.record R) → D.record? R = some r →
+  | field {Γ e R r f τ} : Mutable D Γ e (.record R []) → D.record? R = some r →
       r.fields.lookup f = some τ → Mutable D Γ (.field e f) τ
   | index {Γ e i τ} : Mutable D Γ e (.list τ) → HasType D Γ i (.base .i64) →
       Mutable D Γ (.index e i) τ

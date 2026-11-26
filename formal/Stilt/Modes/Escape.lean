@@ -81,8 +81,8 @@ mutual
 def Expr.leaves (L : Leaving) (out : Option (List Sel)) : Expr → Bool
   | .var y | .move y => y == L.name && out.any L.counts
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => false
-  | .record _ fields => fieldsLeave L fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsLeave L es
+  | .record _ _ fields => fieldsLeave L fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsLeave L es
   | .field e f => e.leaves L (out.map (.field f :: ·))
   | .index e i => e.leaves L (out.map (.elem :: ·)) || i.leaves L none
   | .closure ps _ _ body =>

@@ -20,8 +20,8 @@ mutual
 theorem Expr.resumes_substTys : ∀ e : Expr, (e.substTys s).resumes = e.resumes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.resumes, fieldsResumes_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substTys, Expr.resumes, fieldsResumes_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.resumes, exprsResumes_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.resumes, Expr.resumes_substTys e]
@@ -70,8 +70,8 @@ theorem Expr.oneShot_substTys : ∀ e : Expr, (e.substTys s).oneShot = e.oneShot
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
   | .closure _ _ _ b => by
     simp only [Expr.substTys, Expr.oneShot, Expr.oneShot_substTys b, Expr.resumes_substTys s b]
-  | .record _ fs => by simp [Expr.substTys, Expr.oneShot, fieldsOneShot_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substTys, Expr.oneShot, fieldsOneShot_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.oneShot, exprsOneShot_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.oneShot, Expr.oneShot_substTys e]
@@ -128,8 +128,8 @@ mutual
 theorem Expr.resumes_substRows : ∀ e : Expr, (e.substRows s).resumes = e.resumes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.resumes, fieldsResumes_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substRows, Expr.resumes, fieldsResumes_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.resumes, exprsResumes_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.resumes, Expr.resumes_substRows e]
@@ -179,8 +179,8 @@ theorem Expr.oneShot_substRows : ∀ e : Expr, (e.substRows s).oneShot = e.oneSh
   | .closure _ _ _ b => by
     simp only [Expr.substRows, Expr.oneShot, Expr.oneShot_substRows b, Expr.resumes_substRows s b,
       Row.resumes_substRows]
-  | .record _ fs => by simp [Expr.substRows, Expr.oneShot, fieldsOneShot_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substRows, Expr.oneShot, fieldsOneShot_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.oneShot, exprsOneShot_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.oneShot, Expr.oneShot_substRows e]

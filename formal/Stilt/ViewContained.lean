@@ -45,8 +45,8 @@ whose result may read the parameters `params`. -/
 def Expr.contained (D : Decls) (Γ : ViewScope) (params : List Name) : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
-  | .record _ fields => fieldsContained D Γ params fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsContained D Γ params es
+  | .record _ _ fields => fieldsContained D Γ params fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsContained D Γ params es
   | .field e _ | .try e | .perform _ e | .loop e => e.contained D Γ params
   | .raise e | .return e => e.contained D Γ params && leaves params (e.sources D Γ)
   | .index a b | .seq a b | .while a b | .withH _ _ a b =>

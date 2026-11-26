@@ -1,5 +1,4 @@
-import Stilt.Soundness.Types
-import Stilt.Generics
+import Stilt.Soundness.Arguments
 
 /-!
 # What a type holds
@@ -18,8 +17,11 @@ one reaches what a `Shared` of the other does.
 namespace Stilt
 
 /-- cycles.can-form-cycle, holding: a type holds itself and the types of its fields and
-variants, as its declaration states them, of its elements, of a map's keys and values, and the
-`U` of a `Shared<U>`, and what each of those holds. -/
+variants, as its declaration states them at its type arguments, of its elements, of a map's
+keys and values, and the `U` of a `Shared<U>`, and what each of those holds. An instance of a
+generic type holds its type arguments too, which only adds to what it holds when no field
+names a parameter, so a `Shared` of it may reach itself in the model where the Reference
+says it can't. -/
 inductive STy.Holds (D : Decls) : STy → STy → Prop
   | refl {t : STy} : STy.Holds D t t
   | list {e s : STy} : STy.Holds D e s → STy.Holds D (.list e) s
@@ -28,11 +30,17 @@ inductive STy.Holds (D : Decls) : STy → STy → Prop
   | value {κ σ s : STy} : STy.Holds D σ s → STy.Holds D (.map κ σ) s
   | set {e s : STy} : STy.Holds D e s → STy.Holds D (.set e) s
   | shared {u s : STy} : STy.Holds D u s → STy.Holds D (.shared u) s
-  | record {R : Name} {r : RecordDecl} {f : Name} {τ : Ty} {s : STy} :
-      D.record? R = some r → (f, τ) ∈ r.fields → STy.Holds D τ.sem s → STy.Holds D (.record R) s
-  | variant {T : Name} {t : VariantDecl} {C : Name} {τs : List Ty} {τ : Ty} {s : STy} :
-      D.variant? T = some t → (C, τs) ∈ t.ctors → τ ∈ τs → STy.Holds D τ.sem s →
-      STy.Holds D (.variant T) s
+  | record {R : Name} {as : List STy} {r : RecordDecl} {f : Name} {τ : Ty} {s : STy} :
+      D.record? R = some r → (f, τ) ∈ r.fields → STy.Holds D (τ.semAt (r.typeParams.zip as)) s →
+      STy.Holds D (.record R as) s
+  | variant {T : Name} {as : List STy} {t : VariantDecl} {C : Name} {τs : List Ty} {τ : Ty}
+      {s : STy} :
+      D.variant? T = some t → (C, τs) ∈ t.ctors → τ ∈ τs →
+      STy.Holds D (τ.semAt (t.typeParams.zip as)) s → STy.Holds D (.variant T as) s
+  | recordArg {R : Name} {as : List STy} {a s : STy} :
+      a ∈ as → STy.Holds D a s → STy.Holds D (.record R as) s
+  | variantArg {T : Name} {as : List STy} {a s : STy} :
+      a ∈ as → STy.Holds D a s → STy.Holds D (.variant T as) s
 
 /-- A type holds a function type, whose values capture values of any type. -/
 def STy.HoldsFn (D : Decls) (σ : STy) : Prop :=
@@ -57,6 +65,8 @@ theorem STy.Holds.trans {a b c : STy} (h₁ : STy.Holds D a b) (h₂ : STy.Holds
   | shared _ ih => exact .shared (ih h₂)
   | record hR hm _ ih => exact .record hR hm (ih h₂)
   | variant hT hC hm _ ih => exact .variant hT hC hm (ih h₂)
+  | recordArg hm _ ih => exact .recordArg hm (ih h₂)
+  | variantArg hm _ ih => exact .variantArg hm (ih h₂)
 
 /-- A type holds the function types of what it holds. -/
 theorem STy.HoldsFn.of {a b : STy} (h : STy.Holds D b a) : a.HoldsFn D → b.HoldsFn D
@@ -71,8 +81,12 @@ mutual
 /-- Types that a run takes for the same are equal, or both hold a function type. -/
 theorem STy.Eqv.eq_or_fn : ∀ {a b : STy}, a.Eqv b → a = b ∨ a.HoldsFn D ∧ b.HoldsFn D
   | _, _, .int _ | _, _, .float _ | _, _, .bool | _, _, .str | _, _, .unit | _, _, .never
-  | _, _, .record _ | _, _, .variant _ | _, _, .param _ | _, _, .effect _ | _, _, .resume _ _ =>
+  | _, _, .param _ | _, _, .effect _ | _, _, .resume _ _ =>
     .inl rfl
+  | _, _, .record _ h => (STysEqv.eq_or_fn h).imp (congrArg _)
+      fun ⟨⟨a, ha, hfa⟩, ⟨b, hb, hfb⟩⟩ => ⟨hfa.of (.recordArg ha .refl), hfb.of (.recordArg hb .refl)⟩
+  | _, _, .variant _ h => (STysEqv.eq_or_fn h).imp (congrArg _)
+      fun ⟨⟨a, ha, hfa⟩, ⟨b, hb, hfb⟩⟩ => ⟨hfa.of (.variantArg ha .refl), hfb.of (.variantArg hb .refl)⟩
   | _, _, .list h => (STy.Eqv.eq_or_fn h).imp (congrArg _)
       fun ⟨ha, hb⟩ => ⟨ha.of (.list .refl), hb.of (.list .refl)⟩
   | _, _, .set h => (STy.Eqv.eq_or_fn h).imp (congrArg _)

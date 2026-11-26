@@ -327,7 +327,7 @@ theorem eval_noCont {σ : Type} (D : Decls) (M : Memory σ) : ∀ n, NoContRun (
     case var x => exact inspect _
     case move x => exact inspect _
     case int k | bool b | unit => exact pure _
-    case record R fs =>
+    case record R _ fs =>
       exact bind (fields ih fs hc) fun _ => by
         show Eval.NoCont (Eval.declare D R _)
         unfold Eval.declare
@@ -336,7 +336,7 @@ theorem eval_noCont {σ : Type} (D : Decls) (M : Memory σ) : ∀ n, NoContRun (
           · exact pure _
           · exact fail _
         · exact fail _
-    case variant T C es => exact bind (list ih es hc) fun _ => pure _
+    case variant T _ C es => exact bind (list ih es hc) fun _ => pure _
     case list τ es => exact bind (list ih es hc) fun _ => pure _
     case op o es => exact bind (list ih es hc) fun _ => world M _
     case view es => exact bind (list ih es hc) fun _ => ofExcept _

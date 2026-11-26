@@ -20,13 +20,13 @@ namespace Stilt.Examples.Patterns
 
 /-- `type Shape = | Circle(i64) | Rect(i64, i64) | Empty`. -/
 private def shape : VariantDecl :=
-  ⟨"Shape", [("Circle", [.i64]), ("Rect", [.i64, .i64]), ("Empty", [])]⟩
+  ⟨"Shape", [("Circle", [.i64]), ("Rect", [.i64, .i64]), ("Empty", [])], []⟩
 
 /-- `type Opt = | Some(Shape) | None`. -/
-private def opt : VariantDecl := ⟨"Opt", [("Some", [.variant "Shape"]), ("None", [])]⟩
+private def opt : VariantDecl := ⟨"Opt", [("Some", [.variant "Shape" []]), ("None", [])], []⟩
 
 /-- `type P = { x: i64, y: i64 }`. -/
-private def point : RecordDecl := ⟨"P", [("x", .i64), ("y", .i64)]⟩
+private def point : RecordDecl := ⟨"P", [("x", .i64), ("y", .i64)], []⟩
 
 private def decls : Decls := ⟨[point], [shape, opt], [], [], [], [], []⟩
 
@@ -49,7 +49,7 @@ private def rect (p q : Pattern) : Pattern := .variant "Shape" "Rect" [p, q]
 /-- `match Rect(2, 3) { Circle(r) => r, Rect(1, h) => h, Rect(w, _) => w, _ => 0 }`
 raises `2`: `Rect(1, h)` doesn't match, and `Rect(w, _)` is the first that does. -/
 example : agree (program .i64
-    (.raise (.match (.variant "Shape" "Rect" [.int 2, .int 3]) .i64
+    (.raise (.match (.variant "Shape" [] "Rect" [.int 2, .int 3]) .i64
       [arm (circle (.bind "r")) (.var "r"), arm (rect (.int 1) (.bind "h")) (.var "h"),
         arm (rect (.bind "w") .wild) (.var "w"), arm .wild (.int 0)])))
     (.raised (.int 2)) := ⟨rfl, rfl⟩
@@ -57,7 +57,7 @@ example : agree (program .i64
 /-- Nested variants: `match Some(Circle(5)) { Some(Circle(r)) => r, Some(_) => 1,
 None => 0 }` raises `5`. -/
 example : agree (program .i64
-    (.raise (.match (.variant "Opt" "Some" [.variant "Shape" "Circle" [.int 5]]) .i64
+    (.raise (.match (.variant "Opt" [] "Some" [.variant "Shape" [] "Circle" [.int 5]]) .i64
       [arm (.variant "Opt" "Some" [circle (.bind "r")]) (.var "r"),
         arm (.variant "Opt" "Some" [.wild]) (.int 1), arm (.variant "Opt" "None" []) (.int 0)])))
     (.raised (.int 5)) := ⟨rfl, rfl⟩
@@ -73,7 +73,7 @@ example : agree (program .i64
 /-- Records: `match P { x: 1, y: 2 } { P { y: 0, .. } => 0, P { x, y } => x + y }`
 raises `3`. -/
 example : agree (program .i64
-    (.raise (.match (.record "P" [("x", .int 1), ("y", .int 2)]) .i64
+    (.raise (.match (.record "P" [] [("x", .int 1), ("y", .int 2)]) .i64
       [arm (.record "P" [("y", .int 0)]) (.int 0),
         arm (.record "P" [("x", .bind "x"), ("y", .bind "y")])
           (.op (.arith .add .i64) [.var "x", .var "y"])])))
@@ -82,7 +82,7 @@ example : agree (program .i64
 /-- Or-patterns: `match Rect(4, 9) { Circle(n) | Rect(n, _) => n, Empty => 0 }`
 raises `4` (patterns.or-patterns). -/
 example : agree (program .i64
-    (.raise (.match (.variant "Shape" "Rect" [.int 4, .int 9]) .i64
+    (.raise (.match (.variant "Shape" [] "Rect" [.int 4, .int 9]) .i64
       [arm (.or (circle (.bind "n")) (rect (.bind "n") .wild)) (.var "n"),
         arm (.variant "Shape" "Empty" []) (.int 0)])))
     (.raised (.int 4)) := ⟨rfl, rfl⟩
@@ -102,11 +102,11 @@ private def ifLet (p : Pattern) (e : Expr) (τ : Ty) (a b : Expr) : Expr :=
 /-- `if let Circle(r) = Empty { r } else { 7 }` raises `7`, and on `Circle(2)`
 raises `2`. -/
 example : agree (program .i64
-    (.raise (ifLet (circle (.bind "r")) (.variant "Shape" "Empty" []) .i64 (.var "r") (.int 7))))
+    (.raise (ifLet (circle (.bind "r")) (.variant "Shape" [] "Empty" []) .i64 (.var "r") (.int 7))))
     (.raised (.int 7)) := ⟨rfl, rfl⟩
 
 example : agree (program .i64
-    (.raise (ifLet (circle (.bind "r")) (.variant "Shape" "Circle" [.int 2]) .i64 (.var "r")
+    (.raise (ifLet (circle (.bind "r")) (.variant "Shape" [] "Circle" [.int 2]) .i64 (.var "r")
       (.int 7))))
     (.raised (.int 2)) := ⟨rfl, rfl⟩
 
@@ -116,9 +116,9 @@ example : agree (program .i64
 then the default steps for the payloads. -/
 example : Exhaustive decls
     [[.or (circle .wild) (rect .wild .wild)], [.variant "Shape" "Empty" []]]
-    [.variant "Shape"] :=
-  .variant rfl fun c hc => by
-    simp only [shape, List.mem_cons, List.mem_nil_iff, or_false] at hc
+    [.variant "Shape" []] :=
+  .variant rfl rfl fun c hc => by
+    simp only [VariantDecl.ctorsAt_nil, shape, List.mem_cons, List.mem_nil_iff, or_false] at hc
     rcases hc with rfl | rfl | rfl
     · exact .default (.done (by simp [specialize, defaultRow, variantRow, circle, rect]))
     · exact .default (.default (.done (by simp [specialize, defaultRow, variantRow, circle, rect])))
@@ -133,14 +133,14 @@ example : Exhaustive decls [[.tuple [.bool true, .wild]], [.tuple [.bool false, 
 `Empty` it finds that the arms don't cover `Shape`. -/
 example : Exhaustive decls
     [[.or (circle .wild) (rect .wild .wild)], [.variant "Shape" "Empty" []]]
-    [.variant "Shape"] :=
+    [.variant "Shape" []] :=
   exhaustive_sound decls 16 rfl
 
 example : Exhaustive decls [[.tuple [.bool true, .wild]], [.tuple [.bool false, .wild]]]
     [.tuple [.bool, .i64]] :=
   exhaustive_sound decls 16 rfl
 
-example : exhaustive decls 16 [[.or (circle .wild) (rect .wild .wild)]] [.variant "Shape"] = false :=
+example : exhaustive decls 16 [[.or (circle .wild) (rect .wild .wild)]] [.variant "Shape" []] = false :=
   rfl
 
 /-- An `if let` is exhaustive whatever its pattern: its `else` is `_`. -/
@@ -151,14 +151,15 @@ theorem ifLet_exhaustive (D : Decls) (p : Pattern) (σ : Ty) (a b : Expr) :
 /-- `if let Circle(r) = Circle(2) { r } else { 7 }` has the type `i64`: its
 pattern fits `Shape`, binding `r: i64`, and its arms are exhaustive. -/
 example : HasType decls RowScope.closed [] ⟨Row.pure, false, false, .never, false, false⟩
-    (ifLet (circle (.bind "r")) (.variant "Shape" "Circle" [.int 2]) .i64 (.var "r") (.int 7))
+    (ifLet (circle (.bind "r")) (.variant "Shape" [] "Circle" [.int 2]) .i64 (.var "r") (.int 7))
     .i64 := by
   have hwf : Ty.i64.WellFormed RowScope.closed :=
     ⟨fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.params] at h,
       fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.views] at h⟩
-  refine .match hwf (.variant rfl rfl (.cons (.int (by decide)) (.refl _) .nil))
+  refine .match hwf
+    (.variant rfl rfl (fun _ h => nomatch h) rfl (.cons (.int (by decide)) (.refl _) .nil))
     (ifLet_exhaustive _ _ _ _ _) ?_
-  refine .cons (.variant rfl rfl (.cons .bind .nil)) rfl (by decide) (.var rfl) (.refl _) ?_
+  refine .cons (.variant rfl rfl rfl (.cons .bind .nil)) rfl (by decide) (.var rfl) (.refl _) ?_
   exact .cons .wild rfl (by decide) (.int (by decide)) (.refl _) .nil
 
 /-! ## List patterns -/
@@ -216,24 +217,24 @@ example : Exhaustive decls [[lst [] .exact], [lst [.bool true] .any], [lst [.boo
 
 /-- `type OptNever = | Some(Never) | None`, `type Loop = | Loop(Loop)`, and
 `type Holds = { n: i64, loop: Loop }`. -/
-private def optNever : VariantDecl := ⟨"OptNever", [("Some", [.never]), ("None", [])]⟩
-private def loopTy : VariantDecl := ⟨"Loop", [("Loop", [.variant "Loop"])]⟩
-private def holds : RecordDecl := ⟨"Holds", [("n", .i64), ("loop", .variant "Loop")]⟩
+private def optNever : VariantDecl := ⟨"OptNever", [("Some", [.never]), ("None", [])], []⟩
+private def loopTy : VariantDecl := ⟨"Loop", [("Loop", [.variant "Loop" []])], []⟩
+private def holds : RecordDecl := ⟨"Holds", [("n", .i64), ("loop", .variant "Loop" [])], []⟩
 private def empties : Decls := ⟨[holds], [optNever, loopTy], [], [], [], [], []⟩
 
 /-- A match on an `Option<Never>` is exhaustive with `None` alone: `Some`'s payload
 has no values. -/
-example : Exhaustive empties [[.variant "OptNever" "None" []]] [.variant "OptNever"] :=
+example : Exhaustive empties [[.variant "OptNever" "None" []]] [.variant "OptNever" []] :=
   exhaustive_sound empties 16 rfl
 
 /-- `Loop` has no values, as `Never` has none, so no arm is needed, and neither
 for a record that holds one, nor a tuple. -/
-example : Exhaustive empties [] [.variant "Loop"] := exhaustive_sound empties 16 rfl
-example : Exhaustive empties [] [.record "Holds"] := exhaustive_sound empties 16 rfl
+example : Exhaustive empties [] [.variant "Loop" []] := exhaustive_sound empties 16 rfl
+example : Exhaustive empties [] [.record "Holds" []] := exhaustive_sound empties 16 rfl
 example : Exhaustive empties [] [.tuple [.i64, .never]] := exhaustive_sound empties 16 rfl
 
 /-- A list of `Never` has a value, the empty list, so it needs an arm. -/
 example : exhaustive empties 16 [] [.list .never] = false := rfl
-example : exhaustive empties 16 [] [.variant "OptNever"] = false := rfl
+example : exhaustive empties 16 [] [.variant "OptNever" []] = false := rfl
 
 end Stilt.Examples.Patterns

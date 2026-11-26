@@ -157,12 +157,12 @@ theorem HasType.strengthen :
   | _, _, _, _, .int hk, _, _ => .int hk
   | _, _, _, _, .bool, _, _ => .bool
   | _, _, _, _, .unit, _, _ => .unit
-  | _, _, _, _, .record hr hp hfs, _, h => .record hr hp (FieldsFit.strengthen hfs (part h))
-  | _, _, _, _, .variant ht hc hes, _, h => .variant ht hc (ExprsFit.strengthen hes (part h))
+  | _, _, _, _, .record hr hl hw hp hfs, _, h => .record hr hl hw hp (FieldsFit.strengthen hfs (part h))
+  | _, _, _, _, .variant ht hl hw hc hes, _, h => .variant ht hl hw hc (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .list hwf hes, _, h => .list hwf (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .op ho hes hk, _, h => .op ho (ExprsFit.strengthen hes (part h)) hk
   | _, _, _, _, .view ho hes, _, h => .view ho (ExprsFit.strengthen hes (part h))
-  | _, _, _, _, .field he hr hf, _, h => .field (HasType.strengthen he (part h)) hr hf
+  | _, _, _, _, .field he hr hl hf, _, h => .field (HasType.strengthen he (part h)) hr hl hf
   | _, _, _, _, .elem he hf, _, h => .elem (HasType.strengthen he (part h)) hf
   | _, _, _, _, .index he hi hfit, _, h =>
     .index (HasType.strengthen he (part h)) (HasType.strengthen hi (part h)) hfit
@@ -251,7 +251,7 @@ theorem PathFits.strengthen :
       ∀ {Γ'}, Ctx.AgreeOn (pathFree · path) Γ Γ' →
       PathFits D s Γ' fx σ path τ
   | _, _, _, _, _, .nil, _, _ => .nil
-  | _, _, _, _, _, .field hr hf hp, _, h => .field hr hf (PathFits.strengthen hp (part h))
+  | _, _, _, _, _, .field hr hl hf hp, _, h => .field hr hl hf (PathFits.strengthen hp (part h))
   | _, _, _, _, _, .elem hf hp, _, h => .elem hf (PathFits.strengthen hp (part h))
   | _, _, _, _, _, .index hi hfit hp, _, h => .index (HasType.strengthen hi (part h)) hfit
       (PathFits.strengthen hp (part h))
@@ -286,8 +286,8 @@ theorem Expr.free_substRows (θ : RowSubst) (x : Name) :
   | .closure ps _ _ body => by
     simp [Expr.substRows, Expr.free, Expr.free_substRows θ x body, Function.comp_def,
       Param.name_substRows]
-  | .record _ fs => by simp [Expr.substRows, Expr.free, fieldsFree_substRows θ x fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substRows, Expr.free, fieldsFree_substRows θ x fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.free, exprsFree_substRows θ x es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.free, Expr.free_substRows θ x e]

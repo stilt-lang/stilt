@@ -55,13 +55,13 @@ theorem Lenient.HasType.strict :
   | _, _, _, _, _, _, .int h, _ => .int h
   | _, _, _, _, _, _, .bool, _ => .bool
   | _, _, _, _, _, _, .unit, _ => .unit
-  | _, _, _, _, _, _, .record hr hperm hfs, hne =>
-    .record hr hperm (Lenient.FieldsFit.strict hfs hne)
-  | _, _, _, _, _, _, .variant ht hc hes, hne => .variant ht hc (Lenient.ExprsFit.strict hes hne)
+  | _, _, _, _, _, _, .record hr hl hw hperm hfs, hne =>
+    .record hr hl hw hperm (Lenient.FieldsFit.strict hfs hne)
+  | _, _, _, _, _, _, .variant ht hl hw hc hes, hne => .variant ht hl hw hc (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .list hwf hes, hne => .list hwf (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .op ho hes hk, hne => .op ho (Lenient.ExprsFit.strict hes hne) hk
   | _, _, _, _, _, _, .view ho hes, hne => .view ho (Lenient.ExprsFit.strict hes hne)
-  | _, _, _, _, _, _, .field he hr hf, hne => .field (Lenient.HasType.strict he hne) hr hf
+  | _, _, _, _, _, _, .field he hr hl hf, hne => .field (Lenient.HasType.strict he hne) hr hl hf
   | _, _, _, _, _, _, .elem he hf, hne => .elem (Lenient.HasType.strict he hne) hf
   | _, _, _, _, _, _, .index he hi hfit, hne =>
     have h := both hne
@@ -177,7 +177,7 @@ theorem Lenient.PathFits.strict :
     ∀ {N Γ fx σ path τ}, Lenient.PathFits D scope vs N Γ fx σ path τ →
       pathNoEscape D N path = true → Stilt.PathFits D scope Γ fx σ path τ
   | _, _, _, _, _, _, .nil, _ => .nil
-  | _, _, _, _, _, _, .field hr hf hp, hne => .field hr hf (Lenient.PathFits.strict hp hne)
+  | _, _, _, _, _, _, .field hr hl hf hp, hne => .field hr hl hf (Lenient.PathFits.strict hp hne)
   | _, _, _, _, _, _, .elem hf hp, hne => .elem hf (Lenient.PathFits.strict hp hne)
   | _, _, _, _, _, _, .index hi hfit hp, hne =>
     have h := both hne
@@ -204,12 +204,12 @@ theorem HasType.lenient :
   | _, _, _, _, _, .int h => .int h
   | _, _, _, _, _, .bool => .bool
   | _, _, _, _, _, .unit => .unit
-  | _, _, _, _, _, .record hr hperm hfs => .record hr hperm (FieldsFit.lenient hfs)
-  | _, _, _, _, _, .variant ht hc hes => .variant ht hc (ExprsFit.lenient hes)
+  | _, _, _, _, _, .record hr hl hw hperm hfs => .record hr hl hw hperm (FieldsFit.lenient hfs)
+  | _, _, _, _, _, .variant ht hl hw hc hes => .variant ht hl hw hc (ExprsFit.lenient hes)
   | _, _, _, _, _, .list hwf hes => .list hwf (ExprsFit.lenient hes)
   | _, _, _, _, _, .op ho hes hk => .op ho (ExprsFit.lenient hes) hk
   | _, _, _, _, _, .view ho hes => .view ho (ExprsFit.lenient hes)
-  | _, _, _, _, _, .field he hr hf => .field (HasType.lenient he) hr hf
+  | _, _, _, _, _, .field he hr hl hf => .field (HasType.lenient he) hr hl hf
   | _, _, _, _, _, .elem he hf => .elem (HasType.lenient he) hf
   | _, _, _, _, _, .index he hi hfit => .index (HasType.lenient he) (HasType.lenient hi) (.inl hfit)
   | _, _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
@@ -284,7 +284,7 @@ theorem PathFits.lenient :
     ∀ {N Γ fx σ path τ}, PathFits D scope Γ fx σ path τ →
       Lenient.PathFits D scope vs N Γ fx σ path τ
   | _, _, _, _, _, _, .nil => .nil
-  | _, _, _, _, _, _, .field hr hf hp => .field hr hf (PathFits.lenient hp)
+  | _, _, _, _, _, _, .field hr hl hf hp => .field hr hl hf (PathFits.lenient hp)
   | _, _, _, _, _, _, .elem hf hp => .elem hf (PathFits.lenient hp)
   | _, _, _, _, _, _, .index hi hfit hp =>
     .index (HasType.lenient hi) (.inl hfit) (PathFits.lenient hp)

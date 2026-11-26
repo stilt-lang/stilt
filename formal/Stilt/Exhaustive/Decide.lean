@@ -39,17 +39,18 @@ def exhaustive (D : Decls) : Nat → Rows → List Ty → Bool
         exhaustive D n (specialize (boolRow false) P) τs) || byDefault
     | .unit => exhaustive D n (specialize unitRow P) τs || byDefault
     | .tuple σs => exhaustive D n (specialize (tupleRow σs.length) P) (σs ++ τs) || byDefault
-    | .record R =>
+    | .record R args =>
       match D.record? R with
       | some r =>
-        exhaustive D n (specialize (recordRow (r.fields.map Prod.fst)) P)
-          (r.fields.map Prod.snd ++ τs) || byDefault
+        (args.length == r.typeParams.length &&
+          exhaustive D n (specialize (recordRow (r.fields.map Prod.fst)) P)
+            ((r.fieldsAt args).map Prod.snd ++ τs)) || byDefault
       | none => byDefault
-    | .variant T =>
+    | .variant T args =>
       match D.variant? T with
       | some t =>
-        t.ctors.all (fun c => exhaustive D n (specialize (variantRow c.1 c.2.length) P) (c.2 ++ τs))
-          || byDefault
+        (args.length == t.typeParams.length && (t.ctorsAt args).all (fun c =>
+          exhaustive D n (specialize (variantRow c.1 c.2.length) P) (c.2 ++ τs))) || byDefault
       | none => byDefault
     | .list σ =>
       let m := firstListed P
@@ -89,22 +90,22 @@ theorem exhaustive_sound (D : Decls) : ∀ (n : Nat) {P : Rows} {τs : List Ty},
       rcases h with h | h
       · exact .tuple (exhaustive_sound D n h)
       · exact dflt h
-    | record R =>
+    | record R args =>
       simp only [exhaustive, hu, Bool.false_eq_true, ↓reduceIte] at h
       split at h
       · rename_i r hr
-        simp only [Bool.or_eq_true] at h
-        rcases h with h | h
-        · exact .record hr (exhaustive_sound D n h)
+        simp only [Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq] at h
+        rcases h with ⟨hl, h⟩ | h
+        · exact .record hr hl (exhaustive_sound D n h)
         · exact dflt h
       · exact dflt h
-    | variant T =>
+    | variant T args =>
       simp only [exhaustive, hu, Bool.false_eq_true, ↓reduceIte] at h
       split at h
       · rename_i t ht
-        simp only [Bool.or_eq_true, List.all_eq_true] at h
-        rcases h with h | h
-        · exact .variant ht fun c hc => exhaustive_sound D n (h c hc)
+        simp only [Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq, List.all_eq_true] at h
+        rcases h with ⟨hl, h⟩ | h
+        · exact .variant ht hl fun c hc => exhaustive_sound D n (h c hc)
         · exact dflt h
       · exact dflt h
     | list σ =>

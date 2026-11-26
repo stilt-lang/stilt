@@ -184,8 +184,8 @@ mentions but its parameters, the variables it captures (expressions.capture). -/
 def Expr.mentions : Expr → Live
   | .var x | .move x => .one x
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => .empty
-  | .record _ fields => fieldsMentions fields
-  | .variant _ _ es => exprsMentions es
+  | .record _ _ fields => fieldsMentions fields
+  | .variant _ _ _ es => exprsMentions es
   | .list _ es => exprsMentions es
   | .op _ es | .view es => exprsMentions es
   | .field e _ => e.mentions
@@ -256,8 +256,8 @@ less strict than facts.last-use across the branches of an `if` or a `match`. -/
 def Expr.movesOk (after : Live) : Expr → Bool
   | .var _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => true
   | .move x => !after.mem x
-  | .record _ fields => fieldsMovesOk after fields
-  | .variant _ _ es => exprsMovesOk after es
+  | .record _ _ fields => fieldsMovesOk after fields
+  | .variant _ _ _ es => exprsMovesOk after es
   | .list _ es => exprsMovesOk after es
   | .op _ es | .view es => exprsMovesOk after es
   | .field e _ => e.movesOk after
@@ -345,8 +345,8 @@ theorem Expr.mem_mentions (x : Name) : ∀ e : Expr, e.mentions.mem x = e.free x
   | .var _ | .move _ => by mentions_case
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
   | .closure ps _ _ body => by have := Expr.mem_mentions x body; mentions_case
-  | .record _ fs => by have := fieldsMem_mentions x fs; mentions_case
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by have := fieldsMem_mentions x fs; mentions_case
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     have := exprsMem_mentions x es; mentions_case
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     have := Expr.mem_mentions x e; mentions_case

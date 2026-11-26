@@ -40,8 +40,8 @@ the places `reading` read around it (views.change-while-viewed, E0423). -/
 def Expr.viewsRead (D : Decls) (Γ : ViewScope) (reading : List Shape) : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ => true
-  | .record _ fields => fieldsViewsRead D Γ reading fields
-  | .variant _ _ es | .list _ es | .op _ es => exprsViewsRead D Γ reading es
+  | .record _ _ fields => fieldsViewsRead D Γ reading fields
+  | .variant _ _ _ es | .list _ es | .op _ es => exprsViewsRead D Γ reading es
   | .view [] => true
   | .view (e :: es) =>
     e.viewsRead D Γ reading && exprsViewsRead D Γ (headSources D Γ [e] ++ reading) es

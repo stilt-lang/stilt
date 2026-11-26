@@ -54,15 +54,15 @@ inductive ValueHasType : Value → Ty → Prop
   | str {s} : ValueHasType (.str s) .str
   | bool {b} : ValueHasType (.bool b) .bool
   | unit : ValueHasType .unit .unit
-  | record {R r fields} :
+  | record {R args r fields} :
       D.record? R = some r →
-      FieldValuesHaveTypes fields r.fields →
-      ValueHasType (.record R fields) (.record R)
-  | variant {T t C τs payload} :
+      FieldValuesHaveTypes fields (r.fieldsAt args) →
+      ValueHasType (.record R fields) (.record R args)
+  | variant {T args t C τs payload} :
       D.variant? T = some t →
-      t.ctors.lookup C = some τs →
+      (t.ctorsAt args).lookup C = some τs →
       ValuesHaveTypes payload τs →
-      ValueHasType (.variant T C payload) (.variant T)
+      ValueHasType (.variant T C payload) (.variant T args)
   | list {τ vs} :
       ValuesHaveTypes vs (List.replicate vs.length τ) →
       ValueHasType (.list vs) (.list τ)

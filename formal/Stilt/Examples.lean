@@ -131,7 +131,7 @@ example : agree (program [after] .i64
     (.raised (.int 3)) := ⟨rfl, rfl⟩
 
 /-- `type P = { x: i64, y: i64 }`. -/
-private def pointType : RecordDecl := ⟨"P", [("x", .i64), ("y", .i64)]⟩
+private def pointType : RecordDecl := ⟨"P", [("x", .i64), ("y", .i64)], []⟩
 
 /-- `fn swap(inout a: i64, inout b: i64) { let t = a; a = b; b = t }`. -/
 private def swap : FnDecl :=
@@ -142,8 +142,8 @@ private def swap : FnDecl :=
 /-- The write-back of two `inout` arguments, from a record literal written in
 another order than its fields are declared: `var p = P { y: 2, x: 1 };
 swap(inout p.x, inout p.y); raise p` raises `P { x: 2, y: 1 }`. -/
-example : agree (program [swap] (.record "P") (records := [pointType])
-    (.varIn "p" (.record "P") (.record "P" [("y", .int 2), ("x", .int 1)])
+example : agree (program [swap] (.record "P" []) (records := [pointType])
+    (.varIn "p" (.record "P" []) (.record "P" [] [("y", .int 2), ("x", .int 1)])
       (.seq (call "swap" [.inout (place "p" [.field "x"]), .inout (place "p" [.field "y"])])
         (.raise (.var "p")))))
     (.raised (.record "P" [("x", .int 2), ("y", .int 1)])) := ⟨rfl, rfl⟩
@@ -151,7 +151,7 @@ example : agree (program [swap] (.record "P") (records := [pointType])
 /-- A record literal evaluates its fields in the order they are written:
 `let p = P { y: raise 1, x: raise 2 }` raises `1`. -/
 example : agree (program [] .i64 (records := [pointType])
-    (.letIn "p" (.record "P") (.record "P" [("y", .raise (.int 1)), ("x", .raise (.int 2))])
+    (.letIn "p" (.record "P" []) (.record "P" [] [("y", .raise (.int 1)), ("x", .raise (.int 2))])
       .unit))
     (.raised (.int 1)) := ⟨rfl, rfl⟩
 
@@ -202,44 +202,44 @@ private def send (T m : Name) (recv : Arg) (args : List Arg) (result : Ty := .un
   Expr.methodCall T m [] recv args result
 
 /-- `type Counter = { n: i64 }`. -/
-private def counterType : RecordDecl := ⟨"Counter", [("n", .i64)]⟩
+private def counterType : RecordDecl := ⟨"Counter", [("n", .i64)], []⟩
 
 /-- `fn bumped(self) -> Counter { var c = self; c.n = 5; c }`: it changes its
 copy of the receiver, rebound with `var` (modes.what-can-be-modified). -/
 private def bumped : FnDecl :=
-  ⟨"bumped", [], [], [param .let selfName (.record "Counter")], .record "Counter", Row.pure,
-    .varIn "c" (.record "Counter") (.var selfName)
+  ⟨"bumped", [], [], [param .let selfName (.record "Counter" [])], .record "Counter" [], Row.pure,
+    .varIn "c" (.record "Counter" []) (.var selfName)
       (.seq (.assign (place "c" [.field "n"]) (.int 5)) (.var "c")), {}⟩
 
 /-- `fn add(inout self) / raise<i64> { self.n = 7; raise 1 }`. -/
 private def add : FnDecl :=
-  ⟨"add", [], [], [param .inout selfName (.record "Counter")], .unit, ⟨false, some .i64, [], [], none⟩,
+  ⟨"add", [], [], [param .inout selfName (.record "Counter" [])], .unit, ⟨false, some .i64, [], [], none⟩,
     .seq (.assign (this [.field "n"]) (.int 7)) (.raise (.int 1)), {}⟩
 
 /-- `fn get(inout self, n: i64) -> i64 { self.n }`. -/
 private def get : FnDecl :=
-  ⟨"get", [], [], [param .inout selfName (.record "Counter"), param .let "n"], .i64, Row.pure,
+  ⟨"get", [], [], [param .inout selfName (.record "Counter" []), param .let "n"], .i64, Row.pure,
     .field (.var selfName) "n", {}⟩
 
 /-- `fn reset(inout self) -> i64 { self.n = 9; 0 }`. -/
 private def reset : FnDecl :=
-  ⟨"reset", [], [], [param .inout selfName (.record "Counter")], .i64, Row.pure,
+  ⟨"reset", [], [], [param .inout selfName (.record "Counter" [])], .i64, Row.pure,
     .seq (.assign (this [.field "n"]) (.int 9)) (.int 0), {}⟩
 
 /-- `fn swap(inout self, inout other: Counter) { let t = self; self = other;
 other = t }`. -/
 private def swapWith : FnDecl :=
   ⟨"swap", [], [],
-    [param .inout selfName (.record "Counter"), param .inout "other" (.record "Counter")],
+    [param .inout selfName (.record "Counter" []), param .inout "other" (.record "Counter" [])],
     .unit, Row.pure,
-    .letIn "t" (.record "Counter") (.var selfName)
+    .letIn "t" (.record "Counter" []) (.var selfName)
       (.seq (.assign (this) (.var "other")) (.assign (place "other") (.var "t"))), {}⟩
 
 /-- `impl Counter { … }`. -/
 private def counterImpl : ImplDecl := ⟨"Counter", [bumped, add, get, reset, swapWith]⟩
 
 /-- `Counter { n: k }`. -/
-private def counter (k : Int) : Expr := .record "Counter" [("n", .int k)]
+private def counter (k : Int) : Expr := .record "Counter" [] [("n", .int k)]
 
 private def counterValue (k : Int) : Value := .record "Counter" [("n", .int k)]
 
@@ -247,8 +247,8 @@ private def counterValue (k : Int) : Value := .record "Counter" [("n", .int k)]
 `let c = Counter { n: 1 }; let d = c.bumped(); raise [c.n, d.n]` raises
 `[1, 5]`. -/
 example : agree (program [] (.list .i64) (records := [counterType]) (impls := [counterImpl])
-    (.letIn "c" (.record "Counter") (counter 1)
-      (.letIn "d" (.record "Counter") (send "Counter" "bumped" (.value (.var "c")) [] (.record "Counter"))
+    (.letIn "c" (.record "Counter" []) (counter 1)
+      (.letIn "d" (.record "Counter" []) (send "Counter" "bumped" (.value (.var "c")) [] (.record "Counter" []))
         (.raise (.list .i64 [.field (.var "c") "n", .field (.var "d") "n"])))))
     (.raised (ints [1, 5])) := ⟨rfl, rfl⟩
 
@@ -256,7 +256,7 @@ example : agree (program [] (.list .i64) (records := [counterType]) (impls := [c
 (values.inout-arguments): `var c = Counter { n: 1 }; try c.add() catch e => ();
 raise c.n` raises `7`. -/
 example : agree (program [] .i64 (records := [counterType]) (impls := [counterImpl])
-    (.varIn "c" (.record "Counter") (counter 1)
+    (.varIn "c" (.record "Counter" []) (counter 1)
       (.seq (.tryCatch (send "Counter" "add" (.inout (place "c")) []) .i64 "e" .unit .unit)
         (.raise (.field (.var "c") "n")))))
     (.raised (.int 7)) := ⟨rfl, rfl⟩
@@ -265,7 +265,7 @@ example : agree (program [] .i64 (records := [counterType]) (impls := [counterIm
 modes.durations): `var cs = [Counter { n: 0 }]; cs[raise 1].get(raise 2)`
 raises `1`. -/
 example : agree (program [] .i64 (records := [counterType]) (impls := [counterImpl])
-    (.varIn "cs" (.list (.record "Counter")) (.list (.record "Counter") [counter 0])
+    (.varIn "cs" (.list (.record "Counter" [])) (.list (.record "Counter" []) [counter 0])
       (send "Counter" "get" (.inout (place "cs" [.index (.raise (.int 1))]))
         [.value (.raise (.int 2))] .i64)))
     (.raised (.int 1)) := ⟨rfl, rfl⟩
@@ -275,21 +275,21 @@ later argument makes to it reaches the callee, as in `xs.push(xs.pop() else
 0)` (values.left-to-right): `var c = Counter { n: 1 }; raise c.get(c.reset())`
 raises `9`. -/
 example : agree (program [] .i64 (records := [counterType]) (impls := [counterImpl])
-    (.varIn "c" (.record "Counter") (counter 1)
+    (.varIn "c" (.record "Counter" []) (counter 1)
       (.raise (send "Counter" "get" (.inout (place "c"))
         [.value (send "Counter" "reset" (.inout (place "c")) [] .i64)] .i64))))
     (.raised (.int 9)) := ⟨rfl, rfl⟩
 
 /-- `type Pair = { x: Counter, y: Counter }`. -/
 private def pairType : RecordDecl :=
-  ⟨"Pair", [("x", .record "Counter"), ("y", .record "Counter")]⟩
+  ⟨"Pair", [("x", .record "Counter" []), ("y", .record "Counter" [])], []⟩
 
 /-- The write-back of a receiver and an `inout` argument: `var p = Pair { x:
 Counter { n: 1 }, y: Counter { n: 2 } }; p.x.swap(inout p.y); raise p` raises
 `Pair { x: Counter { n: 2 }, y: Counter { n: 1 } }`. -/
-example : agree (program [] (.record "Pair") (records := [counterType, pairType])
+example : agree (program [] (.record "Pair" []) (records := [counterType, pairType])
     (impls := [counterImpl])
-    (.varIn "p" (.record "Pair") (.record "Pair" [("x", counter 1), ("y", counter 2)])
+    (.varIn "p" (.record "Pair" []) (.record "Pair" [] [("x", counter 1), ("y", counter 2)])
       (.seq (send "Counter" "swap" (.inout (place "p" [.field "x"]))
           [.inout (place "p" [.field "y"])])
         (.raise (.var "p")))))

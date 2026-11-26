@@ -210,13 +210,13 @@ example :
   decide
 
 /-- `type Counter = { n: i64 }`. -/
-private def counterDecls : Decls := ⟨[⟨"Counter", [("n", .i64)]⟩], [], [], [], [], [], []⟩
+private def counterDecls : Decls := ⟨[⟨"Counter", [("n", .i64)], []⟩], [], [], [], [], [], []⟩
 
 /-- The body of a method of `Counter` whose receiver takes `mode`. -/
 private def receiverCtx (mode : Mode) : Ctx :=
-  Ctx.params [] [⟨mode, selfName, .record "Counter", none⟩]
+  Ctx.params [] [⟨mode, selfName, .record "Counter" [], none⟩]
 
-private theorem counter_wellFormed (scope : RowScope) : (Ty.record "Counter").WellFormed scope :=
+private theorem counter_wellFormed (scope : RowScope) : (Ty.record "Counter" []).WellFormed scope :=
   let h := (Head.record "Counter").ground_type
   Ty.Closed.wellFormed h.1 h.2.1 h.2.2 (Head.viewsViewable_type _) scope
 
@@ -234,16 +234,16 @@ example (scope : RowScope) (fx : Effects) (τ : Ty) :
 /-- Rebinding it is accepted: `var c = self; c.n = 0` (modes.what-can-be-modified). -/
 example (scope : RowScope) (fx : Effects) :
     HasType counterDecls scope (receiverCtx .let) fx
-      (.varIn "c" (.record "Counter") (.var selfName) (.assign ⟨"c", [.field "n"]⟩ (.int 0)))
+      (.varIn "c" (.record "Counter" []) (.var selfName) (.assign ⟨"c", [.field "n"]⟩ (.int 0)))
       .unit :=
   .varIn (counter_wellFormed scope) (.var rfl) (.refl _)
-    (.assign (.mk rfl (.field rfl rfl .nil)) (.int (by decide)) (.refl _))
+    (.assign (.mk rfl (.field rfl rfl rfl .nil)) (.int (by decide)) (.refl _))
 
 /-- An `inout self` receiver can be modified: `self.n = 0` types (modes.what-can-be-modified). -/
 example (scope : RowScope) (fx : Effects) :
     HasType counterDecls scope (receiverCtx .inout) fx
       (.assign ⟨selfName, [.field "n"]⟩ (.int 0)) .unit :=
-  .assign (.mk rfl (.field rfl rfl .nil)) (.int (by decide)) (.refl _)
+  .assign (.mk rfl (.field rfl rfl rfl .nil)) (.int (by decide)) (.refl _)
 
 end RequiredTests
 

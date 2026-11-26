@@ -49,8 +49,12 @@ inductive Ty where
   | unit
   /-- `Never`, which has no values and converts to any type (declarations.never). -/
   | never
-  | record (name : Name)
-  | variant (name : Name)
+  /-- A record type, with its type arguments, one for each of its declaration's type
+  parameters (declarations.type-parameters and declarations.type-arguments). -/
+  | record (name : Name) (args : List Ty)
+  /-- A variant type, with its type arguments (declarations.type-parameters and
+  declarations.type-arguments). -/
+  | variant (name : Name) (args : List Ty)
   | list (elem : Ty)
   /-- `(A, B, …)`, a tuple type of one element or more; `()` is the unit type
   (declarations.tuples-and-unit). -/
@@ -117,7 +121,8 @@ def Ty.beq : Ty → Ty → Bool
   | .int k, .int k' => k == k'
   | .float k, .float k' => k == k'
   | .bool, .bool | .str, .str | .unit, .unit | .never, .never => true
-  | .record a, .record b | .variant a, .variant b | .param a, .param b => a == b
+  | .param a, .param b => a == b
+  | .record a as, .record b bs | .variant a as, .variant b bs => a == b && Ty.beqs as bs
   | .list a, .list b | .set a, .set b | .view a, .view b | .shared a, .shared b => Ty.beq a b
   | .tuple as, .tuple bs => Ty.beqs as bs
   | .map a b, .map c d => Ty.beq a c && Ty.beq b d
@@ -159,7 +164,10 @@ mutual
 
 theorem Ty.eq_of_beq : ∀ (a : Ty) {b : Ty}, Ty.beq a b = true → a = b
   | .int _, b, h | .float _, b, h | .bool, b, h | .str, b, h | .unit, b, h | .never, b, h
-  | .record _, b, h | .variant _, b, h | .param _, b, h => by cases b <;> simp_all [Ty.beq]
+  | .param _, b, h => by cases b <;> simp_all [Ty.beq]
+  | .record _ as, b, h | .variant _ as, b, h => by
+    cases b <;> simp only [Ty.beq, Bool.false_eq_true, Bool.and_eq_true, beq_iff_eq] at h
+    rw [h.1, Ty.eq_of_beqs as h.2]
   | .list a, b, h | .set a, b, h | .view a, b, h | .shared a, b, h => by
     cases b <;> simp only [Ty.beq, Bool.false_eq_true] at h <;> rw [Ty.eq_of_beq a h]
   | .tuple as, b, h => by
@@ -208,8 +216,9 @@ end
 mutual
 
 theorem Ty.beq_refl : ∀ a : Ty, Ty.beq a a = true
-  | .int _ | .float _ | .bool | .str | .unit | .never | .record _ | .variant _ | .param _ => by
+  | .int _ | .float _ | .bool | .str | .unit | .never | .param _ => by
     simp [Ty.beq]
+  | .record _ as | .variant _ as => by simp [Ty.beq, Ty.beqs_refl as]
   | .list a | .set a | .view a | .shared a => by simp [Ty.beq, Ty.beq_refl a]
   | .tuple as => by simp [Ty.beq, Ty.beqs_refl as]
   | .map a b => by simp [Ty.beq, Ty.beq_refl a, Ty.beq_refl b]

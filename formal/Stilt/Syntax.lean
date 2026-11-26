@@ -294,10 +294,13 @@ inductive Expr where
   | int (value : Int)
   | bool (value : Bool)
   | unit
-  /-- `R { f: e, … }`, with the fields in the order they are written (expressions.struct-literal-fields). -/
-  | record (type : Name) (fields : List (Name × Expr))
-  /-- `C(e, …)`, a variant of the variant type `type` (declarations.variant-types). -/
-  | variant (type : Name) (ctor : Name) (payload : List Expr)
+  /-- `R { f: e, … }`, with the fields in the order they are written (expressions.struct-literal-fields),
+  and the type arguments that inference gives the record type, which the literal doesn't
+  write (declarations.type-arguments). -/
+  | record (type : Name) (args : List Ty) (fields : List (Name × Expr))
+  /-- `C(e, …)`, a variant of the variant type `type`, at the type arguments that inference
+  gives it (declarations.variant-types and declarations.type-arguments). -/
+  | variant (type : Name) (args : List Ty) (ctor : Name) (payload : List Expr)
   /-- `[e, …]`, with its element type. -/
   | list (elem : Ty) (elems : List Expr)
   /-- A built-in operation applied to its operands, as `(e₁, …, eₙ)`. -/

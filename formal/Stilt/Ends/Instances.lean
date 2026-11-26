@@ -22,8 +22,8 @@ mutual
 
 theorem Expr.divFree_substTys : ∀ e : Expr, (e.substTys s).divFree lim = e.divFree lim
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.divFree, fieldsDivFree_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substTys, Expr.divFree, fieldsDivFree_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.divFree, exprsDivFree_substTys es]
   | .closure _ _ _ e | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.divFree, Expr.divFree_substTys e]
@@ -78,8 +78,8 @@ mutual
 theorem Expr.needs_substTys : ∀ e : Expr, (e.substTys s).needs B = e.needs B
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.needs, fieldsNeeds_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.needs, exprsNeeds_substTys es]
+  | .record _ _ fs => by simp [Expr.substTys, Expr.needs, fieldsNeeds_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.needs, exprsNeeds_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.needs, Expr.needs_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
@@ -139,8 +139,8 @@ mutual
 
 theorem Expr.divFree_substRows : ∀ e : Expr, (e.substRows s).divFree lim = e.divFree lim
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.divFree, fieldsDivFree_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substRows, Expr.divFree, fieldsDivFree_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.divFree, exprsDivFree_substRows es]
   | .closure _ _ _ e | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.divFree, Expr.divFree_substRows e]
@@ -195,8 +195,8 @@ mutual
 theorem Expr.needs_substRows : ∀ e : Expr, (e.substRows s).needs B = e.needs B
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.needs, fieldsNeeds_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.needs, exprsNeeds_substRows es]
+  | .record _ _ fs => by simp [Expr.substRows, Expr.needs, fieldsNeeds_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.needs, exprsNeeds_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.needs, Expr.needs_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b

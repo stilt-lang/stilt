@@ -23,8 +23,8 @@ def Expr.whens : Expr → List When
   | .method _ _ _ => []
   | .held ns hs body => exprsWhens hs ++ (ns, body) :: body.whens
   | .closure _ _ _ body => body.whens
-  | .record _ fields => fieldsWhens fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsWhens es
+  | .record _ _ fields => fieldsWhens fields
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsWhens es
   | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.whens
   | .index a b | .seq a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
   | .tryCatch a _ _ b _ | .withH _ _ a b => a.whens ++ b.whens

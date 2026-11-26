@@ -22,8 +22,8 @@ def Expr.erase : Expr → Expr
   | .int n => .int n
   | .bool b => .bool b
   | .unit => .unit
-  | .record R fields => .record R (eraseFields fields)
-  | .variant T C es => .variant T C (eraseExprs es)
+  | .record R τs fields => .record R τs (eraseFields fields)
+  | .variant T τs C es => .variant T τs C (eraseExprs es)
   | .list τ es => .list τ (eraseExprs es)
   | .op o es => .op o (eraseExprs es)
   | .view es => .view (eraseExprs es)
@@ -107,8 +107,8 @@ theorem Expr.erase_markMoves :
   | .int _, _, _ | .bool _, _, _ | .unit, _, _ | .break, _, _ | .continue, _, _
   | .fnRef .., _, _ | .method .., _, _ => rfl
   | .closure _ _ _ body, _, _ => by simp [Expr.markMoves, Expr.erase, Expr.erase_markMoves body]
-  | .record _ fs, L, _ => by simp [Expr.markMoves, Expr.erase, eraseFields_mark fs L]
-  | .variant _ _ es, L, _ | .list _ es, L, _ | .op _ es, L, _ | .view es, L, _ => by
+  | .record _ _ fs, L, _ => by simp [Expr.markMoves, Expr.erase, eraseFields_mark fs L]
+  | .variant _ _ _ es, L, _ | .list _ es, L, _ | .op _ es, L, _ | .view es, L, _ => by
     simp [Expr.markMoves, Expr.erase, eraseExprs_mark es L]
   | .field e _, L, _ | .raise e, L, _ | .perform _ e, L, _ | .try e, L, _ | .loop e, L, _ | .return e, L, _ => by
     simp [Expr.markMoves, Expr.erase, Expr.erase_markMoves e]
@@ -204,8 +204,8 @@ mutual
 theorem Expr.exclusive_erase : ∀ (e : Expr) (r : List Shape), e.erase.exclusive r = e.exclusive r
   | .var _, _ | .move _, _ | .int _, _ | .bool _, _ | .unit, _ | .break, _ | .continue, _
   | .fnRef .., _ | .method .., _ => rfl
-  | .record _ fs, r => by simp [Expr.erase, Expr.exclusive, fieldsExclusive_erase fs r]
-  | .variant _ _ es, r | .list _ es, r | .op _ es, r | .view es, r => by
+  | .record _ _ fs, r => by simp [Expr.erase, Expr.exclusive, fieldsExclusive_erase fs r]
+  | .variant _ _ _ es, r | .list _ es, r | .op _ es, r | .view es, r => by
     simp [Expr.erase, Expr.exclusive, exprsExclusive_erase es r]
   | .field e _, r | .raise e, r | .perform _ e, r | .try e, r | .loop e, r | .return e, r => by
     simp [Expr.erase, Expr.exclusive, Expr.exclusive_erase e r]
@@ -278,8 +278,8 @@ mutual
 theorem Expr.free_erase (x : Name) : ∀ e : Expr, e.erase.free x = e.free x
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
   | .closure _ _ _ body => by simp [Expr.erase, Expr.free, Expr.free_erase x body]
-  | .record _ fs => by simp [Expr.erase, Expr.free, fieldsFree_erase x fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.erase, Expr.free, exprsFree_erase x es]
+  | .record _ _ fs => by simp [Expr.erase, Expr.free, fieldsFree_erase x fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.erase, Expr.free, exprsFree_erase x es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.erase, Expr.free, Expr.free_erase x e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b

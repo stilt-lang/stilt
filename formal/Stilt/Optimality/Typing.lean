@@ -37,11 +37,15 @@ theorem lookup_params {i : Nat} (hi : i < ss.length) :
 theorem lit_hasType {D : Decls} {F : List Name} {v : Name} {K : Nat}
     (hD : D.records = recDecls F v K) (hv : v ∉ F) {scope : RowScope} {Γ : Ctx}
     {fx : Effects} : ∀ {b : Nat}, b ≤ K → HasType D scope Γ fx (lit F v b) (recTy b)
-  | 0, hb => .record (record?_recName hD hb) (.of_eq (by simp [recDecl, recFields]))
-      (.cons (lookup_recFields_leaf (F := F) 0) (.int (by decide)) (.refl _) .nil)
+  | 0, hb => .record (record?_recName hD hb) rfl (fun _ h => nomatch h)
+      (.of_eq (by simp [recDecl, recFields]))
+      (by rw [RecordDecl.fieldsAt_nil]
+          exact .cons (lookup_recFields_leaf (F := F) 0) (.int (by decide)) (.refl _) .nil)
   | b + 1, hb => by
-    refine .record (record?_recName hD hb) (.of_eq (by simp [recDecl, recFields]))
-      (.cons (lookup_recFields_leaf (F := F) (b + 1)) (.int (by decide)) (.refl _) ?_)
+    refine .record (record?_recName hD hb) rfl (fun _ h => nomatch h)
+      (.of_eq (by simp [recDecl, recFields])) ?_
+    rw [RecordDecl.fieldsAt_nil]
+    refine .cons (lookup_recFields_leaf (F := F) (b + 1)) (.int (by decide)) (.refl _) ?_
     have hlit := lit_hasType hD hv (scope := scope) (Γ := Γ) (fx := fx) (b := b) (by omega)
     suffices ∀ G : List Name, (∀ f ∈ G, f ∈ F) →
         FieldsFit D scope Γ fx (G.map fun f => (f, lit F v b)) (recFields F v (b + 1)) from
@@ -104,12 +108,12 @@ variable (ss a b extra)
 
 theorem substRows_paramTy (σ : RowSubst) (s : Shape) :
     (paramTy ss s).substRows σ = paramTy ss s := by
-  simp [paramTy, recTy, Ty.substRows]
+  simp [paramTy, recTy, Ty.substRows, substTysRows]
 
 theorem paramRows_shapes : ∀ ts : List Shape,
     paramRows (ts.map fun s => (Mode.inout, paramTy ss s)) = []
   | [] => rfl
-  | _ :: ts => by simpa [paramRows, paramTy, recTy, Ty.rows] using paramRows_shapes ts
+  | _ :: ts => by simpa [paramRows, paramTy, recTy, Ty.rows, tysRows] using paramRows_shapes ts
 
 theorem paramRows_params : paramRows ((params ss).map Param.sig) = [] := by
   rw [map_sig_params]
@@ -136,7 +140,7 @@ theorem shapes_wellFormed (scope : RowScope) :
     intro ts
     induction ts with
     | nil => rfl
-    | cons t ts ih => simpa [paramTysParams, paramTy, recTy, Ty.params] using ih
+    | cons t ts ih => simpa [paramTysParams, paramTy, recTy, Ty.params, tysParams] using ih
   have hrows : ∀ ρ ∈ (Ty.fn (ss.map fun s => (Mode.inout, paramTy ss s)) .unit Row.pure).rows,
       ρ = Row.pure := fun ρ hρ => by
     simpa [Ty.rows, paramRows_shapes, Row.rows, Row.pure] using hρ
@@ -161,13 +165,17 @@ theorem decls_wellFormed : (decls ss a b extra).WellFormed where
   fieldsClosed := fun r hr => by
     obtain ⟨b, -, rfl⟩ := mem_recDecls hr
     exact closed_recFields b
-  fieldsConcrete := fun r hr => by
+  fieldRows := fun r hr f hf => by
     obtain ⟨b, -, rfl⟩ := mem_recDecls hr
-    exact concrete_recFields b
+    exact (concrete_recFields b f hf).2
   variantNames := .nil
   ctorNames := fun _ h => nomatch h
   payloadsClosed := fun _ h => nomatch h
-  payloadsConcrete := fun _ h => nomatch h
+  payloadRows := fun _ h => nomatch h
+  paramsDeclared := ⟨fun r hr f hf T hT => (by
+    obtain ⟨b, -, rfl⟩ := mem_recDecls hr
+    rw [(concrete_recFields b f hf).1] at hT
+    exact nomatch hT), fun _ h => nomatch h⟩
   typeParams := fun d hd => by
     simp only [decls, Decls.fns_mk, List.mem_singleton] at hd
     subst hd
@@ -255,7 +263,8 @@ theorem callee_wellTyped (h : Overlap ss a b extra) :
   have hproj := hpath.hasType (scope := (callee ss a b extra).scope)
     (fx := ⟨Row.pure, false, false, (callee ss a b extra).result, false, false⟩) (.var (lookup_params h.lt_a))
   refine ⟨.unit, .seq hassign (.refl _)
-    (probe_hasType (.field hproj (record?_recName hD (by omega)) ?_)), .refl _⟩
+    (probe_hasType (.field hproj (record?_recName hD (by omega)) rfl ?_)), .refl _⟩
+  rw [RecordDecl.fieldsAt_nil]
   exact lookup_recFields_leaf _
 
 /-- `main` checks against `()` and the pure row: each place of the call is a

@@ -108,11 +108,11 @@ theorem eval_guards (D : Decls) (G : List Path) :
     case int k => exact pure trivial
     case bool b => exact pure trivial
     case unit => exact pure trivial
-    case record T fs =>
+    case record T _ fs =>
       exact bind (fields fs fun fe hfe => by
         obtain ⟨R', hR', h'⟩ := fieldsViewsRead_mem h fe hfe
         exact (ih fe.2 Γ R' h').sub hR') fun _ _ => declare D T _
-    case variant T C es => exact bind (list es (exprs_keep ih h)) fun _ _ => pure trivial
+    case variant T _ C es => exact bind (list es (exprs_keep ih h)) fun _ _ => pure trivial
     case list τ es => exact bind (list es (exprs_keep ih h)) fun _ _ => pure trivial
     case op o es => exact bind (list es (exprs_keep ih h)) fun _ _ => world _
     case view es => exact bind (list es (view_keep ih h0)) fun _ _ => ofExcept _ fun _ _ => trivial

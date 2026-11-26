@@ -61,8 +61,8 @@ mutual
 
 theorem Expr.erase_substRows : ∀ e : Expr, (e.substRows s).erase = e.erase.substRows s
   | .var _ | .move _ | .int _ | .bool _ | .unit | .fnRef .. | .method .. | .break | .continue => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.erase, eraseFields_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substRows, Expr.erase, eraseFields_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.erase, eraseExprs_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substRows, Expr.erase, Expr.erase_substRows e]
@@ -125,8 +125,8 @@ mutual
 
 theorem Expr.erase_substTys : ∀ e : Expr, (e.substTys s).erase = e.erase.substTys s
   | .var _ | .move _ | .int _ | .bool _ | .unit | .fnRef .. | .method .. | .break | .continue => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.erase, eraseFields_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+  | .record _ _ fs => by simp [Expr.substTys, Expr.erase, eraseFields_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.erase, eraseExprs_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.erase, Expr.erase_substTys e]
@@ -388,8 +388,8 @@ theorem eval_erase (D : Decls) : ∀ (n : Nat) (e : Expr),
         · exact pure _ _
         · exact fail _ _
       · exact fail _ _
-    | record R fs => exact bind (fields ih fs) fun w => declare D R w
-    | variant T C es => exact bind (list ih es) fun vs => pure Value.erase (Value.variant T C vs)
+    | record R _ fs => exact bind (fields ih fs) fun w => declare D R w
+    | variant T _ C es => exact bind (list ih es) fun vs => pure Value.erase (Value.variant T C vs)
     | list τ es => exact bind (list ih es) fun vs => pure Value.erase (Value.list vs)
     | op o es => exact bind (list ih es) fun vs => world (Op.run_erase o vs)
     | view es =>

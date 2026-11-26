@@ -20,8 +20,8 @@ mutual
 theorem Expr.contFree_substTys : ∀ e : Expr, (e.substTys s).contFree = e.contFree
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. | .loop _ => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.contFree, fieldsContFree_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.contFree, exprsContFree_substTys es]
+  | .record _ _ fs => by simp [Expr.substTys, Expr.contFree, fieldsContFree_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.contFree, exprsContFree_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .return e | .for _ _ e _ | .while e _ => by
     simp [Expr.substTys, Expr.contFree, Expr.contFree_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .tryCatch a _ _ b _ => by
@@ -132,8 +132,8 @@ mutual
 theorem Expr.contFree_substRows : ∀ e : Expr, (e.substRows s).contFree = e.contFree
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. | .loop _ => rfl
-  | .record _ fs => by simp [Expr.substRows, Expr.contFree, fieldsContFree_substRows fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.contFree, exprsContFree_substRows es]
+  | .record _ _ fs => by simp [Expr.substRows, Expr.contFree, fieldsContFree_substRows fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substRows, Expr.contFree, exprsContFree_substRows es]
   | .field e _ | .raise e | .perform _ e | .try e | .return e | .for _ _ e _ | .while e _ => by
     simp [Expr.substRows, Expr.contFree, Expr.contFree_substRows e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .tryCatch a _ _ b _ => by

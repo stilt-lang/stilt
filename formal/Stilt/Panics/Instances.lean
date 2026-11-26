@@ -28,8 +28,8 @@ mutual
 theorem Expr.writes_substTys : ∀ e : Expr, (e.substTys s).writes = e.writes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.writes, fieldsWrites_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.writes, exprsWrites_substTys es]
+  | .record _ _ fs => by simp [Expr.substTys, Expr.writes, fieldsWrites_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.writes, exprsWrites_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.writes, Expr.writes_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
@@ -75,8 +75,8 @@ mutual
 theorem Expr.resizes_substTys : ∀ e : Expr, (e.substTys s).resizes = e.resizes
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .closure .. => rfl
-  | .record _ fs => by simp [Expr.substTys, Expr.resizes, fieldsResizes_substTys fs]
-  | .variant _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.resizes, exprsResizes_substTys es]
+  | .record _ _ fs => by simp [Expr.substTys, Expr.resizes, fieldsResizes_substTys fs]
+  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by simp [Expr.substTys, Expr.resizes, exprsResizes_substTys es]
   | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
     simp [Expr.substTys, Expr.resizes, Expr.resizes_substTys e]
   | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
@@ -356,8 +356,8 @@ theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s
       Expr.panicFree_substTys (withoutNames (withoutNames G (exprsWrites hs)) (ns.map fun x => x.fst)) b]
   | G, .index e i => by
     simp [Expr.substTys, Expr.panicFreeIn, guardedIndex_substTys s G e i, Expr.isVar_substTys]
-  | G, .record _ fs => by simp [Expr.substTys, Expr.panicFreeIn, fieldsPanicFree_substTys G fs]
-  | G, .variant _ _ es | G, .list _ es => by
+  | G, .record _ _ fs => by simp [Expr.substTys, Expr.panicFreeIn, fieldsPanicFree_substTys G fs]
+  | G, .variant _ _ _ es | G, .list _ es => by
     simp [Expr.substTys, Expr.panicFreeIn, exprsPanicFree_substTys G es]
   | G, .view es => by
     simp [Expr.substTys, Expr.panicFreeIn, exprsPanicFree_substTys G es, length_substExprTys]

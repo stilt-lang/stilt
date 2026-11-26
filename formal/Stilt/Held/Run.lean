@@ -69,8 +69,8 @@ theorem eval_keepsHeld (D : Decls) {τ : Type} (F : Frames τ) (k : Ty × Nat) :
     case int => exact pure _
     case bool => exact pure _
     case unit => exact pure _
-    case record R fs => exact bind (fields ih fs) fun _ => declare D R _
-    case variant T C es => exact bind (list ih es) fun _ => pure _
+    case record R _ fs => exact bind (fields ih fs) fun _ => declare D R _
+    case variant T _ C es => exact bind (list ih es) fun _ => pure _
     case list τ es => exact bind (list ih es) fun _ => pure _
     case op o es => exact bind (list ih es) fun vs => run F o vs
     case view es => exact bind (list ih es) fun _ => ofExcept _

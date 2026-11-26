@@ -36,14 +36,20 @@ structure ViewBinding where
 /-- The bindings in scope, the newest first. -/
 abbrev ViewScope := List (Name × ViewBinding)
 
+/-- Whether a type is a view type, or a type parameter, which may stand for one. -/
+def Ty.viewOrParam : Ty → Bool
+  | .view _ | .param _ => true
+  | _ => false
+
 /-- Whether a written type is a view type: `View<T>`, or `Option<V>` for a view
-type `V`, a variant one of whose constructors holds a view (views.view-types).
+type `V`, a variant one of whose constructors holds a view at its type arguments, or,
+in a generic body, a type parameter that may be one (views.view-types).
 A function type that a signature writes isn't one, so no function gives a
 closure that captures a view (views.escaping). -/
 def Ty.isView (D : Decls) : Ty → Bool
   | .view _ => true
-  | .variant T => match D.variant? T with
-    | some t => t.ctors.any fun c => c.2.any fun | .view _ => true | _ => false
+  | .variant T args => match D.variant? T with
+    | some t => (t.ctorsAt args).any fun c => c.2.any Ty.viewOrParam
     | none => false
   | _ => false
 
@@ -69,8 +75,8 @@ def Ty.viewSource : Ty → Bool
 /-- The type of the part of a value of type `τ` that a path reaches. -/
 def Ty.along (D : Decls) : Ty → List Projection → Option Ty
   | τ, [] => some τ
-  | .record R, .field f :: path =>
-    ((D.record? R).bind fun r => r.fields.lookup f).bind fun τ => Ty.along D τ path
+  | .record R args, .field f :: path =>
+    ((D.record? R).bind fun r => (r.fieldsAt args).lookup f).bind fun τ => Ty.along D τ path
   | .tuple τs, .field f :: path => ((positions τs).lookup f).bind fun τ => Ty.along D τ path
   | .list τ, .index _ :: path => Ty.along D τ path
   | _, _ => none
@@ -137,7 +143,7 @@ mutual
 def Expr.sources (D : Decls) (Γ : ViewScope) : Expr → List Shape
   | .var x | .move x => ((Γ.lookup x).map (·.sources)).getD []
   | .view es => headSources D Γ es
-  | .variant _ _ es => exprsSources D Γ es
+  | .variant _ _ _ es => exprsSources D Γ es
   | .closure ps _ _ body => (captureOf ps body Γ).flatMap (·.2.sources)
   | .call callee args τ =>
     if τ.mayBeView D then callee.sources D Γ ++ argsSources D Γ args else []

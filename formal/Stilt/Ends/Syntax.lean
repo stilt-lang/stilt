@@ -48,8 +48,8 @@ def Expr.divFree : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue => true
   | .fnRef f _ _ => lim.fn f
   | .method t m _ => lim.method t m
-  | .record _ fields => fieldsDivFree fields
-  | .variant _ _ es => exprsDivFree es
+  | .record _ _ fields => fieldsDivFree fields
+  | .variant _ _ _ es => exprsDivFree es
   | .list _ es => exprsDivFree es
   | .op _ es | .view es => exprsDivFree es
   | .field e _ => e.divFree
@@ -111,8 +111,8 @@ calls. -/
 def Expr.needs : Expr → Nat
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => 1
-  | .record _ fields => fieldsNeeds fields + 1
-  | .variant _ _ es => exprsNeeds es + 1
+  | .record _ _ fields => fieldsNeeds fields + 1
+  | .variant _ _ _ es => exprsNeeds es + 1
   | .list _ es => exprsNeeds es + 1
   | .op _ es | .view es => exprsNeeds es + 1
   | .field e _ => e.needs + 1

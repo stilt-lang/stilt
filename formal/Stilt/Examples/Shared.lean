@@ -17,14 +17,14 @@ through a call, panics with `deadlock`, as in `conformance/held/deadlock.lt`
 
 namespace Stilt.Examples.Shared
 
-private def account : Ty := .record "Account"
+private def account : Ty := .record "Account" []
 
 private def add (a b : Expr) : Expr := .op (.arith .add .i64) [a, b]
 
 /-- `Shared.new(Account { balance: n })` bound to `h` in `body`. -/
 private def shared (h : Name) (n : Int) (body : Expr) : Expr :=
   .letIn h (.shared account)
-    (.op (.world (.sharedNew account)) [.record "Account" [("balance", .int n)]]) body
+    (.op (.world (.sharedNew account)) [.record "Account" [] [("balance", .int n)]]) body
 
 /-- `when h { block }`, its name `x`. -/
 private def when1 (h x : Name) (block : Expr) : Expr := .held [(x, account)] [.var h] block
@@ -41,7 +41,7 @@ private def bump : FnDecl :=
     when1 "c" "pc"
       (.assign ⟨"pc", [.field "balance"]⟩ (add (.field (.var "pc") "balance") (.int 1))), {}⟩
 
-private def decls : Decls := ⟨[⟨"Account", [("balance", .i64)]⟩], [], [bump], [], [], [], []⟩
+private def decls : Decls := ⟨[⟨"Account", [("balance", .i64)], []⟩], [], [bump], [], [], [], []⟩
 
 private def program (body : Expr) : Program :=
   ⟨decls, body, ⟨false, Option.some .i64, [], [], .none⟩, {}⟩

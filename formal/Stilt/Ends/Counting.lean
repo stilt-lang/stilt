@@ -26,8 +26,8 @@ def Expr.contFree : Expr → Bool
   | .continue => false
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .fnRef _ _ _ | .method _ _ _
   | .closure _ _ _ _ | .loop _ => true
-  | .record _ fields => fieldsContFree fields
-  | .variant _ _ es => exprsContFree es
+  | .record _ _ fields => fieldsContFree fields
+  | .variant _ _ _ es => exprsContFree es
   | .list _ es => exprsContFree es
   | .op _ es | .view es => exprsContFree es
   | .field e _ => e.contFree

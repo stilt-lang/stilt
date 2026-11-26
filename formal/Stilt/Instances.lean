@@ -11,8 +11,10 @@ instantiation by ground types that meet the parameters' bounds where the
 instance is checked keeps every derivation, at the instantiated types.
 
 The types a body reads from declarations, those of record fields and variant
-payloads, name no type parameter, and neither does the row the body runs in, so
-those stay as they are.
+payloads, are their declared types at the type arguments the body writes, which name
+only the declaration's own type parameters, so at the instance they are the declared
+types at the arguments' instances. The row the body runs in names no type parameter,
+so it stays as it is.
 -/
 
 namespace Stilt
@@ -22,14 +24,6 @@ namespace Stilt
 section
 
 variable {D : Decls} {scope scope' : RowScope} {s : TySubst}
-
-theorem Decls.WellFormed.fieldParams (hD : D.WellFormed) {R : Name} {r : RecordDecl}
-    (hR : D.record? R = some r) : ∀ p ∈ r.fields, p.2.params = [] :=
-  fun p hp => (hD.fieldsConcrete r (List.mem_of_find?_eq_some hR) p hp).1
-
-theorem Decls.WellFormed.payloadParams (hD : D.WellFormed) {T : Name} {t : VariantDecl}
-    (hT : D.variant? T = some t) : ∀ c ∈ t.ctors, ∀ τ ∈ c.2, τ.params = [] :=
-  fun c hc τ hτ => (hD.payloadsConcrete t (List.mem_of_find?_eq_some hT) c hc τ hτ).1
 
 /-- The type of a use of a function, instantiated, is the type of the use
 with its type arguments instantiated. -/
@@ -140,16 +134,38 @@ theorem HasType.elem_substTys {Γ : Ctx} {fx : Effects} {e : Expr} {τs : List T
   simp only [Ty.substTys, substTyList_eq_map] at h
   exact .elem h (by unfold positions at hf ⊢; rw [lookup_positionsFrom_map, hf]; rfl)
 
-/-- A variant literal, instantiated, from its instantiated payload; payload
-types name no type parameter. -/
-theorem HasType.variant_substTys (hD : D.WellFormed) {Γ : Ctx} {fx : Effects} {T C : Name}
-    {t : VariantDecl} {τs : List Ty} {es : List Expr} (hT : D.variant? T = some t)
-    (hC : t.ctors.lookup C = some τs)
+/-- A variant literal, instantiated, from its instantiated payload, whose types are the
+payload's at the arguments' instances. -/
+theorem HasType.variant_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {Γ : Ctx}
+    {fx : Effects} {T C : Name} {args : List Ty} {t : VariantDecl} {τs : List Ty}
+    {es : List Expr} (hT : D.variant? T = some t) (hlen : args.length = t.typeParams.length)
+    (hwf : ∀ τ ∈ args, τ.WellFormed scope) (hC : (t.ctorsAt args).lookup C = some τs)
     (h : ExprsFit D scope' Γ fx (substExprTys s es) (τs.map (Ty.substTys s))) :
-    HasType D scope' Γ fx ((Expr.variant T C es).substTys s) ((Ty.variant T).substTys s) := by
-  rw [List.map_congr_left fun τ hτ => Ty.substTys_of_params
-    (hD.payloadParams hT _ (mem_of_lookup hC) τ hτ) s, List.map_id'] at h
-  exact .variant hT hC h
+    HasType D scope' Γ fx ((Expr.variant T args C es).substTys s)
+      ((Ty.variant T args).substTys s) := by
+  show HasType D scope' Γ fx (.variant T (substTyList s args) C _) (.variant T (substTyList s args))
+  rw [substTyList_eq_map]
+  refine .variant hT (by rw [List.length_map]; exact hlen) (fun τ hτ => ?_)
+    (hD.lookup_ctorsAt_substTys s hT hlen hC) h
+  obtain ⟨σ, hσ, rfl⟩ := List.mem_map.1 hτ
+  exact hs.wellFormed (hwf σ hσ)
+
+/-- A record literal, instantiated, from its instantiated fields, whose types are the
+fields' at the arguments' instances. -/
+theorem HasType.record_substTys (hs : s.Fits D scope scope') {Γ : Ctx}
+    {fx : Effects} {R : Name} {args : List Ty} {r : RecordDecl} {fields : List (Name × Expr)}
+    (hR : D.record? R = some r) (hlen : args.length = r.typeParams.length)
+    (hwf : ∀ τ ∈ args, τ.WellFormed scope)
+    (hperm : (fields.map Prod.fst).Perm (r.fields.map Prod.fst))
+    (h : FieldsFit D scope' Γ fx (substFieldTys s fields) (r.fieldsAt (args.map (Ty.substTys s)))) :
+    HasType D scope' Γ fx ((Expr.record R args fields).substTys s)
+      ((Ty.record R args).substTys s) := by
+  show HasType D scope' Γ fx (.record R (substTyList s args) _) (.record R (substTyList s args))
+  rw [substTyList_eq_map]
+  refine .record hR (by rw [List.length_map]; exact hlen) (fun τ hτ => ?_)
+    (by rw [fst_substFieldTys]; exact hperm) h
+  obtain ⟨σ, hσ, rfl⟩ := List.mem_map.1 hτ
+  exact hs.wellFormed (hwf σ hσ)
 
 /-- A list literal, instantiated, from its instantiated elements. -/
 theorem HasType.list_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : Effects} {τ : Ty}
@@ -159,12 +175,14 @@ theorem HasType.list_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : Effe
   rw [List.map_replicate, ← length_substExprTys s] at h
   exact .list (hs.wellFormed hwf) h
 
-/-- A field read, instantiated; field types name no type parameter. -/
+/-- A field read, instantiated: the field's type at the arguments' instances. -/
 theorem HasType.field_substTys (hD : D.WellFormed) {Γ : Ctx} {fx : Effects} {e : Expr} {R f : Name}
-    {r : RecordDecl} {τ : Ty} (h : HasType D scope' Γ fx e (.record R)) (hR : D.record? R = some r)
-    (hf : r.fields.lookup f = some τ) : HasType D scope' Γ fx (.field e f) (τ.substTys s) := by
-  rw [Ty.substTys_of_params (hD.fieldParams hR _ (mem_of_lookup hf))]
-  exact .field h hR hf
+    {args : List Ty} {r : RecordDecl} {τ : Ty}
+    (h : HasType D scope' Γ fx e ((Ty.record R args).substTys s)) (hR : D.record? R = some r)
+    (hlen : args.length = r.typeParams.length) (hf : (r.fieldsAt args).lookup f = some τ) :
+    HasType D scope' Γ fx (.field e f) (τ.substTys s) := by
+  simp only [Ty.substTys, substTyList_eq_map] at h
+  exact .field h hR (by rw [List.length_map]; exact hlen) (hD.lookup_fieldsAt_substTys s hR hlen hf)
 
 /-- A `raise`, instantiated; the row's error type names no type parameter. -/
 theorem HasType.raise_substTys {Γ : Ctx} {fx : Effects} {e : Expr} {E σ : Ty}
@@ -205,16 +223,17 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
   | _, _, _, _, .int h, _ => .int h
   | _, _, _, _, .bool, _ => .bool
   | _, _, _, _, .unit, _ => .unit
-  | _, _, _, _, .record hR hperm hf, hfx =>
-    .record hR (by rw [fst_substFieldTys]; exact hperm)
-      (FieldsFit.substTys hD hs hf hfx (hD.fieldParams hR))
-  | _, _, _, _, .variant hT hC hp, hfx =>
-    HasType.variant_substTys hD hT hC (ExprsFit.substTys hD hs hp hfx)
+  | _, _, _, _, .record hR hlen hwf hperm hf, hfx =>
+    HasType.record_substTys hs hR hlen hwf hperm
+      (FieldsFit.substTys hD hs hf hfx (hD.fieldsAt_substTys s hR hlen))
+  | _, _, _, _, .variant hT hlen hwf hC hp, hfx =>
+    HasType.variant_substTys hD hs hT hlen hwf hC (ExprsFit.substTys hD hs hp hfx)
   | _, _, _, _, .list hwf hes, hfx => HasType.list_substTys hs hwf (ExprsFit.substTys hD hs hes hfx)
   | _, _, _, _, .op ho hes hk, hfx =>
     .op (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx) (hk.substTys ho s)
   | _, _, _, _, .view ho hes, hfx => .view (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx)
-  | _, _, _, _, .field he hR hf, hfx => HasType.field_substTys hD (HasType.substTys hD hs he hfx) hR hf
+  | _, _, _, _, .field he hR hlen hf, hfx =>
+    HasType.field_substTys hD (HasType.substTys hD hs he hfx) hR hlen hf
   | _, _, _, _, .elem he hf, hfx => HasType.elem_substTys (HasType.substTys hD hs he hfx) hf
   | _, _, _, _, .index he hi hfit, hfx =>
     .index (HasType.substTys hD hs he hfx) (HasType.substTys hD hs hi hfx) (hfit.substTys s)
@@ -296,14 +315,13 @@ theorem ExprsFit.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     .cons (HasType.substTys hD hs he hfx) (hfit.substTys s) (ExprsFit.substTys hD hs hes hfx)
 
 theorem FieldsFit.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
-    ∀ {Γ fx fields declared}, FieldsFit D scope Γ fx fields declared → fx.row.ParamFree →
-      (∀ p ∈ declared, p.2.params = []) →
-      FieldsFit D scope' (Γ.substTys s) (fx.substTys s) (substFieldTys s fields) declared
-  | _, _, _, _, .nil, _, _ => .nil
-  | _, _, _, _, .cons hl he hfit hfs, hfx, hc => by
-    have h := hfit.substTys s
-    rw [Ty.substTys_of_params (hc _ (mem_of_lookup hl))] at h
-    exact .cons hl (HasType.substTys hD hs he hfx) h (FieldsFit.substTys hD hs hfs hfx hc)
+    ∀ {Γ fx fields declared declared'}, FieldsFit D scope Γ fx fields declared → fx.row.ParamFree →
+      declared.map (Prod.map id (Ty.substTys s)) = declared' →
+      FieldsFit D scope' (Γ.substTys s) (fx.substTys s) (substFieldTys s fields) declared'
+  | _, _, _, _, _, .nil, _, _ => .nil
+  | _, _, _, _, _, .cons hl he hfit hfs, hfx, rfl =>
+    .cons (by rw [lookup_map_snd, hl]; rfl) (HasType.substTys hD hs he hfx) (hfit.substTys s)
+      (FieldsFit.substTys hD hs hfs hfx rfl)
 
 theorem ArgsFit.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     ∀ {Γ fx args ps}, ArgsFit D scope Γ fx args ps → fx.row.ParamFree →
@@ -326,10 +344,11 @@ theorem PathFits.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     ∀ {Γ fx σ path τ}, PathFits D scope Γ fx σ path τ → fx.row.ParamFree →
       PathFits D scope' (Γ.substTys s) (fx.substTys s) (σ.substTys s) (substPathTys s path) (τ.substTys s)
   | _, _, _, _, _, .nil, _ => .nil
-  | _, _, _, _, _, .field hR hf hp, hfx => by
+  | _, _, _, _, _, .field (args := args) hR hlen hf hp, hfx => by
     have h := PathFits.substTys hD hs hp hfx
-    rw [Ty.substTys_of_params (hD.fieldParams hR _ (mem_of_lookup hf))] at h
-    exact .field hR hf h
+    show PathFits D scope' _ _ (.record _ (substTyList s args)) _ _
+    rw [substTyList_eq_map]
+    exact .field hR (by rw [List.length_map]; exact hlen) (hD.lookup_fieldsAt_substTys s hR hlen hf) h
   | _, _, _, _, _, .index hi hfit hp, hfx =>
     .index (HasType.substTys hD hs hi hfx) (hfit.substTys s) (PathFits.substTys hD hs hp hfx)
   | _, _, _, _, _, .elem (τs := τs) hf hp, hfx => by

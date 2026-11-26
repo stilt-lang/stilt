@@ -41,26 +41,29 @@ theorem ValuesAt.of_replicate {τ : Ty} : ∀ {vs : List Value}, (∀ v ∈ vs, 
   | _ :: _, h => .cons (h _ List.mem_cons_self)
       (ValuesAt.of_replicate fun v hv => h v (List.mem_cons_of_mem _ hv))
 
-theorem Values.Typed.at (η : REnv) :
-    ∀ {vs : List Value} {τs : List Ty}, (∀ τ ∈ τs, τ.Closed) → Values.Typed D vs τs →
-      ValuesAt D η vs τs
+/-- A variant's payload, of its declared types at run-time arguments that the arguments
+`args` close to, has values of those types at `args`. -/
+theorem Values.Typed.at (η : REnv) (names : List Name) (args : List Ty) :
+    ∀ {vs : List Value} {τs : List Ty}, (∀ τ ∈ τs, τ.Closed) →
+      Values.Typed D vs τs (names.zip (closeTys η args)) →
+      ValuesAt D η vs (τs.map (Ty.substTys (names.zip args)))
   | _, _, _, .nil => .nil
   | _, τ :: _, hc, .cons hv hvs =>
-    .cons ((hc τ List.mem_cons_self).close η ▸ hv)
-      (Values.Typed.at η (fun τ h => hc τ (List.mem_cons_of_mem _ h)) hvs)
+    .cons ((hc τ List.mem_cons_self).close_substTys names args η ▸ hv)
+      (Values.Typed.at η names args (fun τ h => hc τ (List.mem_cons_of_mem _ h)) hvs)
 
 /-- A record's fields, in their declared order, have the declared names and
-values of the declared types. -/
-theorem Fields.Typed.at (η : REnv) :
+values of the declared types, at the arguments. -/
+theorem Fields.Typed.at (η : REnv) (names : List Name) (args : List Ty) :
     ∀ {fields : List (Name × Value)} {declared : List (Name × Ty)},
-      (∀ f ∈ declared, f.2.Closed) → Fields.Typed D fields declared →
+      (∀ f ∈ declared, f.2.Closed) → Fields.Typed D fields declared (names.zip (closeTys η args)) →
         fields.map Prod.fst = declared.map Prod.fst ∧
-          ValuesAt D η (fields.map Prod.snd) (declared.map Prod.snd)
+          ValuesAt D η (fields.map Prod.snd) (declared.map (Ty.substTys (names.zip args) ∘ Prod.snd))
   | _, _, _, .nil => ⟨rfl, .nil⟩
   | _, (f, τ) :: _, hc, .cons hv hfs => by
-    obtain ⟨h₁, h₂⟩ := Fields.Typed.at η (fun f h => hc f (List.mem_cons_of_mem _ h)) hfs
+    obtain ⟨h₁, h₂⟩ := Fields.Typed.at η names args (fun f h => hc f (List.mem_cons_of_mem _ h)) hfs
     refine ⟨by simp [h₁], .cons ?_ h₂⟩
-    exact (hc (f, τ) List.mem_cons_self).close η ▸ hv
+    exact (hc (f, τ) List.mem_cons_self).close_substTys names args η ▸ hv
 
 mutual
 
@@ -79,21 +82,22 @@ theorem PatFits.bound (hD : D.WellFormed) : ∀ {p : Pattern} {σ : Ty} {σs : L
     obtain ⟨ws, rfl, hws⟩ := hv.tuple_inv
     simp only [Value.tuple, Pattern.matchOn, positions, map_snd_positionsFrom] at h
     exact PatsFit.bound hD hps (ValuesAt.of_elems hws) h
-  | _, _, _, .record hR _ hfps, _, _, hv, h => by
-    obtain ⟨r, fields, rfl, hR', hfs⟩ := hv.record_inv
+  | _, _, _, .record hR _ _ hfps, _, _, hv, h => by
+    obtain ⟨r, fields, rfl, hR', -, hfs⟩ := hv.record_inv
     obtain rfl := Option.some.inj (hR.symm.trans hR')
     simp only [Pattern.matchOn] at h
     exact FieldPatsFit.bound hD (hD.fieldsClosed _ (Decls.mem_of_record? hR)) hfps hfs h
-  | _, _, _, .variant hT hC hps, _, _, hv, h => by
-    obtain ⟨t, C', τs', payload, rfl, hT', hC', hp⟩ := hv.variant_inv
+  | _, _, _, .variant hT _ hC hps, _, _, hv, h => by
+    obtain ⟨t, C', τs', payload, rfl, hT', -, hC', hp⟩ := hv.variant_inv
     obtain rfl := Option.some.inj (hT.symm.trans hT')
     simp only [Pattern.matchOn] at h
     split at h
     · rename_i hc
       subst hc
-      obtain rfl := Option.some.inj (hC.symm.trans hC')
-      exact PatsFit.bound hD hps (hp.at η (hD.payloadsClosed _ (Decls.mem_of_variant? hT) _
-        (List.mem_of_lookup hC))) h
+      obtain ⟨τs₀, hC₀, rfl⟩ := VariantDecl.exists_lookup_ctorsAt hC
+      obtain rfl := Option.some.inj (hC₀.symm.trans hC')
+      exact PatsFit.bound hD hps (hp.at η _ _ (hD.payloadsClosed _ (Decls.mem_of_variant? hT) _
+        (List.mem_of_lookup hC₀))) h
     · exact nomatch h
   | _, _, _, .or hp hq _, v, _, hv, h => by
     simp only [Pattern.matchOn] at h
@@ -145,20 +149,30 @@ theorem PatsFit.bound (hD : D.WellFormed) : ∀ {ps : List Pattern} {τs σs : L
       exact (PatFits.bound hD hp hv ha).append (PatsFit.bound hD hps hvs hb)
     · exact nomatch h
 
-theorem FieldPatsFit.bound (hD : D.WellFormed) : ∀ {declared : List (Name × Ty)} {fps : List (Name × Pattern)}
-    {σs : List Ty}, (∀ f ∈ declared, f.2.Closed) → FieldPatsFit D declared fps σs →
-      ∀ {fields : List (Name × Value)} {us : List Value}, Fields.Typed D fields declared →
+theorem FieldPatsFit.bound (hD : D.WellFormed) : ∀ {declared : List (Name × Ty)}
+    {names : List Name} {args : List Ty} {fps : List (Name × Pattern)} {σs : List Ty},
+    (∀ f ∈ declared, f.2.Closed) →
+    FieldPatsFit D (declared.map (Prod.map id (Ty.substTys (names.zip args)))) fps σs →
+      ∀ {fields : List (Name × Value)} {us : List Value},
+        Fields.Typed D fields declared (names.zip (closeTys η args)) →
         matchOnFields fps fields = some us → ValuesAt D η us σs
-  | _, _, _, _, .nil, _, _, _, h => by cases h; exact .nil
-  | _, _, _, hc, .cons (τ := τ) hl hp hfps, fields, _, hfs, h => by
-    obtain ⟨v, hv, hvt⟩ := hfs.lookup hl
-    simp only [matchOnFields, hv] at h
-    split at h
-    · rename_i a b ha hb
-      cases h
-      have hvt' : Value.Typed D v (τ.close η) := (hc _ (mem_of_lookup hl)).close η ▸ hvt
-      exact (PatFits.bound hD hp hvt' ha).append (FieldPatsFit.bound hD hc hfps hfs hb)
-    · exact nomatch h
+  | _, _, _, _, _, _, .nil, _, _, _, h => by cases h; exact .nil
+  | declared, names, args, _, _, hc, .cons (τ := τ) hl hp hfps, fields, _, hfs, h => by
+    rw [lookup_map_snd] at hl
+    cases hl₀ : declared.lookup _ with
+    | none => rw [hl₀] at hl; exact nomatch hl
+    | some τ₀ =>
+      rw [hl₀] at hl
+      obtain rfl := Option.some.inj hl
+      obtain ⟨v, hv, hvt⟩ := hfs.lookup hl₀
+      simp only [matchOnFields, hv] at h
+      split at h
+      · rename_i a b ha hb
+        cases h
+        have hvt' : Value.Typed D v ((τ₀.substTys (names.zip args)).close η) :=
+          (hc _ (mem_of_lookup hl₀)).close_substTys names args η ▸ hvt
+        exact (PatFits.bound hD hp hvt' ha).append (FieldPatsFit.bound hD hc hfps hfs hb)
+      · exact nomatch h
 
 end
 
@@ -173,7 +187,7 @@ theorem Exhaustive.sound {P : Rows} {τs : List Ty} (h : Exhaustive D P τs) :
   | done hP => intro vs hvs; cases hvs; exact ⟨[], hP, rowMatches_nil⟩
   | empty hτ =>
     intro vs hvs
-    cases hvs with | cons hv _ => exact (hτ (hv.inhabited _ _ rfl)).elim
+    cases hvs with | cons hv _ => exact (hτ (hv.inhabited hD _ _ rfl)).elim
   | default _ ih =>
     intro vs hvs
     cases hvs with
@@ -201,27 +215,31 @@ theorem Exhaustive.sound {P : Rows} {τs : List Ty} (h : Exhaustive D P τs) :
       have h := ih (hw.append hvs)
       rw [← hw.length] at h
       exact (tupleRow_sound ws).lift h
-  | record hR _ ih =>
+  | record hR _ _ ih =>
     intro vs hvs
     cases hvs with
     | cons hv hvs =>
-      obtain ⟨r', fields, rfl, hR', hfs⟩ := hv.record_inv
+      obtain ⟨r', fields, rfl, hR', -, hfs⟩ := hv.record_inv
       obtain rfl := Option.some.inj (hR.symm.trans hR')
-      obtain ⟨hn, hw⟩ := Fields.Typed.at η (hD.fieldsClosed _ (Decls.mem_of_record? hR)) hfs
-      have h := ih (hw.append hvs)
+      obtain ⟨hn, hw⟩ := Fields.Typed.at η _ _ (hD.fieldsClosed _ (Decls.mem_of_record? hR)) hfs
+      have hw' := hw.append hvs
+      simp only [Function.comp_def] at hw'
+      have h := ih (by simpa [RecordDecl.fieldsAt, RecordDecl.typeArgs, Function.comp_def] using hw')
       rw [← hn] at h
       exact (recordRow_sound _ fields).lift h
-  | variant hT _ ih =>
+  | @variant P T args t τs hT _ _ ih =>
     intro vs hvs
     cases hvs with
     | cons hv hvs =>
-      obtain ⟨t', C, τs', payload, rfl, hT', hC, hp⟩ := hv.variant_inv
+      obtain ⟨t', C, τs', payload, rfl, hT', -, hC, hp⟩ := hv.variant_inv
       obtain rfl := Option.some.inj (hT.symm.trans hT')
       have hmem := List.mem_of_lookup hC
-      have hw := hp.at η (hD.payloadsClosed _ (Decls.mem_of_variant? hT) _ hmem)
-      have h := ih (C, τs') hmem (hw.append hvs)
-      dsimp only at h
-      rw [← hw.length] at h
+      have hw := hp.at η _ _ (hD.payloadsClosed _ (Decls.mem_of_variant? hT) _ hmem)
+      have h := ih (C, τs'.map (Ty.substTys (t.typeArgs args))) (List.mem_map_of_mem hmem)
+        (hw.append hvs)
+      have hl : payload.length = τs'.length := by simpa using hw.length
+      simp only [List.length_map] at h
+      rw [← hl] at h
       exact (variantRow_sound _ C payload).lift h
   | list m _ _ ih ihl =>
     intro vs hvs

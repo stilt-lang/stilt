@@ -350,10 +350,10 @@ def eval : Nat → Expr → Eval σ Value
     | .int k => pure (.int k)
     | .bool b => pure (.bool b)
     | .unit => pure .unit
-    | .record R fields => do
+    | .record R _ fields => do
       let written ← Eval.fields run fields
       Eval.declare D R written
-    | .variant T C payload => do
+    | .variant T _ C payload => do
       let vs ← Eval.list run payload
       pure (.variant T C vs)
     | .list _ es => do

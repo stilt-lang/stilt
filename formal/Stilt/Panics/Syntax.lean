@@ -164,8 +164,8 @@ def Expr.panicFreeIn : List Known → Expr → Bool
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
   | _, .fnRef f _ _ => lim.fn f
   | _, .method t m _ => lim.method t m
-  | G, .record _ fields => fieldsPanicFree G fields
-  | G, .variant _ _ es => exprsPanicFree G es
+  | G, .record _ _ fields => fieldsPanicFree G fields
+  | G, .variant _ _ _ es => exprsPanicFree G es
   | G, .list _ es => exprsPanicFree G es
   | G, .op o es => o.panicFreeOn G es && (lim.overflows || o.overflowFree) && exprsPanicFree G es
   | G, .view es => es.length == 1 && exprsPanicFree G es

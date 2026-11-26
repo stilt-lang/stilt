@@ -95,7 +95,7 @@ theorem Ty.Closed.fn_close {A r : Ty} {ρ : Row} (h : (Ty.fn [(.let, A)] r ρ).C
 the closed type its record declares for the operation (handlers.handler-literals). -/
 theorem HandlerFits.clause {scope : RowScope} {fx : Effects} (hD : D.WellFormed)
     {eff : EffectDecl} {R : Name} {r : RecordDecl} {hv : Value} {control : Option Ty} {o : Name}
-    {A B : Ty} (hr : D.record? R = some r) (hh : Value.Typed D hv (.record R))
+    {A B : Ty} (hr : D.record? R = some r) (hh : Value.Typed D hv (.record R []))
     (hfits : HandlerFits scope fx eff r.fields control) (ho : eff.ops.lookup o = some (A, B))
     (η : REnv) :
     ∃ c ρc, hv.clause? o = some c ∧
@@ -103,10 +103,11 @@ theorem HandlerFits.clause {scope : RowScope} {fx : Effects} (hD : D.WellFormed)
       (Ty.fn [(.let, A)] (control.getD B) ρc).Closed ∧
       ρc.resume = control.map (B, ·) ∧ CallAllowed scope fx { ρc with resume := none } := by
   obtain ⟨ρc, hf, hres, hcall⟩ := hfits o A B ho
-  obtain ⟨r', fields, rfl, hr', hfs⟩ := hh.record_inv
+  obtain ⟨r', fields, rfl, hr', -, hfs⟩ := hh.record_inv
   rw [hr] at hr'
   cases hr'
   obtain ⟨c, hc, hct⟩ := hfs.lookup hf
+  rw [List.zip_nil_right, Ty.semAt, STy.substParams_nil] at hct
   have hcl := hD.fieldsClosed _ (Decls.mem_of_record? hr) _ (List.mem_of_lookup hf)
   exact ⟨c, ρc, hc, (hcl.close η).symm ▸ hct, hcl, hres, hcall⟩
 
@@ -157,7 +158,7 @@ the `with`'s type (handlers.resuming). -/
 theorem clause_ok (hD : D.Typed) {E : Name} {eff : EffectDecl} {R : Name} {r : RecordDecl}
     {hv : Value} {control : Option Ty} {τw : Ty} (hEne : E ≠ Operation.resume.effect)
     (heff : D.effect? E = some eff) (hr : D.record? R = some r)
-    (hh : Value.Typed D hv (.record R)) (hfits : HandlerFits scope fx eff r.fields control)
+    (hh : Value.Typed D hv (.record R [])) (hfits : HandlerFits scope fx eff r.fields control)
     (hctl : ∀ τ, control = some τ → τ = τw) {op : Operation} {τ ρ : STy} {v : Value}
     {γ : Copy.State} (hE : op.effect = E)
     (hop : performsOf D ((fx.row.withEffect E).close η) op τ ρ)
@@ -193,7 +194,7 @@ theorem clause_ok (hD : D.Typed) {E : Name} {eff : EffectDecl} {R : Name} {r : R
 
 theorem withH_ok (hD : D.Typed) {E : Name} {eff : EffectDecl} {h b : Expr} {R : Name}
     {r : RecordDecl} {τ : Ty} (hEne : E ≠ Operation.resume.effect) (heff : D.effect? E = some eff)
-    (hh : HasType D scope Γ fx h (.record R)) (hr : D.record? R = some r)
+    (hh : HasType D scope Γ fx h (.record R [])) (hr : D.record? R = some r)
     (hfits : HandlerFits scope fx eff r.fields none)
     (hb : HasType D scope Γ { fx with row := fx.row.withEffect E } b τ) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
@@ -206,7 +207,7 @@ theorem withH_ok (hD : D.Typed) {E : Name} {eff : EffectDecl} {h b : Expr} {R : 
 
 theorem withControl_ok (hD : D.Typed) {E : Name} {eff : EffectDecl} {h b : Expr} {R : Name}
     {r : RecordDecl} {σ τ : Ty} (hEne : E ≠ Operation.resume.effect)
-    (heff : D.effect? E = some eff) (hh : HasType D scope Γ fx h (.record R))
+    (heff : D.effect? E = some eff) (hh : HasType D scope Γ fx h (.record R []))
     (hr : D.record? R = some r) (hfits : HandlerFits scope fx eff r.fields (some τ))
     (hb : HasType D scope Γ { fx with row := fx.row.withEffect E } b σ) (hfit : Fits σ τ) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))

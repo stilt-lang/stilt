@@ -7,8 +7,9 @@ import Stilt.Soundness.Patterns
 The forms of expressions that build or take apart values of declared types.
 A record literal gives each field once (expressions.struct-literal-fields), so the record it
 builds holds every declared field, in the declared order, at its declared
-type. Fields and payloads have closed types (effects.row-variables), which read the
-same under every environment. A `match` runs the first arm whose pattern
+type at the literal's type arguments. Fields and payloads have closed types
+(effects.row-variables), so at arguments they read as their declared types at the
+arguments read (declarations.type-parameters). A `match` runs the first arm whose pattern
 matches (patterns.match), which its typing checked against the scrutinee's
 type, and its arms are exhaustive (patterns.algorithm), so it always finds one. A
 `for` loop runs a turn of its body for each element (expressions.for-iterables),
@@ -21,13 +22,15 @@ section
 
 variable {D : Decls}
 
-theorem ValuesAt.sem {η : REnv} :
-    ∀ {vs : List Value} {τs : List Ty}, (∀ τ ∈ τs, τ.Closed) → ValuesAt D η vs τs →
-      Values.Typed D vs τs
-  | _, _, _, .nil => .nil
-  | _, τ :: _, hc, .cons hv hvs =>
-    .cons ((hc τ List.mem_cons_self).close η ▸ hv)
-      (ValuesAt.sem (fun τ h => hc τ (List.mem_cons_of_mem _ h)) hvs)
+theorem ValuesAt.sem {η : REnv} (names : List Name) (args : List Ty) :
+    ∀ {vs : List Value} {τs : List Ty}, (∀ τ ∈ τs, τ.Closed) →
+      ValuesAt D η vs (τs.map (Ty.substTys (names.zip args))) →
+      Values.Typed D vs τs (names.zip (closeTys η args))
+  | [], [], _, _ => .nil
+  | _ :: _, τ :: _, hc, .cons hv hvs =>
+    .cons ((hc τ List.mem_cons_self).close_substTys names args η ▸ hv)
+      (ValuesAt.sem names args (fun τ h => hc τ (List.mem_cons_of_mem _ h)) hvs)
+  | [], _ :: _, _, h | _ :: _, [], _, h => nomatch h
 
 theorem ValuesAt.replicate {η : REnv} {τ : Ty} :
     ∀ {vs : List Value} {k : Nat}, ValuesAt D η vs (List.replicate k τ) →
@@ -81,13 +84,14 @@ theorem List.lookup_of_mem_map {β : Type} :
 
 /-- The fields of a record literal, looked up in the declared order, give the
 record's fields at their declared types. -/
-theorem WrittenAt.declare {η : REnv} {declared : List (Name × Ty)}
-    (hnd : (declared.map Prod.fst).Nodup) (hc : ∀ f ∈ declared, f.2.Closed)
+theorem WrittenAt.declare {η : REnv} {declared : List (Name × Ty)} {names : List Name}
+    {args : List Ty} (hnd : (declared.map Prod.fst).Nodup) (hc : ∀ f ∈ declared, f.2.Closed)
     {written : List (Name × Value)} {fields : List (Name × Expr)}
-    (hw : WrittenAt D η declared written fields)
+    (hw : WrittenAt D η (declared.map (Prod.map id (Ty.substTys (names.zip args)))) written fields)
     (hperm : (fields.map Prod.fst).Perm (declared.map Prod.fst)) :
     ∀ l, (∀ x ∈ l, x ∈ declared) →
-      ∃ fs, l.mapM (fun (f, _) => (written.lookup f).map (f, ·)) = some fs ∧ Fields.Typed D fs l
+      ∃ fs, l.mapM (fun (f, _) => (written.lookup f).map (f, ·)) = some fs ∧
+        Fields.Typed D fs l (names.zip (closeTys η args))
   | [], _ => ⟨[], rfl, .nil⟩
   | (f, τ) :: l, hl => by
     have hmem := hl (f, τ) List.mem_cons_self
@@ -97,12 +101,12 @@ theorem WrittenAt.declare {η : REnv} {declared : List (Name × Ty)}
       exact hperm.symm.mem_iff.1 (List.mem_map_of_mem (f := Prod.fst) hmem)
     obtain ⟨v, hv⟩ := List.lookup_of_mem_map hf
     obtain ⟨τ', hτ', hvt⟩ := hlook f v hv
-    rw [List.lookup_of_mem_nodup hnd hmem, Option.some.injEq] at hτ'
-    subst hτ'
+    rw [lookup_map_snd, List.lookup_of_mem_nodup hnd hmem] at hτ'
+    obtain rfl := Option.some.inj hτ'
     obtain ⟨fs, hfs, hft⟩ :=
       WrittenAt.declare hnd hc hw hperm l fun x h => hl x (List.mem_cons_of_mem _ h)
     refine ⟨(f, v) :: fs, by simp [List.mapM_cons, hv, hfs], .cons ?_ hft⟩
-    exact (hc _ hmem).close η ▸ hvt
+    exact (hc _ hmem).close_substTys names args η ▸ hvt
 
 /-- The arms of a `match` bind the payload's values, the first one outermost,
 as `Ctx.bindAll` binds their types. -/
@@ -145,10 +149,10 @@ theorem substArmRows_eq_map (θ : RowSubst) : ∀ arms : List Arm,
   | [] => rfl
   | ⟨_, _, _⟩ :: arms => by simp [substArmRows, substArmRows_eq_map θ arms]
 
-theorem Values.Typed.length : ∀ {vs : List Value} {τs : List Ty}, Values.Typed D vs τs →
-    vs.length = τs.length
-  | _, _, .nil => rfl
-  | _, _, .cons _ hvs => by simp [Values.Typed.length hvs]
+theorem Values.Typed.length : ∀ {vs : List Value} {τs : List Ty} {π : SParams},
+    Values.Typed D vs τs π → vs.length = τs.length
+  | _, _, _, .nil => rfl
+  | _, _, _, .cons _ hvs => by simp [Values.Typed.length hvs]
 
 end
 
@@ -158,11 +162,12 @@ variable {D : Decls} {n : Nat} (hs : Sound D n) (hD : D.WellFormed) {scope : Row
   (hη : η.Respects scope) (θ : RowSubst) {Γ : Ctx} {fx : Effects}
 include hs hD hη
 
-theorem record_ok {R : Name} {r : RecordDecl} {fields : List (Name × Expr)}
-    (hR : D.record? R = some r) (hperm : (fields.map Prod.fst).Perm (r.fields.map Prod.fst))
-    (hf : FieldsFit D scope Γ fx fields r.fields) :
-    Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((Ty.record R).close η))
-      (eval D Copy.memory (n + 1) ((Expr.record R fields).substRows θ)) := by
+theorem record_ok {R : Name} {args : List Ty} {r : RecordDecl} {fields : List (Name × Expr)}
+    (hR : D.record? R = some r) (hlen : args.length = r.typeParams.length)
+    (hperm : (fields.map Prod.fst).Perm (r.fields.map Prod.fst))
+    (hf : FieldsFit D scope Γ fx fields (r.fieldsAt args)) :
+    Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((Ty.record R args).close η))
+      (eval D Copy.memory (n + 1) ((Expr.record R args fields).substRows θ)) := by
   refine Eval.Ok.bind (FieldsFit.ok hs hη θ hf) fun written hw => ?_
   have hr := Decls.mem_of_record? hR
   obtain ⟨fs, hfs, hft⟩ := hw.declare (hD.fieldNames r hr) (hD.fieldsClosed r hr) hperm
@@ -170,15 +175,17 @@ theorem record_ok {R : Name} {r : RecordDecl} {fields : List (Name × Expr)}
   intro γ hγ
   show (Eval.declare D R written γ).Ok D Γ η _ _
   simp only [Eval.declare, hR, hfs]
-  exact ⟨.record hR hft, hγ⟩
+  exact ⟨.record hR (by rw [length_closeTys]; exact hlen) hft, hγ⟩
 
-theorem variant_ok {T : Name} {t : VariantDecl} {C : Name} {τs : List Ty} {payload : List Expr}
-    (hT : D.variant? T = some t) (hC : t.ctors.lookup C = some τs)
-    (hp : ExprsFit D scope Γ fx payload τs) :
-    Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((Ty.variant T).close η))
-      (eval D Copy.memory (n + 1) ((Expr.variant T C payload).substRows θ)) :=
-  Eval.Ok.bind (ExprsFit.ok hs hη θ hp) fun _ hvs => Eval.Ok.pure (.variant hT hC
-    (hvs.sem (hD.payloadsClosed t (Decls.mem_of_variant? hT) (C, τs) (List.mem_of_lookup hC))))
+theorem variant_ok {T : Name} {args : List Ty} {t : VariantDecl} {C : Name} {τs : List Ty}
+    {payload : List Expr} (hT : D.variant? T = some t) (hlen : args.length = t.typeParams.length)
+    (hC : (t.ctorsAt args).lookup C = some τs) (hp : ExprsFit D scope Γ fx payload τs) :
+    Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((Ty.variant T args).close η))
+      (eval D Copy.memory (n + 1) ((Expr.variant T args C payload).substRows θ)) := by
+  obtain ⟨τs₀, hC₀, rfl⟩ := VariantDecl.exists_lookup_ctorsAt hC
+  exact Eval.Ok.bind (ExprsFit.ok hs hη θ hp) fun _ hvs => Eval.Ok.pure (.variant hT
+    (by rw [length_closeTys]; exact hlen) hC₀
+    (hvs.sem _ _ (hD.payloadsClosed t (Decls.mem_of_variant? hT) (C, τs₀) (List.mem_of_lookup hC₀))))
 
 omit hD in
 theorem list_ok {τ : Ty} {es : List Expr} (hes : ExprsFit D scope Γ fx es (List.replicate es.length τ)) :

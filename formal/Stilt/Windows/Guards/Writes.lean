@@ -64,8 +64,8 @@ theorem eval_writes (D : Decls) :
     case int k => exact pure trivial
     case bool b => exact pure trivial
     case unit => exact pure trivial
-    case record R fs => exact bind (fields fs fun fe _ => ih fe.2) fun _ _ => declare D R _
-    case variant T C es => exact bind (list es fun e _ => ih e) fun _ _ => pure trivial
+    case record R _ fs => exact bind (fields fs fun fe _ => ih fe.2) fun _ _ => declare D R _
+    case variant T _ C es => exact bind (list es fun e _ => ih e) fun _ _ => pure trivial
     case list τ es => exact bind (list es fun e _ => ih e) fun _ _ => pure trivial
     case op o es => exact bind (list es fun e _ => ih e) fun _ _ => world _
     case view es =>
