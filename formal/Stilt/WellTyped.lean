@@ -162,6 +162,22 @@ def Decls.typeNames (D : Decls) : List Name :=
   D.records.map (·.name) ++ D.variants.map (·.name) ++ D.traits.map (·.name) ++
     D.effects.map (·.name)
 
+/-- Each effect that a row of the type names, at any depth, is an effect of the program:
+an `Upper` name in a row that names no effect is E0211 (handlers.effects-in-rows). -/
+def Ty.EffectsIn (D : Decls) (τ : Ty) : Prop :=
+  ∀ ρ ∈ τ.rows, ∀ E ∈ ρ.effects, E ∈ D.effects.map (·.name)
+
+/-- The types that the declarations write name only effects of the program
+(handlers.effects-in-rows): those of record fields, variant payloads, function signatures,
+the operations of effects and the methods of traits. The types that a body writes are
+outside this check. -/
+structure Decls.EffectsDeclared (D : Decls) : Prop where
+  fields : ∀ r ∈ D.records, ∀ f ∈ r.fields, f.2.EffectsIn D
+  payloads : ∀ t ∈ D.variants, ∀ c ∈ t.ctors, ∀ τ ∈ c.2, τ.EffectsIn D
+  signatures : ∀ d ∈ D.fns, d.type.EffectsIn D
+  operations : ∀ e ∈ D.effects, ∀ o ∈ e.ops, o.2.1.EffectsIn D ∧ o.2.2.EffectsIn D
+  methods : ∀ t ∈ D.traits, ∀ m ∈ t.methods, m.2.EffectsIn D
+
 /-- The conditions on declarations that declarations.function-declarations and declarations.unique-names states, as far as the calculus
 needs them: names are unique where declarations.unique-names says so, so a type's `impl` blocks
 define each name once (traits.inherent-names), only functions declare row variables
@@ -201,6 +217,9 @@ structure Decls.WellFormed (D : Decls) : Prop where
   (traits.impl-members). -/
   implMembers : ∀ i ∈ D.traitImpls, ∀ d ∈ i.fns,
     ∃ t, D.trait? i.trait = some t ∧ d.name ∈ t.methods.map Prod.fst
+  /-- The rows of declared types name only declared effects (E0211,
+  handlers.effects-in-rows). -/
+  effectsDeclared : D.EffectsDeclared
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`

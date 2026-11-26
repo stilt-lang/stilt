@@ -178,6 +178,28 @@ theorem decls_wellFormed : (decls ss a b extra).WellFormed where
   effectOps := fun _ h => nomatch h
   coherent := .nil
   implMembers := fun _ h => nomatch h
+  effectsDeclared := by
+    refine ⟨fun r hr f hf ρ hρ => ?_, fun _ h => (nomatch h), fun d hd ρ hρ E hE => ?_,
+      fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
+    · obtain ⟨b, -, rfl⟩ := mem_recDecls hr
+      have hf' : f.2.rows = [] := by
+        cases b with
+        | zero =>
+          simp only [recDecl, recFields, List.mem_singleton] at hf
+          subst hf
+          rfl
+        | succ b =>
+          simp only [recDecl, recFields, List.mem_cons, List.mem_map] at hf
+          rcases hf with rfl | ⟨g, -, rfl⟩ <;> rfl
+      rw [hf'] at hρ
+      exact nomatch hρ
+    · simp only [decls, Decls.fns_mk, List.mem_singleton] at hd
+      subst hd
+      change ρ ∈ (Ty.fn ((params ss).map Param.sig) .unit Row.pure).rows at hρ
+      rw [map_sig_params] at hρ
+      have : ρ = Row.pure := by simpa [Ty.rows, paramRows_shapes, Row.rows, Row.pure] using hρ
+      subst this
+      exact nomatch hE
   fnNames := by simp [decls, callee]
   paramNames := fun d hd => by
     simp only [decls, Decls.fns_mk, List.mem_singleton] at hd

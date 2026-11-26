@@ -52,14 +52,29 @@ theorem instantiable_of_check {τ : Ty} {s : RowSubst}
 whose rows name only its row variables. -/
 def signatureCheck (d : FnDecl) : Bool :=
   d.typeParams.isEmpty && (d.type.rows.all fun ρ => ρ.vars.all (· ∈ d.rowParams)) &&
-    d.type.concreteCheck && d.type.views.all Ty.viewable
+    d.type.concreteCheck && d.type.views.all Ty.viewable && d.type.rows.all (·.effects.isEmpty)
 
 private theorem signatures_of_check {D : Decls} (h : D.fns.all signatureCheck = true) :
     ∀ d ∈ D.fns, d.typeParams = [] ∧ d.type.WellFormed d.scope := by
   intro d hd
   have h := List.all_eq_true.1 h d hd
   simp only [signatureCheck, Bool.and_eq_true, List.isEmpty_iff] at h
-  exact ⟨h.1.1.1, wellFormed_of_check (by simp only [Bool.and_eq_true]; exact ⟨⟨h.1.1.2, h.1.2⟩, h.2⟩)⟩
+  exact ⟨h.1.1.1.1, wellFormed_of_check (by simp only [Bool.and_eq_true]; exact ⟨⟨h.1.1.1.2, h.1.1.2⟩, h.1.2⟩)⟩
+
+private theorem effectsIn_of_check {D : Decls} {τ : Ty} (h : τ.rows.all (·.effects.isEmpty) = true) :
+    τ.EffectsIn D := by
+  intro ρ hρ E hE
+  have := List.all_eq_true.1 h ρ hρ
+  simp only [List.isEmpty_iff] at this
+  rw [this] at hE
+  exact nomatch hE
+
+private theorem signatureEffects_of_check {D : Decls} (h : D.fns.all signatureCheck = true) :
+    ∀ d ∈ D.fns, d.type.EffectsIn D := by
+  intro d hd
+  have h := List.all_eq_true.1 h d hd
+  simp only [signatureCheck, Bool.and_eq_true] at h
+  exact effectsIn_of_check h.2
 
 private theorem vars_nil_of_lookup {ks : List Name} {rows : List Row} {v : Name} {ρ : Row}
     (h : (rows.all fun ρ => ρ.vars.isEmpty) = true) (hl : (ks.zip rows).lookup v = some ρ) :
@@ -145,7 +160,8 @@ counterexamples. -/
 theorem declsWellFormed {D : Decls}
     (hrecords : (D.records.map (·.name)).Nodup)
     (hfields : (D.records.all fun r =>
-      decide (r.fields.map Prod.fst).Nodup && r.fields.all (·.2.concreteCheck)) = true)
+      decide (r.fields.map Prod.fst).Nodup &&
+        r.fields.all fun f => f.2.concreteCheck && f.2.rows.all (·.effects.isEmpty)) = true)
     (hfieldsClosed : ∀ r ∈ D.records, ∀ f ∈ r.fields, f.2.Closed)
     (hvariants : D.variants = [] ∧ D.traits = [] ∧ D.traitImpls = [] ∧ D.effects = [])
     (hfns : (D.fns.map (·.name)).Nodup)
@@ -158,11 +174,13 @@ theorem declsWellFormed {D : Decls}
   have hf := fun r hr => List.all_eq_true.1 hfields r hr
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true] at hf
   exact ⟨hrecords, fun r hr => (hf r hr).1, hfieldsClosed,
-    fun r hr f hfm => Ty.concrete_of_check ((hf r hr).2 f hfm), by simp [hv], by simp [hv],
+    fun r hr f hfm => Ty.concrete_of_check ((hf r hr).2 f hfm).1, by simp [hv], by simp [hv],
     by simp [hv], by simp [hv], hfns, hparams, hrowParams,
     fun d hd => by simp [(signatures_of_check hsigs d hd).1], fun d hd => (signatures_of_check hsigs d hd).2,
     fun d hd => implicitRows_of_check (List.all_eq_true.1 himplicit d hd), hreceivers,
     by simp [ht], by simp [hti], by simpa [Decls.typeNames, hv, ht, he] using hrecords,
-    by simp [he], by simp [hti], by simp [hti]⟩
+    by simp [he], by simp [hti], by simp [hti],
+    ⟨fun r hr f hfm => effectsIn_of_check (by simpa using ((hf r hr).2 f hfm).2), by simp [hv],
+      signatureEffects_of_check hsigs, by simp [he], by simp [ht]⟩⟩
 
 end Stilt.Counterexamples
