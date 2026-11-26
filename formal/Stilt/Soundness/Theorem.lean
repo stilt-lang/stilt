@@ -87,13 +87,17 @@ theorem REnv.respects_closed : REnv.Respects (fun _ => []) RowScope.closed where
   types := rfl
   noResume _ _ _ h := nomatch h
 
+/-- A well-typed program's declarations check against their signatures. -/
+theorem Program.WellTyped.typedDecls {p : Program} (hp : p.WellTyped) : p.decls.Typed :=
+  ⟨hp.decls, hp.typedIn.fns⟩
+
 /-- **Type soundness**: a well-typed program, run as the reference interpreter runs it,
 finishes with `()`, raises an error of the type its row allows, panics, or
 runs out of fuel. -/
 theorem typeSoundness : TypeSoundness := by
   intro p fuel input hp
   obtain ⟨σ, hmain, hfit⟩ := hp.main
-  have h := Decls.Typed.sound ⟨hp.decls, hp.typedIn.fns⟩ fuel hmain REnv.respects_closed []
+  have h := hp.typedDecls.sound fuel hmain REnv.respects_closed []
   rw [Expr.substRows_nil] at h
   have ho := h ([], World.start input) ⟨.nil, fun _ h => nomatch h⟩
   show (eval p.decls Copy.memory fuel p.main ([], World.start input)).leaveBody.Sound p.decls p.row

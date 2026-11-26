@@ -121,7 +121,6 @@ conformance/reflection/static.lt
 conformance/reflection/tier
 conformance/reflection/trait_parameter_name.lt
 conformance/reflection/visibility
-conformance/regex/errors.lt
 conformance/regex/matching.lt
 conformance/std/argument_edges.lt
 conformance/std/arguments.lt
