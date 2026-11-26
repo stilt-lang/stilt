@@ -45,7 +45,7 @@ def frames : Frames State where
   bind := InPlace.bind
   bindMoved := bindMoved
   unbind s := { s with env := s.env.tail }
-  capture s := s.env.mapM fun (x, r) => (x, ·) <$> deref s r []
+  capture s keep := (newestOf keep s.env).mapM fun (x, r) => (x, ·) <$> deref s r []
   enter caller captured params := InPlace.enter caller captured (params.map handOver)
   leave caller callee _ := pure { caller with store := callee.store }
 

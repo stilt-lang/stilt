@@ -11,8 +11,8 @@ namespace Stilt
 
 mutual
 
-/-- Marks the last uses in `e`, when `after` holds the variables that what
-follows `e` mentions. `pos` says whether `e` is an argument or an initializer,
+/-- Marks the last uses in `e` (facts.last-use, as `Expr.movesOk` reads it),
+when `after` holds the variables that what follows `e` mentions. `pos` says whether `e` is an argument or an initializer,
 the two positions where a last use may hand its storage over. Each part is
 marked with what follows it, as `Expr.movesOk` checks it. -/
 def Expr.markMoves (after : Live) (pos : Bool) : Expr → Expr
@@ -130,7 +130,8 @@ theorem Expr.mentions_markMoves :
   | .var x, L, b | .move x, L, b => by
     simp only [Expr.markMoves]
     split <;> rfl
-  | .int _, _, _ | .bool _, _, _ | .unit, _, _ | .fnRef .., _, _ | .method .., _, _ | .closure .., _, _ => rfl
+  | .int _, _, _ | .bool _, _, _ | .unit, _, _ | .fnRef .., _, _ | .method .., _, _ => rfl
+  | .closure _ _ _ body, _, _ => by simp [Expr.markMoves, Expr.mentions, Expr.mentions_markMoves body]
   | .record _ fs, L, _ => by simp [Expr.markMoves, Expr.mentions, fieldsMentions_mark fs L]
   | .variant _ _ es, L, _ => by simp [Expr.markMoves, Expr.mentions, exprsMentions_mark es L]
   | .list _ es, L, _ => by simp [Expr.markMoves, Expr.mentions, exprsMentions_mark es L]

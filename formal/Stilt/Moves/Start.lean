@@ -117,7 +117,7 @@ theorem LiveAt.of_all {x : Name} : ∀ {m : List Bool} {ns : List Name}, (∀ b 
     · exact LiveAt.of_all fun c hc => h c (List.mem_cons_of_mem _ hc)
 
 theorem Inv.of_all {L : Live} {m : List Bool} {ns : List Name} (h : ∀ b ∈ m, b = true) : Inv L m ns :=
-  ⟨fun _ _ => LiveAt.of_all h, fun _ => h⟩
+  ⟨fun _ _ => LiveAt.of_all h⟩
 
 /-- The callee starts with every binding live. -/
 theorem MAgrees.callee {frc : Copy.Frame} {sc : State} (h : Agrees frc sc)

@@ -55,9 +55,10 @@ theorem read (x : Name) :
     Eval.PanicFree G Value.PanicFree (Eval.inspect fun s => (Copy.memoryWith w).read s x []) :=
   inspect fun _ hs => Frame.PanicFree.read hs x (fun _ h => nomatch h)
 
-theorem capture : Eval.PanicFree G (fun c : List (Name × Value) => ∀ xv ∈ c, xv.2.PanicFree)
-    (Eval.inspect (Copy.memoryWith w).capture) :=
-  inspect fun _ hs => CalmTo.ok hs
+theorem capture (keep : Name → Bool) :
+    Eval.PanicFree G (fun c : List (Name × Value) => ∀ xv ∈ c, xv.2.PanicFree)
+      (Eval.inspect ((Copy.memoryWith w).capture · keep)) :=
+  inspect fun _ hs => CalmTo.ok fun xv hxv => hs xv (mem_of_mem_newestOf hxv)
 
 theorem asBool {v : Value} : Eval.PanicFree G (fun _ => True) (Eval.asBool v) := by
   cases v <;> first | exact pure trivial | exact stuck

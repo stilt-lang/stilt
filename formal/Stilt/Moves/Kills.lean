@@ -7,9 +7,9 @@ import Stilt.Moves.Mask
   holds and `L` doesn't, and revives none. An expression ends only variables
   it mentions, at their last uses, so never one that what follows it
   mentions.
-* `Inv L m ns`: every variable of `L` has a live newest binding, and every
-  binding is live when `L` holds every variable, as before a closure literal,
-  which the analysis counts as mentioning them all (expressions.capture).
+* `Inv L m ns`: every variable of `L` has a live newest binding. A closure
+  literal reads only the newest binding of each variable it captures, which it
+  mentions (expressions.capture), so its capture reads live bindings only.
 * `sel m X env`: the live bindings whose names `X` holds. An expression writes
   only below their references (values.let-and-var and values.assignment-order).
 -/
@@ -25,11 +25,9 @@ def Kills (L X : Live) : List Bool → List Bool → List Name → Prop
   | [], [], [] => True
   | _, _, _ => False
 
-/-- Every variable of `L` has a live newest binding, and every binding is live
-when `L` holds every variable. -/
+/-- Every variable of `L` has a live newest binding. -/
 structure Inv (L : Live) (m : List Bool) (ns : List Name) : Prop where
   live : ∀ x, L.mem x = true → LiveAt x m ns
-  all : L.all = true → ∀ b ∈ m, b = true
 
 /-- The live bindings whose names `X` holds. -/
 def sel {β : Type} (m : List Bool) (X : Live) (env : List (Name × β)) : List (Name × β) :=
@@ -62,7 +60,7 @@ theorem Kills.trans : ∀ {mk m₁ m₂ : List Bool} {ns : List Name}, Kills L�
       refine ⟨?_, hX⟩
       cases hx : L.mem x
       · rfl
-      · exact absurd (hL.2 x hx) (by simp [hm])
+      · exact absurd (hL x hx) (by simp [hm])
     · exact h₂ rfl hd
   | [], [], _ :: _, _, _, h, _ | [], _ :: _, _, _, h, _, _ | _ :: _, [], _, _, h, _, _
   | _ :: _, _ :: _, [], _, _, h, _ | _ :: _, _ :: _, _ :: _, [], h, _, _
@@ -74,10 +72,10 @@ theorem Kills.mono : ∀ {mk m : List Bool} {ns : List Name}, Kills L X mk m ns 
   | _ :: _, _ :: _, x :: _, ⟨r, h, k⟩, hL, hX => by
     refine ⟨r, fun hb hc => ?_, Kills.mono k hL hX⟩
     obtain ⟨hm, hx⟩ := h hb hc
-    refine ⟨?_, hX.2 x hx⟩
+    refine ⟨?_, hX x hx⟩
     cases h' : L'.mem x
     · rfl
-    · exact absurd (hL.2 x h') (by simp [hm])
+    · exact absurd (hL x h') (by simp [hm])
   | [], [], _ :: _, h, _, _ | [], _ :: _, _, h, _, _ | _ :: _, [], _, h, _, _
   | _ :: _, _ :: _, [], h, _, _ => h.elim
 
@@ -96,19 +94,6 @@ theorem LiveAt.of_kills {x : Name} : ∀ {mk m : List Bool} {ns : List Name}, Li
       · rfl
     · simp only [LiveAt, hy, ↓reduceIte] at h ⊢
       exact LiveAt.of_kills h hx k
-  | [], [], _ :: _, _, _, k | [], _ :: _, _, _, _, k | _ :: _, [], _, _, _, k
-  | _ :: _, _ :: _, [], _, _, k => k.elim
-
-theorem all_of_kills : ∀ {mk m : List Bool} {ns : List Name}, (∀ b ∈ mk, b = true) →
-    L.all = true → Kills L X mk m ns → ∀ c ∈ m, c = true
-  | [], [], [], _, _, _ => by simp
-  | b :: mk, c :: m, x :: ns, h, hall, ⟨_, hk, k⟩ => by
-    intro d hd
-    rcases List.mem_cons.1 hd with rfl | hd
-    · cases d
-      · exact absurd (hk (h b List.mem_cons_self) rfl).1 (by simp [Live.mem_of_all hall])
-      · rfl
-    · exact all_of_kills (fun b' hb' => h b' (List.mem_cons_of_mem _ hb')) hall k d hd
   | [], [], _ :: _, _, _, k | [], _ :: _, _, _, _, k | _ :: _, [], _, _, _, k
   | _ :: _, _ :: _, [], _, _, k => k.elim
 
@@ -136,27 +121,23 @@ theorem sel_sub {β : Type} {mk m : List Bool} {env : List (Name × β)}
     ∀ e ∈ sel m X' env, e ∈ sel mk X env := by
   intro e he
   rw [mem_sel] at he ⊢
-  exact ⟨hk.keep_sub e he.1, hX.2 _ he.2⟩
+  exact ⟨hk.keep_sub e he.1, hX _ he.2⟩
 
 theorem Inv.of_kills {Lb : Live} {mk m : List Bool} {ns : List Name} (hi : Inv Lb mk ns)
     (hL : L.Sub Lb) (hk : Kills L X mk m ns) : Inv L m ns :=
-  ⟨fun x hx => (hi.live x (hL.2 x hx)).of_kills (.inl hx) hk,
-    fun hall => all_of_kills (hi.all (hL.1 hall)) hall hk⟩
+  ⟨fun x hx => (hi.live x (hL x hx)).of_kills (.inl hx) hk⟩
 
 theorem Inv.mono {m : List Bool} {ns : List Name} (hi : Inv L m ns) (h : L'.Sub L) : Inv L' m ns :=
-  ⟨fun x hx => hi.live x (h.2 x hx), fun hall => hi.all (h.1 hall)⟩
+  ⟨fun x hx => hi.live x (h x hx)⟩
 
 theorem Inv.cons {Lb Lb' : Live} {mk : List Bool} {ns : List Name} {x : Name} (hinv : Inv Lb mk ns)
-    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lb.mem z = true) (hall : Lb'.all = true → Lb.all = true) :
+    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lb.mem z = true) :
     Inv Lb' (true :: mk) (x :: ns) := by
-  refine ⟨fun z hz => ?_, fun h b hb => ?_⟩
-  · by_cases hzx : z = x
-    · subst hzx
-      exact LiveAt.cons_self z mk ns
-    · exact (hinv.live z (hLb z hz hzx)).cons hzx
-  · rcases List.mem_cons.1 hb with rfl | hb
-    · rfl
-    · exact hinv.all (hall h) b hb
+  refine ⟨fun z hz => ?_⟩
+  by_cases hzx : z = x
+  · subst hzx
+    exact LiveAt.cons_self z mk ns
+  · exact (hinv.live z (hLb z hz hzx)).cons hzx
 
 /-- Ending the newest binding of `x`, which `X` holds and `L` doesn't. -/
 theorem Kills.kill {x : Name} (hx : L.mem x = false) (hX : X.mem x = true) :

@@ -189,7 +189,7 @@ def frames (shared : Name → Bool) : Frames State where
   bind := bind
   bindMoved s y _ v := bind s y v
   unbind s := { s with env := s.env.tail }
-  capture s := s.env.mapM fun (x, e) => (x, ·) <$> deref s e.ref []
+  capture s keep := readCaptured s (newestOf keep s.env)
   enter := enter shared
   leave caller callee _ := pure { caller with store := callee.store }
 

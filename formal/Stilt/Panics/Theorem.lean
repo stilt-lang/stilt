@@ -161,8 +161,8 @@ theorem eval_panicFree {D : Decls} (hD : ∀ d ∈ D.fns, d.body.panicFree = tru
         · exact stuck
       · exact stuck
     case closure ps result ρ body =>
-      exact bind (capture w) (Eval.Keeps.inspect (W := []) (L := []) _ fun _ _ _ => trivial) fun _ hc =>
-        pure (.closure he (captureOf_forall hc))
+      exact bind (capture w _) (Eval.Keeps.inspect (W := []) (L := []) _ fun _ _ _ => trivial)
+        fun _ hc => pure (.closure he hc)
     case call callee as _ =>
       exact bind (ih G callee he.1) (keep callee) fun _ hf =>
         bind (args ih hk as he.2) (Eval.Keeps.args hk as (List.Subset.refl _) (List.Subset.refl _)) fun _ hp => callAs w hD ih false hf hp

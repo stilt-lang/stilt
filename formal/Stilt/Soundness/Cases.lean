@@ -132,17 +132,24 @@ theorem fnRef_ok (hD : D.WellFormed) {f : Name} {d : FnDecl} {types : List Ty} {
   exact Eval.Ok.pure hv
 
 omit hs hη in
+/-- The newest bindings of a frame are typed by the newest of its context. -/
+theorem Frame.Typed.newestOf :
+    ∀ (keep : Name → Bool) {γ : Copy.Frame} {Γ : Ctx} {η : REnv}, Frame.Typed D γ Γ η →
+      Frame.Typed D (Stilt.newestOf keep γ) (Stilt.newestOf keep Γ) η
+  | _, _, _, _, .nil => .nil
+  | keep, _, _, _, .cons (x := x) hv hrest => by
+    by_cases hk : keep x = true
+    · simp only [Stilt.newestOf, hk, ↓reduceIte]
+      exact .cons hv (Frame.Typed.newestOf _ hrest)
+    · simp only [Stilt.newestOf, hk, Bool.false_eq_true, ↓reduceIte]
+      exact Frame.Typed.newestOf _ hrest
+
+omit hs hη in
 /-- The frame of what a closure captures is typed by the context of it. -/
-theorem Frame.Typed.captureOf {ps : List Param} {body : Expr} :
-    ∀ {γ : Copy.Frame} {Γ : Ctx} {η : REnv}, Frame.Typed D γ Γ η →
-      Frame.Typed D (Stilt.captureOf ps body γ) (Stilt.captureOf ps body Γ) η
-  | _, _, _, .nil => .nil
-  | _, _, _, .cons (x := x) hv hrest => by
-    unfold Stilt.captureOf at *
-    simp only [List.filter_cons]
-    split
-    · exact .cons hv (Frame.Typed.captureOf hrest)
-    · exact Frame.Typed.captureOf hrest
+theorem Frame.Typed.captureOf {ps : List Param} {body : Expr} {γ : Copy.Frame} {Γ : Ctx}
+    {η : REnv} (h : Frame.Typed D γ Γ η) :
+    Frame.Typed D (Stilt.captureOf ps body γ) (Stilt.captureOf ps body Γ) η :=
+  h.newestOf _
 
 omit hs in
 theorem closure_ok {ps : List Param} {result : Ty} {ρ : Row} {body : Expr} {σ : Ty}
@@ -152,12 +159,11 @@ theorem closure_ok {ps : List Param} {result : Ty} {ρ : Row} {body : Expr} {σ 
     Eval.Ok D Γ η (fx.exits D η)
       (fun v => Value.Typed D v ((Ty.fn (ps.map Param.sig) result ρ).close η))
       (eval D Copy.memory (n + 1) ((Expr.closure ps result ρ body).substRows θ)) :=
-  Eval.Ok.bind (Eval.Ok.inspect (P := fun γ => Frame.Typed D γ Γ η) fun γ hγ => .inl ⟨γ.1, rfl, hγ.1⟩)
-    fun γ hγ => by
-      rw [show Stilt.captureOf (ps.map (Param.substRows θ)) (body.substRows θ) γ =
-          Stilt.captureOf ps body γ by simp [Stilt.captureOf, Expr.captures_substRows]]
-      exact Eval.Ok.pure (.closure rfl rfl hnd hη (HasType.captured (result := result) (ρ := ρ) hb)
-        hfit hγ.captureOf (.refl _) (Row.substRows_resume θ ρ))
+  Eval.Ok.bind (Eval.Ok.inspect (P := fun c => Frame.Typed D c (Stilt.captureOf ps body Γ) η)
+      fun γ hγ => .inl ⟨Stilt.captureOf ps body γ.1, by rw [Expr.captures_substRows]; rfl,
+        hγ.1.captureOf⟩)
+    fun _ hc => Eval.Ok.pure (.closure rfl rfl hnd hη (HasType.captured (result := result) (ρ := ρ) hb)
+        hfit hc (.refl _) (Row.substRows_resume θ ρ))
 
 theorem apply_ok (hD : D.Typed) {callee : Expr} {args : List Arg} {ps : List (Mode × Ty)}
     {result : Ty} {σ : Row} (hc : HasType D scope Γ fx callee (.fn ps result σ))

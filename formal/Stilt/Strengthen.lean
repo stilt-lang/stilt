@@ -350,21 +350,9 @@ theorem Expr.captures_substRows (θ : RowSubst) (ps : List Param) (body : Expr) 
 /-! ## A closure's body in the context of what it captures -/
 
 theorem lookup_captureOf {ps : List Param} {body : Expr} {z : Name}
-    (hz : Expr.captures ps body z = true) :
-    ∀ Γ : Ctx, (captureOf ps body Γ).lookup z = Γ.lookup z
-  | [] => rfl
-  | (y, b) :: Γ => by
-    have ih := lookup_captureOf hz Γ
-    unfold captureOf at ih ⊢
-    simp only [List.filter_cons]
-    by_cases hy : y = z
-    · subst hy
-      simp [hz, Ctx.lookup, List.lookup]
-    · split
-      · simp only [Ctx.lookup, List.lookup, beq_false_of_ne (Ne.symm hy)] at ih ⊢
-        exact ih
-      · simp only [Ctx.lookup, List.lookup, beq_false_of_ne (Ne.symm hy)] at ih ⊢
-        exact ih
+    (hz : Expr.captures ps body z = true) (Γ : Ctx) :
+    (captureOf ps body Γ).lookup z = Γ.lookup z :=
+  lookup_newestOf Γ hz
 
 /-- A closure's body types in the context of the variables it captures alone
 (expressions.capture). -/

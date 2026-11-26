@@ -4,8 +4,8 @@ import Stilt.Moves.Relation
 # Operations
 
 Each operation of the evaluator keeps `MAgrees`: writing a live binding,
-binding a new variable, ending the newest binding, capturing every binding
-when all are live, and binding the last use of a variable, which ends it and
+binding a new variable, ending the newest binding, capturing the newest
+binding of each variable a closure literal captures when those are live, and binding the last use of a variable, which ends it and
 hands its storage over (values.passing-values).
 -/
 
@@ -116,6 +116,27 @@ theorem write_just {m : List Bool} {fr fr' : Copy.Frame} {x : Name} {p : Path} {
         exact hxv ▸ Value.Justified.set (hfr _ (mem_of_lookup hv₀)) hj hv'
   · cases h
 
+/-- The newest binding of each name `keep` holds is the same among the live
+bindings when each is live. -/
+theorem newestOf_keep {β : Type} : ∀ (keep : Name → Bool) {m : List Bool} {l : List (Name × β)},
+    m.length = l.length → (∀ x, keep x = true → LiveAt x m (l.map Prod.fst)) →
+      newestOf keep (Moving.keep m l) = newestOf keep l
+  | _, [], [], _, _ => rfl
+  | keep, b :: m, (y, v) :: l, hl, hk => by
+    have hl' : m.length = l.length := by simpa using hl
+    by_cases hy : keep y = true
+    · have hb : b = true := by simpa [LiveAt] using hk y hy
+      subst hb
+      simp only [Moving.keep, ↓reduceIte, newestOf, hy]
+      refine congrArg _ (newestOf_keep _ hl' fun x hx => ?_)
+      simp only [Bool.and_eq_true, bne_iff_ne, ne_eq] at hx
+      simpa [LiveAt, Ne.symm hx.2] using hk x hx.1
+    · have ih := newestOf_keep keep hl' fun x hx => by
+        have hxy : y ≠ x := fun e => hy (e ▸ hx)
+        simpa [LiveAt, hxy] using hk x hx
+      cases b <;> simp [Moving.keep, newestOf, hy, ih]
+  | _, [], _ :: _, hl, _ | _, _ :: _, [], hl, _ => by simp at hl
+
 namespace MAgrees
 
 /-- Both models write a live binding alike. -/
@@ -197,17 +218,21 @@ theorem unbind {b : Bool} {a : Name × Value} (h : MAgrees (b :: m) (a :: fr) s)
       · exact hxv
       · exact List.mem_cons_of_mem _ hxv
 
-/-- When every binding is live, a closure captures the same values in both
-models (expressions.capture). -/
-theorem capture (h : MAgrees m fr s) (hall : ∀ b ∈ m, b = true) :
-    Moving.frames.capture s = .ok fr ∧ ∀ xv ∈ fr, xv.2.Safe ∧ xv.2.Justified := by
-  have hf : keep m fr = fr := keep_all hall h.len
-  have he : keep m s.env = s.env := keep_all hall h.len_env
-  have hag : Agrees fr s := by
-    have := h.agrees
-    rw [hf, he] at this
-    exact this
-  refine ⟨hag.capture, fun xv hxv => ⟨hag.safe xv hxv, h.just xv (by rw [hf]; exact hxv)⟩⟩
+/-- When the newest binding of each name `keep` holds is live, a closure
+captures the same values in both models (expressions.capture). -/
+theorem capture (h : MAgrees m fr s) {keep : Name → Bool}
+    (hk : ∀ x, keep x = true → LiveAt x m (names fr)) :
+    Moving.frames.capture s keep = .ok (newestOf keep fr) ∧
+      ∀ xv ∈ newestOf keep fr, xv.2.Safe ∧ xv.2.Justified := by
+  have hf : newestOf keep (Moving.keep m fr) = newestOf keep fr := newestOf_keep keep h.len hk
+  have he : newestOf keep (Moving.keep m s.env) = newestOf keep s.env :=
+    newestOf_keep keep h.len_env (by rw [← h.align]; exact hk)
+  have hc := h.agrees.holds.capture s.env keep
+  rw [hf, he] at hc
+  refine ⟨hc, fun xv hxv => ?_⟩
+  rw [← hf] at hxv
+  have hxv' := mem_of_mem_newestOf hxv
+  exact ⟨h.agrees.safe xv hxv', h.just xv hxv'⟩
 
 /-- Ending the newest binding of a live variable. -/
 theorem kill (h : MAgrees m fr s) {x : Name} (hx : LiveAt x m (names fr)) :

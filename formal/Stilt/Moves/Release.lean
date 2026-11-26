@@ -12,21 +12,6 @@ namespace Stilt
 
 namespace Live
 
-@[simp] theorem eraseAll_all : ∀ (L : Live) (xs : List Name), (L.eraseAll xs).all = L.all
-  | _, [] => rfl
-  | L, x :: xs => eraseAll_all (L.erase x) xs
-
-theorem mem_eraseAll : ∀ {L : Live} {xs : List Name} {x : Name}, L.mem x = true → x ∉ xs →
-    (L.eraseAll xs).mem x = true
-  | _, [], _, h, _ => h
-  | L, y :: ys, x, h, hx =>
-    mem_eraseAll (L := L.erase y) (xs := ys) (mem_erase_of_ne h fun e => hx (by subst e; simp))
-      fun h' => hx (List.mem_cons_of_mem _ h')
-
-theorem eraseAll_sub : ∀ (L : Live) (xs : List Name), (L.eraseAll xs).Sub L
-  | _, [] => Sub.refl _
-  | L, y :: ys => (eraseAll_sub (L.erase y) ys).trans (erase_sub L y)
-
 /-- What a `when`'s handles run before, within what the `when` mentions. -/
 theorem sub_held (L b e : Live) (xs : List Name) :
     ((L.union (b.eraseAll xs)).union e).Sub (L.union ((ofList xs).union (e.union b))) :=
@@ -35,7 +20,7 @@ theorem sub_held (L b e : Live) (xs : List Name) :
 /-- What a block mentions is what it mentions but its names, or one of them. -/
 theorem sub_eraseAll (L b : Live) (xs : List Name) :
     ((L.union (ofList xs)).union b).Sub ((L.union (b.eraseAll xs)).union (ofList xs)) := by
-  refine ⟨fun h => by simp_all, fun x h => ?_⟩
+  intro x h
   simp only [mem_union, mem_ofList, Bool.or_eq_true] at h ⊢
   by_cases hx : x ∈ xs
   · simp [hx]
@@ -167,7 +152,7 @@ theorem held {Lbody Xb : Live} {m : Eval Copy.State Value} {m' : Eval (State × 
           (Eval.release Copy.memory (names.zip cells) m) (Eval.release Moving.memory (names.zip cells) m') :=
         fun fr s mk hag hinv => MCorr.release _
           (fun c hc => by simp [hmem c hc])
-          (fun c hc => hinv.live c.1 (hnames.2 _ (by simp [hmem c hc]))) (hm fr s mk hag hinv)
+          (fun c hc => hinv.live c.1 (hnames _ (by simp [hmem c hc]))) (hm fr s mk hag hinv)
       refine withVars (hrel.mono (Live.Sub.refl _) (Live.sub_union_left _ _) (Live.Sub.refl _)) hX
         _ Lb (fun xv hxv => hus _ (List.of_mem_zip hxv).2) ?_
       rw [List.map_fst_zip (by omega)]

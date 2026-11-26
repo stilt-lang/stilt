@@ -399,9 +399,11 @@ theorem eval_erase (D : Decls) : ∀ (n : Nat) (e : Expr),
     | field e f => exact bind (ih e) fun v => get v [.field f]
     | index e i => exact bind (ih e) fun v => bind (bind (ih i) asInt) fun k => get v [.index k]
     | closure ps r ρ body =>
-      refine bind (inspect (r := Copy.memory.capture) fun _ => rfl) fun c => ?_
+      refine bind (f := eraseBindings) (inspect fun s => ?_) fun c =>
+        pure Value.erase (Value.closure c ps r ρ body)
+      show Except.ok (captureOf ps body.erase (eraseBindings s.1)) = _
       rw [captureOf_erase]
-      exact pure Value.erase (Value.closure (captureOf ps body c) ps r ρ body)
+      rfl
     | call callee as =>
       exact bind (ih callee) fun f => bind (args ih as) fun passed => callAs D ih false f passed
     | letIn x τ init body | varIn x τ init body =>

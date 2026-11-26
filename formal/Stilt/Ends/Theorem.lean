@@ -92,7 +92,7 @@ theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked
         have hf : Halts (fun n => eval D (Copy.memoryWith w) n (.closure ps result ρ body))
             (fun v => ∃ c, v = .closure c ps result ρ body) s :=
           Halts.succ (bind (const (Eval.Ends.inspect _ fun _ _ _ => trivial)) fun c _ _ _ =>
-            const (Eval.Ends.pure ⟨captureOf ps body c, rfl⟩))
+            const (Eval.Ends.pure ⟨c, rfl⟩))
         refine bind hf fun v s' hv _ => bind (args ih as had han s') fun passed s'' _ _ =>
           callAs _ _ _ false _ passed ?_
         obtain ⟨c, rfl⟩ := hv

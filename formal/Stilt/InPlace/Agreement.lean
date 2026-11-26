@@ -62,7 +62,7 @@ theorem eval_agrees {D : Decls} (hD : Sim.DeclsSafe D) :
         · exact Sim.fail _
       · exact Sim.fail _
     case closure ps result ρ body =>
-      exact Sim.bind Sim.capture fun _ hc => Sim.pure (.closure hdp.1 hex hdp.2 (captureOf_forall hc))
+      exact Sim.bind (Sim.capture _) fun _ hc => Sim.pure (.closure hdp.1 hex hdp.2 hc)
     case call callee as _ =>
       exact Sim.bind (ih callee ⟨⟨r, hex.1.1.1⟩, hdp.1⟩) fun _ hf =>
         Sim.bind (Sim.args ih as (args_safe hex.1.1.2 hdp.2)) fun _ hp =>

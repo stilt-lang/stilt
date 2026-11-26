@@ -133,7 +133,7 @@ theorem mono {mk : List Bool} {fr : Copy.State} {s : State} {s' : State × World
   obtain ⟨m, hag, hk, henv, hev⟩ := h
   refine ⟨m, hag, hk.mono hL hX, henv, Evolves.of_sub (fun e he => ?_) hev⟩
   rw [mem_sel] at he ⊢
-  exact ⟨he.1, hX.2 _ he.2⟩
+  exact ⟨he.1, hX _ he.2⟩
 
 /-- The two states a step ends with are in one world. -/
 theorem world {mk : List Bool} {s : State} {fr : Copy.State} {s' : State × World}

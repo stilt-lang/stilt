@@ -27,7 +27,10 @@ theorem inoutRoots_substArgRows : ∀ args : List Arg, inoutRoots (substArgRows 
 mutual
 
 theorem Expr.mentions_substRows : ∀ e : Expr, (e.substRows s).mentions = e.mentions
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. | .closure .. => rfl
+  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
+  | .closure _ _ _ body => by
+    simp only [Expr.substRows, Expr.mentions, Expr.mentions_substRows body, List.map_map]
+    rfl
   | .record _ fs => by simp [Expr.substRows, Expr.mentions, fieldsMentions_substRows fs]
   | .variant _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substRows, Expr.mentions, exprsMentions_substRows es]
@@ -177,7 +180,10 @@ theorem inoutRoots_substArgTys : ∀ args : List Arg, inoutRoots (substArgTys s 
 mutual
 
 theorem Expr.mentions_substTys : ∀ e : Expr, (e.substTys s).mentions = e.mentions
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. | .closure .. => rfl
+  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
+  | .closure _ _ _ body => by
+    simp only [Expr.substTys, Expr.mentions, Expr.mentions_substTys body, List.map_map]
+    rfl
   | .record _ fs => by simp [Expr.substTys, Expr.mentions, fieldsMentions_substTys fs]
   | .variant _ _ es | .list _ es | .op _ es | .view es => by
     simp [Expr.substTys, Expr.mentions, exprsMentions_substTys es]

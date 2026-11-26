@@ -45,7 +45,7 @@ theorem withVars {m : Eval Copy.State α} {m' : Eval (State × World) α} {Lb' X
     withVar x (hv (x, v) List.mem_cons_self)
       (withVars hm hX bindings (Lb.union (Live.one x)) (fun xv h => hv xv (List.mem_cons_of_mem _ h))
         (hLb.trans (by live_sub)))
-      (fun z hz hzx => by simp_all) (fun h => by simpa using h) (Live.Sub.refl X)
+      (fun z hz hzx => by simp_all) (Live.Sub.refl X)
 
 theorem forEach {body : Value → Eval Copy.State Bool} {body' : Value → Eval (State × World) Bool}
     (h : ∀ v, VOk v → MSim (fun _ => True) Lb Lb X (body v) (body' v)) :
@@ -83,11 +83,11 @@ theorem loop {run : Expr → Eval Copy.State Value} {run' : Expr → Eval (State
     (x : Name)
     {e body : Expr} {Lc Lb' X' : Live} (he : MSim VOk Lb Lc X (run e) (run' e))
     (hb : MSim VOk Lb' Lc X' (run body) (run' body))
-    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lc.mem z = true) (hall : Lb'.all = true → Lc.all = true)
+    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lc.mem z = true)
     (hX : X'.Sub X) (hLc : Lc.Sub Lb) (hL : L.Sub Lc) :
     MSim VOk Lb L X (Eval.loop Copy.memory run x e body) (Eval.loop Moving.memory run' x e body) :=
   bind (bind he (fun _ hv => asList hv) hLc (Live.Sub.refl _)) (fun vs hvs =>
-    bind (forEach (fun _ hv => withVar x hv (turn hb) hLb hall hX) vs hvs)
+    bind (forEach (fun _ hv => withVar x hv (turn hb) hLb hX) vs hvs)
       (fun _ _ => pure ⟨.unit, .unit⟩) (Live.Sub.refl _) hL) hLc hL
 
 /-- Writing a live variable that the expression mentions (values.let-and-var and values.assignment-order). -/
@@ -108,13 +108,13 @@ theorem update (x : Name) (p : Path) {w : Value} (hw : VOk w) (hx : Lb.mem x = t
     rw [List.mem_singleton.1 he, mem_sel]
     exact ⟨mem_of_lookup (by rw [hag.1.lookup_env hlx]; exact hr), hX⟩
 
-/-- The variables in scope when a closure literal is made, all live, of which it
-captures those it uses (expressions.capture). -/
-theorem capture (hall : Lb.all = true) :
+/-- A closure literal captures the newest binding of each variable that `keep`
+holds, each live when the expression mentions it (expressions.capture). -/
+theorem capture {keep : Name → Bool} (hk : ∀ x, keep x = true → Lb.mem x = true) :
     MSim (fun captured : List (Name × Value) => ∀ xv ∈ captured, VOk xv.2) Lb L X
-      (Eval.inspect Copy.memory.capture) (Eval.inspect Moving.memory.capture) :=
-  inspect fun fr _ _ hag hinv => by
-    obtain ⟨h₁, h₂⟩ := hag.1.capture (hinv.all hall)
+      (Eval.inspect (Copy.memory.capture · keep)) (Eval.inspect (Moving.memory.capture · keep)) :=
+  inspect fun _ _ _ hag hinv => by
+    obtain ⟨h₁, h₂⟩ := hag.1.capture fun x hx => hag.1.keys_eq ▸ hinv.live x (hk x hx)
     exact ⟨h₁.symm, fun _ ha => by cases ha; exact h₂⟩
 
 end MSim

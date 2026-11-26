@@ -183,7 +183,8 @@ def frames : Frames State where
   bind := bind
   bindMoved s y _ v := bind s y v
   unbind := unbind
-  capture s := s.env.mapM fun (x, r) => (x, ·) <$> (deref s r [] >>= resolve s.store)
+  capture s keep :=
+    (newestOf keep s.env).mapM fun (x, r) => (x, ·) <$> (deref s r [] >>= resolve s.store)
   enter := enter
   leave caller callee _ := pure { caller with store := callee.store }
 

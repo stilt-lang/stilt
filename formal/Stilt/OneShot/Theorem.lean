@@ -64,8 +64,8 @@ theorem eval_oneShot {D : Decls} (hD : ∀ d ∈ D.fns, d.body.bodyOneShot d.row
         · exact stuck
       · exact stuck
     case closure ps result ρ body =>
-      exact bindLe (b := 0) (capture w) (fun _ hc =>
-        pure (.closure (by simp [Expr.bodyOneShot, he.1, he.2]) (captureOf_forall hc))) (Nat.le_refl _)
+      exact bindLe (b := 0) (capture w _) (fun _ hc =>
+        pure (.closure (by simp [Expr.bodyOneShot, he.1, he.2]) hc)) (Nat.le_refl _)
     case call callee as _ =>
       exact bindLe (ih callee he.1 (by omega)) (fun _ hf => bindLe (args ih as he.2 (by omega))
         (fun _ hp => callAs w hD ih false hf hp) (Nat.le_refl _)) (by simp)

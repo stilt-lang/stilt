@@ -266,10 +266,11 @@ theorem read (x : Name) :
       (Eval.inspect fun s => InPlace.memory.read s x []) :=
   inspect fun _ _ hs => ⟨hs.1.read x [], fun _ ha => hs.1.read_safe ha⟩
 
-theorem capture :
+theorem capture (keep : Name → Bool) :
     Sim (fun captured : List (Name × Value) => ∀ xv ∈ captured, xv.2.Safe)
-      (Eval.inspect Copy.memory.capture) (Eval.inspect InPlace.memory.capture) :=
-  inspect fun _ _ hs => ⟨hs.1.capture.symm, fun _ ha => by cases ha; exact hs.1.safe⟩
+      (Eval.inspect (Copy.memory.capture · keep)) (Eval.inspect (InPlace.memory.capture · keep)) :=
+  inspect fun _ _ hs => ⟨(hs.1.capture keep).symm, fun _ ha => by
+    cases ha; exact fun xv h => hs.1.safe xv (mem_of_mem_newestOf h)⟩
 
 theorem update (x : Name) (p : Path) {w : Value} (hw : w.Safe) :
     Sim (fun _ => True) (Eval.update fun fr => Copy.memory.write fr x p w)

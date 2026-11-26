@@ -64,7 +64,7 @@ theorem deref_store_append {st : List Value} {r : Ref} (h : r.loc < st.length)
 
 /-- Each variable of a frame holds the value its reference reaches in the
 store `st`. The frame and the variables agree name by name, hidden ones
-included, as a closure's capture reads them all. -/
+included. -/
 def Holds (st : List Value) : Copy.Frame → List (Name × Ref) → Prop
   | [], [] => True
   | (x, v) :: fr, (y, r) :: env => x = y ∧ deref ⟨[], st⟩ r [] = .ok v ∧ Holds st fr env
@@ -211,19 +211,22 @@ theorem Agrees.read_safe {fr : Copy.Frame} {s : State} (h : Agrees fr s) {x : Na
 
 /-- A closure captures the same values in both models. -/
 theorem Holds.capture {st : List Value} (e : List (Name × Ref)) :
-    ∀ {fr : Copy.Frame} {env : List (Name × Ref)}, Holds st fr env →
-      env.mapM (fun xr => (xr.1, ·) <$> deref ⟨e, st⟩ xr.2 []) = .ok fr
-  | [], [], _ => rfl
-  | (_, _) :: _, (_, r) :: _, ⟨rfl, hd, h⟩ => by
+    ∀ (keep : Name → Bool) {fr : Copy.Frame} {env : List (Name × Ref)}, Holds st fr env →
+      (newestOf keep env).mapM (fun xr => (xr.1, ·) <$> deref ⟨e, st⟩ xr.2 []) =
+        .ok (newestOf keep fr)
+  | _, [], [], _ => rfl
+  | keep, (x, _) :: _, (_, r) :: _, ⟨rfl, hd, h⟩ => by
     have hd' : deref ⟨e, st⟩ r [] = _ := hd
-    simp only [List.mapM_cons, hd', capture e h]
-    rfl
-  | [], _ :: _, h => h.elim
-  | _ :: _, [], h => h.elim
+    by_cases hk : keep x = true
+    · simp only [newestOf, hk, ↓reduceIte, List.mapM_cons, hd', capture e _ h]
+      rfl
+    · simp only [newestOf, hk, Bool.false_eq_true, ↓reduceIte, capture e _ h]
+  | _, [], _ :: _, h => h.elim
+  | _, _ :: _, [], h => h.elim
 
-theorem Agrees.capture {fr : Copy.Frame} {s : State} (h : Agrees fr s) :
-    InPlace.frames.capture s = .ok fr :=
-  h.holds.capture s.env
+theorem Agrees.capture {fr : Copy.Frame} {s : State} (h : Agrees fr s) (keep : Name → Bool) :
+    InPlace.frames.capture s keep = .ok (newestOf keep fr) :=
+  h.holds.capture s.env keep
 
 /-- A new variable gets a new location, disjoint from every other. -/
 theorem Agrees.bind {fr : Copy.Frame} {s : State} (h : Agrees fr s) (x : Name) {v : Value}

@@ -84,8 +84,8 @@ theorem movedRoots_sub : ∀ (as : List Arg) (x : Name), x ∈ movedRoots as →
       rcases List.mem_cons.1 h with rfl | h
       · rw [eq_of_moved? hy]
         simp [argsMentions, Expr.mentions]
-      · exact (argsMentions_sub_cons a as).2 x (movedRoots_sub as x h)
-    · exact (argsMentions_sub_cons a as).2 x (movedRoots_sub as x h)
+      · exact (argsMentions_sub_cons a as) x (movedRoots_sub as x h)
+    · exact (argsMentions_sub_cons a as) x (movedRoots_sub as x h)
 
 theorem Kills.union_unmentioned {L X M : Live} (hM : ∀ z, X.mem z = true → M.mem z = false) :
     ∀ {mk m : List Bool} {ns : List Name}, Kills L X mk m ns → Kills (L.union M) X mk m ns
@@ -199,8 +199,8 @@ theorem ofArg_of_ne {e : Expr} (h : ∀ x, e ≠ .move x) (v : Value) : Passed.o
 
 theorem movedRoots_sub' (A : Live) (as : List Arg) :
     (A.union (Live.ofList (movedRoots as))).Sub (A.union (argsMentions as)) :=
-  ⟨fun h => by simp at h; simp [h], fun z hz => by
+  fun z hz => by
     simp only [Live.mem_union, Bool.or_eq_true, Live.mem_ofList] at hz ⊢
-    exact hz.imp id (movedRoots_sub as z)⟩
+    exact hz.imp id (movedRoots_sub as z)
 
 end Stilt.Moving

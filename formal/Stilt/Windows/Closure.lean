@@ -79,18 +79,21 @@ theorem capture_one {si : IState} {sw : WState} (hp : Pre D c pend si sw) {xr : 
     · exact (hp.agree.viewed u (List.mem_of_getElem? hu)).get h₂
 
 /-- Both models capture the same values, which the checks accept, or fail alike. -/
-theorem capture_rel {si : IState} {sw : WState} (hp : Pre D c pend si sw) :
-    (∃ e, InPlace.memory.capture si = .error e ∧ memory.capture sw = .error e) ∨
-      ∃ cs, InPlace.memory.capture si = .ok cs ∧ memory.capture sw = .ok cs ∧
+theorem capture_rel {si : IState} {sw : WState} (hp : Pre D c pend si sw) (keep : Name → Bool) :
+    (∃ e, InPlace.memory.capture si keep = .error e ∧ memory.capture sw keep = .error e) ∨
+      ∃ cs, InPlace.memory.capture si keep = .ok cs ∧ memory.capture sw keep = .ok cs ∧
         ∀ xv ∈ cs, xv.2.Viewed D := by
-  show (∃ e, si.1.env.mapM (fun (x, r) => (x, ·) <$> InPlace.deref si.1 r []) = .error e ∧
-      sw.1.env.mapM (fun (x, r) => (x, ·) <$> (deref sw.1 r [] >>= resolve sw.1.store)) =
-        .error e) ∨
-      ∃ cs, si.1.env.mapM (fun (x, r) => (x, ·) <$> InPlace.deref si.1 r []) = .ok cs ∧
-      sw.1.env.mapM (fun (x, r) => (x, ·) <$> (deref sw.1 r [] >>= resolve sw.1.store)) = .ok cs ∧
+  show (∃ e, (newestOf keep si.1.env).mapM
+        (fun (x, r) => (x, ·) <$> InPlace.deref si.1 r []) = .error e ∧
+      (newestOf keep sw.1.env).mapM
+        (fun (x, r) => (x, ·) <$> (deref sw.1 r [] >>= resolve sw.1.store)) = .error e) ∨
+      ∃ cs, (newestOf keep si.1.env).mapM
+        (fun (x, r) => (x, ·) <$> InPlace.deref si.1 r []) = .ok cs ∧
+      (newestOf keep sw.1.env).mapM
+        (fun (x, r) => (x, ·) <$> (deref sw.1 r [] >>= resolve sw.1.store)) = .ok cs ∧
         ∀ xv ∈ cs, xv.2.Viewed D
   rw [← hp.agree.env]
-  exact mapM_same fun xr hxr => capture_one hp hxr
+  exact mapM_same fun xr hxr => capture_one hp (mem_of_mem_newestOf hxr)
 
 /-- A closure literal: the same closure on both sides, which the checks of its literal
 accept. -/
@@ -108,12 +111,12 @@ theorem SimP.closure (n : Nat) (hΓ : ScopeKeeps D c.Γ) {ps₀ ps : List Param}
   have hck : ClosureChecked D ps b := ⟨c.Γ, ps₀, r₀, b₀, hΓ, hnd, hps, hb, hr, hc.1,
     hc.2⟩
   refine SimP.bind (G := fun cs cs' _ _ => cs' = cs ∧ ∀ xv ∈ cs, xv.2.Viewed D)
-    (SimP.inspect fun si sw hp _ _ => (capture_rel hp).imp_right fun ⟨cs, h₁, h₂, h₃⟩ =>
+    (SimP.inspect fun si sw hp _ _ => (capture_rel hp _).imp_right fun ⟨cs, h₁, h₂, h₃⟩ =>
       ⟨cs, cs, h₁, h₂, rfl, h₃⟩) fun cs cs' => ?_
   refine SimP.pure fun _ _ _ ⟨he, hv⟩ => ?_
   rw [he]
   exact ⟨VRel.free rfl, fun w hw => (by simp [windowsOf] at hw),
-    .closure (fun xv hxv => hv xv (List.mem_filter.1 hxv).1) hck⟩
+    .closure (fun xv hxv => hv xv hxv) hck⟩
 
 end Windows
 

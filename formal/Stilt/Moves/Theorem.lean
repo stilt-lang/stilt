@@ -61,7 +61,7 @@ theorem movingAgreement : MovingAgreement := by
     ⟨rfl, rfl, ⟨trivial, .nil, by simp [keep]⟩, by simp [Valid], by simp [keep]⟩
   have hc := eval_msim (p.declsOk hwt hex hmv) fuel p.main .empty hmain hmv.2
     ([], World.start input) (⟨[], []⟩, World.start input) [] ⟨hag, rfl, World.All.start input⟩
-    ⟨fun _ _ => trivial, fun _ b hb => by simp at hb⟩
+    ⟨fun _ _ => trivial⟩
   unfold Program.runCopy Program.runMoving Program.run
   rcases hc.cases with ⟨v, ⟨_, x⟩, ⟨_, y⟩, h₁, h₂, -, ⟨_, ⟨-, hw, -⟩, -⟩⟩ |
     (⟨e, ⟨_, x⟩, ⟨_, y⟩, h₁, h₂, -, ⟨_, ⟨-, hw, -⟩, -⟩⟩ | ⟨j, ⟨_, x⟩, ⟨_, y⟩, h₁, h₂, -, ⟨_, ⟨-, hw, -⟩, -⟩⟩) |

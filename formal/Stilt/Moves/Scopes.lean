@@ -81,8 +81,7 @@ namespace MSim
 theorem withVar (x : Name) {v : Value} (hv : VOk v) {m : Eval Copy.State α}
     {m' : Eval (State × World) α}
     {Lb' X' : Live} (hm : MSim G Lb' L X' m m')
-    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lb.mem z = true) (hall : Lb'.all = true → Lb.all = true)
-    (hX : X'.Sub X) :
+    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lb.mem z = true) (hX : X'.Sub X) :
     MSim G Lb L X (Eval.withVar Copy.memory x v m) (Eval.withVar Moving.memory x v m') := by
   intro fr s mk hag hinv
   show MCorr G L X mk s.1 (Eval.withVar Copy.memory x v m fr) (Eval.withVar Moving.memory x v m' s)
@@ -92,12 +91,12 @@ theorem withVar (x : Name) {v : Value} (hv : VOk v) {m : Eval Copy.State α}
   refine MCorr.unbind rfl (fun st h => ?_) (fun c m₁ hk =>
     (show Kills L X' (true :: mk) (c :: m₁) (x :: keys s.1) from hk).2.2.mono (Live.Sub.refl L) hX)
     hag₀ (hm (Copy.memory.bind fr x v) (Moving.memory.bind s x v) _ ⟨hag₀, hag.2⟩
-      (Inv.cons hinv hLb hall))
+      (Inv.cons hinv hLb))
   have h₁ := Evolves.unbind (s := ⟨sel mk X' s.1.env, s.1.store⟩) (x := x) (v := v)
     (Evolves.of_sub sel_cons h)
   exact Evolves.of_sub (fun e he => by
     rw [mem_sel] at he ⊢
-    exact ⟨he.1, hX.2 _ he.2⟩) h₁
+    exact ⟨he.1, hX _ he.2⟩) h₁
 
 theorem read_lookup {fr : Copy.Frame} {x : Name} {v : Value} (h : Copy.read fr x [] = .ok v) :
     fr.lookup x = some v := by
@@ -122,7 +121,7 @@ theorem withMove (x y : Name) {m : Eval Copy.State α} {m' : Eval (State × Worl
     {Lb' X' : Live}
     (hm : MSim G Lb' L X' m m') (hx : Lb.mem x = true) (hxL : L.mem x = false)
     (hX : X.mem x = true) (hX' : X'.Sub X)
-    (hLb : ∀ z, Lb'.mem z = true → z ≠ y → z ≠ x ∧ Lb.mem z = true) (hall : Lb'.all = false) :
+    (hLb : ∀ z, Lb'.mem z = true → z ≠ y → z ≠ x ∧ Lb.mem z = true) :
     MSim G Lb L X
       (Eval.inspect (fun fr => Copy.memory.read fr x []) >>= fun v =>
         Eval.withInit Copy.memory y (.move x) v m)
@@ -147,7 +146,7 @@ theorem withMove (x y : Name) {m : Eval Copy.State α} {m' : Eval (State × Worl
     have hkill := Kills.kill hxL hX mk (keys s) hlen
     rw [hag.keys_eq] at hag₀
     have hinv₀ : Inv Lb' (true :: kill x mk (keys s)) (y :: keys s) := by
-      refine ⟨fun z hz => ?_, fun h => absurd h (by simp [hall])⟩
+      refine ⟨fun z hz => ?_⟩
       by_cases hzy : z = y
       · subst hzy
         exact LiveAt.cons_self z _ _

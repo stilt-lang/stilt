@@ -27,9 +27,9 @@ theorem call_case {D : Decls} (hD : DeclsOk D) (h : MRun run run') (hmv : MoveRe
   simp only [Expr.exclusive, Expr.distinctParams, Expr.movesOk, Bool.and_eq_true] at hex hdp hm
   simp only [Expr.mentions]
   have hIn : (Live.ofList (inoutRoots as)).Sub (argsMentions as) :=
-    ⟨by simp, fun z hz => inoutRoots_sub as z ((Live.mem_ofList _ _).1 hz)⟩
+    fun z hz => inoutRoots_sub as z ((Live.mem_ofList _ _).1 hz)
   have hMv : (Live.ofList (movedRoots as)).Sub (argsMentions as) :=
-    ⟨by simp, fun z hz => movedRoots_sub as z ((Live.mem_ofList _ _).1 hz)⟩
+    fun z hz => movedRoots_sub as z ((Live.mem_ofList _ _).1 hz)
   have hA : (L.union (Live.ofList (inoutRoots as))).Sub (L.union (argsMentions as)) :=
     Live.Sub.union (Live.sub_union_left _ _) (hIn.trans (Live.sub_union_right _ _))
   refine MSim.bind ((h callee _ ⟨⟨r, hex.1.1.1⟩, hdp.1⟩ hm.1).mono (by live_sub) (Live.Sub.refl _)
@@ -60,7 +60,7 @@ theorem let_case (h : MRun run run') (hmv : MoveReads run run') {x : Name} {init
     have hy : (L.union (body.mentions.erase x)).mem y = false := by simpa [Expr.movesOk] using hmi
     rcases hmv y with ⟨h₁, h₂⟩ | ⟨h₁, h₂⟩ <;> rw [h₁, h₂]
     · refine MSim.withMove y x (h body L hb hmb) (by simp [Expr.mentions]) ?_ (by simp [Expr.mentions])
-        (by live_sub) (fun z hz hzx => ⟨fun hzy => ?_, ?_⟩) ?_
+        (by live_sub) (fun z hz hzx => ⟨fun hzy => ?_, ?_⟩)
       · simp only [Live.mem_union, Bool.or_eq_false_iff] at hy
         exact hy.1
       · subst hzy
@@ -70,17 +70,12 @@ theorem let_case (h : MRun run run') (hmv : MoveReads run run') {x : Name} {init
         rcases hz with hz | hz
         · exact .inl hz
         · exact .inr (by simp [hz])
-      · cases hall : (L.union body.mentions).all
-        · rfl
-        · have := Live.mem_of_all (L := L.union (body.mentions.erase x)) (by simpa using hall) y
-          rw [hy] at this
-          cases this
     · exact fun _ _ _ _ _ => trivial
   · have hne : ∀ y, init ≠ .move y := fun y hy => hmove ⟨y, hy⟩
     simp only [Eval.withInit_eq_withVar _ x hne]
     exact MSim.bind ((h init _ hi hmi).mono (Live.Sub.union hLB (by live_sub)) (Live.Sub.refl _)
       (by live_sub)) (fun v hv => MSim.withVar x hv (h body L hb hmb) hkeep
-        (fun h => by simpa using h) (by live_sub)) hLB (Live.sub_union_left _ _)
+        (by live_sub)) hLB (Live.sub_union_left _ _)
 
 theorem index_case (h : MRun run run') {e i : Expr} (he : e.Safe) (hi : i.Safe)
     (hme : e.movesOk (L.union i.mentions) = true) (hmi : i.movesOk L = true) :
@@ -123,7 +118,7 @@ theorem for_case (h : MRun run run') {x : Name} {e body : Expr} (he : e.Safe) (h
       ((Live.one x).union (e.mentions.union body.mentions))
       (Eval.loop Copy.memory run x e body) (Eval.loop Moving.memory run' x e body) :=
   MSim.loop x ((h e _ he hme).mono (by live_sub) (Live.Sub.refl _) (by live_sub)) (h body _ hb hmb)
-    (fun z hz _ => by simpa using hz) (fun h => by simpa using h) (by live_sub) (by live_sub)
+    (fun z hz _ => by simpa using hz) (by live_sub) (by live_sub)
     (by live_sub)
 
 /-- A `while` evaluates its condition and runs a turn of its body until the
@@ -178,20 +173,22 @@ theorem catch_case (h : MRun run run') {e hd : Expr} {x : Name} (he : e.Safe) (h
       (Eval.handle (run e) fun err => Eval.withVar Copy.memory x err (run hd))
       (Eval.handle (run' e) fun err => Eval.withVar Moving.memory x err (run' hd)) :=
   MSim.handle ((h e _ he hme).mono (by live_sub) (Live.Sub.refl _) (by live_sub))
-    (fun _ hv => MSim.withVar x hv (h hd L hh hmh) (fun z hz _ => hz) id (by live_sub))
+    (fun _ hv => MSim.withVar x hv (h hd L hh hmh) (fun z hz _ => hz) (by live_sub))
     (by live_sub) (by live_sub)
 
 theorem closure_case {ps : List Param} {result : Ty} {ρ : Row} {body : Expr}
     (hnd : (ps.map Param.name).Nodup) (hex : body.exclusive [] = true)
     (hdp : body.distinctParams = true) (hm : body.movesOk (inoutLive ps) = true) :
-    MSim VOk (L.union Live.every) L Live.every
-      (Eval.inspect Copy.memory.capture >>= fun c =>
-        Pure.pure (Value.closure (captureOf ps body c) ps result ρ body))
-      (Eval.inspect Moving.memory.capture >>= fun c =>
-        Pure.pure (Value.closure (captureOf ps body c) ps result ρ body)) :=
-  MSim.bind (MSim.capture (by simp)) (fun _ hc => MSim.pure
-    ⟨.closure hnd hex hdp fun xv h => (hc xv (mem_of_mem_captureOf h)).1,
-      .closure hm fun xv h => (hc xv (mem_of_mem_captureOf h)).2⟩)
+    MSim VOk (L.union (Expr.closure ps result ρ body).mentions) L
+      (Expr.closure ps result ρ body).mentions
+      (Eval.inspect (Copy.memory.capture · (Expr.captures ps body)) >>= fun c =>
+        Pure.pure (Value.closure c ps result ρ body))
+      (Eval.inspect (Moving.memory.capture · (Expr.captures ps body)) >>= fun c =>
+        Pure.pure (Value.closure c ps result ρ body)) :=
+  MSim.bind (MSim.capture fun x hx => by simp [Expr.mentions_of_captures (result := result)
+      (ρ := ρ) hx])
+    (fun _ hc => MSim.pure ⟨.closure hnd hex hdp fun xv h => (hc xv h).1,
+      .closure hm fun xv h => (hc xv h).2⟩)
     (by live_sub) (Live.Sub.refl _)
 
 end Stilt.Moving

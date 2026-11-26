@@ -1,4 +1,4 @@
-import Stilt.Syntax
+import Stilt.Memory
 
 /-!
 # The variables an expression uses
@@ -67,11 +67,12 @@ its body uses `x`, which none of its parameters is (expressions.capture). -/
 def Expr.captures (ps : List Param) (body : Expr) (x : Name) : Bool :=
   !(ps.any (·.name == x)) && body.free x
 
-/-- What a closure literal keeps of the variables in scope, the newest first: those
-it captures (expressions.capture). -/
+/-- What a closure literal keeps of the variables in scope, the newest first: the
+newest binding of each variable it captures (expressions.capture), the one its
+body reads. -/
 def captureOf {α : Type} (ps : List Param) (body : Expr) (scope : List (Name × α)) :
     List (Name × α) :=
-  scope.filter fun p => Expr.captures ps body p.1
+  newestOf (Expr.captures ps body) scope
 
 theorem Expr.free_closure (x : Name) (ps : List Param) (result : Ty) (ρ : Row) (body : Expr) :
     (Expr.closure ps result ρ body).free x = Expr.captures ps body x := by
@@ -81,14 +82,13 @@ theorem Expr.free_closure (x : Name) (ps : List Param) (result : Ty) (ρ : Row) 
 theorem captureOf_map {α β : Type} (ps : List Param) (body : Expr) (f : α → β) :
     ∀ scope : List (Name × α),
       captureOf ps body (scope.map fun p => (p.1, f p.2)) =
-        (captureOf ps body scope).map fun p => (p.1, f p.2) := by
-  intro scope
-  simp [captureOf, List.filter_map, Function.comp_def]
+        (captureOf ps body scope).map fun p => (p.1, f p.2) :=
+  newestOf_map f _
 
 /-- A variable a closure captures is one of those in scope. -/
 theorem mem_of_mem_captureOf {α : Type} {ps : List Param} {body : Expr}
     {scope : List (Name × α)} {p : Name × α} (h : p ∈ captureOf ps body scope) : p ∈ scope :=
-  (List.mem_filter.1 h).1
+  mem_of_mem_newestOf h
 
 /-- What holds of every variable in scope holds of every captured one. -/
 theorem captureOf_forall {α : Type} {ps : List Param} {body : Expr} {scope : List (Name × α)}

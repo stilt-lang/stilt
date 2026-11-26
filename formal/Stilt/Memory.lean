@@ -42,6 +42,48 @@ def Passed.value? : Passed → Option Value
   | .value v | .moved _ v => some v
   | .place _ _ => none
 
+/-- The newest binding of each name that `keep` holds, the newest first. A lookup
+reads the newest binding of a name, so these are the bindings a body that uses
+those names reads, and what a closure literal captures (expressions.capture). -/
+def newestOf {α : Type} (keep : Name → Bool) : List (Name × α) → List (Name × α)
+  | [] => []
+  | (x, a) :: scope =>
+    if keep x then (x, a) :: newestOf (fun y => keep y && y != x) scope else newestOf keep scope
+
+/-- Keeping the newest bindings commutes with any map that keeps names. -/
+theorem newestOf_map {α β : Type} (f : α → β) : ∀ (keep : Name → Bool) (scope : List (Name × α)),
+    newestOf keep (scope.map fun p => (p.1, f p.2)) = (newestOf keep scope).map fun p => (p.1, f p.2)
+  | _, [] => rfl
+  | keep, (x, a) :: scope => by
+    by_cases h : keep x = true <;> simp [newestOf, h, newestOf_map f _ scope]
+
+theorem mem_of_mem_newestOf {α : Type} {p : Name × α} :
+    ∀ {keep : Name → Bool} {scope : List (Name × α)}, p ∈ newestOf keep scope → p ∈ scope
+  | _, [], h => h
+  | keep, (x, a) :: scope, h => by
+    unfold newestOf at h
+    split at h
+    · rcases List.mem_cons.1 h with rfl | h
+      · exact List.mem_cons_self
+      · exact List.mem_cons_of_mem _ (mem_of_mem_newestOf h)
+    · exact List.mem_cons_of_mem _ (mem_of_mem_newestOf h)
+
+/-- A name that `keep` holds reads the same among the newest bindings. -/
+theorem lookup_newestOf {α : Type} {z : Name} :
+    ∀ {keep : Name → Bool} (scope : List (Name × α)), keep z = true →
+      (newestOf keep scope).lookup z = scope.lookup z
+  | _, [], _ => rfl
+  | keep, (x, a) :: scope, hz => by
+    by_cases hzx : z = x
+    · subst hzx
+      simp [newestOf, hz]
+    · have hne : (z == x) = false := by simpa using hzx
+      by_cases hx : keep x = true
+      · simp only [newestOf, hx, ↓reduceIte, List.lookup_cons, hne]
+        exact lookup_newestOf scope (by simp [hz, hzx])
+      · simp only [newestOf, hx, Bool.false_eq_true, ↓reduceIte, List.lookup_cons, hne]
+        exact lookup_newestOf scope hz
+
 /-- What the evaluator needs from a model of the frames of memory: the
 variables of the running body and how calls pass them. -/
 structure Frames (σ : Type) where
@@ -56,9 +98,9 @@ structure Frames (σ : Type) where
   bindMoved : σ → Name → Name → Value → σ
   /-- Ends the scope of the newest binding. -/
   unbind : σ → σ
-  /-- The variables in scope and their values, which a closure captures by
-  copy (expressions.capture). -/
-  capture : σ → Except Fault (List (Name × Value))
+  /-- The newest binding of each variable in scope that `keep` holds, with its
+  value, which a closure literal captures by copy (expressions.capture). -/
+  capture : σ → (Name → Bool) → Except Fault (List (Name × Value))
   /-- Starts a call, once every argument is evaluated: from the caller's state,
   the callee's, with the closure's captured variables and each parameter bound
   to its argument (values.inout-argument-order). -/
@@ -87,7 +129,7 @@ def Frames.withWorld {σ : Type} (F : Frames σ) : Memory (σ × World) where
   bind | (fr, w), x, v => (F.bind fr x v, w)
   bindMoved | (fr, w), y, x, v => (F.bindMoved fr y x v, w)
   unbind | (fr, w) => (F.unbind fr, w)
-  capture | (fr, _) => F.capture fr
+  capture | (fr, _), keep => F.capture fr keep
   enter | (fr, w), captured, params => (·, w) <$> F.enter fr captured params
   leave | (fr, _), (fr', w'), params => (·, w') <$> F.leave fr fr' params
   world := Prod.snd
@@ -196,7 +238,7 @@ def frames : Frames Frame where
   bind fr x v := (x, v) :: fr
   bindMoved fr y _ v := (y, v) :: fr
   unbind := List.tail
-  capture := pure
+  capture fr keep := pure (newestOf keep fr)
   enter := enter
   leave := leave
 
@@ -296,7 +338,7 @@ def frames : Frames State where
   bind := bind
   bindMoved s y _ v := bind s y v
   unbind s := { s with env := s.env.tail }
-  capture s := s.env.mapM fun (x, r) => (x, ·) <$> deref s r []
+  capture s keep := (newestOf keep s.env).mapM fun (x, r) => (x, ·) <$> deref s r []
   enter := enter
   leave caller callee _ := pure { caller with store := callee.store }
 

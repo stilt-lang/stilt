@@ -77,8 +77,9 @@ end
 mutual
 
 theorem Expr.mentions_gate : ∀ (e : Expr) (k : κ), (e.gate child keep k).mentions = e.mentions
-  | .var _, _ | .int _, _ | .bool _, _ | .unit, _ | .fnRef .., _ | .method .., _ | .closure .., _
+  | .var _, _ | .int _, _ | .bool _, _ | .unit, _ | .fnRef .., _ | .method .., _
   | .break, _ | .continue, _ => rfl
+  | .closure _ _ _ body, k => by simp [Expr.gate, Expr.mentions, Expr.mentions_gate body]
   | .move x, k => by
     simp only [Expr.gate]
     split <;> rfl

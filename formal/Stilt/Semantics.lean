@@ -375,8 +375,8 @@ def eval : Nat → Expr → Eval σ Value
     | .fnRef f types rows => pure (.function f types rows)
     | .method trait m τ => Eval.method D trait m τ
     | .closure ps result ρ body => do
-      let captured ← Eval.inspect M.capture
-      pure (.closure (captureOf ps body captured) ps result ρ body)
+      let captured ← Eval.inspect (M.capture · (Expr.captures ps body))
+      pure (.closure captured ps result ρ body)
     | .call callee args _ => do
       let f ← run callee
       let passed ← Eval.args run args

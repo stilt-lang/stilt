@@ -206,16 +206,18 @@ theorem Copy.write_erase (fr : Copy.Frame) (x : Name) (p : Path) (w : Value) :
     simp only [Option.map_some, Value.set_erase]
     cases v.set p w <;> simp [Except.map, Functor.map, assocSet_eraseBindings]
 
+theorem newestOf_eraseBindings :
+    ∀ (keep : Name → Bool) (c : List (Name × Value)),
+      newestOf keep (eraseBindings c) = eraseBindings (newestOf keep c)
+  | _, [] => rfl
+  | keep, (x, v) :: c => by
+    by_cases h : keep x = true <;>
+      simp [eraseBindings, newestOf, h, newestOf_eraseBindings _ c]
+
 /-- A closure literal with its marks erased captures, of the erased variables in scope,
 the erasures of those it captures (expressions.capture). -/
-theorem captureOf_erase (ps : List Param) (body : Expr) :
-    ∀ c : List (Name × Value),
-      captureOf ps body.erase (eraseBindings c) = eraseBindings (captureOf ps body c)
-  | [] => rfl
-  | (x, v) :: c => by
-    have ih := captureOf_erase ps body c
-    simp only [captureOf, Expr.captures_erase] at ih ⊢
-    simp only [eraseBindings, List.filter_cons]
-    split <;> simp [eraseBindings, ih]
+theorem captureOf_erase (ps : List Param) (body : Expr) (c : List (Name × Value)) :
+    captureOf ps body.erase (eraseBindings c) = eraseBindings (captureOf ps body c) := by
+  simp only [captureOf, Expr.captures_erase, newestOf_eraseBindings]
 
 end Stilt

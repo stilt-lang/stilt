@@ -151,10 +151,10 @@ theorem read (x : Name) :
     Eval.OneShot n Value.OneShot (Eval.inspect fun s => (Copy.memoryWith w).read s x []) :=
   inspect fun _ _ hs h => Frame.OneShot.read hs.1 h
 
-theorem capture :
+theorem capture (keep : Name → Bool) :
     Eval.OneShot n (fun c : List (Name × Value) => ∀ xv ∈ c, xv.2.OneShot)
-      (Eval.inspect (Copy.memoryWith w).capture) :=
-  inspect fun _ _ hs h => by cases h; exact hs.1
+      (Eval.inspect ((Copy.memoryWith w).capture · keep)) :=
+  inspect fun _ _ hs h => by cases h; exact fun xv hxv => hs.1 xv (mem_of_mem_newestOf hxv)
 
 end
 

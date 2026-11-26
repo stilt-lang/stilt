@@ -98,8 +98,8 @@ theorem readyP {as : List Arg} {ps : List Passed} {fr : Copy.State} {s : State �
     exact List.mem_filterMap.2 ⟨_, hm, rfl⟩
   have hpl : ∀ z p, Passed.place z p ∈ ps → z ∈ inoutRoots as := fun z p hm => place_roots hok.2.1 hm
   refine ⟨hag, fun x p hm => ⟨hag.1.keys_eq ▸ hinv.live x ?_,
-      hX.2 x (inoutRoots_sub as x (hpl x p hm))⟩,
-    fun x v hm => ⟨hag.1.keys_eq ▸ hinv.live x ?_, hheld x v hm, hX.2 x (movedRoots_sub as x (hmo x v hm)),
+      hX x (inoutRoots_sub as x (hpl x p hm))⟩,
+    fun x v hm => ⟨hag.1.keys_eq ▸ hinv.live x ?_, hheld x v hm, hX x (movedRoots_sub as x (hmo x v hm)),
       ?_⟩, compat_handOver hcompat (hok.2.2 ▸ hnd) fun x hx z p hz => ?_, hok.2.2 ▸ hnd, hok.1⟩
   · simp [hpl x p hm]
   · simp [hmo x v hm]
