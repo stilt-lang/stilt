@@ -1,5 +1,6 @@
 import Stilt.Numbers
 import Stilt.Declarations
+import Stilt.Typing.Else
 import Lean.Data.Json
 
 /-!
@@ -390,6 +391,13 @@ partial def expr (j : Json) : Except String Expr := do
   | "perform" => return .perform ⟨← f 0 >>= str, ← f 1 >>= str⟩ (← f 2 >>= expr)
   | "with" => return .withH (← f 0 >>= str) (← f 1 >>= bool) (← f 2 >>= expr) (← f 3 >>= expr)
   | "held" => return .held (← f 0 >>= list (pair str ty)) (← f 1 >>= list expr) (← f 2 >>= expr)
+  -- `["letElse", e, type, [P, binders, rest], x]`: `let P = e else x`, then the rest.
+  | "letElse" =>
+    let a ← f 2 >>= arm
+    return .letElse a.pattern a.binders (← f 0 >>= expr) (← f 1 >>= ty) a.body (← f 3 >>= expr)
+  -- `["orElse", e₁, type, option, name, e₂]`: `e₁ else e₂`, the `Option` named `option`.
+  | "orElse" =>
+    return .orElse (← f 2 >>= str) (← f 1 >>= ty) (← f 3 >>= str) (← f 0 >>= expr) (← f 4 >>= expr)
   | _ => throw s!"no expression is named {tag}"
 
 partial def arg (j : Json) : Except String Arg := do

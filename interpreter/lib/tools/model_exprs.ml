@@ -116,18 +116,11 @@ and control cx (e : Tast.expr) =
       outside "a generic type's value, or an update"
   | Call _ | Project _ -> outside "a generic call or a projection"
   | Else (x, d) ->
-      (* expressions.option-fallback: the value inside a [Some], or [d]. *)
+      (* expressions.option-fallback: the value inside a [Some], or [d], which the
+         calculus runs as [match x { Some(v) => v, _ => d }]. *)
       let v = temp "else" e.loc in
-      let some =
-        Arr
-          [
-            option_pattern cx x.ty [ tag "bind" [ Str v ] ];
-            Arr [ Str v ];
-            var_e v;
-          ]
-      in
-      let none = Arr [ Str "wild"; Arr []; expr cx d ] in
-      tag "match" [ expr cx x; ty cx e.ty; Arr [ some; none ] ]
+      let option = declared cx option_item (args_of x.ty) in
+      tag "orElse" [ expr cx x; ty cx e.ty; Str option; Str v; expr cx d ]
   | Handler _ | With _ | Resume _ -> Model_handlers.form (handlers cx) cx e
   | When (pairs, b) -> Model_shared.when_ (shared cx) cx e pairs b
   | Error ->
@@ -426,10 +419,11 @@ and binding cx form (b : Tast.binding) rest =
           Str (var_name v); ty cx b.pattern.pty; expr cx b.value; block cx rest;
         ]
   | P_wild, None -> tag "seq" [ expr cx b.value; block cx rest ]
-  | _ ->
-      (* A pattern binds as a match's arm does, and a let-else's [else] is the
-         arm of every other value (patterns.let-else); a [var]'s binders are
-         variables, each initialized with what the pattern binds. *)
+  | _ -> (
+      (* A pattern binds as a match's arm does, and a let-else's [else] runs on
+         every other value, as the arm [_ => x] of that match (patterns.let-else);
+         a [var]'s binders are variables, each initialized with what the pattern
+         binds. *)
       let body =
         if form = "letIn" then block cx rest
         else
@@ -439,17 +433,11 @@ and binding cx form (b : Tast.binding) rest =
               tag "varIn" [ Str n; ty cx t; var_e n; body ])
             (typed_binders b.pattern) (block cx rest)
       in
-      let others =
-        match b.otherwise with
-        | Some o -> [ Arr [ Str "wild"; Arr []; expr cx o ] ]
-        | None -> []
-      in
-      tag "match"
-        [
-          expr cx b.value;
-          ty cx (block_ty rest);
-          Arr (arm cx b.pattern body :: others);
-        ]
+      let value = expr cx b.value and t = ty cx (block_ty rest) in
+      let a = arm cx b.pattern body in
+      match b.otherwise with
+      | Some o -> tag "letElse" [ value; t; a; expr cx o ]
+      | None -> tag "match" [ value; t; Arr [ a ] ])
 
 and assign cx o (p : Tast.expr) (v : Tast.expr) =
   match o with
