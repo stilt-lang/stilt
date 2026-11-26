@@ -11,7 +11,8 @@ def citeAll (decls : Array Decl) (ids prefixes : Std.HashSet String) :
   let mut bad := #[]
   for h : i in [0:decls.size] do
     let d := decls[i]
-    let (good, wrong) := citations ids prefixes (d.doc.getD "")
+    let (good, wrong) := citations ids prefixes
+      (d.partDocs.foldl (· ++ "\n\n" ++ ·) (d.doc.getD ""))
     each := each.push good
     for g in good do by_ := by_.insert g ((by_[g]?.getD #[]).push i)
     for w in wrong do bad := bad.push (d.name, w)

@@ -21,6 +21,9 @@ structure Decl where
   module : Name
   line : Nat
   doc : Option String
+  /-- The docs of its constructors, or of its fields' projections, which stand for it on the
+  map, so that the paragraphs they cite are its own. -/
+  partDocs : Array String := #[]
   /-- The written declarations its statement uses. -/
   statement : Array Name
   /-- The written declarations its proof or body uses. -/

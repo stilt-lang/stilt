@@ -21,7 +21,8 @@ def rangedNames (env : Environment) : NameSet :=
     if inModel env n && (declRangeExt.find? env n).isSome then acc.insert n else acc
 
 /-- One written declaration, with what it uses and the axioms it rests on. -/
-def decl (ranged : NameSet) (ci : ConstantInfo) (doc : Option String) : M Decl := do
+def decl (ranged : NameSet) (ci : ConstantInfo) (doc : Option String)
+    (partDocs : Array String) : M Decl := do
   let env ← read
   let n := ci.name
   let statement ← reachAll ranged n (match ci with
@@ -33,7 +34,7 @@ def decl (ranged : NameSet) (ci : ConstantInfo) (doc : Option String) : M Decl :
     | _ => reachAll ranged n ((ci.value? (allowOpaque := true)).map used |>.getD #[])
   let axs := (← axiomsOf n).toArray.filter (!standardAxioms.contains ·)
   return { name := n, kind := kindOf env ci, module := (moduleOf env n).getD .anonymous,
-           line := lineOf env n, doc, statement, body, axioms := axs.qsort Name.lt }
+           line := lineOf env n, doc, partDocs, statement, body, axioms := axs.qsort Name.lt }
 
 /-- Every written declaration of the model in `env`. -/
 def declarations (env : Environment) : IO (Array Decl) := do
@@ -41,10 +42,20 @@ def declarations (env : Environment) : IO (Array Decl) := do
   let names := ranged.toArray.filter (written env ranged)
   let mut docs : Array (Option String) := #[]
   for n in names do docs := docs.push (← findDocString? env n)
+  -- The constructors and projections of the model, each of which stands for another
+  -- declaration, whose citations its doc adds to.
+  let parts := env.constants.fold (init := #[]) fun acc m _ =>
+    if inModel env m && standFor env m != m then acc.push m else acc
+  let mut partDocs : Std.HashMap Name (Array String) := {}
+  for m in parts.qsort Name.lt do
+    if let some d ← findDocString? env m then
+      let s := standFor env m
+      partDocs := partDocs.insert s ((partDocs[s]?.getD #[]).push d)
   let run : M (Array Decl) := do
     let mut out := #[]
     for n in names, d in docs do
-      if let some ci := env.find? n then out := out.push (← decl ranged ci d)
+      if let some ci := env.find? n then
+        out := out.push (← decl ranged ci d (partDocs[n]?.getD #[]))
     return out
   let out := (run.run env).run' {}
   return out.qsort fun a b =>
