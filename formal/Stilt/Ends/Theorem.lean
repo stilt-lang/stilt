@@ -1,4 +1,4 @@
-import Stilt.Ends.While
+import Stilt.Ends.Body
 import Stilt.Panics.Theorem
 import Stilt.Soundness.Theorem
 
@@ -10,12 +10,13 @@ of a ranked set, free of `div` too, halts in copy-in, copy-out, whatever its ord
 write-back: a call of a function of the set (`Decls.Ranked.call`), a run whose `main` is
 such code (`Program.runCopyWith_halts`) and a program free of `div` whole
 (`Program.DivFree.halts`), and in place when it is well typed and obeys the law
-of exclusivity. The proof goes by induction on the fuel that the text bounds,
-case by case on the expression: a part of an expression needs less than the
-expression, a call's body needs no more than its function's bound, which the
-call's own covers, a `for` loop runs its body at its own fuel, turn after
-turn, and a `while` that counts takes a turn more of fuel for each turn it
-makes, of which its values allow finitely many (`Halts.whileCounts`).
+of exclusivity. A call halts by induction on its function's rank, since a body calls only
+functions ranked below its own, then on the size of the value at its descending position,
+since a self-call that descends passes a smaller one there
+(facts.descending-self-calls); and a body halts by induction on the depth of its
+text (`eval_halts`): a `for` loop runs its body at its own fuel, turn after turn, and a
+`while` that counts takes a turn more of fuel for each turn it makes, of which its values
+allow finitely many (`Halts.whileCounts`).
 
 **Total** (facts.without-div): a well-typed program whose `main` is free of `panic`
 and `div` ends with `()`, with an error of the type its row allows, or with a
@@ -27,142 +28,89 @@ namespace Stilt
 
 variable {lim : Limited}
 
-open Halts in
-/-- Evaluating an expression free of `div` within the fuel its text bounds halts
-from every state. -/
-theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked lim B) :
-    ∀ k, HaltsRun lim B k fun n => eval D (Copy.memoryWith w) n
-  | 0, e, _, hn, _ => absurd hn (by have := e.one_le_needs B; omega)
-  | k + 1, e, hd, hn, s => by
-    have ih := eval_halts w hR k
-    apply Halts.succ
-    cases e <;> try simp only [Expr.divFree, Expr.needs, Bool.and_eq_true, Nat.max_le,
-      Nat.add_le_add_iff_right] at hd hn
-    case var x => exact const (Eval.Ends.inspect _ fun _ _ _ => trivial)
-    case move x => exact const (Eval.Ends.inspect _ fun _ _ _ => trivial)
-    case int k => exact const (Eval.Ends.pure trivial)
-    case bool b => exact const (Eval.Ends.pure trivial)
-    case unit => exact const (Eval.Ends.pure trivial)
-    case record R _ fs => exact bind (fields ih fs hd hn s) fun _ _ _ _ => const (Eval.Ends.declare D R _)
-    case variant T _ C es => exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.pure trivial)
-    case list τ es => exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.pure trivial)
-    case op o es =>
-      exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.world _ _)
-    case view es =>
-      exact bind (list ih es hd hn s) fun _ _ _ _ => const (Eval.Ends.ofExcept _ fun _ _ => trivial)
-    case field e f =>
-      exact bind (ih e hd hn s) fun _ _ _ _ => const (Eval.Ends.ofExcept _ fun _ _ => trivial)
-    case index e i =>
-      exact bind (ih e hd.1 hn.1 s) fun _ s' _ _ =>
-        bind (bind (ih i hd.2 hn.2 s') fun v _ _ _ => const (Eval.Ends.asInt v)) fun _ _ _ _ =>
-          const (Eval.Ends.ofExcept _ fun _ _ => trivial)
-    case fnRef f types rows => exact const (Eval.Ends.pure trivial)
-    case method t m τ =>
-      refine const (m := Eval.method D t m τ) ?_
-      unfold Eval.method
-      split
-      · split
-        · exact Eval.Ends.pure trivial
-        · exact Eval.Ends.fail _
-      · exact Eval.Ends.fail _
-    case closure ps result ρ body =>
-      exact bind (const (Eval.Ends.inspect _ fun _ _ _ => trivial)) fun _ _ _ _ => const (Eval.Ends.pure trivial)
-    case call callee as _ =>
-      obtain ⟨⟨hc, hcd⟩, had⟩ := hd
-      obtain ⟨hcn, han, hbn⟩ := hn
-      cases callee
-      case fnRef f types rows =>
-        have hf : Halts (fun n => eval D (Copy.memoryWith w) n (.fnRef f types rows))
-            (fun v => v = .function f types rows) s :=
-          ⟨1, .done (.function f types rows) s, rfl, fun n hle => by
-            obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-            rfl⟩
-        refine bind hf fun v s' hv _ => bind (args ih as had han s') fun passed s'' _ _ =>
-          callAs _ _ _ false _ passed ?_
-        subst hv
-        show Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
-          (.function f types rows) passed) _ s''
-        unfold Eval.call
-        dsimp only
-        cases hfn : D.fn? f with
-        | none => exact const (Eval.Ends.fail _)
-        | some d =>
-          simp only [Expr.divFree] at hcd
-          obtain ⟨hdd, hdn⟩ := hR f d hfn hcd
-          simp only [Expr.bodyNeeds] at hbn
-          refine invoke _ [] d.params passed fun s₀ => ih _ ?_ ?_ s₀
-          · rw [Expr.divFree_substRows, Expr.divFree_substTys]; exact hdd
-          · rw [Expr.needs_substRows, Expr.needs_substTys]; omega
-      case closure ps result ρ body =>
-        have hf : Halts (fun n => eval D (Copy.memoryWith w) n (.closure ps result ρ body))
-            (fun v => ∃ c, v = .closure c ps result ρ body) s :=
-          Halts.succ (bind (const (Eval.Ends.inspect _ fun _ _ _ => trivial)) fun c _ _ _ =>
-            const (Eval.Ends.pure ⟨c, rfl⟩))
-        refine bind hf fun v s' hv _ => bind (args ih as had han s') fun passed s'' _ _ =>
-          callAs _ _ _ false _ passed ?_
-        obtain ⟨c, rfl⟩ := hv
-        simp only [Expr.divFree] at hcd
-        simp only [Expr.bodyNeeds] at hbn
-        exact invoke _ c ps passed fun s₀ => ih body hcd hbn s₀
-      all_goals simp [Expr.callable] at hc
-    case letIn x τ init body =>
-      exact bind (ih init hd.1 hn.1 s) fun v _ _ _ => withInit _ x init v (ih body hd.2 hn.2 _)
-    case varIn x τ init body =>
-      exact bind (ih init hd.1 hn.1 s) fun v _ _ _ => withInit _ x init v (ih body hd.2 hn.2 _)
-    case assign p value =>
-      obtain ⟨x, ps⟩ := p
-      simp only [Expr.divFree, Expr.needs, Bool.and_eq_true, Nat.max_le,
-        Nat.add_le_add_iff_right] at hd hn
-      exact assign _ ih x hd.1 hn.1 hd.2 hn.2 s
-    case seq a b => exact bind (ih a hd.1 hn.1 s) fun _ s' _ _ => ih b hd.2 hn.2 s'
-    case «if» c τ a b =>
-      exact bind (bind (ih c hd.1.1 hn.1 s) fun v _ _ _ => const (Eval.Ends.asBool v)) fun v s' _ _ =>
-        ite v (ih a hd.1.2 hn.2.1 s') (ih b hd.2 hn.2.2 s')
-    case «match» e τ arms => exact bind (ih e hd.1 hn.1 s) fun v s' _ _ => select _ ih hd.2 hn.2 v s'
-    case «for» x τ e body => exact loop _ ih x hd.1 hn.1 hd.2 hn.2 s
-    case raise e => exact bind (ih e hd hn s) fun v _ _ _ => const (Eval.Ends.throw v)
-    case «try» e => exact ih e hd hn s
-    case tryCatch e E x h τ =>
-      exact handle (ih e hd.1 hn.1 s) fun err s' => withVar _ x err (ih h hd.2 hn.2 _)
-    case «while» c body =>
-      exact shift (Halts.whileCounts ih hd.1.1 hn.1 hd.1.2 hn.2 hd.2 s)
-    case «loop» body => simp at hd
-    case «break» => exact const (Eval.Ends.jump _)
-    case «continue» => exact const (Eval.Ends.jump _)
-    case «return» e => exact bind (ih e hd hn s) fun v _ _ _ => const (Eval.Ends.jump _)
-    case perform => cases hd
-    case withH E c h b =>
-      exact bind (ih h hd.1 hn.1 s) fun hv s' _ _ => letGo _ (handleWith _ E c hv (ih b hd.2 hn.2 s'))
-    case held ns hs b =>
-      exact bind (list ih hs hd.1 hn.1 s) fun vs _ _ _ => held _ (fun s₀ => ih b hd.2 hn.2 s₀) _ vs
+/-- A call whose body halts from the frame the call starts it in halts. -/
+theorem Halts.invokeWith {σ : Type} (M : Memory σ) (captured : List (Name × Value))
+    (params : List Param) (passed : List Passed) {s : σ} {F : Nat → Eval σ Value}
+    (h : ∀ bound callee, bindArgs params passed = some bound → M.enter s captured bound = .ok callee →
+      Halts F (fun _ => True) callee) :
+    Halts (fun n => Eval.invoke M captured params passed (F n)) (fun _ => True) s := by
+  cases hb : bindArgs params passed with
+  | none => exact ⟨0, .stuck, trivial, fun n _ => by simp [Eval.invoke, hb]⟩
+  | some bound =>
+    cases he : M.enter s captured bound with
+    | error f => exact ⟨0, .fault f s, Eval.Ends.fault (P := fun _ => True) f s, fun n _ => by
+        simp [Eval.invoke, hb, he]⟩
+    | ok callee =>
+      refine Halts.post (φ := fun o => Eval.invoke M captured params passed (fun _ => o) s)
+        (h bound callee hb he) (fun n => by simp [Eval.invoke, hb, he]) fun o ho => ?_
+      simp only [Eval.invoke, hb, he]
+      cases o with
+      | jumped j s' =>
+        cases j <;> simp only [Outcome.leaveCall] <;> (try split) <;>
+          first | trivial | exact Eval.Ends.fault _ _
+      | outOfFuel => exact ho
+      | performed => simp [Outcome.Ends] at ho
+      | _ => simp only [Outcome.leaveCall] <;> (try split) <;>
+          first | trivial | exact Eval.Ends.fault _ _
 
 /-- **Without div**, for a call of a function that `lim` covers: on any arguments, from any
 state, the call halts, never running out of fuel from some fuel on, and ending as no
 performance. The function counts as one without `div` wherever it is named; it calls only
-the functions `lim` covers, without recursion, and no function value it is given
-(facts.without-div). -/
-theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} (hR : D.Ranked lim B) (w : WriteBack)
-    {f : Name} {types : List Ty} {rows : List Row} (hf : lim.fn f = true) (passed : List Passed)
-    (s : Copy.State) :
+the functions `lim` covers, ranked below it, itself on strict parts of its descending
+parameter, and no function value it is given (facts.without-div and
+facts.descending-self-calls). -/
+theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} {desc : Name → Nat}
+    (hR : D.Ranked lim B desc) (w : WriteBack) {f : Name} {types : List Ty} {rows : List Row}
+    (hf : lim.fn f = true) (passed : List Passed) (s : Copy.State) :
     Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
       (.function f types rows) passed) (fun _ => True) s := by
+  suffices H : ∀ r f, B f = r → lim.fn f = true → ∀ q (passed : List Passed),
+      Passed.sizeAt passed (desc f) = q → ∀ types rows s,
+        Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
+          (.function f types rows) passed) (fun _ => True) s from
+    H _ f rfl hf _ passed rfl types rows s
+  intro r
+  induction r using Nat.strongRecOn with
+  | ind r ihr =>
+  intro f hBf hf q
+  induction q using Nat.strongRecOn with
+  | ind q ihq =>
+  intro passed hq types rows s
   unfold Eval.call
   dsimp only
   cases hfn : D.fn? f with
   | none => exact Halts.const (Eval.Ends.fail _)
   | some d =>
-    obtain ⟨hdd, hdn⟩ := hR f d hfn hf
-    refine Halts.invoke _ [] d.params passed fun s₀ => eval_halts w hR (B f) _ ?_ ?_ s₀
+    have hdd := hR f d hfn hf
+    refine Halts.invokeWith _ [] d.params passed fun bound callee hb he => ?_
+    obtain ⟨fr, hfr, rfl⟩ : ∃ fr, Copy.enter s.1 [] bound = .ok fr ∧ callee = (fr, s.2) := by
+      change (·, s.2) <$> Copy.enter s.1 [] bound = _ at he
+      cases hc : Copy.enter s.1 [] bound with
+      | error e => rw [hc] at he; cases he
+      | ok fr => rw [hc] at he; cases he; exact ⟨fr, rfl, rfl⟩
+    have hC : CallsHalt D w lim B (some (f, desc f)) (Passed.sizeAt passed (desc f)) := by
+      refine ⟨fun g types' rows' passed' s' hg => ?_, fun f' k' hme types' rows' passed' s' hlt => ?_⟩
+      · simp only [Limited.names, Option.all_some, Bool.and_eq_true, decide_eq_true_eq] at hg
+        exact ihr (B g) (hBf ▸ hg.2) g rfl hg.1 _ passed' rfl types' rows' s'
+      · simp only [Option.some.injEq, Prod.mk.injEq] at hme
+        obtain ⟨rfl, rfl⟩ := hme
+        exact ihq _ (hq ▸ hlt) passed' rfl types' rows' s'
+    refine eval_halts hC _ _ _ ?_ (Nat.le_refl _) ?_ _ (enter_roles hb hfr)
     · rw [Expr.divFree_substRows, Expr.divFree_substTys]; exact hdd
-    · rw [Expr.needs_substRows, Expr.needs_substTys]; exact hdn
+    · rw [Expr.writes_substRows, Expr.writes_substTys]; exact entryRoles_avoids d _
 
 /-- **Without div**, for `main`: when the functions that `lim` covers are ranked and
 `main`'s body is free of `div`, the run halts in copy-in, copy-out, whatever its order of
 write-back, never running out of fuel from some fuel on. -/
-theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} (hR : p.decls.Ranked lim B)
-    (hm : p.main.divFree lim = true) (w : WriteBack) (input : String) :
+theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} {desc : Name → Nat}
+    (hR : p.decls.Ranked lim B desc) (hm : p.main.divFree lim B none [] = true) (w : WriteBack)
+    (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → p.runCopyWith w fuel input ≠ .outOfFuel := by
-  obtain ⟨N, o, ho, hn⟩ := eval_halts w hR _ p.main hm (Nat.le_refl _) ([], World.start input)
+  have hC : CallsHalt p.decls w lim B none 0 :=
+    ⟨fun _ _ _ passed s hg => hR.call w (by simpa [Limited.names] using hg) passed s,
+      fun _ _ h => nomatch h⟩
+  obtain ⟨N, o, ho, hn⟩ := eval_halts hC _ p.main [] hm (Nat.le_refl _) (Roles.Avoids.nil _)
+    ([], World.start input) (Roles.Inv.nil _ _)
   refine ⟨N, fun fuel hf => ?_⟩
   have h := hn fuel hf
   dsimp only at h
@@ -174,8 +122,8 @@ theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} (hR : p.decls
 
 /-- **Without div** for `main`, in place: on a well-typed program that obeys the law of
 exclusivity, in-place mutation shows what copy-in, copy-out does. -/
-theorem Program.runInPlace_halts {p : Program} {B : Name → Nat} (hR : p.decls.Ranked lim B)
-    (hm : p.main.divFree lim = true) (hwt : p.WellTyped) (hex : p.Exclusive) (input : String) :
+theorem Program.runInPlace_halts {p : Program} {B : Name → Nat} {desc : Name → Nat}
+    (hR : p.decls.Ranked lim B desc) (hm : p.main.divFree lim B none [] = true) (hwt : p.WellTyped) (hex : p.Exclusive) (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → (p.runInPlace fuel input).observe ≠ .outOfFuel := by
   obtain ⟨N, hN⟩ := p.runCopyWith_halts hR hm .leftToRight input
   refine ⟨N, fun fuel hf h => ?_⟩
@@ -187,7 +135,7 @@ theorem Program.runInPlace_halts {p : Program} {B : Name → Nat} (hR : p.decls.
 free of `div` halts, never running out of fuel from some fuel on. -/
 theorem Program.DivFree.halts {p : Program} (hp : p.DivFree) (w : WriteBack) (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → p.runCopyWith w fuel input ≠ .outOfFuel :=
-  let ⟨_, hR, hm⟩ := hp
+  let ⟨_, _, hR, hm⟩ := hp
   p.runCopyWith_halts hR hm w input
 
 /-- **Without div**, in place: on a well-typed program that obeys the law of
@@ -195,7 +143,7 @@ exclusivity, in-place mutation shows what copy-in, copy-out does. -/
 theorem Program.DivFree.haltsInPlace {p : Program} (hp : p.DivFree) (hwt : p.WellTyped)
     (hex : p.Exclusive) (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → (p.runInPlace fuel input).observe ≠ .outOfFuel :=
-  let ⟨_, hR, hm⟩ := hp
+  let ⟨_, _, hR, hm⟩ := hp
   p.runInPlace_halts hR hm hwt hex input
 
 /-- **Total**, for `main`: a well-typed program whose `main` is free of `panic`, naming only
@@ -203,9 +151,9 @@ functions that a cover of panic-free functions holds, and free of `div`, naming 
 ranked functions, ends with `()`, with an error of the type its row allows, or with a panic
 of the kind `overflow` or `deadlock`, as the reference interpreter runs it, with every fuel
 from some fuel on (facts.without-div). -/
-theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} (hwt : p.WellTyped)
-    (hD : p.decls.PanicCover lim) (hpm : p.main.panicFree lim = true) (hR : p.decls.Ranked lim' B)
-    (hdm : p.main.divFree lim' = true) (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
+theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} {desc : Name → Nat}
+    (hwt : p.WellTyped) (hD : p.decls.PanicCover lim) (hpm : p.main.panicFree lim = true)
+    (hR : p.decls.Ranked lim' B desc) (hdm : p.main.divFree lim' B none [] = true) (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
       (p.runCopy fuel input).observe = .returned .unit ∨
       (∃ e E, (p.runCopy fuel input).observe = .raised e ∧ p.row.raise = some E ∧
         Value.Typed p.decls e E.sem) ∨
@@ -243,7 +191,7 @@ theorem Program.total {p : Program} (hwt : p.WellTyped) (hpanic : p.PanicFree) (
         Value.Typed p.decls e E.sem) ∨
       (p.runCopy fuel input).observe = .panicked .overflow ∨
       (p.runCopy fuel input).observe = .panicked .deadlock :=
-  let ⟨_, hR, hm⟩ := hdiv
+  let ⟨_, _, hR, hm⟩ := hdiv
   p.total_of hwt hpanic.cover hpanic.2 hR hm input
 
 end Stilt

@@ -12,7 +12,8 @@ solved together. A function without the fact `panic` is one of a set of function
 no site of `panic` and name only functions of the set, the greatest such set being those
 that the inference finds without it; so a limit is kept when some such set holds every
 function the limit is on (`Program.PanicLimited`). For `div` the set is also ranked: its
-functions call each other without recursion (`Program.DivLimited`).
+functions call each other without recursion, but for self-calls that descend
+(facts.descending-self-calls, `Program.DivLimited`).
 
 What the limits promise, proved from the checks (`Program.PanicKeptBy.kept`,
 `Program.DivLimited.kept`):
@@ -56,12 +57,13 @@ def Program.OverflowLimited (p : Program) : Prop :=
 
 /-- `without div`, kept as the Reference infers facts (facts.without-div): some set of
 functions, holding every function limited by `without div`, holds no site of `div` and names
-only functions of the set, which call each other without recursion, and `main`'s body is
-such code when `main` is limited. -/
+only functions of the set, which call each other without recursion, but for self-calls that
+descend (facts.descending-self-calls), and `main`'s body is such code when `main` is
+limited. -/
 def Program.DivLimited (p : Program) : Prop :=
-  ∃ (lim : Limited) (B : Name → Nat), p.decls.Ranked lim B ∧
+  ∃ (lim : Limited) (B : Name → Nat) (desc : Name → Nat), p.decls.Ranked lim B desc ∧
     (∀ d ∈ p.decls.fns, d.limits.div = true → lim.fn d.name = true) ∧
-    (p.limits.div = true → p.main.divFree lim = true)
+    (p.limits.div = true → p.main.divFree lim B none [] = true)
 
 /-- What a limit against `panic` promises (effects.without-panic and
 effects.without-overflow): the functions whose limits `limited` picks are among a set of
@@ -121,7 +123,7 @@ theorem Program.PanicKeptBy.kept {p : Program} {limited : Limits → Bool} {over
 /-- The checks of `without div` keep its promises. -/
 theorem Program.DivLimited.kept {p : Program} (h : p.DivLimited) (hwt : p.WellTyped)
     (hex : p.Exclusive) (input : String) : p.HaltsKept input := by
-  obtain ⟨lim, B, hR, hfns, hmain⟩ := h
+  obtain ⟨lim, B, desc, hR, hfns, hmain⟩ := h
   refine ⟨⟨lim, fun name d hd hl => ?_, fun _ _ _ passed s hf => hR.call .leftToRight hf passed s⟩, fun hl =>
     ⟨p.runCopyWith_halts hR (hmain hl) .leftToRight input,
       p.runInPlace_halts hR (hmain hl) hwt hex input⟩⟩
