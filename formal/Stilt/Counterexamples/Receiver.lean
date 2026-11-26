@@ -50,7 +50,7 @@ theorem receiverAliased_receivers : receiverAliased.decls.Receivers where
     rfl
 
 theorem receiverAliased_wellTyped : receiverAliased.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide) receiverAliased_receivers
   fns := by
     intro d hd

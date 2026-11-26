@@ -45,7 +45,7 @@ def writtenBack : Program :=
     ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem writtenBack_wellTyped : writtenBack.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by simp [writtenBack]) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by simp [writtenBack]) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by
@@ -118,7 +118,7 @@ def selfPart : Program :=
 
 theorem selfPart_wellTyped : selfPart.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide)
-    ⟨rfl, rfl, rfl⟩ (by decide) (by decide) (by decide) (by decide) (by decide)
+    ⟨rfl, rfl, rfl, rfl⟩ (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := fun _ h => nomatch h
   closed := by unfold Ty.Closed; decide

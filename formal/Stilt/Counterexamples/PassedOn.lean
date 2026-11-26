@@ -78,7 +78,7 @@ private theorem pairedF_wellTyped {D : Decls} (hbox : D.record? "Box" = some box
 /-- effects.paired-row-variables accepts `passedOn`: instantiating `e` with `r` leaves every row of
 `f`'s type one `raise` label (effects.one-error-type), and `f` pairs `e` with `Box`. -/
 theorem passedOn_wellTypedWithoutPassing : passedOn.WellTypedWithoutPassing where
-  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by
@@ -187,7 +187,7 @@ private theorem pairedCaller_passesOn :
 
 /-- The model accepts `passedOnPaired`. -/
 theorem passedOnPaired_wellTyped : passedOnPaired.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by

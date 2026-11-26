@@ -149,7 +149,7 @@ def indexed : Program :=
     Row.pure, {}⟩
 
 theorem indexed_wellTyped : indexed.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by simp [indexed]) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by simp [indexed]) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by

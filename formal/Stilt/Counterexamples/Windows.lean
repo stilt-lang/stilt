@@ -39,7 +39,7 @@ def viewChanged : Program :=
     ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem viewChanged_wellTyped : viewChanged.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by simp [viewChanged]) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by simp [viewChanged]) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := fun _ h => nomatch h
@@ -104,7 +104,7 @@ def viewEscaped : Program :=
     ⟨false, some listTy, [], [], none⟩, {}⟩
 
 theorem viewEscaped_wellTyped : viewEscaped.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by simp [viewEscaped]) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by simp [viewEscaped]) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by

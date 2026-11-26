@@ -140,7 +140,7 @@ theorem callRaisingBool_typed {D : Decls} {f : Name} {d : FnDecl}
     (.refl _) .unit
 
 theorem annotated_wellTypedAsRecorded : annotated.WellTypedAsRecorded where
-  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by
@@ -163,7 +163,7 @@ theorem annotated_wellTypedAsRecorded : annotated.WellTypedAsRecorded where
   noEscape := noEscape_of_check (by decide)
 
 theorem generic_wellTypedAsRecorded : generic.WellTypedAsRecorded where
-  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by
@@ -294,7 +294,7 @@ def paired : Program :=
 /-- The model accepts `paired`: the signature of `or_zero` pairs `f'` with
 `Box`, the type its `catch` handles, in `f`'s row (effects.paired-row-variables and effects.catch-around-row-variables). -/
 theorem paired_wellTyped : paired.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by

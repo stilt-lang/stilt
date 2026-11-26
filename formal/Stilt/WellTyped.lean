@@ -156,12 +156,21 @@ def TraitImpl.Implements (D : Decls) (i : TraitImpl) : Prop :=
     ∃ d ∈ i.fns, d.name = m ∧ d.typeParams = [] ∧ d.rowParams = [] ∧
       d.type = σ.substTys [(selfParam, i.type.type)]
 
+/-- The names of the type namespace: those of the records, the variant types, the traits
+and the effects (declarations.namespaces). -/
+def Decls.typeNames (D : Decls) : List Name :=
+  D.records.map (·.name) ++ D.variants.map (·.name) ++ D.traits.map (·.name) ++
+    D.effects.map (·.name)
+
 /-- The conditions on declarations that declarations.function-declarations and declarations.unique-names states, as far as the calculus
 needs them: names are unique where declarations.unique-names says so, so a type's `impl` blocks
 define each name once (traits.inherent-names), only functions declare row variables
 (effects.row-variables) and type parameters (declarations.function-declarations), their non-escaping parameters have implicit ones (effects.non-escaping-parameters),
-only methods take `self` (traits.methods), and each trait impl implements its
-trait (traits.impl-members). -/
+only methods take `self` (traits.methods), each trait impl implements its
+trait and holds no other member (traits.impl-members), a trait has one impl per type
+(traits.coherence), and each effect declares operations, each once
+(handlers.declaring-effect). The value namespace's other half, variants of one name in
+two types, is outside the calculus, which names a variant by its type and its own name. -/
 structure Decls.WellFormed (D : Decls) : Prop where
   recordNames : (D.records.map (·.name)).Nodup
   fieldNames : ∀ r ∈ D.records, (r.fields.map Prod.fst).Nodup
@@ -180,6 +189,18 @@ structure Decls.WellFormed (D : Decls) : Prop where
   receivers : D.Receivers
   traits : ∀ t ∈ D.traits, t.WellFormed
   traitImpls : ∀ i ∈ D.traitImpls, i.Implements D
+  /-- The type namespace holds each name once: a record, a variant type, a trait and an
+  effect of one name are E0208 (declarations.namespaces and declarations.unique-names). -/
+  typeNames : D.typeNames.Nodup
+  /-- An effect has one or more operations (E0518), each named once in it (E0208)
+  (handlers.declaring-effect). -/
+  effectOps : ∀ e ∈ D.effects, e.ops ≠ [] ∧ (e.ops.map Prod.fst).Nodup
+  /-- A trait has at most one impl per type: a second is E0304 (traits.coherence). -/
+  coherent : (D.traitImpls.map fun i => (i.trait, i.type)).Nodup
+  /-- An impl holds no member that its trait doesn't declare: one is E0306
+  (traits.impl-members). -/
+  implMembers : ∀ i ∈ D.traitImpls, ∀ d ∈ i.fns,
+    ∃ t, D.trait? i.trait = some t ∧ d.name ∈ t.methods.map Prod.fst
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`

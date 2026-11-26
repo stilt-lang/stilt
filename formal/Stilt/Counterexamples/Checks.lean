@@ -140,14 +140,14 @@ theorem declsWellFormed {D : Decls}
     (hfields : (D.records.all fun r =>
       decide (r.fields.map Prod.fst).Nodup && r.fields.all (·.2.concreteCheck)) = true)
     (hfieldsClosed : ∀ r ∈ D.records, ∀ f ∈ r.fields, f.2.Closed)
-    (hvariants : D.variants = [] ∧ D.traits = [] ∧ D.traitImpls = [])
+    (hvariants : D.variants = [] ∧ D.traits = [] ∧ D.traitImpls = [] ∧ D.effects = [])
     (hfns : (D.fns.map (·.name)).Nodup)
     (hparams : ∀ d ∈ D.fns, (d.params.map Param.name).Nodup)
     (hrowParams : ∀ d ∈ D.fns, d.rowParams.Nodup)
     (hsigs : D.fns.all signatureCheck = true)
     (himplicit : D.fns.all implicitRowsCheck = true) (hreceivers : D.Receivers) :
     D.WellFormed := by
-  obtain ⟨hv, ht, hti⟩ := hvariants
+  obtain ⟨hv, ht, hti, he⟩ := hvariants
   have hf := fun r hr => List.all_eq_true.1 hfields r hr
   simp only [Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true] at hf
   exact ⟨hrecords, fun r hr => (hf r hr).1, hfieldsClosed,
@@ -155,6 +155,7 @@ theorem declsWellFormed {D : Decls}
     by simp [hv], by simp [hv], hfns, hparams, hrowParams,
     fun d hd => by simp [(signatures_of_check hsigs d hd).1], fun d hd => (signatures_of_check hsigs d hd).2,
     fun d hd => implicitRows_of_check (List.all_eq_true.1 himplicit d hd), hreceivers,
-    by simp [ht], by simp [hti]⟩
+    by simp [ht], by simp [hti], by simpa [Decls.typeNames, hv, ht, he] using hrecords,
+    by simp [he], by simp [hti], by simp [hti]⟩
 
 end Stilt.Counterexamples

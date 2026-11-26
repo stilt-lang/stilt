@@ -27,7 +27,7 @@ def aliased : Program :=
     ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem aliased_wellTyped : aliased.WellTyped where
-  decls := declsWellFormed (by decide) (by decide) (by simp [aliased]) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by simp [aliased]) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by

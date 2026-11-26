@@ -94,7 +94,7 @@ private theorem escaped_main :
 
 /-- The checker without the no-escape rule accepts `escaped`. -/
 theorem escaped_lenient : escaped.LenientIn FnDecl.scope where
-  decls := declsWellFormed (by decide) (by decide) (by simp [escaped]) ⟨rfl, rfl, rfl⟩
+  decls := declsWellFormed (by decide) (by decide) (by simp [escaped]) ⟨rfl, rfl, rfl, rfl⟩
     (by decide) (by decide) (by decide) (by decide) (by decide)
     (Decls.receivers_of_nil rfl (by decide))
   fns := by
