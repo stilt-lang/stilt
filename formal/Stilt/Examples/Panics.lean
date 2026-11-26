@@ -11,7 +11,10 @@ guards `d` (facts.divisors), `when c { x / 2 }`, `if d != 0 { n / d }` and `if d
 division after `d = 0`. A program that divides by a variable holding zero
 panics with `divide-by-zero`, which the check rules out, and a panic-free
 program may still overflow, which `without panic` doesn't rule out
-(effects.without-overflow), as `Program.PanicFree.runCopy` allows.
+(effects.without-overflow), as `Program.PanicFree.runCopy` allows. Under a limit that
+covers `f` alone, a call of `f` adds nothing and one of `g` adds `panic`; under
+`without panic, overflow`, `n / 2`, `i + 1` and `xs.len()` count as overflowing, and
+`i +% 1` doesn't.
 -/
 
 namespace Stilt.Examples.Panics
@@ -165,6 +168,19 @@ example : (Expr.if (contains (.var "k")) .i64
     (.seq (.assign ⟨"m", []⟩ (.op (.map .remove) [.var "m", .var "k"])) (get (.var "k"))) (.int 0)).panicFree Limited.all =
     false := rfl
 example : (get (.var "k")).panicFree Limited.all = false := rfl
+
+/-- The functions that a limit on `f` alone covers, with overflow or without. -/
+private def onlyF (overflows : Bool) : Limited := ⟨(· == "f"), fun _ _ => false, overflows⟩
+
+example : (Expr.call (.fnRef "f" [] []) [] .unit).panicFree (onlyF true) = true := rfl
+example : (Expr.call (.fnRef "g" [] []) [] .unit).panicFree (onlyF true) = false := rfl
+example : (Expr.fnRef "g" [] []).panicFree (onlyF true) = false := rfl
+example : (div (.var "n") (.int 2)).panicFree (onlyF false) = false := rfl
+example : (Expr.op (.arith .add .i64) [.var "i", .int 1]).panicFree (onlyF false) = false := rfl
+example : (Expr.op (.wrapping .add .i64) [.var "i", .int 1]).panicFree (onlyF false) = true := rfl
+example : (Expr.op (.list .len) [.var "xs"]).panicFree (onlyF false) = false := rfl
+example : (Expr.for "i" .i64 (.op (.list (.range false)) [.int 0, .op (.list .len) [.var "xs"]])
+    (.index (.var "xs") (.var "i"))).panicFree (onlyF true) = true := rfl
 
 /-- `let d = 0; 1 / d` divides by zero, and the check rejects it. -/
 private def byZero : Program := program (.letIn "d" .i64 (.int 0) (div (.int 1) (.var "d")))

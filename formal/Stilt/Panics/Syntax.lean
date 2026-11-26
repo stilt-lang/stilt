@@ -96,7 +96,9 @@ def Expr.isLow : Expr → Bool
 /-- The facts that the start of a range gives the loop's variable `x`: from a literal
 `a`, that it isn't zero, from a positive start, isn't negative, from one that isn't,
 and is no less than `a`; from a variable that the facts `G` before the loop know not
-negative, that it isn't negative either (facts.known-signs). -/
+negative, that it isn't negative either (facts.known-signs). The model knows signs from
+these alone: not from constants, `len()`, `+` and `*` of known signs, accumulators or
+bindings known positive, which facts.known-signs gives too. -/
 def Expr.lowFacts (G : List Known) (x : Name) : Expr → List Known
   | .int a => (if 0 < a then [.nonzero x] else []) ++ (if 0 ≤ a then [.nonneg x] else []) ++ [.atLeast x a]
   | .var a => if Known.nonneg a ∈ G then [.nonneg x] else []
