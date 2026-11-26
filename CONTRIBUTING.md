@@ -6,7 +6,7 @@ Stilt is built interpreter first. The [Reference](reference/) defines the langua
 
 ## Set up
 
-You need [rustup](https://rustup.rs), [opam](https://opam.ocaml.org) 2.2 or later, [elan](https://github.com/leanprover/elan), [uv](https://docs.astral.sh/uv/), [just](https://github.com/casey/just), a C compiler, and clang (on macOS, `brew install llvm`). [README.md](README.md) lists the libraries. Then:
+You need [rustup](https://rustup.rs), [opam](https://opam.ocaml.org) 2.2 or later, [elan](https://github.com/leanprover/elan), [uv](https://docs.astral.sh/uv/), [just](https://github.com/casey/just), a C compiler, and on macOS Homebrew's LLVM (`brew install llvm`) for the playground. The clang of release builds is fetched by `just toolchain`, the release that `stilt` pins. [README.md](README.md) lists the libraries. Then:
 
 ```sh
 git clone https://github.com/stilt-lang/stilt

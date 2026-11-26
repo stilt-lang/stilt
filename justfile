@@ -55,9 +55,7 @@ setup:
     need uv "install it from https://docs.astral.sh/uv/, for the grammar checks"
     need cc "install Xcode's command-line tools (xcode-select --install), or gcc"
     if [ "$(uname)" = Darwin ]; then
-        need clang "brew install llvm, whose clang release builds link with"
-    else
-        need clang "install the clang release that compiler/stilt-cli/src/release/compiler.rs pins"
+        need /opt/homebrew/opt/llvm/bin/clang "brew install llvm, whose clang compiles the playground's C for WebAssembly"
     fi
     if [ "$missing" = 1 ]; then
         echo "ERROR install what is missing, then run just setup again"
@@ -238,9 +236,10 @@ _target:
 # toolchain's rustc, with musl's C library and start files for x86-64 and aarch64 Linux (goal
 # cross-compilation). The macOS library leaves out the DWARF of Rust's standard library, which debugging a
 # program never reads, and which dsymutil would otherwise gather at every build: 27 ms of the
-# 91 that a small program's build takes. The clang of release builds is the build machine's,
-# Homebrew's on a Mac, linked as clang/bin/clang, which must be the release that `stilt` pins
-# (builds.release-toolchain); a link takes no room on a disk. WebAssembly's builds take wasi-libc's start
+# 91 that a small program's build takes. The clang of release builds is the release toolchains'
+# archive of the host, fetched once into target/pinned-clang, or the one STILT_CLANG names, linked
+# as clang/bin/clang, which must be the release that `stilt` pins (builds.release-toolchain); a
+# link takes no room on a disk. WebAssembly's builds take wasi-libc's start
 # file and library and clang's builtins from wasi-sdk, and binaryen's wasm-opt, which applies
 # Asyncify, each from the archive that compiler/stilt-cli/src/release/wasm.txt pins, and its
 # runtime library leaves out the DWARF of Rust's standard library too. The
@@ -299,14 +298,19 @@ toolchain:
     link "$PWD/$tools/binaryen" "$out/binaryen"
     pinned=$(sed -n 's/^pub(crate) const CLANG: &str = "\(.*\)";/\1/p' \
         compiler/stilt-cli/src/release/compiler.rs)
-    # STILT_CLANG names the pinned clang where it isn't Homebrew's, as CI unpacks it from the
-    # release toolchains' archive.
-    clang=${STILT_CLANG:-/opt/homebrew/opt/llvm/bin/clang}
-    if [ "$(uname)" != Darwin ] && [ -z "${STILT_CLANG:-}" ]; then
-        clang=$(command -v clang || echo clang)
+    # The clang of the release toolchains' archive for this host, which a release build of an
+    # installed `stilt` fetches too, unless STILT_CLANG names one; a host without an archive
+    # takes the clang of its PATH.
+    clang=${STILT_CLANG:-}
+    if [ -z "$clang" ]; then
+        if just _pinned-clang; then
+            clang=$PWD/target/pinned-clang/bin/clang
+        else
+            clang=$(command -v clang || echo clang)
+        fi
     fi
     if ! "$clang" --version 2> /dev/null | grep -q "clang version $pinned\b"; then
-        echo "ERROR release builds need clang $pinned at $clang: \`brew install llvm\` puts it there, or STILT_CLANG names it"
+        echo "ERROR release builds need clang $pinned at $clang, which STILT_CLANG can name"
         exit 1
     fi
     mkdir -p "$out/clang/bin"
@@ -389,6 +393,38 @@ dist: toolchain
         [ "$(./hi)" = "Hello, hello!" ]
     ) || { echo "ERROR the installed toolchain fails"; cat "$home/installed"; exit 1; }
     echo "target/dist/$archive: $(du -h "target/dist/$archive" | cut -f 1), installs and builds"
+
+# Fetch the clang archive that compiler/stilt-cli/src/release/toolchains.txt names for this host,
+# once, into target/pinned-clang, checked against its SHA-256 before it is unpacked. Fails, keeping
+# nothing, on a host that has no archive or when the fetch does.
+_pinned-clang:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "$(uname -sm)" in
+        "Darwin arm64") host=aarch64-macos ;;
+        "Linux x86_64") host=x86_64-linux ;;
+        "Linux aarch64") host=aarch64-linux ;;
+        *) exit 1 ;;
+    esac
+    read -r url sha256 < <(awk -v host="$host" '$1 == host { print $2, $3 }' \
+        compiler/stilt-cli/src/release/toolchains.txt) || exit 1
+    dest=target/pinned-clang
+    if [ "$(cat "$dest/.sha256" 2> /dev/null)" = "$sha256" ]; then exit 0; fi
+    mkdir -p target
+    work=$(mktemp -d target/.pinned-clang.XXXXXX)
+    trap 'rm -rf "$work"' EXIT
+    curl -fsSL --retry 3 -o "$work/archive" "$url"
+    found=$({ sha256sum "$work/archive" 2> /dev/null || shasum -a 256 "$work/archive"; } \
+        | cut -d' ' -f1)
+    if [ "$found" != "$sha256" ]; then
+        echo "ERROR $url has the SHA-256 $found, not $sha256"
+        exit 1
+    fi
+    mkdir "$work/out"
+    tar -xzf "$work/archive" -C "$work/out"
+    echo "$sha256" > "$work/out/.sha256"
+    rm -rf "$dest"
+    mv "$work/out" "$dest"
 
 # Fetch the archive of a tool of WebAssembly that compiler/stilt-cli/src/release/wasm.txt pins
 # for this host, once, into target/wasm-tools/NAME, checked against its SHA-256 before anything

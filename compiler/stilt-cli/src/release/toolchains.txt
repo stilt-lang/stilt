@@ -1,13 +1,14 @@
 # The release toolchains that this version of `stilt` names (builds.fetching-toolchain): for each host,
 # the URL of its archive and the SHA-256 of the archive's bytes, one host to a line, as
 #
-#     aarch64-macos https://…/clang-23.1.5-aarch64-macos.tar.gz 5f1c…
+#     aarch64-macos https://…/clang-22.1.8-aarch64-macos.tar.gz 5f1c…
 #
 # An archive is a gzip-compressed POSIX tar that holds `bin/clang` and whatever it loads,
 # written by `stilt_pkg::toolchain::archive::pack`, and publishing one adds its line here.
 # A host without a line builds release builds with the toolchain's own clang or `STILT_CC`.
-# Each archive repacks the `bin/clang-23` of LLVM's own release binaries, unchanged.
+# Each archive repacks the `bin/clang-22` of LLVM's own release binaries, unchanged. Not 23.x: LLVM
+# 23.1.0 to 23.1.5 fold `0.0f * (0.0f / d)` to `0.0f` when `d` comes out of a loop and may be zero.
 
-aarch64-macos https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-23.1.5/clang-23.1.5-aarch64-macos.tar.gz 07510d2b4d7ecfe381afd73256d6007f2285927f15fa49a0fdd28d3f24aef3e9
-x86_64-linux https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-23.1.5/clang-23.1.5-x86_64-linux.tar.gz 008a14fc0261c04bb11ccac4f252be3814ea906d6f7b3ab24ca4b7fd5479fa40
-aarch64-linux https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-23.1.5/clang-23.1.5-aarch64-linux.tar.gz 791ed84a6864c9d0323491654e4edbc23c8656993e859a3bbabd6339fea9151f
+aarch64-macos https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-22.1.8/clang-22.1.8-aarch64-macos.tar.gz 931abe51f03493b32544163f1e725321ed1c53aff219cd827c6d1c971dc0d773
+x86_64-linux https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-22.1.8/clang-22.1.8-x86_64-linux.tar.gz e2832f51ddcc77f726c082474374ee973041b382f04f95459b333d258ef5d7bf
+aarch64-linux https://github.com/stilt-lang/stilt-toolchains/releases/download/clang-22.1.8/clang-22.1.8-aarch64-linux.tar.gz 71b0781b698a6379e6192da9d6d97f78bdd31b8b42d84390100b467434440588

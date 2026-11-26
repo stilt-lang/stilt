@@ -21,7 +21,7 @@ use stilt_pkg::toolchain::{Archive, install};
 use super::Environment;
 
 /// The release of clang that this version of `stilt` names.
-pub(crate) const CLANG: &str = "23.1.5";
+pub(crate) const CLANG: &str = "22.1.8";
 
 /// The archive of the release toolchain of each host that has one, a line of `HOST URL
 /// SHA256` each.

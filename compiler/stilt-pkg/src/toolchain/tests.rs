@@ -17,13 +17,13 @@ fn scratch(name: &str) -> PathBuf {
 fn tree(at: &Path) {
     fs::create_dir_all(at.join("bin")).unwrap();
     fs::create_dir_all(at.join("lib")).unwrap();
-    fs::write(at.join("bin/clang-23"), b"#!/bin/sh\necho clang\n").unwrap();
+    fs::write(at.join("bin/clang-22"), b"#!/bin/sh\necho clang\n").unwrap();
     fs::write(at.join("lib/libLLVM.dylib"), vec![7u8; 3000]).unwrap();
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
-        fs::set_permissions(at.join("bin/clang-23"), fs::Permissions::from_mode(0o755)).unwrap();
-        std::os::unix::fs::symlink("clang-23", at.join("bin/clang")).unwrap();
+        fs::set_permissions(at.join("bin/clang-22"), fs::Permissions::from_mode(0o755)).unwrap();
+        std::os::unix::fs::symlink("clang-22", at.join("bin/clang")).unwrap();
     }
 }
 
@@ -54,7 +54,7 @@ fn an_archive_unpacks_to_the_tree_it_was_packed_from() {
     );
     unpack(&bytes, &dir.join("out")).unwrap();
     assert_eq!(
-        fs::read(dir.join("out/bin/clang-23")).unwrap(),
+        fs::read(dir.join("out/bin/clang-22")).unwrap(),
         b"#!/bin/sh\necho clang\n"
     );
     assert_eq!(
@@ -64,14 +64,14 @@ fn an_archive_unpacks_to_the_tree_it_was_packed_from() {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt as _;
-        let mode = fs::metadata(dir.join("out/bin/clang-23"))
+        let mode = fs::metadata(dir.join("out/bin/clang-22"))
             .unwrap()
             .permissions()
             .mode();
         assert_eq!(mode & 0o777, 0o755);
         assert_eq!(
             fs::read_link(dir.join("out/bin/clang")).unwrap(),
-            Path::new("clang-23")
+            Path::new("clang-22")
         );
     }
     let _ = fs::remove_dir_all(&dir);
@@ -84,7 +84,7 @@ fn a_toolchain_is_fetched_once_and_then_found() {
     let home = dir.join("home");
     let (at, fetched) = install(&archive, &home).unwrap();
     assert!(fetched);
-    assert!(at.join("bin/clang-23").is_file());
+    assert!(at.join("bin/clang-22").is_file());
     fs::remove_file(&file).unwrap();
     let (again, fetched) = install(&archive, &home).unwrap();
     assert_eq!(
@@ -143,11 +143,11 @@ fn a_toolchain_left_incomplete_in_the_cache_is_fetched_again() {
     let home = dir.join("home");
     let (at, _) = install(&archive, &home).unwrap();
     fs::remove_file(at.join(".sha256")).unwrap();
-    fs::write(at.join("bin/clang-23"), b"broken").unwrap();
+    fs::write(at.join("bin/clang-22"), b"broken").unwrap();
     let (again, fetched) = install(&archive, &home).unwrap();
     assert!(fetched);
     assert_eq!(
-        fs::read(again.join("bin/clang-23")).unwrap(),
+        fs::read(again.join("bin/clang-22")).unwrap(),
         b"#!/bin/sh\necho clang\n"
     );
     let _ = fs::remove_dir_all(&dir);
