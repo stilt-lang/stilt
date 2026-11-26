@@ -112,6 +112,17 @@ theorem armsResizes_substTys : ∀ arms : List Arm, armsResizes (substArmTys s a
 
 end
 
+theorem Expr.isVar_substTys (e : Expr) : (e.substTys s).isVar = e.isVar := by
+  cases e
+  case assign t _ => obtain ⟨_, _⟩ := t; rfl
+  all_goals rfl
+
+theorem byVar_substPathTys : ∀ p : List Projection,
+    (substPathTys s p).all Projection.byVar = p.all Projection.byVar
+  | [] => rfl
+  | .field _ :: p => by simp [substPathTys, Projection.byVar, byVar_substPathTys p]
+  | .index i :: p => by simp [substPathTys, Projection.byVar, Expr.isVar_substTys, byVar_substPathTys p]
+
 theorem Expr.readVar?_substTys (e : Expr) : (e.substTys s).readVar? = e.readVar? := by
   cases e
   case assign t _ => obtain ⟨_, _⟩ := t; rfl
@@ -343,7 +354,8 @@ theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s
     simp [Expr.substTys, Expr.panicFreeIn, exprsPanicFree_substTys G hs, exprsWrites_substTys s hs,
       Function.comp_def,
       Expr.panicFree_substTys (withoutNames (withoutNames G (exprsWrites hs)) (ns.map fun x => x.fst)) b]
-  | G, .index e i => by simp [Expr.substTys, Expr.panicFreeIn, guardedIndex_substTys s G e i]
+  | G, .index e i => by
+    simp [Expr.substTys, Expr.panicFreeIn, guardedIndex_substTys s G e i, Expr.isVar_substTys]
   | G, .record _ fs => by simp [Expr.substTys, Expr.panicFreeIn, fieldsPanicFree_substTys G fs]
   | G, .variant _ _ es | G, .list _ es => by
     simp [Expr.substTys, Expr.panicFreeIn, exprsPanicFree_substTys G es]
@@ -352,7 +364,7 @@ theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s
   | G, .op o es => by
     cases o <;> simp [Expr.substTys, Expr.panicFreeIn, Op.panicFreeOn, exprsPanicFree_substTys G es,
       literalDivisor_substTys s es, guardedDivisor_substTys s G es, guardedKey_substTys s G es,
-      Op.panicFree, Op.byDivisor]
+      Op.panicFree, Op.byDivisor, Op.overflowFree]
   | _, .closure _ _ _ e => by simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys [] e]
   | G, .field e _ | G, .raise e | G, .try e | G, .return e => by
     simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys G e]
@@ -383,7 +395,7 @@ theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s
     simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys G f, Expr.writes_substTys s f,
       argsPanicFree_substTys (withoutNames G f.writes) args]
   | G, .assign ⟨x, p⟩ v => by
-    simp [Expr.substTys, Expr.panicFreeIn, indexFree_substPathTys s x p, guardedStore_substTys s G x p v,
+    simp [Expr.substTys, Expr.panicFreeIn, indexFree_substPathTys s x p, guardedStore_substTys s G x p v, byVar_substPathTys,
       Expr.panicFree_substTys G v]
   | G, .if c _ a b => by
     simp [Expr.substTys, Expr.panicFreeIn, Expr.panicFree_substTys G c, Expr.writes_substTys s c, Expr.facts_substTys s c,

@@ -29,7 +29,7 @@ macro "leaving" w:term:max hs:term:max hbody:term:max hbound:term:max : tactic =
     simp only [Outcome.leaveCall, Eval.Keeps.memoryWith_leave]
     cases hle : Copy.leave _ _ _ with
     | ok fr => exact ⟨($hbody).1, hl.2 fr hle, ($hbody).2.2⟩
-    | error f => rw [hle] at hl; exact fault hl.1 ⟨$hs, ($hbody).2.2⟩))
+    | error f => rw [hle] at hl; exact fault hl.1.weaken ⟨$hs, ($hbody).2.2⟩))
 
 /-- A callee's panic-free outcome, the call left from a panic-free frame, a
 performance's rest included. -/
@@ -47,7 +47,7 @@ theorem leaveCall {s : Copy.State} (hs : Frame.PanicFree lim s.1) {bound : List 
     simp only [Outcome.leaveCall, Eval.Keeps.memoryWith_leave]
     cases hle : Copy.leave s.1 s'.1 (w.order bound) with
     | ok fr => exact ⟨hv, ⟨hl.2 fr hle, hs'.2⟩, fun u x hu hx => leaveCall hs hbound (hk u x hu hx)⟩
-    | error f => rw [hle] at hl; exact fault hl.1 ⟨hs, hs'.2⟩
+    | error f => rw [hle] at hl; exact fault hl.1.weaken ⟨hs, hs'.2⟩
   | .outOfFuel, _ | .stuck, _ => trivial
 
 /-- A call of a function value whose body is panic-free. -/
@@ -68,7 +68,7 @@ theorem invoke {captured : List (Name × Value)} (hc : ∀ xv ∈ captured, xv.2
     dsimp only
     rw [Eval.Keeps.memoryWith_enter]
     cases he : Copy.enter s.1 captured bound with
-    | error f => rw [he] at hent; exact fault hent.1 hs
+    | error f => rw [he] at hent; exact fault hent.1.weaken hs
     | ok callee =>
       exact leaveCall w hs.1 hbound (hb (callee, s.2) ⟨hent.2 callee he, hs.2⟩ (Frame.Meets.nil _))
 

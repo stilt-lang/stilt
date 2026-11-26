@@ -56,9 +56,10 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
   E0430 having rejected every site of `locks` in it, so a task never waits on a value while it
   holds one (`Program.Locks.block`, shared.locks and shared.when-order);
 * a call of a function limited by `without panic`, on panic-free arguments, panics only with
-  `overflow` or `deadlock`, a call of one limited by `without div` halts, and so does a run
-  whose `main` is limited (`Program.PanicLimited.kept`, `Program.DivLimited.kept`,
-  effects.without-panic and facts.without-div).
+  `overflow` or `deadlock`, and only with `deadlock` when `without overflow` limits it too; a
+  call of one limited by `without div` halts; and so does a run whose `main` is limited
+  (`Program.PanicKeptBy.kept`, `Program.DivLimited.kept`, effects.without-panic,
+  effects.without-overflow and facts.without-div).
 -/
 
 namespace Stilt
@@ -87,6 +88,8 @@ structure Program.Accepted (p : Program) : Prop where
   locks : p.Locks
   /-- Each function and `main` limited by `without panic` keeps the limit (E0204). -/
   panicLimits : p.PanicLimited
+  /-- Each function and `main` limited by `without panic, overflow` keeps both (E0204). -/
+  overflowLimits : p.OverflowLimited
   /-- Each function and `main` limited by `without div` keeps the limit (E0204). -/
   divLimits : p.DivLimited
 
@@ -171,8 +174,11 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       (eval p.decls (Copy.memoryWith w) n ((b.substTys ts).substRows rs) s).TakesNone p.decls
         p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
   /-- effects.without-panic: a call of a function limited by `without panic`, and a run whose
-  `main` is, panics only with `overflow` or `deadlock` (`Program.PanicsKept`). -/
-  panics : p.PanicsKept fuel input
+  `main` is, panics only with `overflow` or `deadlock` (`Program.PanicsKeptBy`). -/
+  panics : p.PanicsKeptBy (·.panic) true fuel input
+  /-- effects.without-overflow: a call of a function limited by `without panic, overflow`,
+  and a run whose `main` is, panics only with `deadlock` (`Program.PanicsKeptBy`). -/
+  overflows : p.PanicsKeptBy (fun l => l.panic && l.overflow) false fuel input
   /-- facts.without-div: a call of a function limited by `without div`, and a run whose `main`
   is, halts (`Program.HaltsKept`). -/
   halts : p.HaltsKept input
@@ -195,7 +201,8 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc,
     fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
     fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs,
-    h.panicLimits.kept h.wellTyped h.exclusive fuel input,
+    Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
+    Program.PanicKeptBy.kept h.overflowLimits h.wellTyped h.exclusive fuel input,
     h.divLimits.kept h.wellTyped h.exclusive input⟩
 
 end Stilt

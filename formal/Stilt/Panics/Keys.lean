@@ -49,10 +49,10 @@ theorem eval_contains_true {n : Nat} {m : Name} {k : Expr} {kt : KeyTerm} (hk : 
   · cases h₂
 
 /-- `m[k]` on a map that has the key doesn't fault. -/
-theorem index_calm {m : Name} {k : Expr} {kt : KeyTerm} (hk : k.keyTerm? = some kt) {n : Nat}
+theorem index_calm {ov : Bool} {m : Name} {k : Expr} {kt : KeyTerm} (hk : k.keyTerm? = some kt) {n : Nat}
     {s s' : Copy.State} {vs : List Value} (hz : (Known.has m kt).Holds s.1)
     (h : (Eval.list (eval D (Copy.memoryWith w) n) [.var m, k] s).Reaches vs s') :
-    Calm (Op.apply (.map .index) vs) := by
+    Calm (Op.apply (.map .index) vs) ov := by
   obtain ⟨u, s₁, u', h₃, h₄, rfl⟩ := Eval.list_pair_reaches h
   obtain ⟨rfl, hl⟩ := eval_var_reaches h₃
   obtain ⟨rfl, hv⟩ := eval_key_reaches hk h₄

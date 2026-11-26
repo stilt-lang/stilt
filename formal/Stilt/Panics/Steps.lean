@@ -34,7 +34,7 @@ def Outcome.PanicFree (lim : Limited) {α : Type} (P : α → Prop) : Outcome Co
   | .done a s => P a ∧ State.PanicFree lim s
   | .raised e s => e.PanicFree lim ∧ State.PanicFree lim s
   | .jumped j s => j.PanicFree lim ∧ State.PanicFree lim s
-  | .panicked k s => (k = .overflow ∨ k = .deadlock) ∧ State.PanicFree lim s
+  | .panicked k s => ((k = .overflow ∧ lim.overflows = true) ∨ k = .deadlock) ∧ State.PanicFree lim s
   | .performed _ v s k =>
     v.PanicFree lim ∧ State.PanicFree lim s ∧
       ∀ w x, w.PanicFree lim → x.All (Value.PanicFree lim) → Outcome.PanicFree lim P (k w x)
@@ -129,7 +129,7 @@ namespace Eval.PanicFree
 
 variable {lim : Limited} {α β : Type} {P : α → Prop} {Q : β → Prop}
 
-theorem fault {γ : Type} {f : Fault} (hf : Calm (Except.error f : Except Fault γ)) {s : Copy.State}
+theorem fault {γ : Type} {f : Fault} (hf : Calm (Except.error f : Except Fault γ) lim.overflows) {s : Copy.State}
     (hs : State.PanicFree lim s) : Outcome.PanicFree lim P (Outcome.fault f s) := by
   cases f with
   | panic k => exact ⟨.inl (hf k rfl), hs⟩
@@ -199,7 +199,7 @@ theorem ofExcept {x : Except Fault α} (h : CalmTo P x) : Eval.PanicFree lim G P
   intro s hs _
   cases x with
   | ok a => exact ⟨h.2 a rfl, hs⟩
-  | error f => exact fault h.1 hs
+  | error f => exact fault h.1.weaken hs
 
 theorem inspect {f : Copy.State → Except Fault α} (h : ∀ s : Copy.State, Frame.PanicFree lim s.1 → CalmTo P (f s)) :
     Eval.PanicFree lim G P (Eval.inspect f) := fun s hs hz => ofExcept (h s hs.1) s hs hz
@@ -212,7 +212,7 @@ theorem update {f : Copy.State → Except Fault Copy.State}
   unfold Eval.update
   cases hf : f s with
   | ok s' => exact ⟨trivial, h1.2 s' hf⟩
-  | error e => rw [hf] at h1; exact fault h1.1 hs
+  | error e => rw [hf] at h1; exact fault h1.1.weaken hs
 
 theorem throw {e : Value} (he : e.PanicFree lim) : Eval.PanicFree lim G P (Eval.throw e) :=
   fun _ hs _ => ⟨he, hs⟩
@@ -268,7 +268,7 @@ variable (w : WriteBack)
 /-- An operation in the world, which panics only as its value does, and only by overflow,
 gives a value of `P` in the frame it started from, and a cell it makes holds one of its
 panic-free operands. -/
-theorem run {R : Value → Prop} {o : Op} {vs : List Value} (hc : Calm (o.apply vs))
+theorem run {R : Value → Prop} {o : Op} {vs : List Value} (hc : Calm (o.apply vs) lim.overflows)
     (hvs : ∀ v ∈ vs, v.PanicFree lim) (hP : ∀ x v x', o.run vs x = .ok (v, x') → R v) :
     Eval.PanicFree lim G R (Eval.world (Copy.memoryWith w) (o.run vs)) := by
   rintro ⟨fr, x⟩ hs _

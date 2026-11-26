@@ -1,4 +1,4 @@
-import Stilt.Panics.Ops
+import Stilt.Panics.Overflow
 import Stilt.Panics.Guards
 import Stilt.Places
 
@@ -29,6 +29,15 @@ namespace Stilt
 than zero keeps from panicking (effects.panicking-operations). -/
 def Op.byDivisor : Op → Bool
   | .arith _ _ | .intMethod _ _ => true
+  | _ => false
+
+/-- `/`, `%` and the integer methods can overflow. -/
+theorem Op.overflowFree_of_byDivisor {o : Op} (h : o.byDivisor = true) : o.overflowFree = false := by
+  cases o <;> first | rfl | (simp [Op.byDivisor] at h)
+
+/-- Whether an expression is a variable, which reads its value with no arithmetic. -/
+def Expr.isVar : Expr → Bool
+  | .var _ => true
   | _ => false
 
 /-- Whether the operands of an operation end in a divisor written as an integer
@@ -115,6 +124,12 @@ def guardedStore (G : List Known) (p : Place) (value : Expr) : Bool :=
     | none => false
   | _ => false
 
+/-- Whether a step of a place is a field, or an index that a variable gives, which reads
+its value with no arithmetic. -/
+def Projection.byVar : Projection → Bool
+  | .field _ => true
+  | .index i => i.isVar
+
 /-- Whether an operation on the operands `es` can't panic, but with `overflow`. -/
 def Op.panicFreeOn (G : List Known) (o : Op) (es : List Expr) : Bool :=
   o.panicFree || (o.byDivisor && (literalDivisor es || guardedDivisor G es)) ||
@@ -143,10 +158,10 @@ def Expr.panicFreeIn : List Known → Expr → Bool
   | G, .record _ fields => fieldsPanicFree G fields
   | G, .variant _ _ es => exprsPanicFree G es
   | G, .list _ es => exprsPanicFree G es
-  | G, .op o es => o.panicFreeOn G es && exprsPanicFree G es
+  | G, .op o es => o.panicFreeOn G es && (lim.overflows || o.overflowFree) && exprsPanicFree G es
   | G, .view es => es.length == 1 && exprsPanicFree G es
   | G, .field e _ => e.panicFreeIn G
-  | G, .index e i => guardedIndex G e i
+  | G, .index e i => guardedIndex G e i && (lim.overflows || i.isVar)
   | _, .closure _ _ _ body => body.panicFreeIn []
   | G, .call callee args _ =>
     callee.panicFreeIn G && argsPanicFree (withoutNames G callee.writes) args
@@ -154,7 +169,9 @@ def Expr.panicFreeIn : List Known → Expr → Bool
     init.panicFreeIn G && body.panicFreeIn (withoutNames (withoutNames G init.writes) [x])
   | G, .varIn x _ init body =>
     init.panicFreeIn G && body.panicFreeIn (withoutNames (withoutNames G init.writes) [x])
-  | G, .assign p value => (p.indexFree || guardedStore G p value) && value.panicFreeIn G
+  | G, .assign p value =>
+    (p.indexFree || guardedStore G p value && (lim.overflows || p.path.all Projection.byVar)) &&
+      value.panicFreeIn G
   | G, .seq a b => a.panicFreeIn G && b.panicFreeIn (withoutWrites G a.writes a.resizes ++ a.after)
   | G, .if c _ a b =>
     c.panicFreeIn G && a.panicFreeIn (withoutNames G c.writes ++ c.facts) &&

@@ -38,13 +38,16 @@ structure Limits where
 
 /-- The functions that code under a limit may name: those that `fn` covers, and the
 method `m` of the trait `t`'s impls when `method t m` covers it, each a function
-without the fact the limit rules out, wherever it is named (facts.without). -/
+without the fact the limit rules out, wherever it is named (facts.without). Under
+`without panic`, `overflows` says whether the code may still overflow: it may not when
+`without overflow` limits it too (effects.without-overflow). -/
 structure Limited where
   fn : Name → Bool
   method : Name → Name → Bool
+  overflows : Bool := true
 
 /-- Every function: a limit on the whole program covers each of its functions. -/
-def Limited.all : Limited := ⟨fun _ => true, fun _ _ => true⟩
+def Limited.all : Limited := ⟨fun _ => true, fun _ _ => true, true⟩
 
 /-- `fn name<T: B, …, e, …>(params) -> result / row { body } without …`
 (declarations.function-declarations): its type parameters, with their bounds, its row

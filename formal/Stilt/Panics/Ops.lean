@@ -15,28 +15,38 @@ or stuck, which typing rules out (`Op.apply_calm`).
 
 namespace Stilt
 
-/-- A result that is no panic but one of the kind `overflow`. -/
-def Calm {α : Type} (x : Except Fault α) : Prop :=
-  ∀ k, x = .error (.panic k) → k = .overflow
+/-- A result that is no panic but one of the kind `overflow`, and that only when `ov`
+allows it: `Calm x false` is a result that is no panic at all. -/
+def Calm {α : Type} (x : Except Fault α) (ov : Bool := true) : Prop :=
+  ∀ k, x = .error (.panic k) → k = .overflow ∧ ov = true
 
 namespace Calm
 
-variable {α β : Type}
+variable {α β : Type} {ov : Bool}
 
-theorem ok (a : α) : Calm (Except.ok a : Except Fault α) := fun _ h => by cases h
+theorem ok (a : α) : Calm (Except.ok a : Except Fault α) ov := fun _ h => by cases h
 
-theorem stuck : Calm (Except.error .stuck : Except Fault α) := fun _ h => by cases h
+theorem stuck : Calm (Except.error .stuck : Except Fault α) ov := fun _ h => by cases h
 
 theorem overflow : Calm (Except.error (.panic .overflow) : Except Fault α) := fun _ h => by
-  cases h; rfl
+  cases h; exact ⟨rfl, rfl⟩
 
-theorem map {x : Except Fault α} (f : α → β) (h : Calm x) : Calm (f <$> x) := fun k hk => by
+/-- A result that is no panic at all is calm whatever `ov` allows. -/
+theorem weaken {x : Except Fault α} (h : Calm x false) : Calm x ov := fun k hk => by
+  have := (h k hk).2
+  cases this
+
+/-- A result calm with overflow, where `ov` allows it. -/
+theorem allowing {x : Except Fault α} (h : Calm x) (hov : ov = true) : Calm x ov := by
+  subst hov; exact h
+
+theorem map {x : Except Fault α} (f : α → β) (h : Calm x ov) : Calm (f <$> x) ov := fun k hk => by
   cases x with
   | ok a => cases hk
   | error e => exact h k (by simpa [Functor.map, Except.map] using hk)
 
-theorem ite {c : Prop} [Decidable c] {x y : Except Fault α} (hx : Calm x) (hy : Calm y) :
-    Calm (if c then x else y) := by
+theorem ite {c : Prop} [Decidable c] {x y : Except Fault α} (hx : Calm x ov) (hy : Calm y ov) :
+    Calm (if c then x else y) ov := by
   split
   · exact hx
   · exact hy
@@ -49,34 +59,34 @@ theorem shift (k : IntTy) (o : Shift) (a b : Int) : Calm (k.shift o a b) := by
   unfold IntTy.shift
   exact ite overflow (ok _)
 
-theorem orStuck (o : Option α) : Calm (Stilt.orStuck o) := by
+theorem orStuck (o : Option α) : Calm (Stilt.orStuck o) ov := by
   cases o
   · exact stuck
   · exact ok _
 
-theorem onList {l : Value} {f : List Value → Except Fault Value} (h : ∀ xs, Calm (f xs)) :
-    Calm (Stilt.onList l f) := by
+theorem onList {l : Value} {f : List Value → Except Fault Value} (h : ∀ xs, Calm (f xs) ov) :
+    Calm (Stilt.onList l f) ov := by
   unfold Stilt.onList; split
   · exact h _
   · exact stuck
 
 theorem onMap {m : Value} {f : List (Value × Value) → Option Value → Except Fault Value}
-    (h : ∀ es d, Calm (f es d)) : Calm (Stilt.onMap m f) := by
+    (h : ∀ es d, Calm (f es d) ov) : Calm (Stilt.onMap m f) ov := by
   unfold Stilt.onMap; split
   · exact h _ _
   · exact stuck
 
-theorem onSet {s : Value} {f : List Value → Except Fault Value} (h : ∀ ks, Calm (f ks)) :
-    Calm (Stilt.onSet s f) := by
+theorem onSet {s : Value} {f : List Value → Except Fault Value} (h : ∀ ks, Calm (f ks) ov) :
+    Calm (Stilt.onSet s f) ov := by
   unfold Stilt.onSet; split
   · exact h _
   · exact stuck
 
 end Calm
 
-/-- A result that is no panic but `overflow`, and whose value `P` holds of. -/
+/-- A result that is no panic, and whose value `P` holds of. -/
 def CalmTo {α : Type} (P : α → Prop) (x : Except Fault α) : Prop :=
-  Calm x ∧ ∀ a, x = .ok a → P a
+  Calm x false ∧ ∀ a, x = .ok a → P a
 
 namespace CalmTo
 

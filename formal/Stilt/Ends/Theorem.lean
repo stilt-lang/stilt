@@ -224,7 +224,7 @@ theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} (
     exact .inr (.inl ⟨e, E, rfl, hE, ht⟩)
   | jumped j s => rw [ho] at hs; exact absurd hs id
   | panicked k s =>
-    rcases p.runCopyWith_panicked hD hpm .leftToRight fuel input ho with rfl | rfl
+    rcases p.runCopyWith_panicked hD hpm .leftToRight fuel input ho with ⟨rfl, _⟩ | rfl
     · exact .inr (.inr (.inl rfl))
     · exact .inr (.inr (.inr rfl))
   | performed => rw [ho] at hs; exact absurd hs id

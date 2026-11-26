@@ -59,7 +59,7 @@ theorem after {held : Bool} {cells : List (Name × Ty × Nat)} {s : Copy.State}
     exact ho s' (hc.2 s' h)
   · rename_i e h
     rw [h] at hc
-    exact Eval.PanicFree.fault hc.1 hs
+    exact Eval.PanicFree.fault hc.1.weaken hs
 
 /-- A `when` puts back panic-free values however its block ends. -/
 theorem release (cells : List (Name × Ty × Nat)) :
@@ -94,7 +94,7 @@ theorem held {block : Eval Copy.State Value} (names : List Name) (handles : List
   | error e =>
     rw [hm] at hc
     cases e with
-    | panic k => exact ⟨.inl (hc.1 k rfl), hs⟩
+    | panic k => exact ⟨.inl (hc.1.weaken k rfl), hs⟩
     | stuck => trivial
   | ok cells =>
     obtain ⟨fr, x⟩ := s

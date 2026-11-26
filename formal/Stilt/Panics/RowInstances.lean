@@ -110,6 +110,17 @@ theorem armsResizes_substRows : ∀ arms : List Arm, armsResizes (substArmRows s
 
 end
 
+theorem Expr.isVar_substRows (e : Expr) : (e.substRows s).isVar = e.isVar := by
+  cases e
+  case assign t _ => obtain ⟨_, _⟩ := t; rfl
+  all_goals rfl
+
+theorem byVar_substPathRows : ∀ p : List Projection,
+    (substPathRows s p).all Projection.byVar = p.all Projection.byVar
+  | [] => rfl
+  | .field _ :: p => by simp [substPathRows, Projection.byVar, byVar_substPathRows p]
+  | .index i :: p => by simp [substPathRows, Projection.byVar, Expr.isVar_substRows, byVar_substPathRows p]
+
 theorem Expr.readVar?_substRows (e : Expr) : (e.substRows s).readVar? = e.readVar? := by
   cases e
   case assign t _ => obtain ⟨_, _⟩ := t; rfl
@@ -339,7 +350,8 @@ theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows
     simp [Expr.substRows, Expr.panicFreeIn, exprsPanicFree_substRows G hs, exprsWrites_substRows s hs,
       Function.comp_def,
       Expr.panicFree_substRows (withoutNames (withoutNames G (exprsWrites hs)) (ns.map fun x => x.fst)) b]
-  | G, .index e i => by simp [Expr.substRows, Expr.panicFreeIn, guardedIndex_substRows s G e i]
+  | G, .index e i => by
+    simp [Expr.substRows, Expr.panicFreeIn, guardedIndex_substRows s G e i, Expr.isVar_substRows]
   | G, .record _ fs => by simp [Expr.substRows, Expr.panicFreeIn, fieldsPanicFree_substRows G fs]
   | G, .variant _ _ es | G, .list _ es => by
     simp [Expr.substRows, Expr.panicFreeIn, exprsPanicFree_substRows G es]
@@ -378,7 +390,7 @@ theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows
     simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows G f, Expr.writes_substRows s f,
       argsPanicFree_substRows (withoutNames G f.writes) args]
   | G, .assign ⟨x, p⟩ v => by
-    simp [Expr.substRows, Expr.panicFreeIn, indexFree_substPathRows s x p, guardedStore_substRows s G x p v,
+    simp [Expr.substRows, Expr.panicFreeIn, indexFree_substPathRows s x p, guardedStore_substRows s G x p v, byVar_substPathRows,
       Expr.panicFree_substRows G v]
   | G, .if c _ a b => by
     simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows G c, Expr.writes_substRows s c, Expr.facts_substRows s c,

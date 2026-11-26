@@ -260,6 +260,26 @@ theorem eval_offset (n : Nat) {j : Name} {k : Int} {i : Expr} (hi : i.offset? = 
       simp only [IntTy.arith, IntTy.check, Int.sub_neg]
       by_cases hc : IntTy.i64.Contains (nj + k) <;> simp [hc, Outcome.fault]
 
+/-- A variable is read with no panic, so code that reads an index from a variable panics
+there only where overflow is allowed. -/
+theorem overflows_of_var {i : Expr} (hov : (lim.overflows || i.isVar) = true) {n : Nat}
+    {s s' : Copy.State} {k : PanicKind} (h : eval D (Copy.memoryWith w) n i s = .panicked k s') :
+    lim.overflows = true := by
+  cases hl : lim.overflows
+  · rw [hl, Bool.false_or] at hov
+    cases i <;> simp [Expr.isVar] at hov
+    rcases n with _ | m
+    · cases h
+    · simp only [eval, Eval.inspect, Eval.ofExcept, Copy.memoryWith, Frames.withWorld, Copy.frames,
+        Copy.read] at h
+      split at h
+      · cases h
+      · rename_i f hf
+        split at hf
+        · simp [Value.get] at hf
+        · cases hf; cases h
+  · rfl
+
 namespace Eval.PanicFree
 
 variable {G : List Known}
@@ -267,7 +287,7 @@ variable {G : List Known}
 /-- An index whose facts give `0 <= j + k` and `j + k < xs.len()` reads an element,
 or overflows computing `j + k`. -/
 theorem index (n : Nat) {xs j : Name} {k : Int} {i : Expr} (hi : i.offset? = some (j, k))
-    (hb : Known.bounds G j xs k = true) :
+    (hb : Known.bounds G j xs k = true) (hov : (lim.overflows || i.isVar) = true) :
     Eval.PanicFree lim G (Value.PanicFree lim) (eval D (Copy.memoryWith w) n (.index (.var xs) i)) := by
   rcases n with _ | m
   · exact outOfFuel
@@ -289,7 +309,7 @@ theorem index (n : Nat) {xs j : Name} {k : Int} {i : Expr} (hi : i.offset? = som
     · dsimp only
       rcases eval_offset m hi hj with h | h | h <;> rw [h]
       · trivial
-      · exact ⟨.inl rfl, hs⟩
+      · exact ⟨.inl ⟨rfl, overflows_of_var hov h⟩, hs⟩
       · have he : elemAt? ws (nj + k) = some ws[(nj + k).toNat] := by
           simp [elemAt?, h0]
         have hel : ws[(nj + k).toNat].PanicFree lim := by

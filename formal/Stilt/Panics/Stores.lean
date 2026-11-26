@@ -53,12 +53,26 @@ theorem eval_index_path (n : Nat) {G : List Known} {xs j : Name} {k : Int} {e : 
   rcases eval_offset (D := D) (w := w) n hi hj with h | h | h <;>
     simp [Eval.path, Eval.bind, Outcome.bind, bind, h, Eval.asInt, pure, Eval.pure]
 
+/-- A store at an index that a variable gives panics computing it only where overflow is
+allowed. -/
+theorem overflows_of_path {e : Expr} (hov : (lim.overflows || e.isVar) = true) {n : Nat}
+    {s s' : Copy.State} {k : PanicKind}
+    (h : Eval.path (eval D (Copy.memoryWith w) n) [.index e] s = .panicked k s') :
+    lim.overflows = true := by
+  cases he : eval D (Copy.memoryWith w) n e s with
+  | panicked k' s'' => exact overflows_of_var hov he
+  | done v s'' =>
+    cases v <;> simp [Eval.path, Eval.bind, Outcome.bind, bind, he, Eval.asInt, pure, Eval.pure,
+      Eval.fail, Outcome.fault] at h
+  | _ => simp [Eval.path, Eval.bind, Outcome.bind, bind, he] at h
+
 namespace Eval.PanicFree
 
 /-- `xs[e] = value` stores into an element, when `e` is proved an index of `xs` and
 `value`, panic-free, doesn't resize `xs`. -/
 theorem storeIndex (n : Nat) {G : List Known} {xs j : Name} {k : Int} {e value : Expr}
     (hi : e.offset? = some (j, k)) (hb : Known.bounds G j xs k = true) (hres : xs ∉ value.resizes)
+    (hov : (lim.overflows || e.isVar) = true)
     (hv : Eval.PanicFree lim G (Value.PanicFree lim) (eval D (Copy.memoryWith w) n value))
     (hkv : Eval.Keeps value.writes value.resizes (fun _ => True) (eval D (Copy.memoryWith w) n value)) :
     Eval.PanicFree lim G (Value.PanicFree lim)
@@ -70,7 +84,7 @@ theorem storeIndex (n : Nat) {G : List Known} {xs j : Name} {k : Int} {e value :
       Eval.bind (Eval.update fun s => (Copy.memoryWith w).write s xs p v) fun _ => Pure.pure Value.unit) s)
   rcases hp with h | h | h <;> simp only [Eval.bind, h, Outcome.bind]
   · trivial
-  · exact ⟨.inl rfl, hs⟩
+  · exact ⟨.inl ⟨rfl, overflows_of_path hov h⟩, hs⟩
   · refine Outcome.PanicFree.bind (hv s hs hz) fun v s₂ hr hvp hs₂ => ?_
     obtain ⟨ws', hw', _⟩ := (hr.keeps (hkv s)).2.lookup_list hres hw
     have hwr : (Copy.memoryWith w).write s₂ xs [.index i] v =
