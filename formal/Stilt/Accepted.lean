@@ -8,6 +8,7 @@ import Stilt.Parallel.Typed
 import Stilt.OneShot.Theorem
 import Stilt.Locks.Theorem
 import Stilt.HeldNames.Unmerge
+import Stilt.Limits
 
 /-!
 # Accepted programs and their soundness
@@ -53,7 +54,11 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
   (`Program.OneShot.clause`, `Program.OneShot.main`, handlers.resume-at-most-once);
 * a `when`'s block, from a frame whose function values are lock-free, takes no other cell,
   E0430 having rejected every site of `locks` in it, so a task never waits on a value while it
-  holds one (`Program.Locks.block`, shared.locks and shared.when-order).
+  holds one (`Program.Locks.block`, shared.locks and shared.when-order);
+* a call of a function limited by `without panic`, on panic-free arguments, panics only with
+  `overflow` or `deadlock`, a call of one limited by `without div` halts, and so does a run
+  whose `main` is limited (`Program.PanicLimited.kept`, `Program.DivLimited.kept`,
+  effects.without-panic and facts.without-div).
 -/
 
 namespace Stilt
@@ -80,6 +85,10 @@ structure Program.Accepted (p : Program) : Prop where
   the inferred fact, called or as a value, a closure literal's body included (shared.locks,
   E0430). -/
   locks : p.Locks
+  /-- Each function and `main` limited by `without panic` keeps the limit (E0204). -/
+  panicLimits : p.PanicLimited
+  /-- Each function and `main` limited by `without div` keeps the limit (E0204). -/
+  divLimits : p.DivLimited
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
@@ -161,6 +170,12 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       (s : Copy.State), Frame.LockFree p.decls p.decls.locks s.1 →
       (eval p.decls (Copy.memoryWith w) n ((b.substTys ts).substRows rs) s).TakesNone p.decls
         p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
+  /-- effects.without-panic: a call of a function limited by `without panic`, and a run whose
+  `main` is, panics only with `overflow` or `deadlock` (`Program.PanicsKept`). -/
+  panics : p.PanicsKept fuel input
+  /-- facts.without-div: a call of a function limited by `without div`, and a run whose `main`
+  is, halts (`Program.HaltsKept`). -/
+  halts : p.HaltsKept input
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -179,6 +194,8 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun n _ _ _ _ _ _ hf hγ => continuations_stay h.wellTyped.typedDecls n hf hγ,
     fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc,
     fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
-    fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs⟩
+    fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs,
+    h.panicLimits.kept h.wellTyped h.exclusive fuel input,
+    h.divLimits.kept h.wellTyped h.exclusive input⟩
 
 end Stilt

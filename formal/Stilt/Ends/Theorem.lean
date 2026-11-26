@@ -134,12 +134,33 @@ theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked
     case held ns hs b =>
       exact bind (list ih hs hd.1 hn.1 s) fun vs _ _ _ => held _ (fun s₀ => ih b hd.2 hn.2 s₀) _ vs
 
-/-- **Without div**, in copy-in, copy-out with any order of write-back: a program
-free of `div` halts, never running out of fuel from some fuel on. -/
-theorem Program.DivFree.halts {p : Program} (hp : p.DivFree) (w : WriteBack) (input : String) :
+/-- **Without div**, for a call of a function that `lim` covers: on any arguments, from any
+state, the call halts, never running out of fuel from some fuel on, and ending as no
+performance. The function counts as one without `div` wherever it is named; it calls only
+the functions `lim` covers, without recursion, and no function value it is given
+(facts.without-div). -/
+theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} (hR : D.Ranked lim B) (w : WriteBack)
+    {f : Name} {types : List Ty} {rows : List Row} (hf : lim.fn f = true) (passed : List Passed)
+    (s : Copy.State) :
+    Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
+      (.function f types rows) passed) (fun _ => True) s := by
+  unfold Eval.call
+  dsimp only
+  cases hfn : D.fn? f with
+  | none => exact Halts.const (Eval.Ends.fail _)
+  | some d =>
+    obtain ⟨hdd, hdn⟩ := hR f d hfn hf
+    refine Halts.invoke _ [] d.params passed fun s₀ => eval_halts w hR (B f) _ ?_ ?_ s₀
+    · rw [Expr.divFree_substRows, Expr.divFree_substTys]; exact hdd
+    · rw [Expr.needs_substRows, Expr.needs_substTys]; exact hdn
+
+/-- **Without div**, for `main`: when the functions that `lim` covers are ranked and
+`main`'s body is free of `div`, the run halts in copy-in, copy-out, whatever its order of
+write-back, never running out of fuel from some fuel on. -/
+theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} (hR : p.decls.Ranked lim B)
+    (hm : p.main.divFree lim = true) (w : WriteBack) (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → p.runCopyWith w fuel input ≠ .outOfFuel := by
-  obtain ⟨B, hR, hmain⟩ := hp
-  obtain ⟨N, o, ho, hn⟩ := eval_halts w hR _ p.main hmain (Nat.le_refl _) ([], World.start input)
+  obtain ⟨N, o, ho, hn⟩ := eval_halts w hR _ p.main hm (Nat.le_refl _) ([], World.start input)
   refine ⟨N, fun fuel hf => ?_⟩
   have h := hn fuel hf
   dsimp only at h
@@ -149,28 +170,46 @@ theorem Program.DivFree.halts {p : Program} (hp : p.DivFree) (w : WriteBack) (in
   rename_i j _
   cases j <;> simp
 
-/-- **Without div**, in place: on a well-typed program that obeys the law of
+/-- **Without div** for `main`, in place: on a well-typed program that obeys the law of
 exclusivity, in-place mutation shows what copy-in, copy-out does. -/
-theorem Program.DivFree.haltsInPlace {p : Program} (hp : p.DivFree) (hwt : p.WellTyped)
-    (hex : p.Exclusive) (input : String) :
+theorem Program.runInPlace_halts {p : Program} {B : Name → Nat} (hR : p.decls.Ranked lim B)
+    (hm : p.main.divFree lim = true) (hwt : p.WellTyped) (hex : p.Exclusive) (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → (p.runInPlace fuel input).observe ≠ .outOfFuel := by
-  obtain ⟨N, hN⟩ := hp.halts .leftToRight input
+  obtain ⟨N, hN⟩ := p.runCopyWith_halts hR hm .leftToRight input
   refine ⟨N, fun fuel hf h => ?_⟩
   rw [← inPlaceAgreement_observe p fuel input hwt hex] at h
   cases ho : p.runCopy fuel input <;> rw [ho] at h <;> simp only [Outcome.observe, reduceCtorEq] at h
   exact hN fuel hf ho
 
-/-- **Total**: a well-typed program free of `panic` and `div` ends with `()`, with an
-error of the type its row allows, or with a panic of the kind `overflow` or `deadlock`,
-as the reference interpreter runs it, with every fuel from some fuel on (facts.without-div). -/
-theorem Program.total {p : Program} (hwt : p.WellTyped) (hpanic : p.PanicFree) (hdiv : p.DivFree)
-    (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
+/-- **Without div**, in copy-in, copy-out with any order of write-back: a program
+free of `div` halts, never running out of fuel from some fuel on. -/
+theorem Program.DivFree.halts {p : Program} (hp : p.DivFree) (w : WriteBack) (input : String) :
+    ∃ N, ∀ fuel, N ≤ fuel → p.runCopyWith w fuel input ≠ .outOfFuel :=
+  let ⟨_, hR, hm⟩ := hp
+  p.runCopyWith_halts hR hm w input
+
+/-- **Without div**, in place: on a well-typed program that obeys the law of
+exclusivity, in-place mutation shows what copy-in, copy-out does. -/
+theorem Program.DivFree.haltsInPlace {p : Program} (hp : p.DivFree) (hwt : p.WellTyped)
+    (hex : p.Exclusive) (input : String) :
+    ∃ N, ∀ fuel, N ≤ fuel → (p.runInPlace fuel input).observe ≠ .outOfFuel :=
+  let ⟨_, hR, hm⟩ := hp
+  p.runInPlace_halts hR hm hwt hex input
+
+/-- **Total**, for `main`: a well-typed program whose `main` is free of `panic`, naming only
+functions that a cover of panic-free functions holds, and free of `div`, naming only
+ranked functions, ends with `()`, with an error of the type its row allows, or with a panic
+of the kind `overflow` or `deadlock`, as the reference interpreter runs it, with every fuel
+from some fuel on (facts.without-div). -/
+theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} (hwt : p.WellTyped)
+    (hD : p.decls.PanicCover lim) (hpm : p.main.panicFree lim = true) (hR : p.decls.Ranked lim' B)
+    (hdm : p.main.divFree lim' = true) (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
       (p.runCopy fuel input).observe = .returned .unit ∨
       (∃ e E, (p.runCopy fuel input).observe = .raised e ∧ p.row.raise = some E ∧
         Value.Typed p.decls e E.sem) ∨
       (p.runCopy fuel input).observe = .panicked .overflow ∨
       (p.runCopy fuel input).observe = .panicked .deadlock := by
-  obtain ⟨N, hN⟩ := hdiv.halts .leftToRight input
+  obtain ⟨N, hN⟩ := p.runCopyWith_halts hR hdm .leftToRight input
   refine ⟨N, fun fuel hf => ?_⟩
   have hs := typeSoundness p fuel input hwt
   have he := hN fuel hf
@@ -185,11 +224,24 @@ theorem Program.total {p : Program} (hwt : p.WellTyped) (hpanic : p.PanicFree) (
     exact .inr (.inl ⟨e, E, rfl, hE, ht⟩)
   | jumped j s => rw [ho] at hs; exact absurd hs id
   | panicked k s =>
-    rcases hpanic.runCopy fuel input ho with rfl | rfl
+    rcases p.runCopyWith_panicked hD hpm .leftToRight fuel input ho with rfl | rfl
     · exact .inr (.inr (.inl rfl))
     · exact .inr (.inr (.inr rfl))
   | performed => rw [ho] at hs; exact absurd hs id
   | outOfFuel => exact absurd ho he
   | stuck => rw [ho] at hs; exact absurd hs id
+
+/-- **Total**: a well-typed program free of `panic` and `div` ends with `()`, with an
+error of the type its row allows, or with a panic of the kind `overflow` or `deadlock`,
+as the reference interpreter runs it, with every fuel from some fuel on (facts.without-div). -/
+theorem Program.total {p : Program} (hwt : p.WellTyped) (hpanic : p.PanicFree) (hdiv : p.DivFree)
+    (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
+      (p.runCopy fuel input).observe = .returned .unit ∨
+      (∃ e E, (p.runCopy fuel input).observe = .raised e ∧ p.row.raise = some E ∧
+        Value.Typed p.decls e E.sem) ∨
+      (p.runCopy fuel input).observe = .panicked .overflow ∨
+      (p.runCopy fuel input).observe = .panicked .deadlock :=
+  let ⟨_, hR, hm⟩ := hdiv
+  p.total_of hwt hpanic.cover hpanic.2 hR hm input
 
 end Stilt

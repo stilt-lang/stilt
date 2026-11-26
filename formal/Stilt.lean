@@ -320,6 +320,7 @@ import Stilt.Ends.NoCont
 import Stilt.Ends.Counter
 import Stilt.Ends.While
 import Stilt.Ends.Theorem
+import Stilt.Limits
 import Stilt.Counterexamples.Div
 import Stilt.Guards.Syntax
 import Stilt.Guards.Match
