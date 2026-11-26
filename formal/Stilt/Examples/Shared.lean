@@ -32,7 +32,7 @@ private def when1 (h x : Name) (block : Expr) : Expr := .held [(x, account)] [.v
 /-- `when c, d { block }`: when the handles are equal, the block with both names one
 variable, `pc`; otherwise each value held under its own. -/
 private def when2 (τ : Ty) (one two : Expr) : Expr :=
-  .if (.op (.structural .eq []) [.var "c", .var "d"]) τ (when1 "c" "pc" one)
+  .if (.op .sameCell [.var "c", .var "d"]) τ (when1 "c" "pc" one)
     (.held [("pc", account), ("pd", account)] [.var "c", .var "d"] two)
 
 /-- `fn bump(c: Shared<Account>) { when c { c.balance += 1 } }`. -/

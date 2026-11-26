@@ -106,6 +106,7 @@ inductive Op.Sig : Op → List Ty → Ty → Prop
   | panic {k : PanicKind} {τs : List Ty} {τ : Ty} : Op.Sig (.panic k) τs τ
   | structural {c : Cmp} {orders : List (Name × List Name)} {τ : Ty} :
       Op.Sig (.structural c orders) [τ, τ] .bool
+  | sameCell {τ : Ty} : Op.Sig .sameCell [.shared τ, .shared τ] .bool
   | sortedByKey {d : Bool} {orders : List (Name × List Name)} {κ τ : Ty} :
       Op.Sig (.sortedByKey d orders) [.list κ, .list τ] (.list τ)
   | list {l : ListOp} {τs : List Ty} {τ : Ty} : l.Sig τs τ → Op.Sig (.list l) τs τ
@@ -209,8 +210,8 @@ def Op.compute : Op → List Scalar → Except Fault Scalar
 `tuple`, `showValue`, the structural comparisons, `panic` and the functions of
 lists, maps and sets. -/
 def Op.scalar : Op → Bool
-  | .tuple | .showValue | .structural .. | .sortedByKey .. | .panic _ | .list _ | .map _ | .set _
-  | .view | .copy => false
+  | .tuple | .showValue | .structural .. | .sameCell | .sortedByKey .. | .panic _ | .list _
+  | .map _ | .set _ | .view | .copy => false
   | _ => true
 
 /-- What an operation on scalars computes from its operands' values. -/
@@ -231,6 +232,9 @@ def Op.apply (o : Op) (vs : List Value) : Except Fault Value :=
   | .panic k => .error (.panic k)
   | .structural c orders => match vs with
     | [v, w] => .ok (.bool (c.values orders v w))
+    | _ => .error .stuck
+  | .sameCell => match vs with
+    | [v, w] => .ok (.bool (v.same w))
     | _ => .error .stuck
   | .sortedByKey d orders => match vs with
     | [.list ks, .list xs] => .ok (.list (sortByKeys orders d ks xs))
@@ -254,7 +258,7 @@ def Op.apply (o : Op) (vs : List Value) : Except Fault Value :=
 /-- Every operation is `tuple`, a function of lists, of maps or of sets, or one
 on scalars. -/
 theorem Op.cases_scalar (o : Op) :
-    o = .tuple ∨ o = .showValue ∨ (∃ c orders, o = .structural c orders) ∨
+    o = .tuple ∨ o = .showValue ∨ (∃ c orders, o = .structural c orders) ∨ o = .sameCell ∨
       (∃ d orders, o = .sortedByKey d orders) ∨ (∃ k, o = .panic k) ∨
       (∃ l, o = .list l) ∨ (∃ m, o = .map m) ∨ (∃ m, o = .set m) ∨ (o = .view ∨ o = .copy) ∨
       o.scalar = true := by
@@ -298,13 +302,17 @@ Booleans and strings, so a property that holds of those and passes through
 records and lists holds of it. -/
 theorem Op.apply_hereditary {P : Value → Prop} (hP : Value.Hereditary P) {o : Op}
     {vs : List Value} (hvs : ∀ v ∈ vs, P v) {w : Value} (h : o.apply vs = .ok w) : P w := by
-  rcases o.cases_scalar with rfl | rfl | ⟨c, orders, rfl⟩ | ⟨d, orders, rfl⟩ | ⟨k, rfl⟩ |
+  rcases o.cases_scalar with rfl | rfl | ⟨c, orders, rfl⟩ | rfl | ⟨d, orders, rfl⟩ | ⟨k, rfl⟩ |
     ⟨l, rfl⟩ | ⟨m, rfl⟩ | ⟨m, rfl⟩ | (rfl | rfl) | ho
   · cases h
     exact hP.tuple hvs
   · simp only [Op.apply] at h
     split at h
     · cases h; exact hP.str _
+    · cases h
+  · simp only [Op.apply] at h
+    split at h
+    · cases h; exact hP.bool _
     · cases h
   · simp only [Op.apply] at h
     split at h

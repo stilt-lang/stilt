@@ -414,13 +414,15 @@ theorem sortedByKey_erase (d : Bool) (orders : CtorOrders) (vs : List Value) :
 value erased. -/
 theorem Op.apply_erase (o : Op) (vs : List Value) :
     o.apply (eraseValues vs) = (o.apply vs).map Value.erase := by
-  rcases o.cases_scalar with rfl | rfl | ⟨c, orders, rfl⟩ | ⟨d, orders, rfl⟩ | ⟨k, rfl⟩ |
+  rcases o.cases_scalar with rfl | rfl | ⟨c, orders, rfl⟩ | rfl | ⟨d, orders, rfl⟩ | ⟨k, rfl⟩ |
     ⟨l, rfl⟩ | ⟨m, rfl⟩ | ⟨m, rfl⟩ | (rfl | rfl) | ho
   · simp only [Op.apply, Except.map, Value.erase_tuple]
   · rcases vs with _ | ⟨v, _ | ⟨w, rest⟩⟩ <;>
       simp [eraseValues, Op.apply, Except.map, Value.erase, Value.shown_erase]
   · rcases vs with _ | ⟨v, _ | ⟨w, _ | ⟨u, rest⟩⟩⟩ <;>
       simp [eraseValues, Op.apply, Except.map, Value.erase, Cmp.values_erase]
+  · rcases vs with _ | ⟨v, _ | ⟨w, _ | ⟨u, rest⟩⟩⟩ <;>
+      simp [eraseValues, Op.apply, Except.map, Value.erase, Value.same_erase]
   · exact sortedByKey_erase d orders vs
   · rfl
   · exact ListOp.apply_erase l vs

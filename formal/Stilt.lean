@@ -6,6 +6,7 @@ import Stilt.Rows.Types
 import Stilt.Rows
 import Stilt.Generics
 import Stilt.Generics.Commute
+import Stilt.Typing.Bounds
 import Stilt.Typing.Uses
 import Stilt.Typing
 import Stilt.Inhabited
@@ -58,6 +59,7 @@ import Stilt.Examples.Numbers
 import Stilt.Examples.Strings
 import Stilt.Examples.Maps
 import Stilt.Examples.Generics
+import Stilt.Examples.Bounds
 import Stilt.Examples.Loops
 import Stilt.Examples.LastUses
 import Stilt.Examples.Structural

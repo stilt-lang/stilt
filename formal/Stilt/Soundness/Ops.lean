@@ -349,6 +349,9 @@ theorem Op.Sig.apply {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hio : ∀ k, 
   | structural =>
     obtain ⟨v, w, rfl, -, -⟩ := hvs.two_inv
     exact .inl ⟨_, rfl, .bool⟩
+  | sameCell =>
+    obtain ⟨v, w, rfl, -, -⟩ := hvs.two_inv
+    exact .inl ⟨_, rfl, .bool⟩
   | sortedByKey =>
     obtain ⟨u, w, rfl, hu, hw⟩ := hvs.two_inv
     obtain ⟨ks, rfl, -⟩ := hu.list_inv

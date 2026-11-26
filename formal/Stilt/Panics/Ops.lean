@@ -231,6 +231,7 @@ theorem Op.apply_calm {o : Op} (ho : o.panicFree = true) (vs : List Value) :
   · simp [Op.panicFree] at ho
   · calm
   · calm
+  · calm
   · exact ListOp.apply_calm (by simpa [Op.panicFree] using ho) vs
   · exact MapOp.apply_calm (by simpa [Op.panicFree] using ho) vs
   · exact SetOp.apply_calm _ vs

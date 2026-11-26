@@ -270,6 +270,7 @@ def op (j : Json) : Except String Op := do
     return .scientific (← f 0 >>= floatTy) (if p < 0 then none else some p.toNat)
   | "showBool" => pure .showBool
   | "showValue" => pure .showValue
+  | "sameCell" => pure .sameCell
   | "panic" => do
     match ← f 0 >>= str with
     | "explicit" => pure (.panic .explicit)

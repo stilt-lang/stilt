@@ -65,11 +65,12 @@ let option cx t ctor payload =
 let temp what (loc : Ast.loc) = Printf.sprintf "%s/%d:%d" what loc.line loc.col
 
 (* Whether the prelude's structural impls of the trait [name] give a type's,
-   whose parts are integers, floats, [bool], [str], lists, tuples, maps for
-   [Show] only, and the program's records and variants without an impl of the
-   trait of their own (std.show-output and traits.structural-impls). Map
-   equality ignores the order of the entries (traits.map-equality), which the
-   calculus's comparison doesn't. *)
+   whose parts are integers, floats, [bool], [str], lists, tuples, maps and sets
+   for [Eq] and [Show], and the program's records and variants without an impl of
+   the trait of their own (std.show-output and traits.structural-impls). A map has
+   [Eq] when its keys are key types and its values have [Eq], and a set when its
+   elements are key types; the calculus compares them in any order
+   (traits.map-equality and std.set-impls). Neither has [Ord]. *)
 let structural_by cx name t =
   let trait = { Hir.home = "std.prelude"; name } in
   let rec go seen t =
@@ -80,9 +81,10 @@ let structural_by cx name t =
         true
     | Con ({ home = "std.prelude"; name = "List" }, [ e ]) -> go seen e
     | Con ({ home = "std.prelude"; name = "Map" }, [ k; v ]) ->
-        name = "Show" && go seen k && go seen v
+        (name = "Show" && go seen k && go seen v)
+        || (name = "Eq" && key cx k && go seen v)
     | Con ({ home = "std.prelude"; name = "Set" }, [ e ]) ->
-        name = "Show" && go seen e
+        (name = "Show" && go seen e) || (name = "Eq" && key cx e)
     | Tuple ts -> List.for_all (go seen) ts
     (* records.no-home: an anonymous record has the structural impls and no others. *)
     | Record fields -> List.for_all (fun (_, t) -> go seen t) fields

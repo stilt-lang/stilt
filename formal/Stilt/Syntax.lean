@@ -165,6 +165,11 @@ inductive Op where
   declaration order (traits.operators, traits.structural-impls and
   traits.structural-calls). -/
   | structural (op : Cmp) (orders : List (Name × List Name))
+  /-- Whether two handles name one cell, which the export tests where a `when` names several
+  handles of one type, to hold one value for the names whose handles are equal
+  (shared.names-that-may-be-one-place). No program writes it as `==`: `Shared<T>` implements
+  no trait (shared.std-sync). -/
+  | sameCell
   /-- The elements of a list, the second operand, sorted stably by their keys, the
   first: in ascending order of `Ord.compare` on the keys, or in descending order,
   through the prelude's structural impls of `Ord`, which is how `sorted_by(key)`

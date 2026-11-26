@@ -80,6 +80,7 @@ theorem Op.apply_serene {o : Op} (ho : o.panicFree = true) (hov : o.overflowFree
   · simp [Op.panicFree] at ho
   · calm
   · calm
+  · calm
   · exact ListOp.apply_serene (by simpa [Op.panicFree] using ho) (by simpa [Op.overflowFree] using hov) vs
   · exact MapOp.apply_serene (by simpa [Op.panicFree] using ho) (by simpa [Op.overflowFree] using hov) vs
   · exact SetOp.apply_serene (by simpa [Op.overflowFree] using hov) vs

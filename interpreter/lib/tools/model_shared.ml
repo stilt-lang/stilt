@@ -70,9 +70,7 @@ let when_ (cb : callbacks) cx (e : Tast.expr) pairs (b : Tast.block) =
           | [] -> split (n :: held) same rest
           | h :: more ->
               let equal =
-                op
-                  (tag "structural" [ Str "eq"; Arr [] ])
-                  [ var_e n.handle; var_e h.handle ]
+                op (Str "sameCell") [ var_e n.handle; var_e h.handle ]
               in
               let one = split held ((n.var, h.var) :: same) rest in
               tag "if" [ equal; ty cx e.ty; one; against more ]

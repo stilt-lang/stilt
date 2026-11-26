@@ -15,7 +15,7 @@ implement none, and maps and sets have no `Ord`.
 
 namespace Stilt
 
-/-- The prelude traits that operations of the calculus stand behind (traits.prelude-traits). -/
+/-- The prelude traits that operations of the calculus stand behind. -/
 inductive PreludeTrait where
   | eq
   | ord
