@@ -35,17 +35,24 @@ theorem handle {L₁ : Live} {m : Eval Copy.State α} {m' : Eval (State × World
   exact (hh e he fr₁ s₁ m₁ hag₁ hinv₁).prefix hag.1 hk henv hev hL
 
 /-- Binds the parts an arm's pattern matched, live for the arm's body (expressions.match). -/
-theorem withVars {m : Eval Copy.State α} {m' : Eval (State × World) α} {Lb' X' : Live}
-    (hm : MSim G Lb' L X' m m') (hX : X'.Sub X) :
-    ∀ (bindings : List (Name × Value)) (Lb : Live), (∀ xv ∈ bindings, VOk xv.2) →
+theorem withVars {m : Eval Copy.State α} {m' : Eval (State × World) α} {Lb' L' X' : Live}
+    (hm : MSim G Lb' L' X' m m') :
+    ∀ (bindings : List (Name × Value)) (Lb L X : Live), (∀ xv ∈ bindings, VOk xv.2) →
       Lb'.Sub (Lb.union (Live.ofList (bindings.map Prod.fst))) →
+      (L.eraseAll (bindings.map Prod.fst)).Sub L' → (X'.eraseAll (bindings.map Prod.fst)).Sub X →
       MSim G Lb L X (Eval.withVars Copy.memory bindings m) (Eval.withVars Moving.memory bindings m')
-  | [], Lb, _, hLb => hm.mono (hLb.trans (by live_sub)) (Live.Sub.refl L) hX
-  | (x, v) :: bindings, Lb, hv, hLb =>
+  | [], Lb, _, _, _, hLb, hL, hX => hm.mono (hLb.trans (by live_sub)) hL hX
+  | (x, v) :: bindings, Lb, L, X, hv, hLb, hL, hX =>
     withVar x (hv (x, v) List.mem_cons_self)
-      (withVars hm hX bindings (Lb.union (Live.one x)) (fun xv h => hv xv (List.mem_cons_of_mem _ h))
-        (hLb.trans (by live_sub)))
-      (fun z hz hzx => by simp_all) (Live.Sub.refl X)
+      (withVars hm bindings (Lb.union (Live.one x)) (L.erase x)
+        (X'.eraseAll (bindings.map Prod.fst)) (fun xv h => hv xv (List.mem_cons_of_mem _ h))
+        (hLb.trans (by live_sub)) hL (Live.Sub.refl _))
+      (fun z hz hzx => by simp_all) (fun z hz hzx => Live.mem_erase_of_ne hz hzx)
+      (fun z hz => hX z (by
+        simp only [Live.mem_erase_eq, Live.mem_eraseAll_eq, List.map_cons, List.contains_cons,
+          Bool.and_eq_true, Bool.not_or, Bool.not_eq_true', bne_iff_ne, ne_eq,
+          beq_eq_false_iff_ne] at hz ⊢
+        grind))
 
 theorem forEach {body : Value → Eval Copy.State Bool} {body' : Value → Eval (State × World) Bool}
     (h : ∀ v, VOk v → MSim (fun _ => True) Lb Lb X (body v) (body' v)) :
@@ -81,13 +88,14 @@ theorem get {v : Value} (hv : VOk v) (p : Path) :
 had when it started (expressions.for-iterables; modes.change-while-iterating). -/
 theorem loop {run : Expr → Eval Copy.State Value} {run' : Expr → Eval (State × World) Value}
     (x : Name)
-    {e body : Expr} {Lc Lb' X' : Live} (he : MSim VOk Lb Lc X (run e) (run' e))
-    (hb : MSim VOk Lb' Lc X' (run body) (run' body))
+    {e body : Expr} {Lc Lb' Lt X' : Live} (he : MSim VOk Lb Lc X (run e) (run' e))
+    (hb : MSim VOk Lb' Lt X' (run body) (run' body))
     (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lc.mem z = true)
-    (hX : X'.Sub X) (hLc : Lc.Sub Lb) (hL : L.Sub Lc) :
+    (hLt : ∀ z, Lc.mem z = true → z ≠ x → Lt.mem z = true)
+    (hX : (X'.erase x).Sub X) (hLc : Lc.Sub Lb) (hL : L.Sub Lc) :
     MSim VOk Lb L X (Eval.loop Copy.memory run x e body) (Eval.loop Moving.memory run' x e body) :=
   bind (bind he (fun _ hv => asList hv) hLc (Live.Sub.refl _)) (fun vs hvs =>
-    bind (forEach (fun _ hv => withVar x hv (turn hb) hLb hX) vs hvs)
+    bind (forEach (fun _ hv => withVar x hv (turn hb) hLb hLt hX) vs hvs)
       (fun _ _ => pure ⟨.unit, .unit⟩) (Live.Sub.refl _) hL) hLc hL
 
 /-- Writing a live variable that the expression mentions (values.let-and-var and values.assignment-order). -/
@@ -105,8 +113,8 @@ theorem update (x : Name) (p : Path) {w : Value} (hw : VOk w) (hx : Lb.mem x = t
     refine ⟨rfl, trivial, mk, ⟨hag', hag.2⟩, Kills.refl L X mk _ (by simp [hag.1.len_env]), henv,
       ?_⟩
     refine Evolves.of_sub (fun e he => ?_) hev
-    rw [List.mem_singleton.1 he, mem_sel]
-    exact ⟨mem_of_lookup (by rw [hag.1.lookup_env hlx]; exact hr), hX⟩
+    rw [List.mem_singleton.1 he]
+    exact mem_sel_of_lookup hag.1.len_env (hag.1.liveAt_env hlx) hr hX
 
 /-- A closure literal captures the newest binding of each variable that `keep`
 holds, each live when the expression mentions it (expressions.capture). -/

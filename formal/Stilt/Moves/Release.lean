@@ -10,27 +10,6 @@ world; and a `with` lets the same cells go in both (shared.when).
 
 namespace Stilt
 
-namespace Live
-
-/-- What a `when`'s handles run before, within what the `when` mentions. -/
-theorem sub_held (L b e : Live) (xs : List Name) :
-    ((L.union (b.eraseAll xs)).union e).Sub (L.union ((ofList xs).union (e.union b))) :=
-  Sub.union (Sub.union (sub_union_left _ _) ((eraseAll_sub b xs).trans (by live_sub))) (by live_sub)
-
-/-- What a block mentions is what it mentions but its names, or one of them. -/
-theorem sub_eraseAll (L b : Live) (xs : List Name) :
-    ((L.union (ofList xs)).union b).Sub ((L.union (b.eraseAll xs)).union (ofList xs)) := by
-  intro x h
-  simp only [mem_union, mem_ofList, Bool.or_eq_true] at h ⊢
-  by_cases hx : x ∈ xs
-  · simp [hx]
-  · rcases h with (h | h) | h
-    · exact .inl (.inl h)
-    · exact absurd h hx
-    · exact .inl (.inr (mem_eraseAll h hx))
-
-end Live
-
 namespace Moving
 
 open InPlace
@@ -130,7 +109,7 @@ theorem letGo {m : Eval Copy.State α} {m' : Eval (State × World) α} (hm : MSi
 (shared.when). -/
 theorem held {Lbody Xb : Live} {m : Eval Copy.State Value} {m' : Eval (State × World) Value}
     (names : List Name) (vs : List Value) (hm : MSim VOk Lbody (L.union (Live.ofList names)) Xb m m')
-    (hX : Xb.Sub X) (hLb : Lbody.Sub (Lb.union (Live.ofList names))) (hLL : L.Sub Lb)
+    (hX : (Xb.eraseAll names).Sub X) (hLb : Lbody.Sub (Lb.union (Live.ofList names))) (hLL : L.Sub Lb)
     (hnames : (Live.ofList names).Sub Lbody) :
     MSim VOk Lb L X (Eval.held Copy.memory m names vs) (Eval.held Moving.memory m' names vs) := by
   unfold Eval.held
@@ -153,10 +132,10 @@ theorem held {Lbody Xb : Live} {m : Eval Copy.State Value} {m' : Eval (State × 
         fun fr s mk hag hinv => MCorr.release _
           (fun c hc => by simp [hmem c hc])
           (fun c hc => hinv.live c.1 (hnames _ (by simp [hmem c hc]))) (hm fr s mk hag hinv)
-      refine withVars (hrel.mono (Live.Sub.refl _) (Live.sub_union_left _ _) (Live.Sub.refl _)) hX
-        _ Lb (fun xv hxv => hus _ (List.of_mem_zip hxv).2) ?_
-      rw [List.map_fst_zip (by omega)]
-      exact hLb
+      have hfst : (names.zip us).map Prod.fst = names := List.map_fst_zip (by omega)
+      refine withVars hrel _ Lb L X (fun xv hxv => hus _ (List.of_mem_zip hxv).2) (by rw [hfst]; exact hLb)
+        (by rw [hfst]; exact (Live.eraseAll_sub L names).trans (Live.sub_union_left _ _))
+        (by rw [hfst]; exact hX)
     · exact fail _
 
 end MSim

@@ -88,13 +88,8 @@ theorem movedRoots_sub : ∀ (as : List Arg) (x : Name), x ∈ movedRoots as →
     · exact (argsMentions_sub_cons a as) x (movedRoots_sub as x h)
 
 theorem Kills.union_unmentioned {L X M : Live} (hM : ∀ z, X.mem z = true → M.mem z = false) :
-    ∀ {mk m : List Bool} {ns : List Name}, Kills L X mk m ns → Kills (L.union M) X mk m ns
-  | [], [], [], _ => trivial
-  | _ :: _, _ :: _, _ :: _, ⟨r, h, k⟩ =>
-    ⟨r, fun hb hc => by
-      obtain ⟨h₁, h₂⟩ := h hb hc
-      simp [h₁, h₂, hM _ h₂], Kills.union_unmentioned hM k⟩
-  | [], [], _ :: _, k | [], _ :: _, _, k | _ :: _, [], _, k | _ :: _, _ :: _, [], k => k.elim
+    ∀ {mk m : List Bool} {ns : List Name}, Kills L X mk m ns → Kills (L.union M) X mk m ns :=
+  fun k => k.weaken (fun z hz h => by simpa [hM z hz] using h) (Live.Sub.refl X)
 
 /-- A step that ends and writes no binding of `x` leaves its value, live. -/
 theorem MAgrees.held {mk m : List Bool} {fr fr' : Copy.Frame} {s s' : State} {x : Name}
@@ -115,7 +110,7 @@ theorem MAgrees.held {mk m : List Bool} {fr fr' : Copy.Frame} {s s' : State} {x 
       cases h₁; cases h₂; exact hd
   have hsame : deref ⟨[], s'.store⟩ r [] = deref ⟨[], s.store⟩ r [] := by
     refine hev.deref_disjoint (hag.valid (x, r) (mem_of_lookup hr)) fun e he => ?_
-    rw [mem_sel] at he
+    replace he := sel_mem he
     refine disjoint_of_lookup hag.agrees.disjoint (by rw [hag.lookup_env hl₀]; exact hr) e he.1 ?_
     rintro rfl
     rw [hX] at he

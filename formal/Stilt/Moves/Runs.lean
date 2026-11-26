@@ -93,7 +93,8 @@ theorem declare (D : Decls) (R : Name) {Lb L X : Live} {written : List (Name × 
   · exact fail _
 
 theorem arms_mem : ∀ {L : Live} {arms : List Arm}, armsMovesOk L arms = true → ∀ arm ∈ arms,
-    arm.body.movesOk L = true ∧ arm.body.mentions.Sub (armsMentions arms)
+    arm.body.movesOk (L.eraseAll arm.binders) = true ∧
+      (arm.body.mentions.eraseAll arm.binders).Sub (armsMentions arms)
   | _, [], _, _, h => by simp at h
   | L, ⟨C, bs, b⟩ :: arms, hm, arm, harm => by
     simp only [armsMovesOk, Bool.and_eq_true] at hm
@@ -118,14 +119,20 @@ theorem select (h : MRun run run') {L : Live} {arms : List Arm}
     obtain ⟨hok, hsub⟩ := arms_mem hm arm hmem
     by_cases hlen : arm.binders.length = us.length
     · simp only [hlen, ↓reduceIte]
-      exact withVars (h _ L (harms arm hmem) hok) hsub _ _
+      have hfst : (arm.binders.zip us).map Prod.fst = arm.binders := List.map_fst_zip (by omega)
+      refine withVars (h _ _ (harms arm hmem) hok) _ _ L _
         (fun xv hxv =>
           ⟨arm.pattern.matchOn_parts Value.Safe.passesToParts hv.1 hmatch xv.2
               (List.of_mem_zip hxv).2,
             arm.pattern.matchOn_parts Value.Justified.passesToParts hv.2 hmatch xv.2
-              (List.of_mem_zip hxv).2⟩)
-        (Live.Sub.union ((Live.sub_union_left _ _).trans (Live.sub_union_left _ _))
-          (hsub.trans ((Live.sub_union_right _ _).trans (Live.sub_union_left _ _))))
+              (List.of_mem_zip hxv).2⟩) ?_ (by rw [hfst]; exact Live.Sub.refl _)
+        (by rw [hfst]; exact hsub)
+      rw [hfst]
+      intro z hz
+      have := hsub z
+      simp only [Live.mem_union, Live.mem_eraseAll_eq, Live.mem_ofList, Bool.or_eq_true,
+        Bool.and_eq_true, Bool.not_eq_true', Bool.eq_false_iff] at hz this ⊢
+      grind
     · simp only [hlen, ↓reduceIte]
       exact fail _
 

@@ -62,7 +62,7 @@ theorem Ready.finish {fr : Copy.Frame} {s : State} {params : List Param}
   obtain ⟨mc, ⟨hagc, hw, hx⟩, hkc, henvc, hevc⟩ := hp
   have hev : Evolves sc s'.1 := by
     have h₁ := Evolves.of_sub (e' := sc.env)
-      (fun e he => (sublist_keep _ _).subset (List.mem_filter.1 he).1) hevc
+      (fun e he => (sublist_keep _ _).subset (sel_mem he).1) hevc
     have hs' : s'.1 = ⟨sc.env, s'.1.store⟩ := by rw [← henvc]
     rw [hs']
     exact h₁

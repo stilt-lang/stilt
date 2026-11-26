@@ -71,9 +71,9 @@ theorem post (h : Ready L X m fr s bound) {frc : Copy.Frame} {sc : State}
     (fun y x p hm => ⟨(hread y x p hm).1, fun v hv => ((hread y x p hm).2 v hv).1⟩) D
     (fun y x v hm => List.mem_filterMap.2 ⟨_, List.mem_map_of_mem hm, rfl⟩)
     (E := sel m X s.env) fun y x p r hm hl => by
-      rw [mem_sel]
       obtain ⟨h₁, h₂⟩ := h.places' y x p hm
-      exact ⟨mem_of_lookup hl, h₂⟩
+      exact mem_sel_of_lookup hag.len_env (hag.liveAt_env h₁)
+        (by rw [← hag.lookup_env h₁]; exact hl) h₂
   obtain ⟨fr₂, hfr, hleave', hn⟩ := leave_full hag.len (fun y x p hm => (h.places y x p hm).1) hleave
   have hj : ∀ xv ∈ frL, xv.2.Justified := by
     rw [copy_leave_eq] at hleave

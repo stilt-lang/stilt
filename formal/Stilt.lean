@@ -58,6 +58,7 @@ import Stilt.Examples.Strings
 import Stilt.Examples.Maps
 import Stilt.Examples.Generics
 import Stilt.Examples.Loops
+import Stilt.Examples.LastUses
 import Stilt.Examples.Structural
 import Stilt.Examples.Panics
 import Stilt.Examples.Ends

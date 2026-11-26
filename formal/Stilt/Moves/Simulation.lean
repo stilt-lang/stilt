@@ -110,8 +110,9 @@ theorem eval_msim {D : Decls} (hD : DeclsOk D) :
             (by live_sub))) (by live_sub) (by live_sub)
     case held ns hs b =>
       exact MSim.bind ((MSim.list ih _ hs (exprs_safe hex.1 hdp.1) hm.1).mono
-        (Live.sub_held _ _ _ _) (Live.Sub.refl _) (by live_sub)) (fun vs _ => MSim.held _ vs (ih b _ ⟨⟨_, hex.2⟩, hdp.2⟩ hm.2)
-          (by live_sub) (Live.sub_eraseAll _ _ _) (Live.sub_union_left _ _) (by live_sub))
-        ((Live.sub_union_left _ _).trans (Live.sub_held _ _ _ _)) (Live.sub_union_left _ _)
+        (by live_sub) (Live.Sub.refl _) (by live_sub))
+        (fun vs _ => MSim.held _ vs (ih b _ ⟨⟨_, hex.2⟩, hdp.2⟩ hm.2)
+          (by live_sub) (by live_sub) (Live.sub_union_left _ _) (by live_sub))
+        (by live_sub) (Live.sub_union_left _ _)
 
 end Stilt.Moving

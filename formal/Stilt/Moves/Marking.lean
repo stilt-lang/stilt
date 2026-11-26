@@ -35,10 +35,10 @@ def Expr.markMoves (after : Live) (pos : Bool) : Expr → Expr
       (markArgs (after.union (Live.ofList (inoutRoots args))) args) τ
   | .letIn x τ init body =>
     .letIn x τ (init.markMoves (after.union (body.mentions.erase x)) true)
-      (body.markMoves after false)
+      (body.markMoves (after.erase x) false)
   | .varIn x τ init body =>
     .varIn x τ (init.markMoves (after.union (body.mentions.erase x)) true)
-      (body.markMoves after false)
+      (body.markMoves (after.erase x) false)
   | .assign ⟨x, path⟩ v =>
     .assign ⟨x, markPath ((Live.one x).union (after.union v.mentions)) path⟩
       (v.markMoves ((Live.one x).union after) false)
@@ -49,12 +49,12 @@ def Expr.markMoves (after : Live) (pos : Bool) : Expr → Expr
   | .match e τ arms =>
     .match (e.markMoves (after.union (armsMentions arms)) false) τ (markArms after arms)
   | .for x τ e body =>
-    .for x τ (e.markMoves (after.union body.mentions) false)
-      (body.markMoves (after.union body.mentions) false)
+    .for x τ (e.markMoves (after.union (body.mentions.erase x)) false)
+      (body.markMoves ((after.union body.mentions).erase x) false)
   | .raise e => .raise (e.markMoves after false)
   | .try e => .try (e.markMoves after false)
-  | .tryCatch e E x h τ => .tryCatch (e.markMoves (after.union h.mentions) false) E x
-      (h.markMoves after false) τ
+  | .tryCatch e E x h τ => .tryCatch (e.markMoves (after.union (h.mentions.erase x)) false) E x
+      (h.markMoves (after.erase x) false) τ
   | .while c body =>
     let again := after.union (c.mentions.union body.mentions)
     .while (c.markMoves again false) (body.markMoves again false)
@@ -98,7 +98,8 @@ def markPath (after : Live) : List Projection → List Projection
 /-- Marks the last uses in the arms of a `match`. -/
 def markArms (after : Live) : List Arm → List Arm
   | [] => []
-  | ⟨C, binders, body⟩ :: arms => ⟨C, binders, body.markMoves after false⟩ :: markArms after arms
+  | ⟨C, binders, body⟩ :: arms =>
+    ⟨C, binders, body.markMoves (after.eraseAll binders) false⟩ :: markArms after arms
 
 end
 

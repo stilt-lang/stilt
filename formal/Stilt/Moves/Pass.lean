@@ -27,13 +27,11 @@ theorem Post.moved {A : Live} {x : Name} {as : List Arg} {mk : List Bool} {s : S
       mk s fr' s' := by
   obtain ⟨m, hag', hk, henv, hev⟩ := h
   refine ⟨m, hag', ((hk.union_unmentioned (M := Live.one x) fun z hz => ?_).mono (by live_sub)
-    (by live_sub)), henv, Evolves.of_sub (fun e he => ?_) hev⟩
-  · simp only [Live.mem_one, Bool.eq_false_iff, ne_eq]
-    rintro rfl
-    rw [hx] at hz
-    exact absurd hz (by simp)
-  · rw [mem_sel] at he ⊢
-    exact ⟨he.1, by simp [he.2]⟩
+    (by live_sub)), henv, Evolves.of_sub (sel_mono (Live.sub_union_right _ _)) hev⟩
+  simp only [Live.mem_one, Bool.eq_false_iff, ne_eq]
+  rintro rfl
+  rw [hx] at hz
+  exact absurd hz (by simp)
 
 /-- The arguments after a last use `move x`, which mention no `x`. -/
 theorem args_move (hmv : MoveReads run run') (A : Live) (x : Name) (as : List Arg)

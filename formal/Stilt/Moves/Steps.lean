@@ -12,10 +12,10 @@ evaluator that keep it.
 `m'`, run on a `Moving` state that agrees with it under a mask that keeps the
 variables of `Lb` live, in the same world, end the same way. When they return
 or raise, the value is the same, and `Post` holds: the two states agree, in
-one world, under a mask that ended only
-bindings of variables that `X` holds and `L` doesn't, the state has the same
-variables, and its store changed only below the references of the live
-variables that `X` holds, and in new locations. `Lb`, `L` and `X` come from
+one world, under a mask that ended only newest bindings of variables that `X`
+holds and `L` doesn't, the state has the same variables, and its store changed
+only below the references of the newest live bindings of variables that `X`
+holds, and in new locations. `Lb`, `L` and `X` come from
 `Expr.movesOk`: the variables mentioned from the start of `m` on, after it,
 and by it. A raise skips what follows it up to its handler, which `L` holds
 too, and so does a jump, which skips what follows it up to its loop or the end
@@ -106,9 +106,13 @@ theorem MCorr.sub {L' X' : Live} {mk mk' : List Bool} {s s' : State}
 theorem MAgrees.keys_eq {m : List Bool} {fr : Copy.Frame} {s : State} (h : MAgrees m fr s) :
     names fr = keys s := h.align
 
+theorem MAgrees.liveAt_env {m : List Bool} {fr : Copy.Frame} {s : State} (h : MAgrees m fr s)
+    {x : Name} (hx : LiveAt x m (names fr)) : LiveAt x m (s.env.map Prod.fst) :=
+  h.align ▸ hx
+
 theorem MAgrees.valid_sel {m mk : List Bool} {fr : Copy.Frame} {s : State} (h : MAgrees m fr s)
     (X : Live) : Valid ⟨sel mk X s.env, s.store⟩ := fun xr hxr =>
-  h.valid xr ((sublist_keep mk s.env).subset (List.mem_filter.1 hxr).1)
+  h.valid xr ((sublist_keep mk s.env).subset (sel_mem hxr).1)
 
 namespace Post
 
@@ -131,9 +135,7 @@ theorem mono {mk : List Bool} {fr : Copy.State} {s : State} {s' : State × World
     (h : Post L X mk s fr s')
     {L' X' : Live} (hL : L'.Sub L) (hX : X.Sub X') : Post L' X' mk s fr s' := by
   obtain ⟨m, hag, hk, henv, hev⟩ := h
-  refine ⟨m, hag, hk.mono hL hX, henv, Evolves.of_sub (fun e he => ?_) hev⟩
-  rw [mem_sel] at he ⊢
-  exact ⟨he.1, hX _ he.2⟩
+  exact ⟨m, hag, hk.mono hL hX, henv, Evolves.of_sub (sel_mono hX) hev⟩
 
 /-- The two states a step ends with are in one world. -/
 theorem world {mk : List Bool} {s : State} {fr : Copy.State} {s' : State × World}

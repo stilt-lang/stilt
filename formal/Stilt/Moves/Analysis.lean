@@ -6,28 +6,40 @@ import Stilt.Free
 The analysis that marks the last use of a variable, and the check that a
 program's marks are last uses.
 
-A body's variables are mentioned where they are read, written, passed or
-bound. A read of `x` is a last use when nothing evaluated after it, up to the
-end of the body, mentions `x` (facts.last-use). A loop's body is followed by
-its next turn, so a variable that a loop mentions has no last use inside it.
-Leaving a body uses its `inout` parameters, which go back to the caller
+An expression mentions the variables it uses of the scopes around it, those
+it reads, writes or passes that none of its binders binds: its free variables
+(`Expr.mem_mentions`). A read of `x` is a last use when nothing evaluated
+after it, up to the end of the body, mentions `x` (facts.last-use). A loop's
+body is followed by its next turn, so a variable that a loop mentions, one
+declared outside it, has no last use inside it, and one its body declares
+may. Leaving a body uses its `inout` parameters, which go back to the caller
 (values.passing-values), so an `inout` parameter has no last use. A closure
 literal mentions what its body mentions but its parameters: a use inside the
-literal counts as a use at the literal, and those hold every variable the
+literal counts as a use at the literal, and those are the variables the
 literal captures (expressions.capture, `Expr.mentions_of_captures`), the only
-ones it reads when it is made. A binder `let x` or `var x` ends the scope of
-the earlier `x` for the rest of its body, so `var x = x` is the last use of
-the earlier `x` when nothing after the binding mentions it.
+ones it reads when it is made.
 
-The analysis goes by names and by evaluation order. A binder mentions its
-name, so a later binding of `x` and a binding of `x` inside a later closure
-literal count as uses of an earlier `x`; a loop's next turn mentions what its
-body binds, so a binding declared inside a loop has no last use there either;
-and a `move x` of an inner `x` counts the uses after its block of the `x` it
-hides. There the analysis is stricter than facts.last-use. A branch of an
-`if` or an arm of a `match` is followed by what follows the whole expression,
-not by the other branches, which never run after it: there it is less strict,
-and the theorem proves those marks safe too.
+The check goes by bindings. A binder `let x`, `var x`, a `for`'s, a `catch`'s
+or a pattern's names hide each other `x` in their body, so the body is
+followed by what follows the binder but `x`, and a later `let x` or a closure
+literal that binds `x` uses no earlier `x`. So `var x = x` is the last use of
+the earlier `x` when nothing after the whole `var` mentions it, and in
+`{ let x = 2; f(move x) }; g(x)` the mark is a last use of the inner `x`. The
+simulation can follow a binding rather than a name because each step reads
+and writes only the newest binding of each name: what follows a body mentions
+a hidden `x` that no step of the body ends or writes (`Stilt.Moves.Kills`).
+One set serves both the check and the proof: what an expression may end or
+write, and what must be live when it starts, is what it mentions.
+
+The check goes by evaluation order where the Reference's other rules give
+uses that source order doesn't show: a call's `inout` arguments are used when
+the call starts, after its other arguments (modes.durations), so in
+`f(inout a, move a)` the mark is no last use; a body's `inout` parameters are
+used when it ends; and a `when`'s names are read at the end of its block,
+which puts them back. A branch of an `if` or an arm of a
+`match` is followed by what follows the whole expression, not by the other
+branches, which never run after it: there the check is less strict than
+facts.last-use, and the theorem proves those marks safe too.
 
 `Expr.markMoves` marks each argument and each initializer that is a variable
 at its last use; `Expr.movesOk` checks that every mark of a body is one. Only
@@ -120,12 +132,36 @@ theorem eraseAll_sub : ∀ (L : Live) (xs : List Name), (L.eraseAll xs).Sub L
 @[simp] theorem mem_ofList (xs : List Name) (x : Name) : (ofList xs).mem x = true ↔ x ∈ xs := by
   simp [mem, ofList]
 
+@[simp] theorem mem_erase_eq (L : Live) (x y : Name) : (L.erase y).mem x = (L.mem x && x != y) := by
+  apply Bool.eq_iff_iff.2
+  simp [mem, erase]
+
+@[simp] theorem mem_eraseAll_eq : ∀ (L : Live) (xs : List Name) (x : Name),
+    (L.eraseAll xs).mem x = (L.mem x && !xs.contains x)
+  | _, [], _ => by simp [eraseAll]
+  | L, y :: ys, x => by
+    show ((L.erase y).eraseAll ys).mem x = _
+    rw [mem_eraseAll_eq (L.erase y) ys x, mem_erase_eq]
+    apply Bool.eq_iff_iff.2
+    simp only [Bool.and_eq_true, bne_iff_ne, Bool.not_eq_true', List.contains_cons,
+      Bool.or_eq_false_iff, beq_eq_false_iff_ne]
+    grind
+
 end Live
 
 /-- Proves that one union of sets of variables is within another. -/
 macro "live_sub" : tactic => `(tactic| exact fun _ h => by
-    simp only [Live.mem_union, Live.mem_ofList, Live.mem_one, List.map_cons, List.map_nil,
-      List.mem_cons, List.not_mem_nil, Bool.or_eq_true] at h ⊢; grind)
+    simp only [Live.mem_union, Live.mem_ofList, Live.mem_one, Live.mem_erase_eq,
+      Live.mem_eraseAll_eq, List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil,
+      Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq,
+      Bool.eq_false_iff, List.contains_iff_mem] at h ⊢; grind)
+
+/-- Proves that a variable of one union of sets, other than a name, is in another. -/
+macro "live_mem" : tactic => `(tactic| exact fun _ h hne => by
+    simp only [Live.mem_union, Live.mem_ofList, Live.mem_one, Live.mem_erase_eq,
+      Live.mem_eraseAll_eq, List.map_cons, List.map_nil, List.mem_cons, List.not_mem_nil,
+      Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', bne_iff_ne, ne_eq,
+      Bool.eq_false_iff, List.contains_iff_mem] at h hne ⊢; grind)
 
 /-- The variables a body hands back to its caller when it ends: its `inout`
 parameters (values.passing-values and values.inout-arguments). -/
@@ -141,9 +177,10 @@ def inoutRoots : List Arg → List Name
 
 mutual
 
-/-- The variables an expression mentions: those it reads, writes, passes or
-binds. A closure literal mentions those its body mentions but its parameters,
-among which are the variables it captures (expressions.capture). -/
+/-- The variables an expression mentions: those it reads, writes or passes of
+the scopes around it. In a binder's body its names are the bindings it makes,
+which the binder doesn't mention. A closure literal mentions those its body
+mentions but its parameters, the variables it captures (expressions.capture). -/
 def Expr.mentions : Expr → Live
   | .var x | .move x => .one x
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => .empty
@@ -155,22 +192,21 @@ def Expr.mentions : Expr → Live
   | .index e i => e.mentions.union i.mentions
   | .closure ps _ _ body => body.mentions.eraseAll (ps.map Param.name)
   | .call f args _ => f.mentions.union (argsMentions args)
-  | .letIn x _ init body => (Live.one x).union (init.mentions.union body.mentions)
-  | .varIn x _ init body => (Live.one x).union (init.mentions.union body.mentions)
+  | .letIn x _ init body | .varIn x _ init body => init.mentions.union (body.mentions.erase x)
   | .assign ⟨x, path⟩ v => (Live.one x).union ((pathMentions path).union v.mentions)
   | .seq a b => a.mentions.union b.mentions
   | .if c _ a b => c.mentions.union (a.mentions.union b.mentions)
   | .match e _ arms => e.mentions.union (armsMentions arms)
-  | .for x _ e body => (Live.one x).union (e.mentions.union body.mentions)
+  | .for x _ e body => e.mentions.union (body.mentions.erase x)
   | .raise e => e.mentions
   | .try e => e.mentions
-  | .tryCatch e _ x h _ => (Live.one x).union (e.mentions.union h.mentions)
+  | .tryCatch e _ x h _ => e.mentions.union (h.mentions.erase x)
   | .while c body => c.mentions.union body.mentions
   | .loop body => body.mentions
   | .return e => e.mentions
   | .perform _ e => e.mentions
   | .withH _ _ h b => h.mentions.union b.mentions
-  | .held ns hs body => (Live.ofList (ns.map (·.1))).union ((exprsMentions hs).union body.mentions)
+  | .held ns hs body => (exprsMentions hs).union (body.mentions.eraseAll (ns.map (·.1)))
 
 /-- The variables a list of expressions mentions. -/
 def exprsMentions : List Expr → Live
@@ -195,27 +231,28 @@ def pathMentions : List Projection → Live
   | .field _ :: path => pathMentions path
   | .index i :: path => i.mentions.union (pathMentions path)
 
-/-- The variables the arms of a `match` mention, their binders included. -/
+/-- The variables the arms of a `match` mention, which their binders hide. -/
 def armsMentions : List Arm → Live
   | [] => .empty
-  | ⟨_, binders, body⟩ :: arms =>
-    (Live.ofList binders).union (body.mentions.union (armsMentions arms))
+  | ⟨_, binders, body⟩ :: arms => (body.mentions.eraseAll binders).union (armsMentions arms)
 
 end
 
 mutual
 
 /-- Whether every mark in `e` is a last use (facts.last-use), when `after` holds
-the variables that what follows `e` in its body mentions. Each part of `e` is checked with
-what follows it: the parts after it in `e`, in the order values.left-to-right gives,
-then `after`. A jump goes to the end of its loop or its body, whose variables
-`after` already holds, so the parts a jump skips only make the check stricter. The arguments of a call are followed by the roots of its `inout`
-arguments, which the call uses when it starts (modes.durations), a loop's body
-by its next iteration, and a `catch` operand by the arm. A closure literal is
+the variables that what follows `e` in its body mentions. Each part of `e` is
+checked with what follows it: the parts after it in `e`, in the order
+values.left-to-right gives, then `after`. A jump goes to the end of its loop
+or its body, whose variables `after` already holds, so the parts a jump skips
+only make the check stricter. The arguments of a call are followed by the
+roots of its `inout` arguments, which the call uses when it starts
+(modes.durations), a loop's body by its next iteration, and a `catch` operand
+by the arm. The body of a binder is followed by what follows the binder but
+the names it binds, which hide those of what follows. A closure literal is
 followed by what follows it, and its body is a body of its own. The check
-goes by names and by evaluation order, as the module's doc says, so it is
-stricter than facts.last-use where a binder reuses a name, and less strict
-across the branches of an `if` or a `match`. -/
+goes by bindings and by evaluation order, as the module's doc says, so it is
+less strict than facts.last-use across the branches of an `if` or a `match`. -/
 def Expr.movesOk (after : Live) : Expr → Bool
   | .var _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => true
   | .move x => !after.mem x
@@ -229,10 +266,8 @@ def Expr.movesOk (after : Live) : Expr → Bool
   | .call f args _ =>
     f.movesOk (after.union (argsMentions args)) &&
       argsMovesOk (after.union (Live.ofList (inoutRoots args))) args
-  | .letIn x _ init body =>
-    init.movesOk (after.union (body.mentions.erase x)) && body.movesOk after
-  | .varIn x _ init body =>
-    init.movesOk (after.union (body.mentions.erase x)) && body.movesOk after
+  | .letIn x _ init body | .varIn x _ init body =>
+    init.movesOk (after.union (body.mentions.erase x)) && body.movesOk (after.erase x)
   | .assign ⟨x, path⟩ v =>
     pathMovesOk ((Live.one x).union (after.union v.mentions)) path &&
       v.movesOk ((Live.one x).union after)
@@ -240,11 +275,12 @@ def Expr.movesOk (after : Live) : Expr → Bool
   | .if c _ a b =>
     c.movesOk (after.union (a.mentions.union b.mentions)) && a.movesOk after && b.movesOk after
   | .match e _ arms => e.movesOk (after.union (armsMentions arms)) && armsMovesOk after arms
-  | .for _ _ e body =>
-    e.movesOk (after.union body.mentions) && body.movesOk (after.union body.mentions)
+  | .for x _ e body =>
+    e.movesOk (after.union (body.mentions.erase x)) &&
+      body.movesOk ((after.union body.mentions).erase x)
   | .raise e => e.movesOk after
   | .try e => e.movesOk after
-  | .tryCatch e _ _ h _ => e.movesOk (after.union h.mentions) && h.movesOk after
+  | .tryCatch e _ x h _ => e.movesOk (after.union (h.mentions.erase x)) && h.movesOk (after.erase x)
   | .while c body =>
     let again := after.union (c.mentions.union body.mentions)
     c.movesOk again && body.movesOk again
@@ -281,87 +317,82 @@ def pathMovesOk (after : Live) : List Projection → Bool
   | .field _ :: path => pathMovesOk after path
   | .index i :: path => i.movesOk (after.union (pathMentions path)) && pathMovesOk after path
 
-/-- Whether the marks of the arms of a `match` are last uses. -/
+/-- Whether the marks of the arms of a `match` are last uses, each arm's body
+followed by what follows the `match` but its binders. -/
 def armsMovesOk (after : Live) : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.movesOk after && armsMovesOk after arms
+  | ⟨_, binders, body⟩ :: arms => body.movesOk (after.eraseAll binders) && armsMovesOk after arms
 
 end
 
-/-! ## The variables a closure captures -/
+/-! ## The variables an expression uses -/
 
-/-- Solves a case of `Expr.mentions_of_free` from the cases of its parts. -/
+/-- Solves a case of `Expr.mem_mentions` from the cases of its parts. -/
 macro "mentions_case" : tactic => `(tactic| (
+  apply Bool.eq_iff_iff.2
   simp only [Expr.free, Expr.mentions, exprsFree, fieldsFree, argsFree, pathFree, armsFree,
     exprsMentions, fieldsMentions, argsMentions, pathMentions, armsMentions, Live.mem_union,
-    Live.mem_one, Live.mem_ofList, Live.mem_empty, Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq,
-    bne_iff_ne, ne_eq, Bool.not_eq_true', List.contains_iff_mem] at *
+    Live.mem_one, Live.mem_ofList, Live.mem_empty, Live.mem_erase_eq, Live.mem_eraseAll_eq,
+    Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, Bool.not_eq_true',
+    Bool.eq_false_iff, List.contains_iff_mem, List.any_eq_true, List.mem_map] at *
   grind))
 
 mutual
 
-/-- A variable an expression uses is one it mentions. -/
-theorem Expr.mentions_of_free (x : Name) : ∀ e : Expr, e.free x = true → e.mentions.mem x = true
-  | .var _, h | .move _, h => by mentions_case
-  | .int _, h | .bool _, h | .unit, h | .break, h | .continue, h | .fnRef .., h | .method .., h =>
-    by simp [Expr.free] at h
-  | .closure ps _ _ body, h => by
-    simp only [Expr.free, Bool.and_eq_true, Bool.not_eq_true', List.any_eq_false, beq_iff_eq] at h
-    exact Live.mem_eraseAll (Expr.mentions_of_free x body h.2) fun hx => by
-      obtain ⟨p, hp, rfl⟩ := List.mem_map.1 hx
-      exact h.1 p hp rfl
-  | .record _ fs, h => by have := fieldsMentions_of_free x fs; mentions_case
-  | .variant _ _ es, h | .list _ es, h | .op _ es, h | .view es, h => by
-    have := exprsMentions_of_free x es; mentions_case
-  | .field e _, h | .raise e, h | .perform _ e, h | .try e, h | .loop e, h | .return e, h => by
-    have := Expr.mentions_of_free x e; mentions_case
-  | .index a b, h | .seq a b, h | .withH _ _ a b, h | .letIn _ _ a b, h | .varIn _ _ a b, h
-  | .for _ _ a b, h | .while a b, h | .tryCatch a _ _ b _, h => by
-    have := Expr.mentions_of_free x a; have := Expr.mentions_of_free x b; mentions_case
-  | .call f args _, h => by
-    have := Expr.mentions_of_free x f; have := argsMentions_of_free x args; mentions_case
-  | .assign ⟨_, p⟩ v, h => by
-    have := pathMentions_of_free x p; have := Expr.mentions_of_free x v; mentions_case
-  | .if c _ a b, h => by
-    have := Expr.mentions_of_free x c; have := Expr.mentions_of_free x a
-    have := Expr.mentions_of_free x b; mentions_case
-  | .match e _ arms, h => by
-    have := Expr.mentions_of_free x e; have := armsMentions_of_free x arms; mentions_case
-  | .held ns hs b, h => by
-    have := exprsMentions_of_free x hs; have := Expr.mentions_of_free x b; mentions_case
+/-- The variables an expression mentions are those it uses of a scope around
+it (`Expr.free`). -/
+theorem Expr.mem_mentions (x : Name) : ∀ e : Expr, e.mentions.mem x = e.free x
+  | .var _ | .move _ => by mentions_case
+  | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
+  | .closure ps _ _ body => by have := Expr.mem_mentions x body; mentions_case
+  | .record _ fs => by have := fieldsMem_mentions x fs; mentions_case
+  | .variant _ _ es | .list _ es | .op _ es | .view es => by
+    have := exprsMem_mentions x es; mentions_case
+  | .field e _ | .raise e | .perform _ e | .try e | .loop e | .return e => by
+    have := Expr.mem_mentions x e; mentions_case
+  | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b
+  | .for _ _ a b | .while a b | .tryCatch a _ _ b _ => by
+    have := Expr.mem_mentions x a; have := Expr.mem_mentions x b; mentions_case
+  | .call f args _ => by
+    have := Expr.mem_mentions x f; have := argsMem_mentions x args; mentions_case
+  | .assign ⟨_, p⟩ v => by
+    have := pathMem_mentions x p; have := Expr.mem_mentions x v; mentions_case
+  | .if c _ a b => by
+    have := Expr.mem_mentions x c; have := Expr.mem_mentions x a
+    have := Expr.mem_mentions x b; mentions_case
+  | .match e _ arms => by
+    have := Expr.mem_mentions x e; have := armsMem_mentions x arms; mentions_case
+  | .held ns hs b => by
+    have := exprsMem_mentions x hs; have := Expr.mem_mentions x b; mentions_case
 
-theorem exprsMentions_of_free (x : Name) :
-    ∀ es : List Expr, exprsFree x es = true → (exprsMentions es).mem x = true
-  | [], h => by simp [exprsFree] at h
-  | e :: es, h => by
-    have := Expr.mentions_of_free x e; have := exprsMentions_of_free x es; mentions_case
+theorem exprsMem_mentions (x : Name) : ∀ es : List Expr, (exprsMentions es).mem x = exprsFree x es
+  | [] => rfl
+  | e :: es => by
+    have := Expr.mem_mentions x e; have := exprsMem_mentions x es; mentions_case
 
-theorem fieldsMentions_of_free (x : Name) :
-    ∀ fs : List (Name × Expr), fieldsFree x fs = true → (fieldsMentions fs).mem x = true
-  | [], h => by simp [fieldsFree] at h
-  | (_, e) :: fs, h => by
-    have := Expr.mentions_of_free x e; have := fieldsMentions_of_free x fs; mentions_case
+theorem fieldsMem_mentions (x : Name) :
+    ∀ fs : List (Name × Expr), (fieldsMentions fs).mem x = fieldsFree x fs
+  | [] => rfl
+  | (_, e) :: fs => by
+    have := Expr.mem_mentions x e; have := fieldsMem_mentions x fs; mentions_case
 
-theorem argsMentions_of_free (x : Name) :
-    ∀ args : List Arg, argsFree x args = true → (argsMentions args).mem x = true
-  | [], h => by simp [argsFree] at h
-  | .value e :: args, h => by
-    have := Expr.mentions_of_free x e; have := argsMentions_of_free x args; mentions_case
-  | .inout ⟨_, p⟩ :: args, h => by
-    have := pathMentions_of_free x p; have := argsMentions_of_free x args; mentions_case
+theorem argsMem_mentions (x : Name) : ∀ args : List Arg, (argsMentions args).mem x = argsFree x args
+  | [] => rfl
+  | .value e :: args => by
+    have := Expr.mem_mentions x e; have := argsMem_mentions x args; mentions_case
+  | .inout ⟨_, p⟩ :: args => by
+    have := pathMem_mentions x p; have := argsMem_mentions x args; mentions_case
 
-theorem pathMentions_of_free (x : Name) :
-    ∀ p : List Projection, pathFree x p = true → (pathMentions p).mem x = true
-  | [], h => by simp [pathFree] at h
-  | .field _ :: p, h => by have := pathMentions_of_free x p; mentions_case
-  | .index i :: p, h => by
-    have := Expr.mentions_of_free x i; have := pathMentions_of_free x p; mentions_case
+theorem pathMem_mentions (x : Name) : ∀ p : List Projection, (pathMentions p).mem x = pathFree x p
+  | [] => rfl
+  | .field _ :: p => by have := pathMem_mentions x p; mentions_case
+  | .index i :: p => by
+    have := Expr.mem_mentions x i; have := pathMem_mentions x p; mentions_case
 
-theorem armsMentions_of_free (x : Name) :
-    ∀ arms : List Arm, armsFree x arms = true → (armsMentions arms).mem x = true
-  | [], h => by simp [armsFree] at h
-  | ⟨_, _, b⟩ :: arms, h => by
-    have := Expr.mentions_of_free x b; have := armsMentions_of_free x arms; mentions_case
+theorem armsMem_mentions (x : Name) : ∀ arms : List Arm, (armsMentions arms).mem x = armsFree x arms
+  | [] => rfl
+  | ⟨_, _, b⟩ :: arms => by
+    have := Expr.mem_mentions x b; have := armsMem_mentions x arms; mentions_case
 
 end
 
@@ -369,8 +400,8 @@ end
 theorem Expr.mentions_of_captures {ps : List Param} {result : Ty} {ρ : Row} {body : Expr}
     {x : Name} (h : Expr.captures ps body x = true) :
     (Expr.closure ps result ρ body).mentions.mem x = true := by
-  rw [← Expr.free_closure x ps result ρ body] at h
-  exact Expr.mentions_of_free x _ h
+  rw [Expr.mem_mentions, Expr.free_closure]
+  exact h
 
 /-- Every mark of the program is a last use: in each function's body, which
 hands its `inout` parameters back, and in `main`. -/

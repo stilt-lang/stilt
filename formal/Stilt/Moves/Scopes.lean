@@ -22,12 +22,12 @@ theorem withInit_eq {σ : Type} (M : Memory σ) (x : Name) (init : Expr) (v : Va
     (s : σ) : Eval.withInit M x init v m s = (m (M.bindInit s x init v)).unbind M := rfl
 
 theorem sel_cons {β : Type} {mk : List Bool} {X : Live} {a : Name × β} {env : List (Name × β)} :
-    ∀ e ∈ sel (true :: mk) X (a :: env), e ∈ a :: sel mk X env := by
+    ∀ e ∈ sel (true :: mk) X (a :: env), e ∈ a :: sel mk (X.erase a.1) env := by
   intro e he
-  simp only [mem_sel, keep, ↓reduceIte, List.mem_cons] at he ⊢
-  rcases he with ⟨rfl | he, hx⟩
-  · exact .inl rfl
-  · exact .inr ⟨he, hx⟩
+  simp only [sel, Bool.true_and] at he
+  split at he
+  · exact he
+  · exact List.mem_cons_of_mem _ he
 
 /-- Writes below the references of a state with a binding that shares one of
 its references are writes below its own references. -/
@@ -43,15 +43,15 @@ theorem Evolves.unshare {e : List (Name × Ref)} {st : List Value} {y z : Name} 
   · exact ⟨P, hP, q, hq⟩
 
 /-- Ending the binding that a body ran with gives corresponding outcomes. -/
-theorem MCorr.unbind {X₀ : Live} {mk₀ mk : List Bool} {a₀ : Name × Value} {fr : Copy.Frame}
+theorem MCorr.unbind {L₀ X₀ : Live} {mk₀ mk : List Bool} {a₀ : Name × Value} {fr : Copy.Frame}
     {s s₀ : State} (hs₀ : s₀.env.tail = s.env)
     (hev₀ : ∀ st, Evolves ⟨sel mk₀ X₀ s₀.env, s₀.store⟩ ⟨sel mk₀ X₀ s₀.env, st⟩ →
       Evolves ⟨sel mk X s.env, s.store⟩ ⟨sel mk X s.env, st⟩)
-    (hk₀ : ∀ c m₁, Kills L X₀ mk₀ (c :: m₁) (keys s₀) → Kills L X mk m₁ (keys s))
+    (hk₀ : ∀ c m₁, Kills L₀ X₀ mk₀ (c :: m₁) (keys s₀) → Kills L X mk m₁ (keys s))
     (hag₀ : MAgrees mk₀ (a₀ :: fr) s₀) {o : Outcome Copy.State α} {o' : Outcome (State × World) α}
-    (hc : MCorr G L X₀ mk₀ s₀ o o') :
+    (hc : MCorr G L₀ X₀ mk₀ s₀ o o') :
     MCorr G L X mk s (o.unbind Copy.memory) (o'.unbind Moving.memory) := by
-  have key : ∀ fr₁ s₁, Post L X₀ mk₀ s₀ fr₁ s₁ →
+  have key : ∀ fr₁ s₁, Post L₀ X₀ mk₀ s₀ fr₁ s₁ →
       Post L X mk s (Copy.memory.unbind fr₁) (Moving.memory.unbind s₁) := by
     intro ⟨fr₁, w⟩ ⟨s₁, w'⟩ ⟨m₁, ⟨hag₁, hw⟩, hk, henv, hev⟩
     dsimp only at hag₁ hw henv hev
@@ -77,11 +77,13 @@ theorem MCorr.unbind {X₀ : Live} {mk₀ mk : List Bool} {a₀ : Name × Value}
 
 namespace MSim
 
-/-- An ordinary binding, live for its body, in a new location. -/
+/-- An ordinary binding, live for its body, in a new location. The body may
+end its `x`, which hides every other: what follows the body may mention those. -/
 theorem withVar (x : Name) {v : Value} (hv : VOk v) {m : Eval Copy.State α}
     {m' : Eval (State × World) α}
-    {Lb' X' : Live} (hm : MSim G Lb' L X' m m')
-    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lb.mem z = true) (hX : X'.Sub X) :
+    {Lb' L' X' : Live} (hm : MSim G Lb' L' X' m m')
+    (hLb : ∀ z, Lb'.mem z = true → z ≠ x → Lb.mem z = true)
+    (hL : ∀ z, L.mem z = true → z ≠ x → L'.mem z = true) (hX : (X'.erase x).Sub X) :
     MSim G Lb L X (Eval.withVar Copy.memory x v m) (Eval.withVar Moving.memory x v m') := by
   intro fr s mk hag hinv
   show MCorr G L X mk s.1 (Eval.withVar Copy.memory x v m fr) (Eval.withVar Moving.memory x v m' s)
@@ -89,14 +91,12 @@ theorem withVar (x : Name) {v : Value} (hv : VOk v) {m : Eval Copy.State α}
   have hag₀ : MAgrees (true :: mk) ((x, v) :: fr.1) (InPlace.bind s.1 x v) :=
     hag.1.bind x hv.1 hv.2
   refine MCorr.unbind rfl (fun st h => ?_) (fun c m₁ hk =>
-    (show Kills L X' (true :: mk) (c :: m₁) (x :: keys s.1) from hk).2.2.mono (Live.Sub.refl L) hX)
+    (show Kills L' X' (true :: mk) (c :: m₁) (x :: keys s.1) from hk).pop hL hX)
     hag₀ (hm (Copy.memory.bind fr x v) (Moving.memory.bind s x v) _ ⟨hag₀, hag.2⟩
       (Inv.cons hinv hLb))
-  have h₁ := Evolves.unbind (s := ⟨sel mk X' s.1.env, s.1.store⟩) (x := x) (v := v)
+  have h₁ := Evolves.unbind (s := ⟨sel mk (X'.erase x) s.1.env, s.1.store⟩) (x := x) (v := v)
     (Evolves.of_sub sel_cons h)
-  exact Evolves.of_sub (fun e he => by
-    rw [mem_sel] at he ⊢
-    exact ⟨he.1, hX _ he.2⟩) h₁
+  exact Evolves.of_sub (sel_mono hX) h₁
 
 theorem read_lookup {fr : Copy.Frame} {x : Name} {v : Value} (h : Copy.read fr x [] = .ok v) :
     fr.lookup x = some v := by
@@ -118,10 +118,11 @@ theorem bind_inspect {σ β : Type} (f : σ → Except Fault α) (k : α → Eva
 /-- The binding of the last use of `x`, which ends `x` and hands its storage
 over to `y` (values.passing-values). Nothing after it mentions `x`, but as `y`. -/
 theorem withMove (x y : Name) {m : Eval Copy.State α} {m' : Eval (State × World) α}
-    {Lb' X' : Live}
-    (hm : MSim G Lb' L X' m m') (hx : Lb.mem x = true) (hxL : L.mem x = false)
-    (hX : X.mem x = true) (hX' : X'.Sub X)
-    (hLb : ∀ z, Lb'.mem z = true → z ≠ y → z ≠ x ∧ Lb.mem z = true) :
+    {Lb' L' X' : Live}
+    (hm : MSim G Lb' L' X' m m') (hx : Lb.mem x = true) (hxL : L.mem x = false)
+    (hX : X.mem x = true) (hX' : (X'.erase y).Sub X)
+    (hLb : ∀ z, Lb'.mem z = true → z ≠ y → z ≠ x ∧ Lb.mem z = true)
+    (hL : ∀ z, L.mem z = true → z ≠ y → L'.mem z = true) :
     MSim G Lb L X
       (Eval.inspect (fun fr => Copy.memory.read fr x []) >>= fun v =>
         Eval.withInit Copy.memory y (.move x) v m)
@@ -152,14 +153,12 @@ theorem withMove (x y : Name) {m : Eval Copy.State α} {m' : Eval (State × Worl
         exact LiveAt.cons_self z _ _
       · obtain ⟨hzx, hz'⟩ := hLb z hz hzy
         exact ((hinv.live z hz').kill hzx).cons hzy
-    have hxr : (x, r) ∈ sel mk X s.env := by
-      rw [mem_sel]
-      refine ⟨mem_of_lookup (by rw [hag.lookup_env hlx]; exact hr), hX⟩
+    have hxr : (x, r) ∈ sel mk X s.env :=
+      mem_sel_of_lookup hag.len_env (by have := hag.keys_eq; simp only [names, keys] at this; rw [← this]; exact hlx) hr hX
     refine MCorr.unbind (by rw [hb]; rfl) (fun st h => ?_)
       (fun c m₁ hk => hkill.trans
-        ((show Kills L X' (true :: kill x mk (keys s)) (c :: m₁) (y :: keys s) by
-          rw [keys, hb] at hk; exact hk).2.2.mono
-          (Live.Sub.refl L) hX') (Live.Sub.refl L)) hag₀
+        ((show Kills L' X' (true :: kill x mk (keys s)) (c :: m₁) (y :: keys s) by
+          rw [keys, hb] at hk; exact hk).pop hL hX') (Live.Sub.refl L)) hag₀
       (hm ((y, v) :: fr, w) (Moving.bindMoved s y x v, w') _ ⟨hag₀, hw⟩
         (by show Inv Lb' _ (keys (Moving.bindMoved s y x v)); rw [hb]; exact hinv₀))
     rw [hb] at h
