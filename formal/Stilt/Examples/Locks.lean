@@ -20,7 +20,7 @@ private def hold : Expr := .held [("a", .i64)] [.var "a"] .unit
 private def callOf (f : Expr) : Expr := .call f [] .unit
 
 private def fn (name : Name) (params : List Param) (body : Expr) : FnDecl :=
-  ⟨name, [], [], params, .unit, Row.pure, body⟩
+  ⟨name, [], [], params, .unit, Row.pure, body, {}⟩
 
 private def decls : Decls :=
   ⟨[], [], [
@@ -34,7 +34,7 @@ private def decls : Decls :=
 example : decls.locks = ["inner", "outer", "stored"] := by decide
 
 /-- A `when` whose block holds the block `b`, in `main`. -/
-private def program (b : Expr) : Program := ⟨decls, .held [("a", .i64)] [.var "a"] b, Row.pure⟩
+private def program (b : Expr) : Program := ⟨decls, .held [("a", .i64)] [.var "a"] b, Row.pure, {}⟩
 
 /-- `when a { outer() }` is E0430. -/
 example : ¬ (program (callOf (.fnRef "outer" [] []))).Locks := by
