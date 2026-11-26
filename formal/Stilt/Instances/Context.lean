@@ -192,6 +192,7 @@ theorem Op.Sig.substTys {o : Op} {τs : List Ty} {τ : Ty} (h : Op.Sig o τs τ)
     exact .tuple (by simpa using h)
   | concat => rw [List.map_replicate]; exact .concat
   | neg h => exact .neg h
+  | float h => exact .float h
   | convert h₁ h₂ => exact .convert h₁ h₂
   | farith h => exact .farith h
   | funary h₁ h₂ => exact .funary h₁ h₂

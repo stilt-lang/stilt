@@ -46,7 +46,10 @@ inductive Op.Sig : Op → List Ty → Ty → Prop
   (declarations.tuples-and-unit). -/
   | tuple {τs : List Ty} : τs ≠ [] → Op.Sig .tuple τs (.tuple τs)
   | not : Op.Sig .not [.bool] .bool
-  | float {k : FloatTy} {m : Nat} {s : Bool} {e : Nat} : Op.Sig (.float k m s e) [] (.float k)
+  /-- A float literal fits its type when it rounds to a finite value of that type, so
+  `1e39` can't be an `f32` (E0320, numbers.float-literals). -/
+  | float {k : FloatTy} {m : Nat} {s : Bool} {e : Nat} :
+      (FloatVal.ofScientific k m s e).isInf = false → Op.Sig (.float k m s e) [] (.float k)
   /-- Unary `-` is defined on signed types only (numbers.unsigned-negation). -/
   | neg {k : IntTy} : k.signed = true → Op.Sig (.neg k) [.int k] (.int k)
   | arith {o : Arith} {k : IntTy} : Op.Sig (.arith o k) [.int k, .int k] (.int k)
