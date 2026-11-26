@@ -6,8 +6,8 @@ import Stilt.InPlace.Enter
 /-!
 # Runs without panics
 
-The evaluator's steps that run expressions keep `Eval.PanicFree`, given that
-running a panic-free expression does (`PanicFreeRun`) and keeps what it doesn't
+The evaluator's steps that run expressions keep `Eval.PanicFree lim`, given that
+running a panic-free expression does (`PanicFreeRun lim`) and keeps what it doesn't
 write (`KeepsRun`): evaluating a list of expressions, each guarded by what the
 ones before it don't write, a record's fields, the indexes of a place without
 one, a call's arguments, a `match`, an assignment, and a `for` loop, whose
@@ -17,11 +17,13 @@ turns keep the facts about the variables its body doesn't write.
 namespace Stilt
 
 /-- Running a panic-free expression, guarded by `G`, ends as panic-free code may. -/
-def PanicFreeRun (run : Expr → Eval Copy.State Value) : Prop :=
-  ∀ G e, e.panicFreeIn G = true → Eval.PanicFree G Value.PanicFree (run e)
+def PanicFreeRun (lim : Limited) (run : Expr → Eval Copy.State Value) : Prop :=
+  ∀ G e, e.panicFreeIn lim G = true → Eval.PanicFree lim G (Value.PanicFree lim) (run e)
+
+variable {lim : Limited}
 
 theorem armsPanicFree_mem : ∀ {G : List Known} {arms : List Arm} {arm : Arm},
-    armsPanicFree G arms = true → arm ∈ arms → arm.body.panicFreeIn (withoutNames G arm.binders) = true
+    armsPanicFree lim G arms = true → arm ∈ arms → arm.body.panicFreeIn lim (withoutNames G arm.binders) = true
   | _, ⟨_, _, _⟩ :: _, _, h, hm => by
     simp only [armsPanicFree, Bool.and_eq_true] at h
     rcases List.mem_cons.1 hm with rfl | hm
@@ -52,26 +54,26 @@ namespace Eval.PanicFree
 variable (w : WriteBack) {G : List Known}
 
 theorem read (x : Name) :
-    Eval.PanicFree G Value.PanicFree (Eval.inspect fun s => (Copy.memoryWith w).read s x []) :=
+    Eval.PanicFree lim G (Value.PanicFree lim) (Eval.inspect fun s => (Copy.memoryWith w).read s x []) :=
   inspect fun _ hs => Frame.PanicFree.read hs x (fun _ h => nomatch h)
 
 theorem capture (keep : Name → Bool) :
-    Eval.PanicFree G (fun c : List (Name × Value) => ∀ xv ∈ c, xv.2.PanicFree)
+    Eval.PanicFree lim G (fun c : List (Name × Value) => ∀ xv ∈ c, xv.2.PanicFree lim)
       (Eval.inspect ((Copy.memoryWith w).capture · keep)) :=
   inspect fun _ hs => CalmTo.ok fun xv hxv => hs xv (mem_of_mem_newestOf hxv)
 
-theorem asBool {v : Value} : Eval.PanicFree G (fun _ => True) (Eval.asBool v) := by
+theorem asBool {v : Value} : Eval.PanicFree lim G (fun _ => True) (Eval.asBool v) := by
   cases v <;> first | exact pure trivial | exact stuck
 
-theorem asList {v : Value} (hv : v.PanicFree) :
-    Eval.PanicFree G (fun vs : List Value => ∀ u ∈ vs, u.PanicFree) (Eval.asList v) := by
+theorem asList {v : Value} (hv : v.PanicFree lim) :
+    Eval.PanicFree lim G (fun vs : List Value => ∀ u ∈ vs, u.PanicFree lim) (Eval.asList v) := by
   cases v <;> first | exact stuck | skip
   cases hv with
   | list h => exact pure h
 
 theorem declare (D : Decls) (R : Name) {written : List (Name × Value)}
-    (hw : ∀ fv ∈ written, fv.2.PanicFree) :
-    Eval.PanicFree G Value.PanicFree (Eval.declare D R written) := by
+    (hw : ∀ fv ∈ written, fv.2.PanicFree lim) :
+    Eval.PanicFree lim G (Value.PanicFree lim) (Eval.declare D R written) := by
   unfold Eval.declare
   split
   · split
@@ -86,11 +88,11 @@ theorem declare (D : Decls) (R : Name) {written : List (Name × Value)}
 
 section Runs
 
-variable {run : Expr → Eval Copy.State Value} (h : PanicFreeRun run) (hk : KeepsRun run)
+variable {run : Expr → Eval Copy.State Value} (h : PanicFreeRun lim run) (hk : KeepsRun run)
 include h hk
 
-theorem list : ∀ {G : List Known} (es : List Expr), exprsPanicFree G es = true →
-    Eval.PanicFree G (fun vs : List Value => ∀ v ∈ vs, v.PanicFree) (Eval.list run es)
+theorem list : ∀ {G : List Known} (es : List Expr), exprsPanicFree lim G es = true →
+    Eval.PanicFree lim G (fun vs : List Value => ∀ v ∈ vs, v.PanicFree lim) (Eval.list run es)
   | _, [], _ => pure (by simp)
   | G, e :: es, hes => by
     simp only [exprsPanicFree, Bool.and_eq_true] at hes
@@ -102,8 +104,8 @@ theorem list : ∀ {G : List Known} (es : List Expr), exprsPanicFree G es = true
           · exact hvs u hu
 
 /-- The values of a list of expressions, one for each. -/
-theorem listSized : ∀ {G : List Known} (es : List Expr), exprsPanicFree G es = true →
-    Eval.PanicFree G (fun vs : List Value => (∀ v ∈ vs, v.PanicFree) ∧ vs.length = es.length)
+theorem listSized : ∀ {G : List Known} (es : List Expr), exprsPanicFree lim G es = true →
+    Eval.PanicFree lim G (fun vs : List Value => (∀ v ∈ vs, v.PanicFree lim) ∧ vs.length = es.length)
       (Eval.list run es)
   | _, [], _ => pure ⟨by simp, rfl⟩
   | G, e :: es, hes => by
@@ -115,8 +117,8 @@ theorem listSized : ∀ {G : List Known} (es : List Expr), exprsPanicFree G es =
           · exact hv
           · exact hvs.1 u hu, by simp [hvs.2]⟩
 
-theorem fields : ∀ {G : List Known} (fs : List (Name × Expr)), fieldsPanicFree G fs = true →
-    Eval.PanicFree G (fun ws : List (Name × Value) => ∀ fv ∈ ws, fv.2.PanicFree) (Eval.fields run fs)
+theorem fields : ∀ {G : List Known} (fs : List (Name × Expr)), fieldsPanicFree lim G fs = true →
+    Eval.PanicFree lim G (fun ws : List (Name × Value) => ∀ fv ∈ ws, fv.2.PanicFree lim) (Eval.fields run fs)
   | _, [], _ => pure (by simp)
   | G, (f, e) :: fs, hfs => by
     simp only [fieldsPanicFree, Bool.and_eq_true] at hfs
@@ -131,7 +133,7 @@ omit h hk in
 /-- The indexes of a place without one evaluate to a path along fields: no index
 is evaluated. -/
 theorem path : ∀ {G : List Known} (ps : List Projection), ps.all (fun q => q.fieldName?.isSome) = true →
-    Eval.PanicFree G Path.Fields (Eval.path run ps)
+    Eval.PanicFree lim G Path.Fields (Eval.path run ps)
   | _, [], _ => pure fun _ h => nomatch h
   | _, .field f :: ps, hps => by
     simp only [List.all_cons, Projection.fieldName?, Option.isSome_some, Bool.true_and] at hps
@@ -141,8 +143,8 @@ theorem path : ∀ {G : List Known} (ps : List Projection), ps.all (fun q => q.f
         · exact hp s hs
   | _, .index _ :: _, hps => by simp [Projection.fieldName?] at hps
 
-theorem args : ∀ {G : List Known} (as : List Arg), argsPanicFree G as = true →
-    Eval.PanicFree G (fun passed : List Passed => ∀ q ∈ passed, q.PanicFree) (Eval.args run as)
+theorem args : ∀ {G : List Known} (as : List Arg), argsPanicFree lim G as = true →
+    Eval.PanicFree lim G (fun passed : List Passed => ∀ q ∈ passed, q.PanicFree lim) (Eval.args run as)
   | _, [], _ => pure (by simp)
   | G, .value e :: as, has => by
     simp only [argsPanicFree, Bool.and_eq_true] at has
@@ -163,9 +165,9 @@ theorem args : ∀ {G : List Known} (as : List Arg), argsPanicFree G as = true �
           · exact hps q hq
 
 omit hk in
-theorem select {arms : List Arm} (harms : armsPanicFree G arms = true) {v : Value}
-    (hv : v.PanicFree) :
-    Eval.PanicFree G Value.PanicFree (Eval.select (Copy.memoryWith w) run arms v) := by
+theorem select {arms : List Arm} (harms : armsPanicFree lim G arms = true) {v : Value}
+    (hv : v.PanicFree lim) :
+    Eval.PanicFree lim G (Value.PanicFree lim) (Eval.select (Copy.memoryWith w) run arms v) := by
   unfold Eval.select
   cases hsel : selectArm arms v with
   | none => exact stuck
@@ -184,8 +186,8 @@ theorem select {arms : List Arm} (harms : armsPanicFree G arms = true) {v : Valu
       exact stuck
 
 theorem assign (x : Name) {ps : List Projection} (hps : ps.all (fun q => q.fieldName?.isSome) = true)
-    {value : Expr} (hv : value.panicFreeIn G = true) :
-    Eval.PanicFree G Value.PanicFree (Eval.assign (Copy.memoryWith w) run x ps value) :=
+    {value : Expr} (hv : value.panicFreeIn lim G = true) :
+    Eval.PanicFree lim G (Value.PanicFree lim) (Eval.assign (Copy.memoryWith w) run x ps value) :=
   bind (W := []) (L := []) (path ps hps) (Eval.Keeps.fieldPath hps) fun _ hp =>
     bind (weaken (h G value hv) fun y hy => mem_withoutNames.2 ⟨hy, by simp⟩)
       (hk value _ _ (List.Subset.refl _) (List.Subset.refl _)) fun _ hw =>
@@ -199,17 +201,17 @@ holds once the frame meets those of `L vs`, for the elements `vs` that the
 iterable reaches from a frame that meets `G`, that read the value of nothing the body writes and the length of
 nothing it resizes. -/
 theorem loop (x : Name) {e body : Expr} (F : List Known) (L : List Value → List Known)
-    (he : e.panicFreeIn G = true)
-    (hb : body.panicFreeIn
+    (he : e.panicFreeIn lim G = true)
+    (hb : body.panicFreeIn lim
       (withoutNames (withoutNames (withoutNames G e.writes) body.writes) [x] ++ F) = true)
     (hafter : ∀ s v s', (run e s).Reaches v s' → ∀ vs, v = .list vs → Frame.Meets (L vs) s'.1)
     (helem : ∀ s v s', Frame.Meets G s.1 → (run e s).Reaches v s' → ∀ vs, v = .list vs → ∀ u ∈ vs, ∀ s'',
       Frame.Meets (withoutWrites (L vs) body.writes body.resizes) s'' → Frame.Meets F ((x, u) :: s'')) :
-    Eval.PanicFree G Value.PanicFree (Eval.loop (Copy.memoryWith w) run x e body) := by
+    Eval.PanicFree lim G (Value.PanicFree lim) (Eval.loop (Copy.memoryWith w) run x e body) := by
   let E : List Value → Prop := fun vs => ∀ u ∈ vs, ∀ s'',
     Frame.Meets (withoutWrites (L vs) body.writes body.resizes) s'' → Frame.Meets F ((x, u) :: s'')
-  have helems : ∀ (H : List Known) v, v.PanicFree ∧ (∀ vs, v = .list vs → E vs) →
-      Eval.PanicFree H (fun vs : List Value => (∀ u ∈ vs, u.PanicFree) ∧ E vs) (Eval.asList v) := by
+  have helems : ∀ (H : List Known) v, v.PanicFree lim ∧ (∀ vs, v = .list vs → E vs) →
+      Eval.PanicFree lim H (fun vs : List Value => (∀ u ∈ vs, u.PanicFree lim) ∧ E vs) (Eval.asList v) := by
     intro H v ⟨hv, hq⟩
     cases v <;> first | exact stuck | skip
     rename_i vs
@@ -225,7 +227,7 @@ theorem loop (x : Name) {e body : Expr} (F : List Known) (L : List Value → Lis
       obtain ⟨rfl, rfl⟩ := Eval.asList_reaches h₂
       exact hafter s _ _ h₁ vs rfl) fun vs ⟨hvs, hE⟩ => ?_
   let T := withoutWrites (withoutNames G e.writes ++ L vs) body.writes body.resizes
-  have hbody : Eval.PanicFree (withoutNames T [x] ++ F) Value.PanicFree (run body) :=
+  have hbody : Eval.PanicFree lim (withoutNames T [x] ++ F) (Value.PanicFree lim) (run body) :=
     weaken (h _ body hb) fun f hf => by
       simp only [List.mem_append] at hf ⊢
       rcases hf with hf | hF
@@ -235,7 +237,7 @@ theorem loop (x : Name) {e body : Expr} (F : List Known) (L : List Value → Lis
         exact withoutNames_sub_withoutWrites (body.resizes_subset)
           (mem_withoutNames.2 ⟨List.mem_append.2 (.inl hf), hb⟩)
       · exact .inr hF
-  have helemT : ∀ u ∈ vs, u.PanicFree ∧ ∀ s'', Frame.Meets T s'' → Frame.Meets F ((x, u) :: s'') :=
+  have helemT : ∀ u ∈ vs, u.PanicFree lim ∧ ∀ s'', Frame.Meets T s'' → Frame.Meets F ((x, u) :: s'') :=
     fun u hu => ⟨hvs u hu, fun s'' hT => hE u hu s'' (hT.mono fun f hf => by
       simp only [T, List.mem_append, mem_withoutWrites] at hf ⊢
       exact ⟨.inr hf.1, hf.2⟩)⟩

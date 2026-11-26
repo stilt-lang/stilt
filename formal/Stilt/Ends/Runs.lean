@@ -15,8 +15,8 @@ namespace Stilt
 
 /-- Running an expression free of `div` whose bound is at most `k` halts, from
 every state. -/
-def HaltsRun {σ : Type} (B : Name → Nat) (k : Nat) (F : Nat → Expr → Eval σ Value) : Prop :=
-  ∀ e, e.divFree = true → e.needs B ≤ k → ∀ s, Halts (fun n => F n e) (fun _ => True) s
+def HaltsRun {σ : Type} (lim : Limited) (B : Name → Nat) (k : Nat) (F : Nat → Expr → Eval σ Value) : Prop :=
+  ∀ e, e.divFree lim = true → e.needs B ≤ k → ∀ s, Halts (fun n => F n e) (fun _ => True) s
 
 theorem Expr.one_le_needs (B : Name → Nat) (e : Expr) : 1 ≤ e.needs B := by
   cases e
@@ -49,14 +49,14 @@ end Eval.Ends
 
 namespace Halts
 
-variable {σ : Type} (M : Memory σ) {B : Name → Nat} {k : Nat} {F : Nat → Expr → Eval σ Value}
+variable {σ : Type} (M : Memory σ) {lim : Limited} {B : Name → Nat} {k : Nat} {F : Nat → Expr → Eval σ Value}
 
 section Runs
 
-variable (h : HaltsRun B k F)
+variable (h : HaltsRun lim B k F)
 include h
 
-theorem list : ∀ es : List Expr, exprsDivFree es = true → exprsNeeds B es ≤ k → ∀ s,
+theorem list : ∀ es : List Expr, exprsDivFree lim es = true → exprsNeeds B es ≤ k → ∀ s,
     Halts (fun n => Eval.list (F n) es) (fun _ => True) s
   | [], _, _, _ => const (Eval.Ends.pure trivial)
   | e :: es, hd, hn, s => by
@@ -64,7 +64,7 @@ theorem list : ∀ es : List Expr, exprsDivFree es = true → exprsNeeds B es �
     exact bind (h e hd.1 hn.1 s) fun _ s' _ _ =>
       bind (list es hd.2 hn.2 s') fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem fields : ∀ fs : List (Name × Expr), fieldsDivFree fs = true → fieldsNeeds B fs ≤ k → ∀ s,
+theorem fields : ∀ fs : List (Name × Expr), fieldsDivFree lim fs = true → fieldsNeeds B fs ≤ k → ∀ s,
     Halts (fun n => Eval.fields (F n) fs) (fun _ => True) s
   | [], _, _, _ => const (Eval.Ends.pure trivial)
   | (_, e) :: fs, hd, hn, s => by
@@ -72,7 +72,7 @@ theorem fields : ∀ fs : List (Name × Expr), fieldsDivFree fs = true → field
     exact bind (h e hd.1 hn.1 s) fun _ s' _ _ =>
       bind (fields fs hd.2 hn.2 s') fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem path : ∀ ps : List Projection, pathDivFree ps = true → pathNeeds B ps ≤ k → ∀ s,
+theorem path : ∀ ps : List Projection, pathDivFree lim ps = true → pathNeeds B ps ≤ k → ∀ s,
     Halts (fun n => Eval.path (F n) ps) (fun _ => True) s
   | [], _, _, _ => const (Eval.Ends.pure trivial)
   | .field _ :: ps, hd, hn, s => by
@@ -83,7 +83,7 @@ theorem path : ∀ ps : List Projection, pathDivFree ps = true → pathNeeds B p
     exact bind (bind (h i hd.1 hn.1 s) fun v _ _ _ => const (Eval.Ends.asInt v)) fun _ s' _ _ =>
       bind (path ps hd.2 hn.2 s') fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem args : ∀ as : List Arg, argsDivFree as = true → argsNeeds B as ≤ k → ∀ s,
+theorem args : ∀ as : List Arg, argsDivFree lim as = true → argsNeeds B as ≤ k → ∀ s,
     Halts (fun n => Eval.args (F n) as) (fun _ => True) s
   | [], _, _, _ => const (Eval.Ends.pure trivial)
   | .value e :: as, hd, hn, s => by
@@ -96,15 +96,15 @@ theorem args : ∀ as : List Arg, argsDivFree as = true → argsNeeds B as ≤ k
       bind (args as hd.2 hn.2 s') fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
 omit h in
-theorem arms_mem : ∀ {arms : List Arm} {arm : Arm}, armsDivFree arms = true →
-    armsNeeds B arms ≤ k → arm ∈ arms → arm.body.divFree = true ∧ arm.body.needs B ≤ k
+theorem arms_mem : ∀ {arms : List Arm} {arm : Arm}, armsDivFree lim arms = true →
+    armsNeeds B arms ≤ k → arm ∈ arms → arm.body.divFree lim = true ∧ arm.body.needs B ≤ k
   | ⟨_, _, _⟩ :: _, _, hd, hn, hm => by
     simp only [armsDivFree, armsNeeds, Bool.and_eq_true, Nat.max_le] at hd hn
     rcases List.mem_cons.1 hm with rfl | hm
     · exact ⟨hd.1, hn.1⟩
     · exact arms_mem hd.2 hn.2 hm
 
-theorem select {arms : List Arm} (hd : armsDivFree arms = true) (hn : armsNeeds B arms ≤ k)
+theorem select {arms : List Arm} (hd : armsDivFree lim arms = true) (hn : armsNeeds B arms ≤ k)
     (v : Value) (s : σ) : Halts (fun n => Eval.select M (F n) arms v) (fun _ => True) s := by
   unfold Eval.select
   cases hsel : selectArm arms v with
@@ -118,14 +118,14 @@ theorem select {arms : List Arm} (hd : armsDivFree arms = true) (hn : armsNeeds 
     · exact withVars M (h _ hda hna) _ s
     · exact const (Eval.Ends.fail _)
 
-theorem assign (x : Name) {ps : List Projection} (hd : pathDivFree ps = true)
-    (hn : pathNeeds B ps ≤ k) {value : Expr} (hvd : value.divFree = true) (hvn : value.needs B ≤ k)
+theorem assign (x : Name) {ps : List Projection} (hd : pathDivFree lim ps = true)
+    (hn : pathNeeds B ps ≤ k) {value : Expr} (hvd : value.divFree lim = true) (hvn : value.needs B ≤ k)
     (s : σ) : Halts (fun n => Eval.assign M (F n) x ps value) (fun _ => True) s :=
   bind (path h ps hd hn s) fun _ s' _ _ => bind (h value hvd hvn s') fun _ _ _ _ =>
     bind (const (Eval.Ends.update _)) fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem loop (x : Name) {e body : Expr} (hed : e.divFree = true) (hen : e.needs B ≤ k)
-    (hbd : body.divFree = true) (hbn : body.needs B ≤ k) (s : σ) :
+theorem loop (x : Name) {e body : Expr} (hed : e.divFree lim = true) (hen : e.needs B ≤ k)
+    (hbd : body.divFree lim = true) (hbn : body.needs B ≤ k) (s : σ) :
     Halts (fun n => Eval.loop M (F n) x e body) (fun _ => True) s :=
   bind (bind (h e hed hen s) fun v _ _ _ => const (Eval.Ends.asList v)) fun vs s' _ _ =>
     bind (forEach (fun v _ => withVar M x v (turn (h body hbd hbn _))) vs s') fun _ _ _ _ =>

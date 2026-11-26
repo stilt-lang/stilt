@@ -13,9 +13,11 @@ and handlers.implicit-effects-and-capabilities).
 
 namespace Stilt
 
+variable {lim : Limited}
+
 /-- The clause of a panic-free handler is panic-free. -/
-theorem Value.PanicFree.clause {handler c : Value} {op : Name} (hh : handler.PanicFree)
-    (hc : handler.clause? op = some c) : c.PanicFree := by
+theorem Value.PanicFree.clause {handler c : Value} {op : Name} (hh : handler.PanicFree lim)
+    (hc : handler.clause? op = some c) : c.PanicFree lim := by
   cases handler <;> simp only [Value.clause?, reduceCtorEq] at hc
   cases hh with
   | record hfs => exact hfs _ (mem_of_lookup hc)
@@ -26,8 +28,8 @@ variable {α : Type} {P : α → Prop} (w : WriteBack)
 
 /-- A clause's outcome as the `with`'s, on a panic-free frame, in the world the clause
 left. -/
-theorem lift {s : Copy.State} (hs : Frame.PanicFree s.1) :
-    ∀ {o : Outcome Copy.State α}, o.PanicFree P → (o.lift (Copy.memoryWith w) s).PanicFree P
+theorem lift {s : Copy.State} (hs : Frame.PanicFree lim s.1) :
+    ∀ {o : Outcome Copy.State α}, o.PanicFree lim P → (o.lift (Copy.memoryWith w) s).PanicFree lim P
   | .done _ _, h => ⟨h.1, hs, h.2.2⟩
   | .raised _ _, h => ⟨h.1, hs, h.2.2⟩
   | .jumped _ _, h => ⟨h.1, hs, h.2.2⟩
@@ -37,9 +39,9 @@ theorem lift {s : Copy.State} (hs : Frame.PanicFree s.1) :
 
 /-- The body of a clause that takes control, each `resume` running a panic-free rest. -/
 theorem runBody {resume : Value → World → Outcome Copy.State Value}
-    (hr : ∀ u x, u.PanicFree → x.All Value.PanicFree → (resume u x).PanicFree Value.PanicFree) :
-    ∀ {o : Outcome Copy.State Value}, o.PanicFree Value.PanicFree →
-      (o.runBody (Copy.memoryWith w) resume).PanicFree Value.PanicFree
+    (hr : ∀ u x, u.PanicFree lim → x.All (Value.PanicFree lim) → (resume u x).PanicFree lim (Value.PanicFree lim)) :
+    ∀ {o : Outcome Copy.State Value}, o.PanicFree lim (Value.PanicFree lim) →
+      (o.runBody (Copy.memoryWith w) resume).PanicFree lim (Value.PanicFree lim)
   | .performed op u s k, ⟨hu, hs, hk⟩ => by
     unfold Outcome.runBody
     split
@@ -50,11 +52,11 @@ theorem runBody {resume : Value → World → Outcome Copy.State Value}
 /-- A `with` of a panic-free handler, whose clauses' calls on panic-free arguments
 are panic-free, keeps a panic-free block's outcome panic-free. -/
 theorem handleWith {effect : Name} {control : Bool} {handler : Value}
-    {call : Value → Value → Copy.State → Outcome Copy.State Value} (hh : handler.PanicFree)
-    (hcall : ∀ c v s, c.PanicFree → v.PanicFree → State.PanicFree s →
-      (call c v s).PanicFree Value.PanicFree) :
-    ∀ {o : Outcome Copy.State Value}, o.PanicFree Value.PanicFree →
-      (o.handleWith (Copy.memoryWith w) effect control handler call).PanicFree Value.PanicFree
+    {call : Value → Value → Copy.State → Outcome Copy.State Value} (hh : handler.PanicFree lim)
+    (hcall : ∀ c v s, c.PanicFree lim → v.PanicFree lim → State.PanicFree lim s →
+      (call c v s).PanicFree lim (Value.PanicFree lim)) :
+    ∀ {o : Outcome Copy.State Value}, o.PanicFree lim (Value.PanicFree lim) →
+      (o.handleWith (Copy.memoryWith w) effect control handler call).PanicFree lim (Value.PanicFree lim)
   | .performed op v s k, ⟨hv, hs, hk⟩ => by
     unfold Outcome.handleWith
     split

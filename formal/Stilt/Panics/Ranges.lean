@@ -15,6 +15,8 @@ facts give `i >= 0` and `i < xs.len()` is within the list's bounds
 
 namespace Stilt
 
+variable {lim : Limited}
+
 /-- What the iterable of a `for` over `a..xs.len() - c` leaves: that `xs` holds a
 list longer than each element of the range plus `c`. -/
 def Expr.rangeAfter : Expr → List Value → List Known
@@ -266,19 +268,19 @@ variable {G : List Known}
 or overflows computing `j + k`. -/
 theorem index (n : Nat) {xs j : Name} {k : Int} {i : Expr} (hi : i.offset? = some (j, k))
     (hb : Known.bounds G j xs k = true) :
-    Eval.PanicFree G Value.PanicFree (eval D (Copy.memoryWith w) n (.index (.var xs) i)) := by
+    Eval.PanicFree lim G (Value.PanicFree lim) (eval D (Copy.memoryWith w) n (.index (.var xs) i)) := by
   rcases n with _ | m
   · exact outOfFuel
   · intro s hs hz
     obtain ⟨nj, ws, hj, hw, h0, hlt⟩ := Known.bounds_spec hb hz
-    have hws : (Value.list ws).PanicFree := hs.1 _ (mem_of_lookup hw)
+    have hws : (Value.list ws).PanicFree lim := hs.1 _ (mem_of_lookup hw)
     have hx : eval D (Copy.memoryWith w) m (.var xs) s = .outOfFuel ∨
         eval D (Copy.memoryWith w) m (.var xs) s = .done (.list ws) s := by
       rcases m with _ | m
       · exact .inl rfl
       · exact .inr (by simp [eval, Eval.inspect, Eval.ofExcept, Copy.memoryWith, Frames.withWorld, Copy.frames, Copy.read,
           hw, Value.get])
-    show Outcome.PanicFree _ (Eval.bind (eval D (Copy.memoryWith w) m (.var xs)) (fun v =>
+    show (Outcome.PanicFree lim) _ (Eval.bind (eval D (Copy.memoryWith w) m (.var xs)) (fun v =>
       Eval.bind (Eval.bind (eval D (Copy.memoryWith w) m i) Eval.asInt)
         fun idx => Eval.ofExcept (v.get [.index idx])) s)
     unfold Eval.bind Outcome.bind
@@ -290,7 +292,7 @@ theorem index (n : Nat) {xs j : Name} {k : Int} {i : Expr} (hi : i.offset? = som
       · exact ⟨.inl rfl, hs⟩
       · have he : elemAt? ws (nj + k) = some ws[(nj + k).toNat] := by
           simp [elemAt?, h0]
-        have hel : ws[(nj + k).toNat].PanicFree := by
+        have hel : ws[(nj + k).toNat].PanicFree lim := by
           cases hws with
           | list h => exact h _ (List.getElem_mem _)
         simp [Eval.asInt, Pure.pure, Eval.pure, Eval.ofExcept, Value.get, he, Outcome.PanicFree, hel, hs,

@@ -13,6 +13,8 @@ list's length, so a range loop's facts survive it.
 
 namespace Stilt
 
+variable {lim : Limited}
+
 variable {D : Decls} {w : WriteBack}
 
 /-- A store into an element within a list's bounds. -/
@@ -24,14 +26,14 @@ theorem write_index {fr : Copy.Frame} {xs : Name} {ws : List Value} {i : Int} (v
 
 /-- Storing a panic-free value into an element of a panic-free frame's list keeps it
 panic-free. -/
-theorem Frame.PanicFree.store {fr : Copy.Frame} (hfr : Frame.PanicFree fr) {xs : Name}
-    {ws : List Value} (hw : fr.lookup xs = some (.list ws)) {v : Value} (hv : v.PanicFree) (i : Nat) :
-    Frame.PanicFree (assocSet fr xs (.list (ws.set i v))) := by
+theorem Frame.PanicFree.store {fr : Copy.Frame} (hfr : Frame.PanicFree lim fr) {xs : Name}
+    {ws : List Value} (hw : fr.lookup xs = some (.list ws)) {v : Value} (hv : v.PanicFree lim) (i : Nat) :
+    Frame.PanicFree lim (assocSet fr xs (.list (ws.set i v))) := by
   intro xv hxv
   rcases mem_assocSet hxv with hxv | hxv
   · exact hfr xv hxv
   · rw [hxv]
-    have hws : (Value.list ws).PanicFree := hfr _ (mem_of_lookup hw)
+    have hws : (Value.list ws).PanicFree lim := hfr _ (mem_of_lookup hw)
     refine .list fun u hu => ?_
     rcases List.mem_or_eq_of_mem_set hu with hu | rfl
     · cases hws with
@@ -57,13 +59,13 @@ namespace Eval.PanicFree
 `value`, panic-free, doesn't resize `xs`. -/
 theorem storeIndex (n : Nat) {G : List Known} {xs j : Name} {k : Int} {e value : Expr}
     (hi : e.offset? = some (j, k)) (hb : Known.bounds G j xs k = true) (hres : xs ∉ value.resizes)
-    (hv : Eval.PanicFree G Value.PanicFree (eval D (Copy.memoryWith w) n value))
+    (hv : Eval.PanicFree lim G (Value.PanicFree lim) (eval D (Copy.memoryWith w) n value))
     (hkv : Eval.Keeps value.writes value.resizes (fun _ => True) (eval D (Copy.memoryWith w) n value)) :
-    Eval.PanicFree G Value.PanicFree
+    Eval.PanicFree lim G (Value.PanicFree lim)
       (Eval.assign (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) xs [.index e] value) := by
   intro s hs hz
   obtain ⟨ws, i, hw, h0, hlt, hp⟩ := eval_index_path (D := D) (w := w) n hi hb hz
-  show Outcome.PanicFree _ (Eval.bind (Eval.path (eval D (Copy.memoryWith w) n) [.index e]) (fun p =>
+  show (Outcome.PanicFree lim) _ (Eval.bind (Eval.path (eval D (Copy.memoryWith w) n) [.index e]) (fun p =>
     Eval.bind (eval D (Copy.memoryWith w) n value) fun v =>
       Eval.bind (Eval.update fun s => (Copy.memoryWith w).write s xs p v) fun _ => Pure.pure Value.unit) s)
   rcases hp with h | h | h <;> simp only [Eval.bind, h, Outcome.bind]

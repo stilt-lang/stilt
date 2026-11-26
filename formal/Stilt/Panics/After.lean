@@ -11,6 +11,8 @@ was false, so it may count on the facts that the condition's negation gives
 
 namespace Stilt
 
+variable {lim : Limited}
+
 /-- Bindings around a step that never reaches a value keep it so. -/
 theorem withVars_not_reaches {σ : Type} {M : Memory σ} {m : Eval σ Value}
     (hm : ∀ s v s', ¬ (m s).Reaches v s') :

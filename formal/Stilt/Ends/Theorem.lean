@@ -23,11 +23,13 @@ and, when it obeys the law of exclusivity, in place.
 
 namespace Stilt
 
+variable {lim : Limited}
+
 open Halts in
 /-- Evaluating an expression free of `div` within the fuel its text bounds halts
 from every state. -/
-theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked B) :
-    ∀ k, HaltsRun B k fun n => eval D (Copy.memoryWith w) n
+theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked lim B) :
+    ∀ k, HaltsRun lim B k fun n => eval D (Copy.memoryWith w) n
   | 0, e, _, hn, _ => absurd hn (by have := e.one_le_needs B; omega)
   | k + 1, e, hd, hn, s => by
     have ih := eval_halts w hR k
@@ -83,7 +85,8 @@ theorem eval_halts {D : Decls} {B : Name → Nat} (w : WriteBack) (hR : D.Ranked
         cases hfn : D.fn? f with
         | none => exact const (Eval.Ends.fail _)
         | some d =>
-          obtain ⟨hdd, hdn⟩ := hR f d hfn
+          simp only [Expr.divFree] at hcd
+          obtain ⟨hdd, hdn⟩ := hR f d hfn hcd
           simp only [Expr.bodyNeeds] at hbn
           refine invoke _ [] d.params passed fun s₀ => ih _ ?_ ?_ s₀
           · rw [Expr.divFree_substRows, Expr.divFree_substTys]; exact hdd

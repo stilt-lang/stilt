@@ -13,18 +13,20 @@ which doesn't write it, holds an integer other than zero.
 
 namespace Stilt
 
+variable {lim : Limited}
+
 namespace Eval.PanicFree
 
 variable {D : Decls} (w : WriteBack) {G : List Known} {α : Type} {P : α → Prop}
 
 /-- The two operands of an operation, the second guarded by what the first doesn't write. -/
 theorem pair {run : Expr → Eval Copy.State Value} {a b : Expr} {W₁ W₂ L₁ L₂ : List Name}
-    {P₁ P₂ : Value → Prop} (ha : Eval.PanicFree G P₁ (run a))
+    {P₁ P₂ : Value → Prop} (ha : Eval.PanicFree lim G P₁ (run a))
     (ka : Eval.Keeps W₁ L₁ (fun _ => True) (run a))
-    (hb : Eval.PanicFree (withoutNames G W₁) P₂ (run b)) (kb : Eval.Keeps W₂ L₂ (fun _ => True) (run b)) :
-    Eval.PanicFree G (fun vs => ∃ u v, vs = [u, v] ∧ P₁ u ∧ P₂ v) (Eval.list run [a, b]) := by
+    (hb : Eval.PanicFree lim (withoutNames G W₁) P₂ (run b)) (kb : Eval.Keeps W₂ L₂ (fun _ => True) (run b)) :
+    Eval.PanicFree lim G (fun vs => ∃ u v, vs = [u, v] ∧ P₁ u ∧ P₂ v) (Eval.list run [a, b]) := by
   unfold Eval.list Eval.list Eval.list
-  have inner : Eval.PanicFree (withoutNames G W₁) (fun vs => ∃ v, vs = [v] ∧ P₂ v)
+  have inner : Eval.PanicFree lim (withoutNames G W₁) (fun vs => ∃ v, vs = [v] ∧ P₂ v)
       (do let v ← run b; let vs ← (Pure.pure [] : Eval Copy.State (List Value)); Pure.pure (v :: vs)) :=
     bind hb kb fun v hv => bind (W := []) (L := []) (R := fun _ => True)
       (pure (P := fun vs : List Value => vs = []) rfl)
@@ -37,29 +39,29 @@ theorem pair {run : Expr → Eval Copy.State Value} {a b : Expr} {W₁ W₂ L₁
   exact bind ha ka fun u hu => bind inner kinner fun vs ⟨v, hvs, hv⟩ => pure ⟨u, v, by rw [hvs], hu, hv⟩
 
 theorem intLit (n : Nat) (k : Int) :
-    Eval.PanicFree G (fun v => v = .int k) (eval D (Copy.memoryWith w) n (.int k)) := by
+    Eval.PanicFree lim G (fun v => v = .int k) (eval D (Copy.memoryWith w) n (.int k)) := by
   cases n
   · exact outOfFuel
   · exact pure rfl
 
 /-- A variable that a test guards holds an integer other than zero. -/
 theorem readNonzero (n : Nat) {d : Name} (hd : Known.nonzero d ∈ G) :
-    Eval.PanicFree G (fun v => ∃ k, v = .int k ∧ k ≠ 0) (eval D (Copy.memoryWith w) n (.var d)) := by
+    Eval.PanicFree lim G (fun v => ∃ k, v = .int k ∧ k ≠ 0) (eval D (Copy.memoryWith w) n (.var d)) := by
   cases n
   · exact outOfFuel
   · intro s hs hz
     obtain ⟨k, hk, hk0⟩ := hz _ hd
-    show Outcome.PanicFree _ (Eval.inspect (fun s : Copy.State => Copy.read s.1 d []) s)
+    show (Outcome.PanicFree lim) _ (Eval.inspect (fun s : Copy.State => Copy.read s.1 d []) s)
     simp only [Eval.inspect, Eval.ofExcept, Copy.read, hk, Value.get]
     exact ⟨⟨k, rfl, hk0⟩, hs⟩
 
 /-- An `if` or a `while`: the branch a condition takes may count on the facts it gives
 (`eval_facts`). -/
-theorem cond (n : Nat) (ih : PanicFreeRun (eval D (Copy.memoryWith w) n)) {c : Expr}
-    (hc : c.panicFreeIn G = true) {ma mb : Eval Copy.State α}
-    (ha : Eval.PanicFree (withoutNames G c.writes ++ c.facts) P ma)
-    (hb : Eval.PanicFree (withoutNames G c.writes ++ c.negFacts) P mb) :
-    Eval.PanicFree G P ((eval D (Copy.memoryWith w) n c >>= Eval.asBool) >>= fun v =>
+theorem cond (n : Nat) (ih : PanicFreeRun lim (eval D (Copy.memoryWith w) n)) {c : Expr}
+    (hc : c.panicFreeIn lim G = true) {ma mb : Eval Copy.State α}
+    (ha : Eval.PanicFree lim (withoutNames G c.writes ++ c.facts) P ma)
+    (hb : Eval.PanicFree lim (withoutNames G c.writes ++ c.negFacts) P mb) :
+    Eval.PanicFree lim G P ((eval D (Copy.memoryWith w) n c >>= Eval.asBool) >>= fun v =>
       if v then ma else mb) :=
   have kc := eval_keeps D w n c c.writes c.resizes (List.Subset.refl _) (List.Subset.refl _)
   bindAfter (F := fun v => c.factsAs v)

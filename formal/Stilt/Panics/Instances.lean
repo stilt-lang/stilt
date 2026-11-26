@@ -14,7 +14,7 @@ namespace Stilt
 
 section
 
-variable (s : TySubst)
+variable (s : TySubst) {lim : Limited}
 
 theorem indexFree_substPathTys (x : Name) : ∀ p : List Projection,
     Place.indexFree ⟨x, substPathTys s p⟩ = Place.indexFree ⟨x, p⟩
@@ -336,7 +336,7 @@ theorem guardedDivisor_substTys (G : List Known) :
 
 mutual
 
-theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s).panicFreeIn G = e.panicFreeIn G
+theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s).panicFreeIn lim G = e.panicFreeIn lim G
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
   | _, .fnRef .. | _, .method .. => rfl
   | G, .held ns hs b => by
@@ -394,21 +394,21 @@ theorem Expr.panicFree_substTys : ∀ (G : List Known) (e : Expr), (e.substTys s
       armsPanicFree_substTys (withoutNames G e.writes) arms]
 
 theorem exprsPanicFree_substTys : ∀ (G : List Known) (es : List Expr),
-    exprsPanicFree G (substExprTys s es) = exprsPanicFree G es
+    exprsPanicFree lim G (substExprTys s es) = exprsPanicFree lim G es
   | _, [] => rfl
   | G, e :: es => by
     simp [substExprTys, exprsPanicFree, Expr.panicFree_substTys G e, Expr.writes_substTys s e,
       exprsPanicFree_substTys (withoutNames G e.writes) es]
 
 theorem fieldsPanicFree_substTys : ∀ (G : List Known) (fs : List (Name × Expr)),
-    fieldsPanicFree G (substFieldTys s fs) = fieldsPanicFree G fs
+    fieldsPanicFree lim G (substFieldTys s fs) = fieldsPanicFree lim G fs
   | _, [] => rfl
   | G, (_, e) :: fs => by
     simp [substFieldTys, fieldsPanicFree, Expr.panicFree_substTys G e, Expr.writes_substTys s e,
       fieldsPanicFree_substTys (withoutNames G e.writes) fs]
 
 theorem argsPanicFree_substTys : ∀ (G : List Known) (args : List Arg),
-    argsPanicFree G (substArgTys s args) = argsPanicFree G args
+    argsPanicFree lim G (substArgTys s args) = argsPanicFree lim G args
   | _, [] => rfl
   | G, .value e :: args => by
     simp [substArgTys, argsPanicFree, Expr.panicFree_substTys G e, Expr.writes_substTys s e,
@@ -417,7 +417,7 @@ theorem argsPanicFree_substTys : ∀ (G : List Known) (args : List Arg),
     simp [substArgTys, argsPanicFree, indexFree_substPathTys s x p, argsPanicFree_substTys G args]
 
 theorem armsPanicFree_substTys : ∀ (G : List Known) (arms : List Arm),
-    armsPanicFree G (substArmTys s arms) = armsPanicFree G arms
+    armsPanicFree lim G (substArmTys s arms) = armsPanicFree lim G arms
   | _, [] => rfl
   | G, ⟨_, bs, b⟩ :: arms => by
     simp [substArmTys, armsPanicFree, Expr.panicFree_substTys (withoutNames G bs) b,

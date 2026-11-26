@@ -13,14 +13,14 @@ namespace Stilt
 
 section
 
-variable (s : TySubst)
+variable (s : TySubst) {lim : Limited}
 
 theorem Expr.callable_substTys (e : Expr) : (e.substTys s).callable = e.callable := by
   cases e <;> first | rfl | (rename_i t _; cases t; rfl)
 
 mutual
 
-theorem Expr.divFree_substTys : ∀ e : Expr, (e.substTys s).divFree = e.divFree
+theorem Expr.divFree_substTys : ∀ e : Expr, (e.substTys s).divFree lim = e.divFree lim
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
   | .record _ fs => by simp [Expr.substTys, Expr.divFree, fieldsDivFree_substTys fs]
   | .variant _ _ es | .list _ es | .op _ es | .view es => by
@@ -45,27 +45,27 @@ theorem Expr.divFree_substTys : ∀ e : Expr, (e.substTys s).divFree = e.divFree
   | .held _ hs b => by
     simp [Expr.substTys, Expr.divFree, exprsDivFree_substTys hs, Expr.divFree_substTys b]
 
-theorem exprsDivFree_substTys : ∀ es : List Expr, exprsDivFree (substExprTys s es) = exprsDivFree es
+theorem exprsDivFree_substTys : ∀ es : List Expr, exprsDivFree lim (substExprTys s es) = exprsDivFree lim es
   | [] => rfl
   | e :: es => by simp [substExprTys, exprsDivFree, Expr.divFree_substTys e, exprsDivFree_substTys es]
 
 theorem fieldsDivFree_substTys :
-    ∀ fs : List (Name × Expr), fieldsDivFree (substFieldTys s fs) = fieldsDivFree fs
+    ∀ fs : List (Name × Expr), fieldsDivFree lim (substFieldTys s fs) = fieldsDivFree lim fs
   | [] => rfl
   | (_, e) :: fs => by simp [substFieldTys, fieldsDivFree, Expr.divFree_substTys e, fieldsDivFree_substTys fs]
 
-theorem argsDivFree_substTys : ∀ args : List Arg, argsDivFree (substArgTys s args) = argsDivFree args
+theorem argsDivFree_substTys : ∀ args : List Arg, argsDivFree lim (substArgTys s args) = argsDivFree lim args
   | [] => rfl
   | .value e :: args => by simp [substArgTys, argsDivFree, Expr.divFree_substTys e, argsDivFree_substTys args]
   | .inout ⟨_, p⟩ :: args => by
     simp [substArgTys, argsDivFree, pathDivFree_substTys p, argsDivFree_substTys args]
 
-theorem pathDivFree_substTys : ∀ p : List Projection, pathDivFree (substPathTys s p) = pathDivFree p
+theorem pathDivFree_substTys : ∀ p : List Projection, pathDivFree lim (substPathTys s p) = pathDivFree lim p
   | [] => rfl
   | .field _ :: p => by simpa [substPathTys, pathDivFree] using pathDivFree_substTys p
   | .index i :: p => by simp [substPathTys, pathDivFree, Expr.divFree_substTys i, pathDivFree_substTys p]
 
-theorem armsDivFree_substTys : ∀ arms : List Arm, armsDivFree (substArmTys s arms) = armsDivFree arms
+theorem armsDivFree_substTys : ∀ arms : List Arm, armsDivFree lim (substArmTys s arms) = armsDivFree lim arms
   | [] => rfl
   | ⟨_, _, b⟩ :: arms => by simp [substArmTys, armsDivFree, Expr.divFree_substTys b, armsDivFree_substTys arms]
 
@@ -130,14 +130,14 @@ end
 
 section
 
-variable (s : RowSubst)
+variable (s : RowSubst) {lim : Limited}
 
 theorem Expr.callable_substRows (e : Expr) : (e.substRows s).callable = e.callable := by
   cases e <;> first | rfl | (rename_i t _; cases t; rfl)
 
 mutual
 
-theorem Expr.divFree_substRows : ∀ e : Expr, (e.substRows s).divFree = e.divFree
+theorem Expr.divFree_substRows : ∀ e : Expr, (e.substRows s).divFree lim = e.divFree lim
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method .. => rfl
   | .record _ fs => by simp [Expr.substRows, Expr.divFree, fieldsDivFree_substRows fs]
   | .variant _ _ es | .list _ es | .op _ es | .view es => by
@@ -162,27 +162,27 @@ theorem Expr.divFree_substRows : ∀ e : Expr, (e.substRows s).divFree = e.divFr
   | .held _ hs b => by
     simp [Expr.substRows, Expr.divFree, exprsDivFree_substRows hs, Expr.divFree_substRows b]
 
-theorem exprsDivFree_substRows : ∀ es : List Expr, exprsDivFree (substExprRows s es) = exprsDivFree es
+theorem exprsDivFree_substRows : ∀ es : List Expr, exprsDivFree lim (substExprRows s es) = exprsDivFree lim es
   | [] => rfl
   | e :: es => by simp [substExprRows, exprsDivFree, Expr.divFree_substRows e, exprsDivFree_substRows es]
 
 theorem fieldsDivFree_substRows :
-    ∀ fs : List (Name × Expr), fieldsDivFree (substFieldRows s fs) = fieldsDivFree fs
+    ∀ fs : List (Name × Expr), fieldsDivFree lim (substFieldRows s fs) = fieldsDivFree lim fs
   | [] => rfl
   | (_, e) :: fs => by simp [substFieldRows, fieldsDivFree, Expr.divFree_substRows e, fieldsDivFree_substRows fs]
 
-theorem argsDivFree_substRows : ∀ args : List Arg, argsDivFree (substArgRows s args) = argsDivFree args
+theorem argsDivFree_substRows : ∀ args : List Arg, argsDivFree lim (substArgRows s args) = argsDivFree lim args
   | [] => rfl
   | .value e :: args => by simp [substArgRows, argsDivFree, Expr.divFree_substRows e, argsDivFree_substRows args]
   | .inout ⟨_, p⟩ :: args => by
     simp [substArgRows, argsDivFree, pathDivFree_substRows p, argsDivFree_substRows args]
 
-theorem pathDivFree_substRows : ∀ p : List Projection, pathDivFree (substPathRows s p) = pathDivFree p
+theorem pathDivFree_substRows : ∀ p : List Projection, pathDivFree lim (substPathRows s p) = pathDivFree lim p
   | [] => rfl
   | .field _ :: p => by simpa [substPathRows, pathDivFree] using pathDivFree_substRows p
   | .index i :: p => by simp [substPathRows, pathDivFree, Expr.divFree_substRows i, pathDivFree_substRows p]
 
-theorem armsDivFree_substRows : ∀ arms : List Arm, armsDivFree (substArmRows s arms) = armsDivFree arms
+theorem armsDivFree_substRows : ∀ arms : List Arm, armsDivFree lim (substArmRows s arms) = armsDivFree lim arms
   | [] => rfl
   | ⟨_, _, b⟩ :: arms => by simp [substArmRows, armsDivFree, Expr.divFree_substRows b, armsDivFree_substRows arms]
 

@@ -49,9 +49,9 @@ private def forever : Program :=
 example : forever.divFree = false := rfl
 example : (forever.runCopy 12).observe = .outOfFuel := rfl
 
-example : (Expr.while (.bool true) .unit).divFree = false := rfl
+example : (Expr.while (.bool true) .unit).divFree Limited.all = false := rfl
 /-- `when c { x }` adds no `div` (shared.when). -/
-example : (Expr.held [("x", .i64)] [.var "c"] (.var "x")).divFree = true := rfl
+example : (Expr.held [("x", .i64)] [.var "c"] (.var "x")).divFree Limited.all = true := rfl
 
 private def lt (a b : Expr) : Expr := .op (.compare .lt .i64) [a, b]
 private def step (x : Name) (o : Arith) (k : Int) : Expr := .assign ⟨x, []⟩ (.op (.arith o .i64) [.var x, .int k])

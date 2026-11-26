@@ -120,6 +120,10 @@ def Op.panicFreeOn (G : List Known) (o : Op) (es : List Expr) : Bool :=
   o.panicFree || (o.byDivisor && (literalDivisor es || guardedDivisor G es)) ||
     (o == .map .index && guardedKey G es)
 
+section
+
+variable (lim : Limited)
+
 mutual
 
 /-- Whether `e`, where the tests around it guard the variables of `G`, holds no
@@ -128,10 +132,14 @@ performance adds none of its own, as a call through a stored function value
 doesn't, and neither does a `with`: a handler's bodies are closure literals of
 the code that writes them (handlers.implicit-effects-and-capabilities). A `when` adds
 only `deadlock`, which `without panic` doesn't rule out
-(shared.when-on-value-already-held); its names carry no fact. -/
+(shared.when-on-value-already-held); its names carry no fact. Naming a function, to call
+it or as a value, adds `panic` unless `lim` covers it: a function limited by
+`without panic` counts as one that can't panic wherever it is named
+(effects.without-panic). -/
 def Expr.panicFreeIn : List Known → Expr → Bool
-  | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
-  | _, .fnRef _ _ _ | _, .method _ _ _ => true
+  | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
+  | _, .fnRef f _ _ => lim.fn f
+  | _, .method t m _ => lim.method t m
   | G, .record _ fields => fieldsPanicFree G fields
   | G, .variant _ _ es => exprsPanicFree G es
   | G, .list _ es => exprsPanicFree G es
@@ -196,11 +204,25 @@ def armsPanicFree : List Known → List Arm → Bool
 end
 
 /-- Whether `e` holds no operation that adds `panic`, with no test around it. -/
-def Expr.panicFree (e : Expr) : Bool := e.panicFreeIn []
+def Expr.panicFree (e : Expr) : Bool := e.panicFreeIn lim []
+
+end
+
+/-- The functions that `lim` covers hold no operation that adds `panic`, and name only
+functions it covers, and each impl's method `m` of a trait `t` is covered when `t.m` is:
+code under `without panic` can count on every function it names
+(effects.without-panic). -/
+structure Decls.PanicCover (D : Decls) (lim : Limited) : Prop where
+  fns : ∀ d ∈ D.fns, lim.fn d.name = true → d.body.panicFree lim = true
+  methods : ∀ t m h i, lim.method t m = true → D.traitImpl? t h = some i →
+    lim.fn (implName t h m) = true
 
 /-- Every body a program declares, and `main`, holds no operation that adds
 `panic`: the whole program is limited by `without panic` (effects.without-panic). -/
 def Program.PanicFree (p : Program) : Prop :=
-  (∀ d ∈ p.decls.fns, d.body.panicFree = true) ∧ p.main.panicFree = true
+  (∀ d ∈ p.decls.fns, d.body.panicFree Limited.all = true) ∧ p.main.panicFree Limited.all = true
+
+theorem Program.PanicFree.cover {p : Program} (hp : p.PanicFree) : p.decls.PanicCover Limited.all :=
+  ⟨fun d hd _ => hp.1 d hd, fun _ _ _ _ _ _ => rfl⟩
 
 end Stilt

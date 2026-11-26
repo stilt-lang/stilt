@@ -26,16 +26,23 @@ def Expr.callable : Expr → Bool
   | .fnRef _ _ _ | .closure _ _ _ _ => true
   | _ => false
 
+section
+
+variable (lim : Limited)
+
 mutual
 
 /-- Whether `e` holds no site of `div`: no loop but `for` and a `while` that counts,
 and calls only of a named function or of a closure literal where it is written. A
 performance is a site of `div`, as a call through a stored function value, the
 handler's clause, is; a `with` and a `when` add nothing of their own
-(handlers.implicit-effects-and-capabilities). -/
+(handlers.implicit-effects-and-capabilities). Naming a function, to call it or as a
+value, adds `div` unless `lim` covers it: a function limited by `without div` counts as
+one without `div` wherever it is named (facts.without). -/
 def Expr.divFree : Expr → Bool
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
-  | .method _ _ _ => true
+  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue => true
+  | .fnRef f _ _ => lim.fn f
+  | .method t m _ => lim.method t m
   | .record _ fields => fieldsDivFree fields
   | .variant _ _ es => exprsDivFree es
   | .list _ es => exprsDivFree es
@@ -82,6 +89,8 @@ def pathDivFree : List Projection → Bool
 def armsDivFree : List Arm → Bool
   | [] => true
   | ⟨_, _, body⟩ :: arms => body.divFree && armsDivFree arms
+
+end
 
 end
 
@@ -154,17 +163,17 @@ end
 
 end
 
-/-- A ranking of the program's functions: each body is free of `div`, and needs no
-more fuel than its function's bound, the bounds of what it calls included. A
-function that calls itself, directly or through others, has none: its body would
-need more than its own bound. -/
-def Decls.Ranked (D : Decls) (B : Name → Nat) : Prop :=
-  ∀ name d, D.fn? name = some d → d.body.divFree = true ∧ d.body.needs B ≤ B name
+/-- A ranking of the functions that `lim` covers: each body is free of `div`, naming
+only functions that `lim` covers, and needs no more fuel than its function's bound, the
+bounds of what it calls included. A function that calls itself, directly or through
+others, has none: its body would need more than its own bound. -/
+def Decls.Ranked (D : Decls) (lim : Limited) (B : Name → Nat) : Prop :=
+  ∀ name d, D.fn? name = some d → lim.fn name = true → d.body.divFree lim = true ∧ d.body.needs B ≤ B name
 
 /-- Every function of the program and `main` hold no site of `div`, and the
 functions call each other without recursion (facts.without-div). -/
 def Program.DivFree (p : Program) : Prop :=
-  ∃ B, p.decls.Ranked B ∧ p.main.divFree = true
+  ∃ B, p.decls.Ranked Limited.all B ∧ p.main.divFree Limited.all = true
 
 /-- The bounds of functions that call only those declared before them: each
 function's, in order, the fuel its body needs with the bounds before it. -/
@@ -173,15 +182,15 @@ def Decls.rank (D : Decls) : Name → Nat :=
 
 /-- Whether every function's body is free of `div` and within its bound. -/
 def Decls.rankedBy (D : Decls) (B : Name → Nat) : Bool :=
-  D.fns.all fun d => d.body.divFree && decide (d.body.needs B ≤ B d.name)
+  D.fns.all fun d => d.body.divFree Limited.all && decide (d.body.needs B ≤ B d.name)
 
 /-- The check of `Program.DivFree` for a program whose functions call only those
 declared before them. -/
-def Program.divFree (p : Program) : Bool := p.decls.rankedBy p.decls.rank && p.main.divFree
+def Program.divFree (p : Program) : Bool := p.decls.rankedBy p.decls.rank && p.main.divFree Limited.all
 
 theorem Decls.ranked_of_rankedBy {D : Decls} {B : Name → Nat} (h : D.rankedBy B = true) :
-    D.Ranked B := by
-  intro name d hd
+    D.Ranked Limited.all B := by
+  intro name d hd _
   have hmem := List.mem_of_find?_eq_some hd
   have hname : d.name = name := by simpa using List.find?_some hd
   have := List.all_eq_true.1 h d hmem

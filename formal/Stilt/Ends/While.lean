@@ -31,7 +31,7 @@ theorem countDistance_step {cmp : Cmp} {grow : Bool} (hg : cmp.counts = some gro
     simp only [Cmp.ints, decide_eq_true_eq] at hxy <;>
     simp only [countDistance, stepped, ↓reduceIte, Bool.false_eq_true] <;> omega
 
-variable {D : Decls} {w : WriteBack}
+variable {D : Decls} {w : WriteBack} {lim : Limited}
 
 /-- The frame a family's run reaches, at some fuel. -/
 theorem done_at {α : Type} {F : Nat → Eval Copy.State α} {s s' : Copy.State} {a : α}
@@ -77,8 +77,8 @@ theorem turn_steps {body : Expr} {v : Name} {grow : Bool} {b : Bound} (hs : body
 /-- A `while` that counts halts from every state, given that its condition and body,
 whose bounds are at most `k`, do. -/
 theorem Halts.whileCounts {B : Name → Nat} {k : Nat}
-    (ih : HaltsRun B k fun n => eval D (Copy.memoryWith w) n) {c body : Expr}
-    (hcd : c.divFree = true) (hcn : c.needs B ≤ k) (hbd : body.divFree = true) (hbn : body.needs B ≤ k)
+    (ih : HaltsRun lim B k fun n => eval D (Copy.memoryWith w) n) {c body : Expr}
+    (hcd : c.divFree lim = true) (hcn : c.needs B ≤ k) (hbd : body.divFree lim = true) (hbn : body.needs B ≤ k)
     (hct : Expr.countsIn c body = true) (s : Copy.State) :
     Halts (fun n => eval D (Copy.memoryWith w) n (.while c body)) (fun _ => True) s := by
   unfold Expr.countsIn at hct

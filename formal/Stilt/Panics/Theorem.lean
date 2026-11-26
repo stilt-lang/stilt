@@ -25,6 +25,8 @@ of bounds.
 
 namespace Stilt
 
+variable {lim : Limited}
+
 theorem literalDivisor_spec {es : List Expr} (h : literalDivisor es = true) :
     ∃ a k, es = [a, .int k] ∧ k ≠ 0 := by
   rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩
@@ -83,8 +85,8 @@ theorem guardedStore_spec {G : List Known} {x : Name} {ps : List Projection} {va
 
 open Eval.PanicFree in
 /-- Evaluating a panic-free expression, with any fuel, ends as panic-free code may. -/
-theorem eval_panicFree {D : Decls} (hD : ∀ d ∈ D.fns, d.body.panicFree = true) (w : WriteBack) :
-    ∀ n, PanicFreeRun (eval D (Copy.memoryWith w) n)
+theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
+    ∀ n, PanicFreeRun lim (eval D (Copy.memoryWith w) n)
   | 0, _, _, _ => outOfFuel
   | n + 1, G, e, he => by
     have ih := eval_panicFree hD w n
@@ -118,7 +120,7 @@ theorem eval_panicFree {D : Decls} (hD : ∀ d ∈ D.fns, d.body.panicFree = tru
         exact bind (pair (ih G a hes.1) (keep a) (intLit w n k) (keep _)) kl
           fun vs ⟨u, v, hvs, hu, hv⟩ => by
             subst hvs hv
-            have hvs : ∀ x ∈ [u, Value.int k], x.PanicFree := by simp [hu, Value.PanicFree.int]
+            have hvs : ∀ x ∈ [u, Value.int k], x.PanicFree lim := by simp [hu, Value.PanicFree.int]
             exact run w (Op.apply_calm_divisor (Op.byDivisor_spec hb) u hk0) hvs fun _ _ _ h =>
               Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
       · obtain ⟨a, d, rfl, hd, hda⟩ := guardedDivisor_spec hg
@@ -127,7 +129,7 @@ theorem eval_panicFree {D : Decls} (hD : ∀ d ∈ D.fns, d.body.panicFree = tru
               simp only [Known.reads, List.mem_singleton] at hy; exact hy ▸ hda⟩))
             (keep _)) kl fun vs ⟨u, v, hvs, hu, ⟨k, hv, hk0⟩⟩ => by
             subst hvs hv
-            have hvs : ∀ x ∈ [u, Value.int k], x.PanicFree := by simp [hu, Value.PanicFree.int]
+            have hvs : ∀ x ∈ [u, Value.int k], x.PanicFree lim := by simp [hu, Value.PanicFree.int]
             exact run w (Op.apply_calm_divisor (Op.byDivisor_spec hb) u hk0) hvs fun _ _ _ h =>
               Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
       · obtain ⟨m, k, kt, rfl, hkt, hm⟩ := guardedKey_spec hgk
@@ -151,13 +153,15 @@ theorem eval_panicFree {D : Decls} (hD : ∀ d ∈ D.fns, d.body.panicFree = tru
     case index e i =>
       obtain ⟨xs, j, k, rfl, hi, hb⟩ := guardedIndex_spec he
       exact index (n + 1) hi hb
-    case fnRef f types rows => exact pure .function
+    case fnRef f types rows => exact pure (.function he)
     case method t m τ =>
-      show Eval.PanicFree G Value.PanicFree (Eval.method D t m τ)
+      show Eval.PanicFree lim G (Value.PanicFree lim) (Eval.method D t m τ)
       unfold Eval.method
       split
-      · split
-        · exact pure .function
+      · rename_i h _
+        split
+        · rename_i i hi
+          exact pure (.function (hD.methods t m h i he hi))
         · exact stuck
       · exact stuck
     case closure ps result ρ body =>
@@ -214,12 +218,27 @@ theorem eval_panicFree {D : Decls} (hD : ∀ d ∈ D.fns, d.body.panicFree = tru
       exact bind (list ih hk hs he.1) (Eval.Keeps.list hk hs (List.Subset.refl _) (List.Subset.refl _))
         fun vs _ => held w (ns.map Prod.fst) vs (ih _ b he.2)
 
-/-- **Without panic**, in copy-in, copy-out with any order of write-back: a
-panic-free program panics only with `overflow` or `deadlock` (effects.without-panic). -/
-theorem Program.PanicFree.runCopyWith {p : Program} (hp : p.PanicFree) (w : WriteBack) (fuel : Nat)
-    (input : String) {k : PanicKind} {s : Copy.State} (h : p.runCopyWith w fuel input = .panicked k s) :
+/-- **Without panic**, for a call of a function that `lim` covers: on panic-free arguments,
+from a panic-free state, the call ends as panic-free code may. It panics only with
+`overflow` or `deadlock`, and so does the rest of every performance it makes, resumed with
+panic-free values. The function counts as one that can't panic wherever it is named, and
+the function values it is given may have been made anywhere, panic-free as they are
+(effects.without-panic and facts.calls-through-function-values). -/
+theorem Decls.PanicCover.call {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) (n : Nat)
+    {f : Name} {types : List Ty} {rows : List Row} (hf : lim.fn f = true) {passed : List Passed}
+    (hp : ∀ q ∈ passed, q.PanicFree lim) :
+    Eval.PanicFree lim [] (Value.PanicFree lim)
+      (Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) (.function f types rows) passed) :=
+  Eval.PanicFree.call w hD (eval_panicFree hD w n) (.function hf) hp
+
+/-- **Without panic**, for `main`: when the functions that `lim` covers are panic-free and
+`main`'s body is too, the run panics only with `overflow` or `deadlock`, in copy-in, copy-out
+whatever its order of write-back. -/
+theorem Program.runCopyWith_panicked {p : Program} (hD : p.decls.PanicCover lim)
+    (hm : p.main.panicFree lim = true) (w : WriteBack) (fuel : Nat) (input : String)
+    {k : PanicKind} {s : Copy.State} (h : p.runCopyWith w fuel input = .panicked k s) :
     k = .overflow ∨ k = .deadlock := by
-  have hr := eval_panicFree hp.1 w fuel [] p.main hp.2 ([], World.start input)
+  have hr := eval_panicFree hD w fuel [] p.main hm ([], World.start input)
     ⟨(fun _ h => nomatch h), World.All.start input⟩ (Frame.Meets.nil _)
   unfold Program.runCopyWith Program.run at h
   cases ho : eval p.decls (Copy.memoryWith w) fuel p.main ([], World.start input) <;> rw [ho] at h hr <;>
@@ -229,6 +248,26 @@ theorem Program.PanicFree.runCopyWith {p : Program} (hp : p.PanicFree) (w : Writ
     exact hr.1
   case jumped j s' => cases j <;> cases h
   all_goals cases h
+
+/-- **Without panic** for `main`, in place: on a well-typed program that obeys the law of
+exclusivity, in-place mutation shows what copy-in, copy-out does. -/
+theorem Program.runInPlace_panicked {p : Program} (hD : p.decls.PanicCover lim)
+    (hm : p.main.panicFree lim = true) (hwt : p.WellTyped) (hex : p.Exclusive) (fuel : Nat)
+    (input : String) {k : PanicKind} (h : (p.runInPlace fuel input).observe = .panicked k) :
+    k = .overflow ∨ k = .deadlock := by
+  rw [← inPlaceAgreement_observe p fuel input hwt hex] at h
+  cases ho : p.runCopy fuel input <;> rw [ho] at h <;> simp only [Outcome.observe] at h
+  case panicked k' s =>
+    cases h
+    exact p.runCopyWith_panicked hD hm .leftToRight fuel input ho
+  all_goals cases h
+
+/-- **Without panic**, in copy-in, copy-out with any order of write-back: a
+panic-free program panics only with `overflow` or `deadlock` (effects.without-panic). -/
+theorem Program.PanicFree.runCopyWith {p : Program} (hp : p.PanicFree) (w : WriteBack) (fuel : Nat)
+    (input : String) {k : PanicKind} {s : Copy.State} (h : p.runCopyWith w fuel input = .panicked k s) :
+    k = .overflow ∨ k = .deadlock :=
+  p.runCopyWith_panicked hp.cover hp.2 w fuel input h
 
 /-- **Without panic**, as the reference interpreter runs programs. -/
 theorem Program.PanicFree.runCopy {p : Program} (hp : p.PanicFree) (fuel : Nat) (input : String)
@@ -240,12 +279,7 @@ theorem Program.PanicFree.runCopy {p : Program} (hp : p.PanicFree) (fuel : Nat) 
 exclusivity, in-place mutation shows what copy-in, copy-out does. -/
 theorem Program.PanicFree.runInPlace {p : Program} (hp : p.PanicFree) (hwt : p.WellTyped)
     (hex : p.Exclusive) (fuel : Nat) (input : String) {k : PanicKind}
-    (h : (p.runInPlace fuel input).observe = .panicked k) : k = .overflow ∨ k = .deadlock := by
-  rw [← inPlaceAgreement_observe p fuel input hwt hex] at h
-  cases ho : p.runCopy fuel input <;> rw [ho] at h <;> simp only [Outcome.observe] at h
-  case panicked k' s =>
-    cases h
-    exact hp.runCopy fuel input ho
-  all_goals cases h
+    (h : (p.runInPlace fuel input).observe = .panicked k) : k = .overflow ∨ k = .deadlock :=
+  p.runInPlace_panicked hp.cover hp.2 hwt hex fuel input h
 
 end Stilt

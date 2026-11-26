@@ -16,27 +16,30 @@ its frames panic-free.
 
 namespace Stilt
 
-/-- Every closure a value holds, at any depth, has a panic-free body. -/
-inductive Value.PanicFree : Value → Prop
-  | int {n : Int} : Value.PanicFree (.int n)
-  | float {x : FloatVal} : Value.PanicFree (.float x)
-  | str {s : String} : Value.PanicFree (.str s)
-  | bool {b : Bool} : Value.PanicFree (.bool b)
-  | unit : Value.PanicFree .unit
+/-- Every closure a value holds, at any depth, has a body panic-free under `lim`, and
+every function it names is one `lim` covers. -/
+inductive Value.PanicFree (lim : Limited) : Value → Prop
+  | int {n : Int} : Value.PanicFree lim (.int n)
+  | float {x : FloatVal} : Value.PanicFree lim (.float x)
+  | str {s : String} : Value.PanicFree lim (.str s)
+  | bool {b : Bool} : Value.PanicFree lim (.bool b)
+  | unit : Value.PanicFree lim .unit
   | record {R : Name} {fields : List (Name × Value)} :
-      (∀ fv ∈ fields, Value.PanicFree fv.2) → Value.PanicFree (.record R fields)
+      (∀ fv ∈ fields, Value.PanicFree lim fv.2) → Value.PanicFree lim (.record R fields)
   | variant {T C : Name} {payload : List Value} :
-      (∀ v ∈ payload, Value.PanicFree v) → Value.PanicFree (.variant T C payload)
-  | list {vs : List Value} : (∀ v ∈ vs, Value.PanicFree v) → Value.PanicFree (.list vs)
+      (∀ v ∈ payload, Value.PanicFree lim v) → Value.PanicFree lim (.variant T C payload)
+  | list {vs : List Value} : (∀ v ∈ vs, Value.PanicFree lim v) → Value.PanicFree lim (.list vs)
   | closure {captured : List (Name × Value)} {ps : List Param} {result : Ty} {ρ : Row}
       {body : Expr} :
-      body.panicFree = true → (∀ xv ∈ captured, Value.PanicFree xv.2) →
-      Value.PanicFree (.closure captured ps result ρ body)
+      body.panicFree lim = true → (∀ xv ∈ captured, Value.PanicFree lim xv.2) →
+      Value.PanicFree lim (.closure captured ps result ρ body)
   | function {f : Name} {types : List Ty} {rows : List Row} :
-      Value.PanicFree (.function f types rows)
-  | handle {u : Ty} {k : Nat} : Value.PanicFree (.handle u k)
+      lim.fn f = true → Value.PanicFree lim (.function f types rows)
+  | handle {u : Ty} {k : Nat} : Value.PanicFree lim (.handle u k)
 
-theorem Value.PanicFree.hereditary : Value.Hereditary Value.PanicFree where
+variable {lim : Limited}
+
+theorem Value.PanicFree.hereditary : Value.Hereditary (Value.PanicFree lim) where
   int _ := .int
   float _ := .float
   bool _ := .bool
@@ -45,7 +48,7 @@ theorem Value.PanicFree.hereditary : Value.Hereditary Value.PanicFree where
   list _ := ⟨fun h => by cases h; assumption, .list⟩
   handle _ _ := .handle
 
-theorem Value.PanicFree.passesToParts : Value.PassesToParts Value.PanicFree where
+theorem Value.PanicFree.passesToParts : Value.PassesToParts (Value.PanicFree lim) where
   record _ _ h := by cases h; assumption
   variant _ _ _ h := by cases h; assumption
   list _ := ⟨fun h => by cases h; assumption, .list⟩
@@ -66,8 +69,8 @@ theorem Path.fields_append {p q : Path} (hp : p.Fields) (hq : q.Fields) : (p ++ 
 namespace Value.PanicFree
 
 /-- Reading a panic-free value along fields doesn't panic, and gives a panic-free part. -/
-theorem get {v : Value} {p : Path} (hv : v.PanicFree) (hp : p.Fields) :
-    CalmTo Value.PanicFree (v.get p) := by
+theorem get {v : Value} {p : Path} (hv : v.PanicFree lim) (hp : p.Fields) :
+    CalmTo (Value.PanicFree lim) (v.get p) := by
   induction p generalizing v with
   | nil => exact CalmTo.ok hv
   | cons s p ih =>
@@ -84,8 +87,8 @@ theorem get {v : Value} {p : Path} (hv : v.PanicFree) (hp : p.Fields) :
 
 /-- Writing a panic-free value into one along fields doesn't panic, and gives a
 panic-free value. -/
-theorem set {v w : Value} {p : Path} (hv : v.PanicFree) (hw : w.PanicFree) (hp : p.Fields) :
-    CalmTo Value.PanicFree (v.set p w) := by
+theorem set {v w : Value} {p : Path} (hv : v.PanicFree lim) (hw : w.PanicFree lim) (hp : p.Fields) :
+    CalmTo (Value.PanicFree lim) (v.set p w) := by
   induction p generalizing v with
   | nil => exact CalmTo.ok hw
   | cons s p ih =>
@@ -110,39 +113,40 @@ end Value.PanicFree
 /-! ## Frames -/
 
 /-- Every value of a frame is panic-free. -/
-def Frame.PanicFree (fr : Copy.Frame) : Prop := ∀ xv ∈ fr, xv.2.PanicFree
+def Frame.PanicFree (lim : Limited) (fr : Copy.Frame) : Prop := ∀ xv ∈ fr, xv.2.PanicFree lim
 
 /-- Every value of a state is panic-free: those of its frame, and those its world's cells
 hold, which a `when` takes out (shared.when). -/
-def State.PanicFree (s : Copy.State) : Prop := Frame.PanicFree s.1 ∧ s.2.All Value.PanicFree
+def State.PanicFree (lim : Limited) (s : Copy.State) : Prop :=
+  Frame.PanicFree lim s.1 ∧ s.2.All (Value.PanicFree lim)
 
 /-- What a call passes: a panic-free value, or a place along fields. -/
-def Passed.PanicFree : Passed → Prop
-  | .value v | .moved _ v => v.PanicFree
+def Passed.PanicFree (lim : Limited) : Passed → Prop
+  | .value v | .moved _ v => v.PanicFree lim
   | .place _ p => p.Fields
 
 namespace Frame.PanicFree
 
-theorem cons {fr : Copy.Frame} {x : Name} {v : Value} (hfr : Frame.PanicFree fr)
-    (hv : v.PanicFree) : Frame.PanicFree ((x, v) :: fr) := by
+theorem cons {fr : Copy.Frame} {x : Name} {v : Value} (hfr : Frame.PanicFree lim fr)
+    (hv : v.PanicFree lim) : Frame.PanicFree lim ((x, v) :: fr) := by
   intro xv h
   rcases List.mem_cons.1 h with rfl | h
   · exact hv
   · exact hfr xv h
 
-theorem tail {fr : Copy.Frame} (hfr : Frame.PanicFree fr) : Frame.PanicFree fr.tail :=
+theorem tail {fr : Copy.Frame} (hfr : Frame.PanicFree lim fr) : Frame.PanicFree lim fr.tail :=
   fun xv h => hfr xv (List.mem_of_mem_tail h)
 
-theorem read {fr : Copy.Frame} (hfr : Frame.PanicFree fr) (x : Name) {p : Path}
-    (hp : p.Fields) : CalmTo Value.PanicFree (Copy.read fr x p) := by
+theorem read {fr : Copy.Frame} (hfr : Frame.PanicFree lim fr) (x : Name) {p : Path}
+    (hp : p.Fields) : CalmTo (Value.PanicFree lim) (Copy.read fr x p) := by
   unfold Copy.read
   split
   · rename_i v hv
     exact Value.PanicFree.get (hfr (x, v) (mem_of_lookup hv)) hp
   · exact CalmTo.stuck
 
-theorem write {fr : Copy.Frame} (hfr : Frame.PanicFree fr) (x : Name) {p : Path} {w : Value}
-    (hw : w.PanicFree) (hp : p.Fields) : CalmTo Frame.PanicFree (Copy.write fr x p w) := by
+theorem write {fr : Copy.Frame} (hfr : Frame.PanicFree lim fr) (x : Name) {p : Path} {w : Value}
+    (hw : w.PanicFree lim) (hp : p.Fields) : CalmTo (Frame.PanicFree lim) (Copy.write fr x p w) := by
   unfold Copy.write
   split
   · rename_i v hv
@@ -155,13 +159,13 @@ theorem write {fr : Copy.Frame} (hfr : Frame.PanicFree fr) (x : Name) {p : Path}
 
 /-- Entering a call binds panic-free values: the captured ones, the arguments,
 and the places read along fields. -/
-theorem enter {caller : Copy.Frame} (hc : Frame.PanicFree caller) :
-    ∀ {fr : Copy.Frame} (params : List (Name × Passed)), Frame.PanicFree fr →
-      (∀ ya ∈ params, ya.2.PanicFree) → CalmTo Frame.PanicFree (Copy.enter caller fr params)
+theorem enter {caller : Copy.Frame} (hc : Frame.PanicFree lim caller) :
+    ∀ {fr : Copy.Frame} (params : List (Name × Passed)), Frame.PanicFree lim fr →
+      (∀ ya ∈ params, ya.2.PanicFree lim) → CalmTo (Frame.PanicFree lim) (Copy.enter caller fr params)
   | fr, [], hfr, _ => CalmTo.ok hfr
   | fr, (y, a) :: params, hfr, hps => by
     have ha := hps (y, a) List.mem_cons_self
-    have hrest : ∀ ya ∈ params, ya.2.PanicFree := fun ya h => hps ya (List.mem_cons_of_mem _ h)
+    have hrest : ∀ ya ∈ params, ya.2.PanicFree lim := fun ya h => hps ya (List.mem_cons_of_mem _ h)
     unfold Copy.enter
     rw [List.foldlM_cons]
     cases a with
@@ -171,13 +175,13 @@ theorem enter {caller : Copy.Frame} (hc : Frame.PanicFree caller) :
         fun fr' h => enter hc params h hrest
 
 /-- Leaving a call writes panic-free values of the callee's frame back along fields. -/
-theorem leave {callee : Copy.Frame} (hce : Frame.PanicFree callee) :
-    ∀ {fr : Copy.Frame} (params : List (Name × Passed)), Frame.PanicFree fr →
-      (∀ ya ∈ params, ya.2.PanicFree) → CalmTo Frame.PanicFree (Copy.leave fr callee params)
+theorem leave {callee : Copy.Frame} (hce : Frame.PanicFree lim callee) :
+    ∀ {fr : Copy.Frame} (params : List (Name × Passed)), Frame.PanicFree lim fr →
+      (∀ ya ∈ params, ya.2.PanicFree lim) → CalmTo (Frame.PanicFree lim) (Copy.leave fr callee params)
   | fr, [], hfr, _ => CalmTo.ok hfr
   | fr, (y, a) :: params, hfr, hps => by
     have ha := hps (y, a) List.mem_cons_self
-    have hrest : ∀ ya ∈ params, ya.2.PanicFree := fun ya h => hps ya (List.mem_cons_of_mem _ h)
+    have hrest : ∀ ya ∈ params, ya.2.PanicFree lim := fun ya h => hps ya (List.mem_cons_of_mem _ h)
     unfold Copy.leave
     rw [List.foldlM_cons]
     cases a with

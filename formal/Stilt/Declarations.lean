@@ -36,6 +36,16 @@ structure Limits where
   div : Bool := false
   deriving DecidableEq, Repr, Inhabited
 
+/-- The functions that code under a limit may name: those that `fn` covers, and the
+method `m` of the trait `t`'s impls when `method t m` covers it, each a function
+without the fact the limit rules out, wherever it is named (facts.without). -/
+structure Limited where
+  fn : Name → Bool
+  method : Name → Name → Bool
+
+/-- Every function: a limit on the whole program covers each of its functions. -/
+def Limited.all : Limited := ⟨fun _ => true, fun _ _ => true⟩
+
 /-- `fn name<T: B, …, e, …>(params) -> result / row { body } without …`
 (declarations.function-declarations): its type parameters, with their bounds, its row
 variables (effects.row-variables), and the limits its body is checked against. -/

@@ -12,7 +12,7 @@ namespace Stilt
 
 section
 
-variable (s : RowSubst)
+variable (s : RowSubst) {lim : Limited}
 
 theorem indexFree_substPathRows (x : Name) : ∀ p : List Projection,
     Place.indexFree ⟨x, substPathRows s p⟩ = Place.indexFree ⟨x, p⟩
@@ -332,7 +332,7 @@ theorem guardedDivisor_substRows (G : List Known) :
 
 mutual
 
-theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows s).panicFreeIn G = e.panicFreeIn G
+theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows s).panicFreeIn lim G = e.panicFreeIn lim G
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
   | _, .fnRef .. | _, .method .. => rfl
   | G, .held ns hs b => by
@@ -389,21 +389,21 @@ theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows
       armsPanicFree_substRows (withoutNames G e.writes) arms]
 
 theorem exprsPanicFree_substRows : ∀ (G : List Known) (es : List Expr),
-    exprsPanicFree G (substExprRows s es) = exprsPanicFree G es
+    exprsPanicFree lim G (substExprRows s es) = exprsPanicFree lim G es
   | _, [] => rfl
   | G, e :: es => by
     simp [substExprRows, exprsPanicFree, Expr.panicFree_substRows G e, Expr.writes_substRows s e,
       exprsPanicFree_substRows (withoutNames G e.writes) es]
 
 theorem fieldsPanicFree_substRows : ∀ (G : List Known) (fs : List (Name × Expr)),
-    fieldsPanicFree G (substFieldRows s fs) = fieldsPanicFree G fs
+    fieldsPanicFree lim G (substFieldRows s fs) = fieldsPanicFree lim G fs
   | _, [] => rfl
   | G, (_, e) :: fs => by
     simp [substFieldRows, fieldsPanicFree, Expr.panicFree_substRows G e, Expr.writes_substRows s e,
       fieldsPanicFree_substRows (withoutNames G e.writes) fs]
 
 theorem argsPanicFree_substRows : ∀ (G : List Known) (args : List Arg),
-    argsPanicFree G (substArgRows s args) = argsPanicFree G args
+    argsPanicFree lim G (substArgRows s args) = argsPanicFree lim G args
   | _, [] => rfl
   | G, .value e :: args => by
     simp [substArgRows, argsPanicFree, Expr.panicFree_substRows G e, Expr.writes_substRows s e,
@@ -412,7 +412,7 @@ theorem argsPanicFree_substRows : ∀ (G : List Known) (args : List Arg),
     simp [substArgRows, argsPanicFree, indexFree_substPathRows s x p, argsPanicFree_substRows G args]
 
 theorem armsPanicFree_substRows : ∀ (G : List Known) (arms : List Arm),
-    armsPanicFree G (substArmRows s arms) = armsPanicFree G arms
+    armsPanicFree lim G (substArmRows s arms) = armsPanicFree lim G arms
   | _, [] => rfl
   | G, ⟨_, bs, b⟩ :: arms => by
     simp [substArmRows, armsPanicFree, Expr.panicFree_substRows (withoutNames G bs) b,
