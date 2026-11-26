@@ -40,6 +40,17 @@ case "$(uname -s)-$(uname -m)" in
     *) fail "no toolchain is built for $(uname -s) on $(uname -m) yet; aarch64 macOS and x86-64 and aarch64 Linux have one" ;;
 esac
 
+# Linux's `stilt` loads glibc 2.31 or later. A system without glibc, such as Alpine's, whose C
+# library is musl, has no GNU_LIBC_VERSION.
+if [ "$(uname -s)" = Linux ]; then
+    glibc=$(getconf GNU_LIBC_VERSION 2> /dev/null | sed -n 's/^glibc //p')
+    [ -n "$glibc" ] || fail "Linux's toolchain needs glibc 2.31 or later, and this system has no glibc (Alpine's C library is musl); nothing was installed"
+    minor=${glibc#2.}; minor=${minor%%.*}
+    case $glibc in
+        2.*) [ "$minor" -ge 31 ] 2> /dev/null || fail "Linux's toolchain needs glibc 2.31 or later, and this system has $glibc; nothing was installed" ;;
+    esac
+fi
+
 # Fetches `$1` of the distribution into the file `$2`.
 fetch() {
     case $dist in

@@ -338,10 +338,28 @@ dist: toolchain
     esac
     version=$(cat VERSION)
     name=stilt-$version-$host
-    cargo build -q --release -p stilt-cli
+    # Linux's `stilt` links against glibc 2.31, through cargo-zigbuild and zig, so that it runs on
+    # Ubuntu 20.04, Debian 11 and every later system, rather than only on the build machine's
+    # glibc and later.
+    case $host in
+        *-linux)
+            triple=${host%%-*}-unknown-linux-gnu
+            cargo zigbuild -q --release -p stilt-cli --target "$triple.2.31"
+            stilt=target/$triple/release/stilt
+            newest=$(objdump -T "$stilt" | grep -o 'GLIBC_2\.[0-9]*' | sort -u -t . -k 2 -n | tail -1)
+            if [ "${newest#GLIBC_2.}" -gt 31 ]; then
+                echo "ERROR $stilt needs $newest, not glibc 2.31"
+                exit 1
+            fi
+            ;;
+        *)
+            cargo build -q --release -p stilt-cli
+            stilt=target/release/stilt
+            ;;
+    esac
     rm -rf target/dist
     mkdir -p "target/dist/$name/bin"
-    cp target/release/stilt "target/dist/$name/bin/stilt"
+    cp "$stilt" "target/dist/$name/bin/stilt"
     mkdir "target/dist/$name/bin/stilt-toolchain"
     for part in target/stilt-toolchain/*; do
         [ "${part##*/}" = clang ] || cp -RL "$part" "target/dist/$name/bin/stilt-toolchain/"
@@ -360,12 +378,12 @@ dist: toolchain
         "$("$rustc" --print sysroot)/share/doc/rust/COPYRIGHT-library.html" "target/dist/$name/rust/"
     # The manual pages and the shells' completions, where package managers look for them.
     share="target/dist/$name/share"
-    target/release/stilt manual "$share/man/man1"
+    "$stilt" manual "$share/man/man1"
     mkdir -p "$share/bash-completion/completions" "$share/zsh/site-functions" \
         "$share/fish/vendor_completions.d"
-    target/release/stilt completions bash > "$share/bash-completion/completions/stilt"
-    target/release/stilt completions zsh > "$share/zsh/site-functions/_stilt"
-    target/release/stilt completions fish > "$share/fish/vendor_completions.d/stilt.fish"
+    "$stilt" completions bash > "$share/bash-completion/completions/stilt"
+    "$stilt" completions zsh > "$share/zsh/site-functions/_stilt"
+    "$stilt" completions fish > "$share/fish/vendor_completions.d/stilt.fish"
     archive=stilt-$host.tar.gz
     tar -czf "target/dist/$archive" -C target/dist "$name"
     sum=sha256sum
