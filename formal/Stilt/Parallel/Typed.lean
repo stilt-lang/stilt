@@ -39,8 +39,8 @@ theorem call_settled (hD : D.Typed) (n : Nat) {Γ : Ctx} {η : REnv} {f : Value}
   | _ => trivial
 
 /-- tasks.continuations-stay-in-task: a task's function raises nothing and performs no
-user-defined effect (tasks.task-functions), and `async` performs nothing but its tasks' calls
-(tasks.sequential-run), so the row of its type holds `io` at most. A call of it never ends as
+user-defined effect (tasks.task-functions), and `async` performs nothing but its tasks' calls,
+as the export writes it, so the row of its type holds `io` at most. A call of it never ends as
 a performance: no continuation leaves the task, and every performance in it is handled, and
 resumed, inside it. -/
 theorem continuations_stay (hD : D.Typed) (n : Nat) {Γ : Ctx} {η : REnv} {f : Value}

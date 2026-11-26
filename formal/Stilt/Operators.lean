@@ -159,8 +159,8 @@ bounds, in a list or a string, integer overflow, integer division by zero,
 slicing a string inside a UTF-8 sequence, indexing a map without a default with
 a missing key, `panic(msg)`, `unreachable()`, `unwrap` and `expect` of a `None`
 or an `Err`, a false `assert`, a `when` on a value that a `when` holds
-(shared.when-on-value-already-held), and code with an error, reached
-(program.bodies-with-errors). -/
+(shared.when-on-value-already-held), and code with an error, reached, which the export
+writes as this panic. -/
 inductive PanicKind where
   | bounds
   | overflow

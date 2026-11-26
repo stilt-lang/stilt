@@ -88,7 +88,7 @@ variable {D : Decls} {s : RowScope}
 mutual
 
 /-- A well-typed expression's closure literals name their parameters once each
-(expressions.closures). -/
+(declarations.unique-names). -/
 theorem HasType.distinctParams :
     ∀ {Γ fx e τ}, HasType D s Γ fx e τ → e.distinctParams = true
   | _, _, _, _, .var _ => rfl

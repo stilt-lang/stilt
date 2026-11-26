@@ -42,7 +42,7 @@ structure ModeCtx where
   /-- Whether the expression, if it is a closure literal, is `once` (modes.once-closures). -/
   once : Bool
   /-- Whether the expression, if it is a closure literal, is the binding that
-  a `let` or `var` names (modes.show). -/
+  a `let` or `var` names. -/
   bound : Bool
   /-- The `inout` parameters in scope, to which an assignment stores its value
   (modes.escaping). -/

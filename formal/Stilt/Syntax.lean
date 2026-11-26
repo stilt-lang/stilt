@@ -25,7 +25,8 @@ variable that the function's own row holds too (effects.non-escaping-parameters)
 elaborated parameter carries that variable in `implicit`, and its type holds
 it. An `escaping` parameter, an `inout` one, a closure literal's, and one whose
 type isn't a function type have none, so `implicit = none` on a parameter of
-function type with no mode is the mark `escaping`. -/
+function type with no mode is the mark `escaping`: its type is the one written, whose row
+holds no variable but those the signature writes (effects.escaping-parameters). -/
 structure Param where
   mode : Mode
   name : Name
@@ -97,11 +98,10 @@ inductive Op where
   /-- `==`, `!=` and the ordering operators on `bool`, through its native `Eq`
   and `Ord`, with `false < true` (traits.operators and traits.built-in-impls). -/
   | bcompare (op : Cmp)
-  /-- A string literal's text, its escapes read (lexical.string-literals and
-  lexical.escapes). -/
+  /-- A string literal's text, its escapes read: the calculus starts after lexing. -/
   | str (text : String)
   /-- An interpolating string literal: its pieces joined, each interpolation
-  shown (lexical.interpolation and std.show-output). -/
+  shown (std.show-output). -/
   | concat
   /-- An integer shown in decimal, with a leading `-` when it is negative
   (numbers.printing-integers). -/
@@ -319,7 +319,7 @@ inductive Expr where
   first parameter is the receiver; a method call through a bound calls it
   (traits.method-resolution and traits.qualified-calls). -/
   | method (trait : Name) (name : Name) (type : Ty)
-  /-- `|p, …| body`, with its whole type written out (expressions.closures and expressions.closure-parameter-types). -/
+  /-- `|p, …| body`, with its whole type written out (expressions.closure-parameter-types). -/
   | closure (params : List Param) (result : Ty) (row : Row) (body : Expr)
   /-- `f(a, …)`, where `f` is any expression of function type, with the type of its result
   (expressions.arguments, expressions.inout-arguments and expressions.consumed-arguments). -/

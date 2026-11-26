@@ -73,7 +73,7 @@ inductive Op.Sig : Op → List Ty → Ty → Prop
   | bcompare {c : Cmp} : Op.Sig (.bcompare c) [.bool, .bool] .bool
   | str {t : String} : Op.Sig (.str t) [] .str
   /-- An interpolating literal joins strings: its literal pieces and the
-  interpolations shown (lexical.interpolation). -/
+  interpolations shown. -/
   | concat {n : Nat} : Op.Sig .concat (List.replicate n .str) .str
   | showInt {k : IntTy} : Op.Sig (.showInt k) [.int k] .str
   | showBool : Op.Sig .showBool [.bool] .str

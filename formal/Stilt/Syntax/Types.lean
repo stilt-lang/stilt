@@ -67,7 +67,7 @@ inductive Ty where
   (declarations.function-types). -/
   | fn (params : List (Mode × Ty)) (result : Ty) (row : Row)
   /-- `View<T>`, a window into a part of a value of the viewable type `T`, its
-  source (views.std-view and views.what-view-is). -/
+  source (views.what-view-is). -/
   | view (viewed : Ty)
   /-- `Shared<T>`, a handle to a value that tasks share (shared.std-sync). -/
   | shared (elem : Ty)

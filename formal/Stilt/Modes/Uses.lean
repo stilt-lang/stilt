@@ -165,8 +165,8 @@ def onceStep (D : Decls) (O : OnceParams) : OnceParams := fun g n =>
   | none => false
 
 /-- The `once` parameters of the program (modes.once-parameters): the fixed point over
-the call graph, from every parameter `once`, as facts.inference solves implicit
-effects. A round only turns parameters `many`, so as many rounds as there are
+the call graph, from every parameter `once`, as the implicit effects are
+solved. A round only turns parameters `many`, so as many rounds as there are
 parameters reach it (`Decls.onceParams_fixed`). -/
 def onceParams (D : Decls) : OnceParams := Nat.repeat D.onceStep (D.slots + 1) fun _ _ => true
 

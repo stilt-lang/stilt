@@ -209,7 +209,7 @@ theorem World.Typed.chain_leads {w : World} (hw : World.Typed D w) {c c' : Ty ×
 
 /-- cycles.can-form-cycle is sound: a cell of a typed world on a cycle is one of a
 `Shared<U>` whose `U` can reach itself. So the value of a `Shared<U>` whose `U` can't is on
-no cycle, and a collector that skips such values frees every cycle (cycles.freeing). -/
+no cycle, and a collector that skips such values frees every cycle. -/
 theorem on_cycle_can_reach_itself {w : World} (hw : World.Typed D w) {u : Ty} {k : Nat}
     (h : w.Chain (u, k) (u, k)) : CanReachItself D u :=
   hw.chain_leads h

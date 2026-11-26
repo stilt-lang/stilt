@@ -23,7 +23,7 @@ def FnDecl.nonEscaping (d : FnDecl) : List Name :=
 
 /-- For each parameter of the function that a callee names, whether it is
 non-escaping. A callee that isn't a declared function's name has none: an
-argument given to a function value's parameter escapes (effects.escaping-parameters). -/
+argument given to a function value's parameter escapes (effects.no-escape). -/
 def Decls.passing (D : Decls) : Expr → List Bool
   | .fnRef f _ _ => (D.fn? f).elim [] fun d => d.params.map (·.implicit.isSome)
   | _ => []

@@ -72,7 +72,7 @@ end
 
 /-- Whether `τ` is a copy-on-write type (modes.copy-on-write-types), with `fuel` to spend
 on record and variant types and `seen` holding those on the way to `τ`. A type
-that reaches one of them again is recursive (facts.allocation). Fuel runs out
+that reaches one of them again is recursive (declarations.recursive-types). Fuel runs out
 only past every declared type, and then the answer is the conservative one. -/
 def cowIn (D : Decls) : Nat → List Name → Ty → Bool
   | 0, _, _ => true

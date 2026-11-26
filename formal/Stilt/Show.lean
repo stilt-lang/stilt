@@ -47,7 +47,7 @@ def unqualified (n : Name) : String :=
 
 /-- Whether a record's name is an anonymous record type's: the type as written,
 `{ f: T, … }`, its fields in the alphabetical order of their names, which no
-declaration can be named (records.anonymous-types and records.field-order). -/
+declaration can be named (records.field-order). -/
 def anonymousName (R : Name) : Bool := R.startsWith "{ "
 
 /-- Texts joined by `, `. -/

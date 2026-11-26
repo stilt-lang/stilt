@@ -486,7 +486,7 @@ def Outcome.output {σ α : Type} : Outcome (σ × World) α → Option Output
   | .outOfFuel | .stuck => none
 
 /-- What a run shows: its observation, and what it wrote to its output and standard error,
-however it ends (program.exit-statuses). -/
+however it ends; `Stilt.Run.Program` gives the exit status it makes. -/
 def Outcome.shows {σ : Type} (o : Outcome (σ × World) Value) : Observation × Option Output :=
   (o.observe, o.output)
 
