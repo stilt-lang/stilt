@@ -151,7 +151,8 @@ def TraitImpl.members (i : TraitImpl) : List FnDecl :=
 
 /-- `effect Name { fn op(param: A) -> B; … }` (handlers.declaring-effect): each
 operation with the type of its argument, its parameters as one value, and of
-its result. -/
+its result. That value is passed as a `let` parameter, never `inout`
+(handlers.no-inout-parameter). -/
 structure EffectDecl where
   name : Name
   ops : List (Name × Ty × Ty)

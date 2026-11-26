@@ -73,7 +73,8 @@ inductive Ty where
   | shared (elem : Ty)
 
 /-- An effect row (effects.rows). Its elements are unordered, `io` appears
-at most once, and a row holds at most one `raise<E>` (effects.one-error-type). A row written in
+at most once, and a row holds at most one `raise<E>` (effects.one-error-type and
+effects.repeated-elements). A row written in
 a signature holds at most one row variable, but a function's own row and the
 rows a body forms may hold several, since the implicit variables of
 non-escaping parameters are never written (effects.row-variables and effects.non-escaping-parameters). So a flag, an

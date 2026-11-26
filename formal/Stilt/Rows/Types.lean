@@ -198,7 +198,8 @@ def substParamRows (s : RowSubst) : List (Mode × Ty) → List (Mode × Ty)
   | (m, τ) :: ps => (m, τ.substRows s) :: substParamRows s ps
 
 /-- Replaces each row variable of a row that the instantiation names by the
-row it stands for, whose elements join the row's. The result keeps the row's
+row it stands for, whose elements join the row's: a variable carries the declared effects
+of that row as it carries `io` (handlers.rows-pass-effects-on). The result keeps the row's
 own `raise` label, or else the first that a variable brings; the use that
 instantiates the variables makes sure all of them agree
 (`Row.KeepsOneRaise`). Its `resume` is its own, which names no row variable,

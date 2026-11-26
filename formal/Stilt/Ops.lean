@@ -39,7 +39,8 @@ inductive WorldOp.Sig : WorldOp → List Ty → Ty → Prop
 /-- `Op.Sig op τs τ`: the operation takes operands of the types `τs` and gives
 a value of type `τ`. The two operands of an arithmetic, bitwise or comparison
 operator have the same type, and a shift's amount may have any integer type
-(numbers.no-implicit-conversions, numbers.shifts and numbers.comparisons). -/
+(numbers.no-implicit-conversions, numbers.shifts and numbers.comparisons). Arithmetic is
+on integers and floats alone: `+` is not defined on `str` (expressions.no-string-plus). -/
 inductive Op.Sig : Op → List Ty → Ty → Prop
   /-- A tuple has one element or more: `()` is the unit value
   (declarations.tuples-and-unit). -/

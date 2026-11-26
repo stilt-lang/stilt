@@ -237,7 +237,10 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   parameters instantiated by types that meet their bounds (traits.unsatisfied-bounds), and its row variables
   instantiated so that every row of its type keeps one `raise` label (effects.row-variables, effects.one-error-type and effects.inference), by rows without `resume`, which only an operation's body names (handlers.resume-outside-operation), and that passes on a row variable to a paired one only
   with its pairing (effects.passing-to-paired-variables). The rule holds in closure literals too,
-  since the scope is the enclosing function's. -/
+  since the scope is the enclosing function's. Where the signature pairs `v` with `E`, every
+  row the use gives `v` raises only the type the use gives `E`
+  (effects.what-paired-variable-may-raise). The function may be the one whose body holds the
+  use, at type arguments other than its own type parameters (polymorphism.recursion). -/
   | fnRef {Γ fx f d types rows} :
       D.fn? f = some d →
       rows.length = d.rowParams.length →
@@ -260,7 +263,9 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   modify (expressions.capture), and its effects fit the closure's own row, not the
   row around it (effects.missing-effects). Its parameters are never non-escaping
   (effects.closure-parameters). The `try` around a closure literal marks the calls in it (effects.marking);
-  a `catch` around it does not reach into it (effects.catch-around-row-variables). -/
+  a `catch` around it does not reach into it (effects.catch-around-row-variables). An `inout`
+  parameter is no capture: the body may modify it, and the closure's type has `inout` there
+  (expressions.inout-closure-parameters). -/
   | closure {Γ fx ps result ρ body σ} :
       (ps.map Param.name).Nodup →
       ps.all (·.implicit.isNone) = true →
@@ -288,7 +293,7 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx e σ → Fits σ τ →
       HasType Γ fx (.assign p e) .unit
   /-- A statement before the last one of its block has type `()` or `Never`
-  (expressions.statements). -/
+  (expressions.statements and expressions.unused-values). -/
   | seq {Γ fx a b σ τ} :
       HasType Γ fx a σ → Fits σ .unit →
       HasType Γ fx b τ →
@@ -301,7 +306,8 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx (.if c τ a b) τ
   /-- Each arm's pattern fits the scrutinee's type, and the arms cover every
   value of it (patterns.match, patterns.algorithm and
-  patterns.non-exhaustive-matches). -/
+  patterns.non-exhaustive-matches). So a `match` with no arms is one on a type without
+  values (patterns.empty-matches). -/
   | «match» {Γ fx e σ τ arms} :
       τ.WellFormed scope →
       HasType Γ fx e σ →
@@ -436,7 +442,9 @@ inductive ArgsFit : Ctx → Effects → List Arg → List (Mode × Ty) → Prop
       ArgsFit Γ fx (.inout p :: args) ((.inout, τ) :: ps)
 
 /-- A place that can be modified, of type `τ`: it is rooted in a `var`
-binding or an `inout` parameter (expressions.mutable-places; modes.what-can-be-modified). -/
+binding or an `inout` parameter (expressions.mutable-places; modes.what-can-be-modified).
+Values are data, so a value appears to change only through such a place
+(values.value-semantics). -/
 inductive PlaceFits : Ctx → Effects → Place → Ty → Prop
   | mk {Γ fx x path σ τ} :
       Γ.lookup x = some ⟨σ, true⟩ →
@@ -444,7 +452,8 @@ inductive PlaceFits : Ctx → Effects → Place → Ty → Prop
       PlaceFits Γ fx ⟨x, path⟩ τ
 
 /-- Following the projections of a place from a value of type `σ` reaches a
-value of type `τ`. -/
+value of type `τ`. No projection reaches into a `str`, so no part of a string can be
+assigned (values.strings). -/
 inductive PathFits : Ctx → Effects → Ty → List Projection → Ty → Prop
   | nil {Γ fx τ} : PathFits Γ fx τ [] τ
   | field {Γ fx R r f path τ τ'} :

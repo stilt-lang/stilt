@@ -330,7 +330,9 @@ inductive Expr where
   | varIn (name : Name) (type : Ty) (init : Expr) (body : Expr)
   /-- `place = e` (expressions.assignment). -/
   | assign (target : Place) (value : Expr)
-  /-- A statement followed by the rest of its block (expressions.statements). -/
+  /-- A statement followed by the rest of its block (expressions.statements). Its value is
+  the rest's, so a block has the value of its last statement, and a block whose last
+  statement is no expression statement has `()` as its rest (expressions.block-value). -/
   | seq (first : Expr) (rest : Expr)
   /-- `if c { a } else { b }`, with the type of its branches (expressions.if). An `if` without `else` is one whose `else` branch is `()`. -/
   | «if» (cond : Expr) (type : Ty) (thenBranch : Expr) (elseBranch : Expr)

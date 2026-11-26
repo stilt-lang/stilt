@@ -98,7 +98,8 @@ structure FnDecl.ImplicitRows (d : FnDecl) : Prop where
   elsewhere : ∀ v ∈ d.implicits,
     (∀ p ∈ d.params, p.implicit ≠ some v → ∀ σ ∈ p.type.rows, v ∉ σ.vars) ∧
       (∀ σ ∈ d.result.rows, v ∉ σ.vars) ∧ ∀ σ ∈ d.row.rows.tail, v ∉ σ.vars
-  /-- A row of the signature holds at most one row variable that it writes. -/
+  /-- A row of the signature holds at most one row variable that it writes
+  (effects.repeated-elements). -/
   written : ∀ σ ∈ d.type.rows, (σ.vars.filter (· ∉ d.implicits)).length ≤ 1
 
 /-- A function without non-escaping parameters has no implicit row variables,
