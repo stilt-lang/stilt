@@ -329,7 +329,9 @@ impl<'a, 'b> Translator<'a, 'b> {
         Ok(())
     }
 
-    /// Releases the value of every constant that was computed, whose cell's state is 1.
+    /// Releases the value of every constant that was computed, whose cell's state is 1, and sets
+    /// the state back to 0, so that the image's drop, which releases the constants a program
+    /// that ended with a panic left, doesn't release them again.
     fn release_constants(&mut self) -> Result<(), String> {
         for (_, id, words) in self.reg.constants() {
             let gv = self.module.declare_data_in_func(id, self.fb.func);
@@ -346,6 +348,8 @@ impl<'a, 'b> Translator<'a, 'b> {
                     };
                     t.count(v, repr, false)?;
                 }
+                let waiting = t.fb.ins().iconst(I64, 0);
+                t.fb.ins().store(t.trusted, waiting, addr, 0);
                 Ok(())
             })?;
         }

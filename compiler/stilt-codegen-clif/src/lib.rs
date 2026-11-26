@@ -322,6 +322,9 @@ impl Drop for Image {
     fn drop(&mut self) {
         // Debuggers forget the code before its memory goes.
         self.registrations.clear();
+        // A program that ended with a panic, or that never ended, as `stilt run` stops one, leaves
+        // the values of the constants it computed, which the image owns: they go with it.
+        self.release_constants();
         if let Some(module) = self.module.take() {
             // SAFETY: the image is dropped only once no program runs its code.
             unsafe { module.free_memory() };
