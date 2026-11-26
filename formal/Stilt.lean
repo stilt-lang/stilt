@@ -357,6 +357,10 @@ import Stilt.OneShot.Runs
 import Stilt.OneShot.Calls
 import Stilt.OneShot.Theorem
 import Stilt.Examples.OneShot
+import Stilt.Whens
+import Stilt.Rename
+import Stilt.HeldNames
+import Stilt.HeldNames.Unmerge
 import Stilt.Locks.Syntax
 import Stilt.Locks.Instances
 import Stilt.Locks.Values

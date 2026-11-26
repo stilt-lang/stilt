@@ -1,4 +1,5 @@
 import Stilt.Handling
+import Stilt.Whens
 
 /-!
 # The fact `locks` and E0430
@@ -19,7 +20,7 @@ a function outside it has a body without a site (`Decls.locks_closed`).
 
 E0430 rejects a `when` whose block holds a site of `locks`: `Program.Locks` asks it of the
 block of every `when` the program writes, those in closure literals included
-(`Expr.whenBlocks`). The model leaves out `without locks` (E0204 at each site) and what
+(`Program.whenBlocks`). The model leaves out `without locks` (E0204 at each site) and what
 `stilt show` prints.
 -/
 
@@ -117,52 +118,9 @@ theorem Decls.locksAfter_closed (D : Decls) : ∀ (k : Nat) (L : List Name),
 theorem Decls.locks_closed (D : Decls) : D.LocksClosed D.locks :=
   D.locksAfter_closed _ _
 
-mutual
-
-/-- The blocks of the `when`s that `e` writes, at any depth, those in closure literals
-included. -/
-def Expr.whenBlocks : Expr → List Expr
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
-  | .method _ _ _ => []
-  | .held _ hs body => exprsWhenBlocks hs ++ body :: body.whenBlocks
-  | .closure _ _ _ body => body.whenBlocks
-  | .record _ fields => fieldsWhenBlocks fields
-  | .variant _ _ es | .list _ es | .op _ es | .view es => exprsWhenBlocks es
-  | .field e _ | .raise e | .try e | .return e | .loop e | .perform _ e => e.whenBlocks
-  | .index a b | .seq a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b | .while a b
-  | .tryCatch a _ _ b _ | .withH _ _ a b => a.whenBlocks ++ b.whenBlocks
-  | .call callee args _ => callee.whenBlocks ++ argsWhenBlocks args
-  | .assign ⟨_, path⟩ value => pathWhenBlocks path ++ value.whenBlocks
-  | .if c _ a b => c.whenBlocks ++ a.whenBlocks ++ b.whenBlocks
-  | .match e _ arms => e.whenBlocks ++ armsWhenBlocks arms
-
-def exprsWhenBlocks : List Expr → List Expr
-  | [] => []
-  | e :: es => e.whenBlocks ++ exprsWhenBlocks es
-
-def fieldsWhenBlocks : List (Name × Expr) → List Expr
-  | [] => []
-  | (_, e) :: fields => e.whenBlocks ++ fieldsWhenBlocks fields
-
-def argsWhenBlocks : List Arg → List Expr
-  | [] => []
-  | .value e :: args => e.whenBlocks ++ argsWhenBlocks args
-  | .inout ⟨_, path⟩ :: args => pathWhenBlocks path ++ argsWhenBlocks args
-
-def pathWhenBlocks : List Projection → List Expr
-  | [] => []
-  | .field _ :: path => pathWhenBlocks path
-  | .index i :: path => i.whenBlocks ++ pathWhenBlocks path
-
-def armsWhenBlocks : List Arm → List Expr
-  | [] => []
-  | ⟨_, _, body⟩ :: arms => body.whenBlocks ++ armsWhenBlocks arms
-
-end
-
-/-- The blocks of the `when`s of every body of a program, and of `main`. -/
-def Program.whenBlocks (p : Program) : List Expr :=
-  p.decls.fns.flatMap (·.body.whenBlocks) ++ p.main.whenBlocks
+/-- The blocks of the `when`s of every body of a program, and of `main`, those in closure
+literals included. -/
+def Program.whenBlocks (p : Program) : List Expr := p.whens.map Prod.snd
 
 /-- E0430 (shared.locks): no `when` of the program has a block that holds a site of `locks`,
 which would be a `when` inside a `when`. -/

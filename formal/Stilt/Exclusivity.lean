@@ -1,4 +1,6 @@
 import Stilt.Places
+import Stilt.Rename
+import Stilt.Whens
 
 /-!
 # Exclusivity
@@ -129,6 +131,29 @@ body, and `main`. -/
 def Program.Exclusive (p : Program) : Prop :=
   (∀ d ∈ p.decls.fns, d.body.exclusive [] = true) ∧ p.main.exclusive [] = true
 
+/-- The type of the value that the name `x` of a `when` reaches, if `x` is one of its names. -/
+def Held.tyOf (ns : List (Name × Ty)) (x : Name) : Option Ty := (ns.find? (·.1 == x)).map Prod.snd
+
+/-- The name that stands for `x` among the names `ns` of a `when`: the first of them whose
+value has the type of `x`'s, or `x` itself when it isn't one of them. -/
+def Held.one (ns : List (Name × Ty)) (x : Name) : Name :=
+  match Held.tyOf ns x with
+  | some τ =>
+    match ns.find? fun n => n.2.beq τ with
+    | some (y, _) => y
+    | none => x
+  | none => x
+
+/-- shared.names-that-may-be-one-place: for the law of exclusivity, the names of one `when`
+whose values have the same type are one binding, since their handles may reach one value. An
+access to a place rooted in one overlaps an access to the same place rooted in another, as
+two accesses rooted in one name do, for E0402 and E0404 alike: the block of each `when`,
+with each name written as the first of its type (`Held.one`), obeys the law. Names whose
+values have different types never reach one value, and stay apart. The law around the block,
+with the `for` loops outside the `when` reading their places, is `Program.Exclusive`'s. -/
+def Program.HeldNames (p : Program) : Prop :=
+  ∀ w ∈ p.whens, (w.2.rename (Held.one w.1)).exclusive [] = true
+
 /-! ## Lemmas -/
 
 /-- A loop reading a place forbids modifying it, and any place that overlaps
@@ -231,6 +256,32 @@ example :
       (.varIn "xs" (.list .i64) (.list .i64 [.int 0])
         (.assign (place "xs" [.index (.int 0)]) (.var "x")))).exclusive [] = true := by
   decide
+
+/-- `a` and `b`, the names of one `when` of `Shared<Account>` values, and `c` of a
+`Shared<i64>`. -/
+private def accounts : List (Name × Ty) := [("a", .record "Account"), ("b", .record "Account"), ("c", .i64)]
+
+/-- The block of a `when` of `accounts`, checked with names that may be one place as one. -/
+private def heldExclusive (body : Expr) : Bool := (body.rename (Held.one accounts)).exclusive []
+
+private def both (x y : Place) : Expr := call "both" [.inout x, .inout y]
+
+/-- `both(inout a.balance, inout b.balance)` is rejected (E0402), as it is with `a` twice. -/
+example : heldExclusive (both (place "a" [.field "balance"]) (place "b" [.field "balance"])) =
+    false := by decide +kernel
+
+/-- `both(inout a.balance, inout b.fee)` is accepted. -/
+example : heldExclusive (both (place "a" [.field "balance"]) (place "b" [.field "fee"])) =
+    true := by decide +kernel
+
+/-- `both(inout a.balance, inout c)` is accepted: names of other types never reach one value. -/
+example : heldExclusive (both (place "a" [.field "balance"]) (place "c")) = true := by decide +kernel
+
+/-- `for x in a.items { push(inout b.items, x) }` is rejected (E0404). -/
+example :
+    heldExclusive (.for "x" .i64 (.field (.var "a") "items")
+      (call "push" [.inout (place "b" [.field "items"]), .value (.var "x")])) = false := by
+  decide +kernel
 
 end RequiredTests
 

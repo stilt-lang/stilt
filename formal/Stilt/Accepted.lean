@@ -7,6 +7,7 @@ import Stilt.Windows.Checked
 import Stilt.Parallel.Typed
 import Stilt.OneShot.Theorem
 import Stilt.Locks.Theorem
+import Stilt.HeldNames.Unmerge
 
 /-!
 # Accepted programs and their soundness
@@ -16,7 +17,8 @@ calculus, and the one theorem that says what they promise of its runs.
 
 A program is **accepted** when it is well typed, which takes in mutability
 (modes.what-can-be-modified) and the no-escape check (effects.no-escape), obeys
-the law of exclusivity (modes.law), modifies no source of a view while the view
+the law of exclusivity (modes.law), the names of one `when` of one type as one binding
+(shared.names-that-may-be-one-place), modifies no source of a view while the view
 lives (views.change-while-viewed) and keeps every view inside its sources' scopes
 (views.escaping), resumes a continuation at most once on each path
 (handlers.resume-at-most-once), and runs no `when` inside a `when` (shared.locks).
@@ -28,7 +30,9 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
   the model states by what such an access would change: copy-in, copy-out,
   where each body works on copies, and in-place mutation, where every `inout`
   argument is the caller's storage, show the same and write the same output
-  (`inPlaceAgreement`);
+  (`inPlaceAgreement`), and the law holds of the block of a `when` with any names whose
+  handles may reach one value written as one, as the export writes it when they do
+  (`Program.HeldNames.aliased`, shared.names-that-may-be-one-place);
 * views held as the compiler holds them, windows into their sources' storage
   that hold no copy, show what copies show (`shows_windows`, views.what-view-is);
 * the reuse of storage that the modes of bindings allow, at the last uses of
@@ -61,6 +65,9 @@ structure Program.Accepted (p : Program) : Prop where
   wellTyped : p.WellTyped
   /-- The law of exclusivity (modes.law, E0402 and E0404). -/
   exclusive : p.Exclusive
+  /-- The law of exclusivity with the names of one `when` whose values have the same type
+  as one binding (shared.names-that-may-be-one-place, E0402 and E0404). -/
+  heldNames : p.HeldNames
   /-- No source of a view modified while the view lives (views.change-while-viewed, E0423). -/
   viewsRead : p.ViewsRead
   /-- No view outlives its sources' scopes (views.escaping, E0422). -/
@@ -82,6 +89,13 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   /-- No access breaks exclusivity: in place shows and writes what copies do
   (`InPlaceAgreement`). -/
   exclusive : (p.runCopy fuel input).shows = (p.runInPlace fuel input).shows
+  /-- shared.names-that-may-be-one-place: the block of every `when`, with any of its names
+  written as another of the same type, as the export writes it for handles that reach one
+  value, obeys the law of exclusivity, when it binds none of the `when`'s names
+  (`Program.HeldNames.aliased`). So the law that `exclusive` rests on holds of the block that
+  runs, whichever handles are equal. -/
+  heldNames : ∀ w ∈ p.whens, ∀ f : Name → Name, Held.Aliasing w.1 f →
+      w.2.bindsNone (fun x => (Held.tyOf w.1 x).isSome) = true → (w.2.rename f).exclusive [] = true
   /-- No view reads a source that changed or is gone: with views as windows into their
   sources' storage, the run shows and writes what copies do (views.what-view-is). -/
   views : (p.runCopy fuel input).shows = (p.runWindows fuel input).shows
@@ -155,6 +169,7 @@ def Soundness : Prop :=
 /-- **Soundness**, proved. -/
 theorem soundness : Soundness := fun p fuel input h =>
   ⟨typeSoundness p fuel input h.wellTyped, inPlaceAgreement p fuel input h.wellTyped h.exclusive,
+    fun _ hw _ hf hb => h.heldNames.aliased hw hf hb,
     (inPlaceAgreement p fuel input h.wellTyped h.exclusive).trans
       (Windows.shows_windows (Windows.cases_of (Windows.declsChecked_of h.wellTyped h.exclusive
         h.viewsRead h.viewsContained)) (Windows.main_distinctParams h.wellTyped) h.exclusive.2
