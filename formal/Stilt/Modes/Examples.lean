@@ -425,7 +425,7 @@ example : (D.onceParams "ping" 0, D.onceParams "pong" 0) = (false, false) := by 
 
 /-! ## The thread axes and `show` (modes.fixed-values, modes.contended-values, modes.mode-crossing and modes.show) -/
 
-/-- No binding of the calculus is `fixed` or `contended`. -/
+/-- No binding of this core body is `fixed` or `contended`. -/
 example : (M.bodyFacts [param "xs"] grownBody).all
     (fun f => f.modes.portability == .portable && f.modes.contention == .calm) = true := by decide
 

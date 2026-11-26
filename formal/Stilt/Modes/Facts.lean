@@ -13,9 +13,14 @@ A body is read once, with a context (`ModeCtx`) that flows from each
 expression to its parts: the part of its value that leaves the function, as
 `Expr.leaves` follows it (modes.escaping and modes.not-escaping); whether it is a closure literal
 that runs once (modes.once-closures) or that a binding names; and which variables in scope
-may give their storage up at a last use: a `local`, `unique` binding, or a
-capture of a `once` closure, which its body owns (modes.once-closures;
-modes.once-parameters). `Stilt.Modes.Agreement` reads the last of these.
+may give their storage up at a last use. Those are read from the modes of each binding
+(`bindingModes`, `paramModes`, `closureModes`), as `Stilt.Modes.Lattice` reads a point: a binding
+whose modes are `local` and `unique` (`Modes.reuses`), or a capture of a closure literal whose
+modes are `once`, which its body owns (`Modes.runsOnce`, modes.once-closures and
+modes.once-parameters). `Stilt.Modes.Agreement` reads the last of these, so the modes on
+locality, uniqueness and once are what the soundness theorem's reuse reads. Their points on
+the thread axes are the defaults there, and each fact sets them from the binding's type
+(`Modes.threads`): no reuse reads portability or contention.
 -/
 
 namespace Stilt
@@ -88,56 +93,89 @@ def bodyShared (ps : List Param) (body : Expr) : List Name :=
       (if m && w.shared then [x] else []) ++ w.mirrored.filter modifiable
     else []
 
+/-- The modes of a `let` or `var` binding `y` of type `τ`, in the context `k`:
+its locality (modes.escaping and modes.not-escaping), its uniqueness if it is a `var` (modes.copy-on-write-types, modes.copies and modes.shared-writes),
+and, if it binds a closure literal, whether that closure is `once`
+(modes.once-closures). Its thread axes are at their defaults, which its fact sets from its
+type (`Modes.threads`); no reuse reads them. -/
+def bindingModes (k : ModeCtx) (y : Name) (τ : Ty) (isVar : Bool) (init body : Expr) : Modes :=
+  { Modes.default init.isClosure with
+    locality := localityOf M.decls M.consumed k.inouts y τ k.out body
+    uniqueness := if isVar && k.shared.contains y then .shared else .unique
+    once := if init.isClosure then
+      some (if boundOnce M.onceParams isVar y init body then .once else .many) else none }
+
+/-- The modes of a closure literal in the context `k`: it escapes where its value leaves
+(modes.escaping and modes.not-escaping), and is `once` as its context says (modes.once-closures),
+which for a literal that a `let` or `var` binds is the binding's (`initCtx`). Its thread axes are
+at their defaults, as `bindingModes` says. -/
+def closureModes (k : ModeCtx) : Modes :=
+  { Modes.default true with
+    locality := if k.out.isSome then .escapes else .local
+    once := some (if k.once then .once else .many) }
+
+/-- The modes of a parameter of a body with parameters `ps`: its locality is
+its consumption (modes.escaping), an `inout` one has a uniqueness (modes.shared-writes), and one of
+function type is `once` when the body uses it once (modes.once-parameters). Its thread axes are at
+their defaults, as `bindingModes` says. -/
+def paramModes (ps : List Param) (body : Expr) (p : Param) : Modes :=
+  { Modes.default p.type.isFn with
+    locality := paramLocality M.decls M.consumed (inoutNames ps) body p
+    uniqueness := if p.mode == .inout && (M.bodyShared ps body).contains p.name then .shared
+      else .unique
+    once := if p.type.isFn then
+      some (if body.use M.onceParams p.name == .once then .once else .many) else none }
+
 /-- Whether a parameter of a body with parameters `ps` may give its storage up
-at a last use: a `let` parameter that is `local` (modes.escaping), as every
-`let` parameter is `unique`. -/
+at a last use: a `let` parameter whose modes are `local` and `unique` (`Modes.reuses`). An
+`inout` parameter's storage is its caller's. -/
 def paramReuse (ps : List Param) (body : Expr) (p : Param) : Bool :=
-  p.mode == .let && paramLocality M.decls M.consumed (inoutNames ps) body p == .local
+  p.mode == .let && (M.paramModes ps body p).reuses
 
 /-- Which variables of a body with parameters `ps` may give their storage up:
-its `local` `let` parameters, and the others as `base` says. -/
+its `let` parameters whose modes are `local` and `unique`, and the others as `base` says. -/
 def reuseOf (ps : List Param) (body : Expr) (base : Name → Bool) : Name → Bool := fun y =>
   match ps.find? (·.name == y) with
   | some p => M.paramReuse ps body p
   | none => base y
 
-/-- Whether a `let` or `var` binding `y` may give its storage up: it is `local`
-and `unique` (modes.escaping and modes.shared-writes). -/
-def bindingReuse (k : ModeCtx) (y : Name) (τ : Ty) (isVar : Bool) (body : Expr) : Bool :=
-  localityOf M.decls M.consumed k.inouts y τ k.out body == .local &&
-    (!isVar || !k.shared.contains y)
+/-- Whether a `let` or `var` binding `y` may give its storage up: its modes are `local`
+and `unique` (`Modes.reuses`). -/
+def bindingReuse (k : ModeCtx) (y : Name) (τ : Ty) (isVar : Bool) (init body : Expr) : Bool :=
+  (M.bindingModes k y τ isVar init body).reuses
 
 /-- The context of the initializer of a binding `y`: a closure literal there
 leaves the function where `y` does (modes.not-escaping), is `once` as modes.once-closures says, and is
-the binding `y` names. -/
-def initCtx (k : ModeCtx) (y : Name) (isVar : Bool) (init body : Expr) : ModeCtx :=
+the binding `y` names, whose modes give its point on the once axis. -/
+def initCtx (k : ModeCtx) (y : Name) (τ : Ty) (isVar : Bool) (init body : Expr) : ModeCtx :=
   { k.inner (if init.isClosure &&
       body.leaves ⟨.escape, M.consumed, y, fun _ => true, k.inouts.filter (· != y)⟩ k.out
       then some [] else none) with
-    once := boundOnce M.onceParams isVar y init body, bound := true }
+    once := (M.bindingModes k y τ isVar init body).runsOnce, bound := true }
 
 /-- The context of the part at position `n` of an expression in the context
 `k`, in the order of `Stilt.Modes.Traverse`. A closure literal's body is a
 body of its own, whose result leaves it, and which owns its captures when the
-closure is `once` (modes.once-parameters). -/
+closure's modes are `once` (`Modes.runsOnce`, modes.once-parameters). -/
 def child (k : ModeCtx) : Expr → Nat → ModeCtx
   | .field _ f, _ => k.inner (k.out.map (.field f :: ·))
   | .index _ _, 0 => k.inner (k.out.map (.elem :: ·))
   | .record .., _ | .variant .., _ | .list .., _ | .raise _, _ | .perform _ _, _ | .assign .., 1 => k.inner (some [])
   | .closure ps _ _ body, _ =>
-    ⟨M.reuseOf ps body fun _ => k.once, some [], false, false, inoutNames ps, M.bodyShared ps body⟩
+    ⟨M.reuseOf ps body fun _ => (closureModes k).runsOnce, some [], false, false, inoutNames ps,
+      M.bodyShared ps body⟩
   | .call f _ _, 0 => { k.inner none with once := f.isClosure }
   | .call f _ _, n + 1 =>
     { k.inner (if consumesArg M.consumed f n then some [] else none) with
       once := passesOnce M.onceParams f n }
-  | .letIn y _ init body, 0 => M.initCtx k y false init body
-  | .varIn y _ init body, 0 => M.initCtx k y true init body
-  | .letIn y τ _ body, _ =>
+  | .letIn y τ init body, 0 => M.initCtx k y τ false init body
+  | .varIn y τ init body, 0 => M.initCtx k y τ true init body
+  | .letIn y τ init body, _ =>
     { k.inner k.out with
-      reuse := update k.reuse y (M.bindingReuse k y τ false body), inouts := k.hide [y] }
-  | .varIn y τ _ body, _ =>
+      reuse := update k.reuse y (M.bindingReuse k y τ false init body), inouts := k.hide [y] }
+  | .varIn y τ init body, _ =>
     { k.inner k.out with
-      reuse := update k.reuse y (M.bindingReuse k y τ true body), inouts := k.hide [y] }
+      reuse := update k.reuse y (M.bindingReuse k y τ true init body), inouts := k.hide [y] }
   | .seq .., 1 | .withH _ _ .., 1 | .if .., 1 | .if .., 2 | .try _, _ | .tryCatch .., 0 => k.inner k.out
   | .match _ _ arms, n + 1 =>
     let binders := (arms[n]?.map (·.binders)).getD []
@@ -191,50 +229,19 @@ namespace ModeEnv
 
 variable (M : ModeEnv)
 
-/-- The modes of a `let` or `var` binding `y` of type `τ`, in the context `k`:
-its locality (modes.escaping and modes.not-escaping), its uniqueness if it is a `var` (modes.copy-on-write-types, modes.copies and modes.shared-writes),
-and, if it binds a closure literal, whether that closure is `once`
-(modes.once-closures). -/
-def bindingModes (k : ModeCtx) (y : Name) (τ : Ty) (isVar : Bool) (init body : Expr) : Modes :=
-  { locality := localityOf M.decls M.consumed k.inouts y τ k.out body
-    uniqueness := if isVar && k.shared.contains y then .shared else .unique
-    once := if init.isClosure then
-      some (if boundOnce M.onceParams isVar y init body then .once else .many) else none
-    portability := portabilityOf τ []
-    contention := contentionOf τ [] }
-
-/-- The modes of a closure literal of type `τ` that no binding names: it
-escapes where its value leaves (modes.escaping and modes.not-escaping), and is `once` as its context
-says (modes.once-closures). -/
-def closureModes (k : ModeCtx) (τ : Ty) : Modes :=
-  ⟨if k.out.isSome then .escapes else .local, .unique, some (if k.once then .once else .many),
-    portabilityOf τ [], contentionOf τ []⟩
-
-/-- The modes of a parameter of a body with parameters `ps`: its locality is
-its consumption (modes.escaping), an `inout` one has a uniqueness (modes.shared-writes), and one of
-function type is `once` when the body uses it once (modes.once-parameters). -/
-def paramModes (ps : List Param) (body : Expr) (p : Param) : Modes :=
-  { locality := paramLocality M.decls M.consumed (inoutNames ps) body p
-    uniqueness := if p.mode == .inout && (M.bodyShared ps body).contains p.name then .shared
-      else .unique
-    once := if p.type.isFn then
-      some (if body.use M.onceParams p.name == .once then .once else .many) else none
-    portability := portabilityOf p.type []
-    contention := contentionOf p.type [] }
-
 /-- The facts that an expression in the context `k` gives of itself: those of
-the binding it makes, if it makes one. -/
+the binding it makes, if it makes one, with its thread axes from its type. -/
 def visit (k : ModeCtx) : Expr → List Fact
-  | .letIn y τ init body => [⟨.let y, M.bindingModes k y τ false init body⟩]
-  | .varIn y τ init body => [⟨.var y, M.bindingModes k y τ true init body⟩]
+  | .letIn y τ init body => [⟨.let y, (M.bindingModes k y τ false init body).threads τ []⟩]
+  | .varIn y τ init body => [⟨.var y, (M.bindingModes k y τ true init body).threads τ []⟩]
   | .closure ps r ρ _ =>
-    if k.bound then [] else [⟨.closure, closureModes k (.fn (ps.map Param.sig) r ρ)⟩]
+    if k.bound then [] else [⟨.closure, (closureModes k).threads (.fn (ps.map Param.sig) r ρ) []⟩]
   | _ => []
 
 /-- The facts of a body with parameters `ps`: its parameters', then its
 bindings', in source order, closure literals' bodies among them. -/
 def bodyFacts (ps : List Param) (body : Expr) : List Fact :=
-  ps.map (fun p => ⟨.param p.name, M.paramModes ps body p⟩) ++
+  ps.map (fun p => ⟨.param p.name, (M.paramModes ps body p).threads p.type []⟩) ++
     body.gather M.child M.visit (M.start ps body)
 
 end ModeEnv
@@ -244,8 +251,9 @@ def Program.facts (p : Program) : List (Name × List Fact) :=
   p.decls.fns.map (fun d => (d.name, p.modeEnv.bodyFacts d.params d.body)) ++
     [("main", p.modeEnv.bodyFacts [] p.main)]
 
-/-- **No binding of the calculus is contended** (modes.contended-values and
-modes.mode-crossing), and only a binding of a view type is fixed (modes.fixed-values and
+/-- **The model finds no binding contended** (modes.contended-values and
+modes.mode-crossing), as no binding of a core module is, though the calculus has `Shared<T>`
+(`Ty.contended`), and only a binding of a view type is fixed (modes.fixed-values and
 views.fixed): every fact of every body is `calm`, and `portable` unless its binding has
 a view type. -/
 theorem ModeEnv.bodyFacts_calm (M : ModeEnv) (ps : List Param) (body : Expr) :

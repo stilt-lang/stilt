@@ -11,9 +11,15 @@ judgment reads no mode, and the model infers them from the elaborated syntax
 
 Each axis has two points, ordered as the record writes them. Inference finds
 the least point each rule allows (modes.bindings-and-axes); `Axis.join` is how two reasons for a
-point combine. The thread axes are settled here: no type of the calculus, as no
-core type, is fixed or contended, so every binding is `portable` and `calm`
-(modes.fixed-values, modes.contended-values and modes.mode-crossing).
+point combine. A binding reuses its storage at a last use when it is `local` and `unique`,
+and a closure literal gives its captures up at its call when it is `once`: the least points
+of their axes (`Modes.reuses`, `Modes.runsOnce`), which `Program.markModes` reads, and so
+the soundness theorem.
+
+The thread axes are settled here, from a binding's type (modes.fixed-values,
+modes.contended-values and modes.mode-crossing): `View<T>` is the one fixed type of the
+calculus, and the model finds no type contended, though the calculus has `Shared<T>`, so
+every binding is `calm`. No reuse reads either axis.
 -/
 
 namespace Stilt
@@ -112,13 +118,15 @@ inductive Once where
   | many
   deriving DecidableEq, Repr
 
-/-- Portability: may the value go to another task (modes.fixed-values)? -/
+/-- Portability: may the value go to another task (modes.bindings-and-axes)? `portabilityOf`
+gives a binding its point. -/
 inductive Portability where
   | portable
   | fixed
   deriving DecidableEq, Repr
 
-/-- Contention: may several tasks reach the value at once (modes.contended-values)? -/
+/-- Contention: may several tasks reach the value at once (modes.bindings-and-axes)?
+`contentionOf` gives a binding its point. -/
 inductive Contention where
   | calm
   | contended
@@ -161,6 +169,15 @@ def words (m : Modes) : List String :=
 theorem words_default (closure : Bool) : (default closure).words = [] := by
   cases closure <;> rfl
 
+/-- Whether a binding at these modes may give its storage up at a last use: it is `local`
+and `unique`, the least points of locality and uniqueness (modes.bindings-and-axes). Its
+value leaves no function, and no write shares it. -/
+def reuses (m : Modes) : Bool := m.locality == Axis.least && m.uniqueness == Axis.least
+
+/-- Whether a closure literal at these modes is `once`, the least point of the once axis
+(modes.bindings-and-axes), and so may give its captures up at its call (modes.once-parameters). -/
+def runsOnce (m : Modes) : Bool := m.once == some Axis.least
+
 end Modes
 
 /-! ## The thread axes -/
@@ -171,8 +188,9 @@ def Ty.fixed : Ty → Bool
   | .view _ => true
   | _ => false
 
-/-- Whether a type holds `Shared<T>` (modes.contended-values), which the calculus,
-like core, doesn't have. -/
+/-- Whether a type holds `Shared<T>` (modes.contended-values). The model finds none so,
+though the calculus has `Shared<T>` (`Ty.shared`): every binding is `calm`, as every
+binding of a core module is, and nothing reads contention. -/
 def Ty.contended (_ : Ty) : Bool := false
 
 /-- A binding of type `τ` is `fixed` when its type holds a fixed type, or when
@@ -184,6 +202,12 @@ def portabilityOf (τ : Ty) (captured : List Ty) : Portability :=
 when it is a closure literal that captures a contended binding (modes.contended-values and modes.mode-crossing). -/
 def contentionOf (τ : Ty) (captured : List Ty) : Contention :=
   if τ.contended || captured.any Ty.contended then .contended else .calm
+
+/-- These modes with the points on the thread axes of a binding of type `τ` that captures
+bindings of types `captured` (modes.fixed-values and modes.contended-values). The facts set them
+so; no reuse reads them. -/
+def Modes.threads (m : Modes) (τ : Ty) (captured : List Ty) : Modes :=
+  { m with portability := portabilityOf τ captured, contention := contentionOf τ captured }
 
 /-- Every binding of the calculus is `calm` (modes.contended-values and modes.mode-crossing). -/
 theorem calm (τ : Ty) (captured : List Ty) : contentionOf τ captured = .calm := by

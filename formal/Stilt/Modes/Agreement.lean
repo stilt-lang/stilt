@@ -13,14 +13,18 @@ The evaluation that reuses memory is `Moving` (`Stilt.Moves.Memory`), in
 which a mark `move x` hands the storage of `x` over to the binding or the
 parameter that takes its value. `Program.markModes` keeps, of the marks that
 `Program.markMoves` puts at every last use, those that the modes allow
-(`ModeCtx.reuse`), and reads the others as variables, which copy:
+(`ModeCtx.reuse`), and reads the others as variables, which copy. The context reads
+them from each binding's modes (`Stilt.Modes.Facts`), points of the lattice of
+modes.bindings-and-axes (`Stilt.Modes.Lattice`):
 
-* the last use of a `local`, `unique` binding: a `let` or `var` binding or a
-  `let` parameter whose value doesn't leave the function, and which no write
-  shares (modes.escaping and modes.shared-writes);
-* in the body of a `once` closure literal, the last use of a capture, which
-  the closure gives up at its one call (modes.once-parameters), as a consumed parameter gives
-  up its argument.
+* the last use of a binding whose modes are `local` and `unique` (`Modes.reuses`): a
+  `let` or `var` binding or a `let` parameter whose value doesn't leave the function, and
+  which no write shares (modes.escaping and modes.shared-writes);
+* in the body of a closure literal whose modes are `once` (`Modes.runsOnce`), the last use
+  of a capture, which the closure gives up at its one call (modes.once-parameters), as a
+  consumed parameter gives up its argument.
+
+No reuse reads portability or contention.
 
 Evaluation with every mode at its default is copy-in, copy-out, the reference interpreter's,
 which reads no mode and copies every value it binds or passes. `modesAgreement`
@@ -113,8 +117,9 @@ theorem Program.runCopy_eq_markGated_runMoving (p : Program) (fuel : Nat) (input
 end Gated
 
 /-- The program with the last uses of each body marked where the modes of its
-bindings allow reuse: of a `local`, `unique` binding, or of a capture of a
-`once` closure in its body (modes.fact-not-type). -/
+bindings allow reuse (modes.fact-not-type): of a binding whose modes are `local` and
+`unique`, the least points of locality and uniqueness, or of a capture of a closure
+literal whose modes are `once`, in its body (modes.bindings-and-axes). -/
 def Program.markModes (p : Program) : Program :=
   p.markGated p.modeEnv.child ModeCtx.reuse p.modeEnv.start
 
