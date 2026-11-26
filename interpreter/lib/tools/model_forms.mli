@@ -32,6 +32,11 @@ val ctor : Model_types.cx -> Hir.item -> Types.ty -> string * string
 (** A constructor's type, as the calculus declares it for the type [t] of its
     values, and its name. *)
 
+val ctor_args :
+  Model_types.cx -> Hir.item -> Types.ty -> string * Model_json.t list * string
+(** A constructor's type, the type arguments a constructor of it is written
+    with, and its name. *)
+
 val eq_trait : Hir.item
 val ord_trait : Hir.item
 val show_trait : Hir.item

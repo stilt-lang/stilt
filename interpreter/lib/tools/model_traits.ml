@@ -90,14 +90,20 @@ let rec holds_str cx t =
       | Some { Env.def = Env.Record fields; _ } ->
           List.exists
             (fun (_, f) ->
-              holds_str cx (instantiated cx { key = ""; item = i; args } f))
+              holds_str cx
+                (instantiated cx
+                   { key = ""; item = i; args; generic = false }
+                   f))
             fields
       | Some { Env.def = Env.Variants ctors; _ } ->
           List.exists
             (fun (_, ts) ->
               List.exists
                 (fun f ->
-                  holds_str cx (instantiated cx { key = ""; item = i; args } f))
+                  holds_str cx
+                    (instantiated cx
+                       { key = ""; item = i; args; generic = false }
+                       f))
                 ts)
             ctors
       | _ -> true)
@@ -260,7 +266,9 @@ let components cx trait t =
     when declared_record i && Env.trait_impl cx.env ~trait i = None -> (
       match Env.type_info cx.env i with
       | Some { Env.def = Env.Record fields; _ } ->
-          let sub = instantiated cx { key = ""; item = i; args } in
+          let sub =
+            instantiated cx { key = ""; item = i; args; generic = false }
+          in
           Some (List.map (fun (f, t) -> (at f, sub t)) fields)
       | _ -> None)
   | _ -> None

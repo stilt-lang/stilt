@@ -28,7 +28,8 @@ let update ~expr cx (e : Tast.expr) (base : Tast.expr) written =
   in
   let built =
     tag "record"
-      [ Str (record_name cx e.ty); Arr (List.map field declared_fields) ]
+      ((Str (record_name cx e.ty) :: with_args (record_args cx e.ty))
+      @ [ Arr (List.map field declared_fields) ])
   in
   let body =
     List.fold_right

@@ -13,6 +13,15 @@ let ctor cx (c : Hir.item) t =
   | Some (i, _, _) -> (declared cx i (args_of t), c.name)
   | None -> outside "the constructor %s" (item_name c)
 
+(* A constructor's variant type, the type arguments it is written with, and its
+   name. *)
+let ctor_args cx (c : Hir.item) t =
+  match Env.variant cx.env c with
+  | Some (i, _, _) ->
+      let name, args = declared_args cx i (args_of t) in
+      (name, with_args args, c.name)
+  | None -> outside "the constructor %s" (item_name c)
+
 let map_item = { Hir.home = "std.prelude"; name = "Map" }
 
 let is_map t =
@@ -49,8 +58,8 @@ let option_payload t =
 
 (* A value of [Option<T>], for the type [t] of [Option<T>]. *)
 let option cx t ctor payload =
-  tag "variant"
-    [ Str (declared cx option_item (args_of t)); Str ctor; Arr payload ]
+  let name, args = declared_args cx option_item (args_of t) in
+  tag "variant" ((Str name :: with_args args) @ [ Str ctor; Arr payload ])
 
 (* A name of a temporary of the export's, unique to the source position. *)
 let temp what (loc : Ast.loc) = Printf.sprintf "%s/%d:%d" what loc.line loc.col
@@ -78,7 +87,9 @@ let structural_by cx name t =
     (* records.no-home: an anonymous record has the structural impls and no others. *)
     | Record fields -> List.for_all (fun (_, t) -> go seen t) fields
     | Con (i, args) -> (
-        let sub t = instantiated cx { key = ""; item = i; args } t in
+        let sub t =
+          instantiated cx { key = ""; item = i; args; generic = false } t
+        in
         let parts ts = List.for_all (fun t -> go (i :: seen) (sub t)) ts in
         List.mem i seen
         || Env.trait_impl cx.env ~trait i = None
@@ -107,7 +118,9 @@ let ctor_orders cx t =
         let seen = (i, args) :: seen in
         let parts acc ts =
           List.fold_left go acc
-            (List.map (instantiated cx { key = ""; item = i; args }) ts)
+            (List.map
+               (instantiated cx { key = ""; item = i; args; generic = false })
+               ts)
         in
         match Env.type_info cx.env i with
         | Some { Env.def = Env.Variants ctors; _ } ->

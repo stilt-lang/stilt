@@ -8,9 +8,16 @@ exception Outside of string
 val outside : ('a, unit, string, 'b) format4 -> 'a
 (** Raises {!Outside} with the message. *)
 
-type instance = { key : string; item : Hir.item; args : Types.ty list }
-(** A record or variant type with its type arguments, which the calculus
-    declares as a type of its own, named [key]. *)
+type instance = {
+  key : string;
+  item : Hir.item;
+  args : Types.ty list;
+  generic : bool;
+}
+(** A record or variant type that the calculus declares, named [key]: a generic
+    type once, at its own type parameters, which its uses give arguments, when
+    [generic], and otherwise a type at one list of arguments, as a type of its
+    own. *)
 
 type target =
   | Function of Hir.item
@@ -112,8 +119,25 @@ val raises_in : cx -> Types.row -> (unit -> 'a) -> 'a
     exports. *)
 
 val declared : cx -> Hir.item -> Types.ty list -> string
-(** A record type without parameters, or a variant type with its arguments,
-    which the export declares: its name in the calculus. *)
+(** A record or variant type at its arguments, which the export declares: its
+    name in the calculus. *)
+
+val declared_args :
+  cx -> Hir.item -> Types.ty list -> string * Model_json.t list
+(** A record or variant type at its arguments: its name in the calculus, and the
+    type arguments the calculus writes it with, none for a type declared at its
+    arguments. *)
+
+val record_args : cx -> Types.ty -> Model_json.t list
+(** The type arguments the calculus writes a record type with. *)
+
+val with_args : Model_json.t list -> Model_json.t list
+(** The type arguments of a literal or a constructor, as its second field: none
+    for a type declared at its arguments. *)
+
+val type_params : cx -> instance -> Model_json.t
+(** The type parameters of a declared type, by their names, none for a type
+    declared at its arguments. *)
 
 val instantiated : cx -> instance -> Types.ty -> Types.ty
 (** A type in a declaration of the instance's type, its parameters replaced by

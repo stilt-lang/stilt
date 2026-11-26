@@ -24,10 +24,13 @@ let rec expr cx (e : Tast.expr) =
   | Tuple es -> op (Str "tuple") (List.map (expr cx) es)
   | Record (i, _, fields) when declared_record i ->
       let field (f, x) = Arr [ Str f; expr cx x ] in
-      tag "record" [ Str (record_name cx e.ty); Arr (List.map field fields) ]
+      tag "record"
+        ((Str (record_name cx e.ty) :: with_args (record_args cx e.ty))
+        @ [ Arr (List.map field fields) ])
   | Construct (c, _, args) ->
-      let t, name = ctor cx c e.ty in
-      tag "variant" [ Str t; Str name; Arr (List.map (expr cx) args) ]
+      let t, targs, name = ctor_args cx c e.ty in
+      tag "variant"
+        ((Str t :: targs) @ [ Str name; Arr (List.map (expr cx) args) ])
   | List es -> tag "list" [ ty cx (elem e.ty); Arr (List.map (expr cx) es) ]
   | Field (b, f) -> tag "field" [ expr cx b; Str f ]
   | Tuple_field (b, i) -> tag "field" [ expr cx b; Str (string_of_int i) ]

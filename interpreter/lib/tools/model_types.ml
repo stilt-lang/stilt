@@ -4,7 +4,12 @@ exception Outside of string
 
 let outside fmt = Printf.ksprintf (fun s -> raise (Outside s)) fmt
 
-type instance = { key : string; item : Hir.item; args : Types.ty list }
+type instance = {
+  key : string;
+  item : Hir.item;
+  args : Types.ty list;
+  generic : bool;
+}
 
 type target =
   | Function of Hir.item
@@ -139,7 +144,9 @@ let key cx t =
     | Record fields -> List.for_all (fun (_, t) -> go seen t) fields
     | Con (i, _) when List.mem i seen -> true
     | Con (i, args) when not (written i "Eq" || written i "Hash") -> (
-        let sub t = instantiated cx { key = ""; item = i; args } t in
+        let sub t =
+          instantiated cx { key = ""; item = i; args; generic = false } t
+        in
         let parts ts = List.for_all (fun t -> go (i :: seen) (sub t)) ts in
         match Env.type_info cx.env i with
         | Some { Env.def = Env.Record fields; _ } when declared_record i ->
@@ -203,12 +210,18 @@ let rec ty cx (t : Types.ty) =
   | Record fields -> tag "record" [ Str (anonymous cx fields) ]
   | Handler h -> tag "record" [ Str (handler_record cx h) ]
   | Con (i, args) -> (
+      let named kind =
+        match declared_args cx i args with
+        | name, [] -> tag kind [ Str name ]
+        | name, args -> tag kind [ Str name; Arr args ]
+      in
       match Env.type_info cx.env i with
       | Some { Env.def = Env.Record _; _ } when declared_record i ->
-          tag "record" [ Str (declared cx i args) ]
-      | Some { Env.def = Env.Variants _; _ } ->
-          tag "variant" [ Str (declared cx i args) ]
+          named "record"
+      | Some { Env.def = Env.Variants _; _ } -> named "variant"
       | _ -> outside "a type the model lacks")
+  (* A type parameter of a generic type, in its declaration. *)
+  | Param v -> tag "param" [ Str v.name ]
   | _ -> outside "a type the model lacks"
 
 (* A function type. *)
@@ -223,9 +236,58 @@ and param_ty cx (m, t) =
   | Ast.Inout, Con ({ home = "std.view"; name = "View" }, [ u ]) -> ty cx u
   | _ -> ty cx t
 
-(* A type the calculus declares: a record or a variant type, one declaration
+(* A type the calculus declares: a record or a variant type, at its arguments. *)
+and declared cx (i : Hir.item) args = fst (declared_args cx i args)
+
+(* A record or a variant type, at its arguments: declared once, with its type
+   parameters, which each use gives its arguments (declarations.type-parameters
+   and declarations.type-arguments), when every part of its declaration is a form
+   of the calculus there; and otherwise, as for a type with value parameters, once
    for each list of arguments, named by them. *)
-and declared cx (i : Hir.item) args =
+and declared_args cx (i : Hir.item) args =
+  if generic cx i args then (item_name i, List.map (ty cx) args)
+  else (declared_at cx i args, [])
+
+(* Whether the calculus declares [i] once, with its type parameters: decided at
+   the first use, by writing its declaration's types at its parameters. *)
+and generic cx (i : Hir.item) args =
+  let value a = match norm a with Types.Value _ -> true | _ -> false in
+  match List.find_opt (fun inst -> inst.item = i) cx.types with
+  | Some inst -> inst.generic && not (List.exists value args)
+  | None -> (
+      let ps = params cx i in
+      let parts =
+        match Env.type_info cx.env i with
+        | Some { Env.def = Env.Record fields; _ } when declared_record i ->
+            Some (List.map snd fields)
+        | Some { Env.def = Env.Variants ctors; _ } ->
+            Some (List.concat_map snd ctors)
+        | _ -> None
+      in
+      match parts with
+      | Some parts
+        when ps <> []
+             && List.length ps = List.length args
+             && not (List.exists value args) -> (
+          let inst =
+            {
+              key = item_name i;
+              item = i;
+              args = List.map (fun v -> Types.Param v) ps;
+              generic = true;
+            }
+          in
+          cx.types <- inst :: cx.types;
+          try
+            List.iter (fun t -> ignore (ty cx t)) parts;
+            true
+          with Outside _ ->
+            cx.types <- List.filter (fun j -> j != inst) cx.types;
+            false)
+      | _ -> false)
+
+(* A type the calculus declares once for each list of arguments, named by them. *)
+and declared_at cx (i : Hir.item) args =
   (match Env.type_info cx.env i with
   | Some { Env.params; def = Env.Variants _; _ }
     when List.length params = List.length args ->
@@ -237,6 +299,8 @@ and declared cx (i : Hir.item) args =
   | Some { Env.def = Env.Variants _; _ } ->
       outside "a variant type with arguments of another number"
   | _ -> outside "the type %s" (item_name i));
+  if List.exists has_param args then
+    outside "a type at a parameter of a type declared at its arguments";
   let key =
     match args with
     | [] -> item_name i
@@ -246,7 +310,7 @@ and declared cx (i : Hir.item) args =
         ^ ">"
   in
   if not (List.exists (fun inst -> inst.key = key) cx.types) then
-    cx.types <- { key; item = i; args } :: cx.types;
+    cx.types <- { key; item = i; args; generic = false } :: cx.types;
   key
 
 (* An anonymous record type, which the calculus declares as a record named by the type's
@@ -257,7 +321,8 @@ and anonymous cx fields =
   let key = "{ " ^ String.concat ", " (List.map field fields) ^ " }" in
   if not (List.exists (fun inst -> inst.key = key) cx.types) then
     cx.types <-
-      { key; item = Types.anonymous; args = [ Record fields ] } :: cx.types;
+      { key; item = Types.anonymous; args = [ Record fields ]; generic = false }
+      :: cx.types;
   key
 
 (* The record the calculus declares for a record type: a declared record's instance, or
@@ -267,6 +332,27 @@ and record_name cx t =
   | Con (i, args) when declared_record i -> declared cx i args
   | Record fields -> anonymous cx fields
   | _ -> outside "a record of a type the model lacks"
+
+(* Whether a type parameter occurs in a type. *)
+and has_param t =
+  match norm t with
+  | Param _ -> true
+  | Con (_, ts) | Tuple ts -> List.exists has_param ts
+  | Record fs -> List.exists (fun (_, t) -> has_param t) fs
+  | Fn (ps, r, _) -> List.exists (fun (_, t) -> has_param t) ps || has_param r
+  | _ -> false
+
+(* The type arguments the calculus writes a record type with. *)
+and record_args cx t =
+  match norm t with
+  | Con (i, args) when declared_record i -> snd (declared_args cx i args)
+  | _ -> []
+
+(* The type parameters of a declared type, by their names. *)
+and type_params cx inst =
+  if inst.generic then
+    Arr (List.map (fun (v : Hir.var) -> Str v.name) (params cx inst.item))
+  else Arr []
 
 (* A type argument as an instance's name writes it: a type as the calculus has it, and a
    value argument as written (generics.value-parameters). *)
@@ -344,3 +430,5 @@ and handler_record cx (h : Types.handler) =
     cx.handlers <-
       (key, Arr [ Str key; Arr fields ]) :: List.remove_assoc key cx.handlers);
   key
+
+let with_args = function [] -> [] | args -> [ Arr args ]

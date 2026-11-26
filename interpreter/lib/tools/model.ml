@@ -80,8 +80,10 @@ let functions cx =
   in
   go []
 
-(* A record or a variant type: [name, fields] or [name, ctors]. *)
+(* A record or a variant type: [name, fields] or [name, ctors], and, for a generic
+   one, its type parameters' names. *)
 let type_decl cx inst =
+  let params = if inst.generic then [ type_params cx inst ] else [] in
   let ty t = ty cx (instantiated cx inst t) in
   match (inst.args, Env.type_info cx.env inst.item) with
   | [ Record fields ], _ when inst.item = Types.anonymous ->
@@ -91,10 +93,10 @@ let type_decl cx inst =
       match info with
       | Some { Env.def = Env.Record fields; _ } ->
           let field (f, t) = Arr [ Str f; ty t ] in
-          `Record (Arr [ Str inst.key; Arr (List.map field fields) ])
+          `Record (Arr (Str inst.key :: Arr (List.map field fields) :: params))
       | Some { Env.def = Env.Variants ctors; _ } ->
           let ctor (c, ts) = Arr [ Str c; Arr (List.map ty ts) ] in
-          `Variant (Arr [ Str inst.key; Arr (List.map ctor ctors) ])
+          `Variant (Arr (Str inst.key :: Arr (List.map ctor ctors) :: params))
       | _ -> outside "the type %s" inst.key)
 
 (* Every type met, each once: declaring one may name another. *)
