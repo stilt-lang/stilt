@@ -33,7 +33,7 @@ private def push (xs : Name) (x : Expr) : Expr :=
   .call (.fnRef "push" [] []) [.inout ⟨xs, []⟩, .value x] .unit
 
 private def decl (name : Name) (ps : List Param) (body : Expr) (result : Ty := lst) : FnDecl :=
-  ⟨name, [], [], ps, result, Row.pure, body⟩
+  ⟨name, [], [], ps, result, Row.pure, body, {}⟩
 
 /-- The body of `grown(xs, x)`: `var out = xs; push(inout out, x); out`. -/
 private def grownBody : Expr := .varIn "out" lst (v "xs") (.seq (push "out" (v "x")) (v "out"))

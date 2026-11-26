@@ -16,7 +16,7 @@ namespace Stilt.Examples.Tuples
 /-- A program from its functions, the type of the value it shows and `main`,
 whose row is `raise<shown>`. -/
 private def program (fns : List FnDecl) (shown : Ty) (main : Expr) : Program :=
-  ⟨⟨[], [], fns, [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩⟩
+  ⟨⟨[], [], fns, [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
 
 /-- Both models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=
@@ -32,7 +32,7 @@ private def pair : Ty := .tuple [.i64, .i64]
 private def swap : FnDecl :=
   ⟨"swap", [], [], [⟨.inout, "x", .i64, none⟩, ⟨.inout, "y", .i64, none⟩], .unit, Row.pure,
     .letIn "t" .i64 (.var "x")
-      (.seq (.assign ⟨"x", []⟩ (.var "y")) (.assign ⟨"y", []⟩ (.var "t")))⟩
+      (.seq (.assign ⟨"x", []⟩ (.var "y")) (.assign ⟨"y", []⟩ (.var "t"))), {}⟩
 
 /-- `.0` reads the first element: `let t = (1, true); raise t.0` raises `1`. -/
 example : agree (program [] .i64

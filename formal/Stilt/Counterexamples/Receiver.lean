@@ -22,7 +22,7 @@ def aType : RecordDecl := ⟨"A", [("b", .i64)]⟩
 /-- `fn f(inout self, inout b: i64) -> i64 { b = 1; self.b }`. -/
 def peek : FnDecl :=
   ⟨"f", [], [], [⟨.inout, selfName, .record "A", none⟩, ⟨.inout, "b", .i64, none⟩], .i64,
-    Row.pure, .seq (.assign ⟨"b", []⟩ (.int 1)) (.field (.var selfName) "b")⟩
+    Row.pure, .seq (.assign ⟨"b", []⟩ (.int 1)) (.field (.var selfName) "b"), {}⟩
 
 /-- `impl A { fn f(inout self, inout b: i64) -> i64 { … } }` (traits.impl-blocks). -/
 def aImpl : ImplDecl := ⟨"A", [peek]⟩
@@ -33,7 +33,7 @@ def receiverAliased : Program :=
   ⟨⟨[aType], [], [], [aImpl], [], [], []⟩,
     .varIn "a" (.record "A") (.record "A" [("b", .int 0)])
       (.raise (Expr.methodCall "A" "f" [] (.inout ⟨"a", []⟩) [.inout ⟨"a", [.field "b"]⟩] .i64)),
-    ⟨false, some .i64, [], [], none⟩⟩
+    ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem receiverAliased_receivers : receiverAliased.decls.Receivers where
   types := by decide

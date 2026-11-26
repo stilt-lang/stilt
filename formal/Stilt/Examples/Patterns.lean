@@ -32,7 +32,7 @@ private def decls : Decls := ⟨[point], [shape, opt], [], [], [], [], []⟩
 
 /-- A program whose `main` raises a value of `shown`. -/
 private def program (shown : Ty) (main : Expr) : Program :=
-  ⟨decls, main, ⟨false, some shown, [], [], none⟩⟩
+  ⟨decls, main, ⟨false, some shown, [], [], none⟩, {}⟩
 
 /-- Both models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=

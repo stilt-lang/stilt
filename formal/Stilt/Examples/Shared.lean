@@ -39,12 +39,12 @@ private def when2 (τ : Ty) (one two : Expr) : Expr :=
 private def bump : FnDecl :=
   ⟨"bump", [], [], [⟨.let, "c", .shared account, .none⟩], .unit, Row.pure,
     when1 "c" "pc"
-      (.assign ⟨"pc", [.field "balance"]⟩ (add (.field (.var "pc") "balance") (.int 1)))⟩
+      (.assign ⟨"pc", [.field "balance"]⟩ (add (.field (.var "pc") "balance") (.int 1))), {}⟩
 
 private def decls : Decls := ⟨[⟨"Account", [("balance", .i64)]⟩], [], [bump], [], [], [], []⟩
 
 private def program (body : Expr) : Program :=
-  ⟨decls, body, ⟨false, Option.some .i64, [], [], .none⟩⟩
+  ⟨decls, body, ⟨false, Option.some .i64, [], [], .none⟩, {}⟩
 
 private def raisesBoth (p : Program) (k : Int) : Bool :=
   (match (p.runCopy 64).observe with | .raised (.int k') => k == k' | _ => false) &&

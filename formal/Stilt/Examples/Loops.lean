@@ -39,7 +39,7 @@ private def sumFrom3 : FnDecl :=
           .seq (set "i" (add (.var "i") (.int 1))) <|
           .seq (when (lt (.var "i") (.int 3)) .continue) <|
           set "s" (add (.var "s") (.var "i")))
-        (.var "s")⟩
+        (.var "s"), {}⟩
 
 /-- The body of `first`'s inner `loop`: `if n < i { return i }; i = i + 1; break`. -/
 private def turn : Expr :=
@@ -51,7 +51,7 @@ i = i + 1; break } } }`: the least integer above `n`, returned from the inner
 loop out of both. -/
 private def firstAbove : FnDecl :=
   ⟨"first", [], [], [⟨.let, "n", .i64, none⟩], .i64, Row.pure,
-    .varIn "i" .i64 (.int 0) (.loop (.loop turn))⟩
+    .varIn "i" .i64 (.int 0) (.loop (.loop turn)), {}⟩
 
 private def decls : Decls := ⟨[], [], [sumFrom3, firstAbove], [], [], [], []⟩
 
@@ -60,7 +60,7 @@ private def call (f : Name) (e : Expr) (result : Ty :=
   .i64) : Expr := .call (.fnRef f [] []) [.value e] result
 
 /-- A program whose `main` raises an `i64`. -/
-private def program (main : Expr) : Program := ⟨decls, .raise main, ⟨false, some .i64, [], [], none⟩⟩
+private def program (main : Expr) : Program := ⟨decls, .raise main, ⟨false, some .i64, [], [], none⟩, {}⟩
 
 /-- Whether a run shows the raise of the integer `k`. -/
 private def raisedInt (k : Int) : Observation → Bool
@@ -84,7 +84,7 @@ example : raises (program (call "first" (call "sum" (.int 5)))) 13 := by decide 
 
 /-- A `return` in `main` ends it with `()` (program.main): `return; raise 1`
 raises nothing. -/
-example : (Program.mk decls (.seq (.return .unit) (.raise (.int 1))) ⟨false, some .i64, [], [], none⟩
+example : (Program.mk decls (.seq (.return .unit) (.raise (.int 1))) ⟨false, some .i64, [], [], none⟩ {}
     |>.runCopy 8).observe = .returned .unit := rfl
 
 /-! ## Typing -/

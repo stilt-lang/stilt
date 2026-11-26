@@ -81,19 +81,19 @@ def annotatedBody : Expr :=
 /-- `fn f<e>(escaping g: fn() / e) -> i64 / e { try { let h: fn() /
 {raise<Box>, e} = g; h(); 0 } catch x => x.v }`. -/
 def annotatedF : FnDecl :=
-  ⟨"f", [], ["e"], [⟨.let, "g", .fn [] .unit eRow, none⟩], .i64, eRow, annotatedBody⟩
+  ⟨"f", [], ["e"], [⟨.let, "g", .fn [] .unit eRow, none⟩], .i64, eRow, annotatedBody, {}⟩
 
 /-- `fn apply<r>(escaping k: fn() / {raise<Box>, r}) / {raise<Box>, r} { try
 k() }`. -/
 def apply : FnDecl :=
   ⟨"apply", [], ["r"], [⟨.let, "k", .fn [] .unit boxR, none⟩], .unit, boxR,
-    .try (.call (.var "k") [] .unit)⟩
+    .try (.call (.var "k") [] .unit), {}⟩
 
 /-- `fn f<e>(escaping g: fn() / e) -> i64 / e { try { apply<e>(g); 0 } catch x
 => x.v }`. -/
 def genericF : FnDecl :=
   ⟨"f", [], ["e"], [⟨.let, "g", .fn [] .unit eRow, none⟩], .i64, eRow,
-    catchBox (.seq (.call (.fnRef "apply" [] [eRow]) [.value (.var "g")] .unit) (.int 0))⟩
+    catchBox (.seq (.call (.fnRef "apply" [] [eRow]) [.value (.var "g")] .unit) (.int 0)), {}⟩
 
 /-- `let n: i64 = try f<raise<bool>>(|| raise true)`, in a `main` whose row is
 `raise<bool>`. -/
@@ -105,11 +105,11 @@ def callRaisingBool (f : Name) : Expr :=
 
 /-- The program whose row is formed by an annotation. -/
 def annotated : Program :=
-  ⟨⟨[box], [], [annotatedF], [], [], [], []⟩, callRaisingBool "f", raisesBool⟩
+  ⟨⟨[box], [], [annotatedF], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
 
 /-- The program whose row is formed by an instantiation. -/
 def generic : Program :=
-  ⟨⟨[box], [], [apply, genericF], [], [], [], []⟩, callRaisingBool "f", raisesBool⟩
+  ⟨⟨[box], [], [apply, genericF], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
 
 /-! ## effects.no-escape as it was written is unsound -/
 
@@ -272,7 +272,7 @@ the guide's `or_zero` with `Box` for `E`. Its parameter is non-escaping, so its
 row is `{raise<Box>, f'}` and the function's own row is `{f'}`. -/
 def orZero : FnDecl :=
   ⟨"or_zero", [], ["f'"], [⟨.let, "f", .fn [] .i64 boxF, some "f'"⟩], .i64, ⟨false, none, ["f'"], [], none⟩,
-    catchBox (.call (.var "f") [] .i64)⟩
+    catchBox (.call (.var "f") [] .i64), {}⟩
 
 /-- The row `/ raise<Box>`. -/
 abbrev raisesBox : Row := ⟨false, some (.record "Box"), [], [], none⟩
@@ -289,7 +289,7 @@ abbrev raisesI64 : Row := ⟨false, some .i64, [], [], none⟩
 def paired : Program :=
   ⟨⟨[box], [], [orZero], [], [], [], []⟩,
     .raise (.call (.fnRef "or_zero" [] [Row.pure]) [.value (.closure [] .i64 raisesBox raiseBox)] .i64),
-    raisesI64⟩
+    raisesI64, {}⟩
 
 /-- The model accepts `paired`: the signature of `or_zero` pairs `f'` with
 `Box`, the type its `catch` handles, in `f`'s row (effects.paired-row-variables and effects.catch-around-row-variables). -/

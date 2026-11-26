@@ -38,7 +38,7 @@ private def atFor (name : Name) (row : Row) : FnDecl :=
     .varIn "r" (.list .unit) (.list .unit [])
       (.seq (.assign ⟨"r", []⟩ (.list .unit [.call (.var "k") [.inout ⟨"xs", [.index (.var "i")]⟩] .unit]))
         (.seq (.assign ⟨"xs", [.index (.int 0)]⟩ (.index (.var "xs") (.var "i")))
-          (.index (.var "r") (.int 0))))⟩
+          (.index (.var "r") (.int 0)))), {}⟩
 
 /-- The same projection written for an access that threads a place of the caller's, of
 type `fn(inout i64, inout i64) -> ()`. -/
@@ -49,17 +49,17 @@ private def atThreading : FnDecl :=
     .varIn "r" (.list .unit) (.list .unit [])
       (.seq (.assign ⟨"r", []⟩ (.list .unit [.call (.var "k")
           [.inout ⟨"xs", [.index (.var "i")]⟩, .inout ⟨"t", []⟩] .unit]))
-        (.index (.var "r") (.int 0)))⟩
+        (.index (.var "r") (.int 0))), {}⟩
 
 /-- `fn swap(inout a: i64, inout b: i64)`. -/
 private def swap : FnDecl :=
   ⟨"swap", [], [], [⟨.inout, "a", .i64, none⟩, ⟨.inout, "b", .i64, none⟩], .unit, Row.pure,
-    .letIn "x" .i64 (.var "a") (.seq (.assign ⟨"a", []⟩ (.var "b")) (.assign ⟨"b", []⟩ (.var "x")))⟩
+    .letIn "x" .i64 (.var "a") (.seq (.assign ⟨"a", []⟩ (.var "b")) (.assign ⟨"b", []⟩ (.var "x"))), {}⟩
 
 private def decls : Decls := ⟨[], [], [atFor "at" Row.pure, atFor "atRaising" raising, atThreading, swap],
   [], [], [], []⟩
 
-private def program (main : Expr) : Program := ⟨decls, main, raising⟩
+private def program (main : Expr) : Program := ⟨decls, main, raising, {}⟩
 
 /-- `var xs = [1, 2, 3]` around `body`. -/
 private def withList (body : Expr) : Expr :=

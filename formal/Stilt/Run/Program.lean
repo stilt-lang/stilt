@@ -26,12 +26,25 @@ def typeParam : Decoder TypeParam
   | .arr #[n, bs] => return ⟨← str n, ← list str bs⟩
   | j => throw s!"a type parameter, not {j.compress}"
 
-/-- A function: `[name, typeParams, rowParams, params, result, row, body]`. -/
-def fnDecl : Decoder FnDecl
-  | .arr #[n, tps, rps, ps, r, rw, b] =>
-    return ⟨← str n, ← list typeParam tps, ← list str rps, ← list param ps, ← ty r, ← row rw,
-      ← expr b⟩
+/-- Limits: an array of their names, `"panic"`, `"overflow"` and `"div"` (facts.without). -/
+def limits (j : Json) : Except String Limits := do
+  (← list str j).foldlM (init := {}) fun l n => match n with
+    | "panic" => pure { l with panic := true }
+    | "overflow" => pure { l with overflow := true }
+    | "div" => pure { l with div := true }
+    | _ => throw s!"a limit, not {n}"
+
+/-- A function: `[name, typeParams, rowParams, params, result, row, body]`, and after
+them the limits its body keeps, none when they are left out. -/
+def fnDecl (j : Json) : Except String FnDecl :=
+  match j with
+  | .arr #[n, tps, rps, ps, r, rw, b] => decode n tps rps ps r rw b (.arr #[])
+  | .arr #[n, tps, rps, ps, r, rw, b, ls] => decode n tps rps ps r rw b ls
   | j => throw s!"a function, not {j.compress}"
+where
+  decode (n tps rps ps r rw b ls : Json) : Except String FnDecl := do
+    return ⟨← str n, ← list typeParam tps, ← list str rps, ← list param ps, ← ty r, ← row rw,
+      ← expr b, ← limits ls⟩
 
 def head (j : Json) : Except String Head := do
   match (← ty j).head? with
@@ -62,10 +75,11 @@ def decls (j : Json) : Except String Decls := do
       let (n, ops) ← pair str (list (pair str (pair ty ty))) e
       pure ⟨n, ops⟩) }
 
-/-- A program: an object of its declarations, `main` and `main`'s row. -/
+/-- A program: an object of its declarations, `main`, `main`'s row and, when given,
+the limits `main`'s body keeps. -/
 def program (j : Json) : Except String Program := do
   return ⟨← j.getObjVal? "decls" >>= decls, ← j.getObjVal? "main" >>= expr,
-    ← j.getObjVal? "row" >>= row⟩
+    ← j.getObjVal? "row" >>= row, ← (j.getObjVal? "limits").toOption.getD (.arr #[]) |> limits⟩
 
 /-- What a process shows of a run. -/
 structure Shown where

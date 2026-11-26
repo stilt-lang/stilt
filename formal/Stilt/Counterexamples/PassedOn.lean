@@ -47,17 +47,17 @@ e { try { let h: fn() / {raise<Box>, e} = g; h(); 0 } catch x => x.v }`:
 `annotatedF` with a parameter whose type pairs `e` with `Box`. -/
 def pairedF : FnDecl :=
   ⟨"f", [], ["e"], [⟨.let, "g", .fn [] .unit eRow, none⟩, ⟨.let, "k", .fn [] .unit boxE, none⟩],
-    .i64, eRow, annotatedBody⟩
+    .i64, eRow, annotatedBody, {}⟩
 
 /-- `fn caller<r>(escaping g: fn() / r) -> i64 / r { f<r>(g, || ()) }`. -/
 def unpairedCaller : FnDecl :=
   ⟨"caller", [], ["r"], [⟨.let, "g", .fn [] .unit rRow, none⟩], .i64, rRow,
-    .call (.fnRef "f" [] [rRow]) [.value (.var "g"), .value (.closure [] .unit Row.pure .unit)] .i64⟩
+    .call (.fnRef "f" [] [rRow]) [.value (.var "g"), .value (.closure [] .unit Row.pure .unit)] .i64, {}⟩
 
 /-- The program in which `caller` passes its unpaired `r` on to `f`'s paired
 `e`. -/
 def passedOn : Program :=
-  ⟨⟨[box], [], [pairedF, unpairedCaller], [], [], [], []⟩, callRaisingBool "caller", raisesBool⟩
+  ⟨⟨[box], [], [pairedF, unpairedCaller], [], [], [], []⟩, callRaisingBool "caller", raisesBool, {}⟩
 
 /-- `f`'s signature pairs `e` with `Box`, in `k`'s type. -/
 private theorem pairedF_pairs : pairedF.pairs "e" (.record "Box") :=
@@ -137,7 +137,7 @@ type. -/
 def pairedCaller : FnDecl :=
   ⟨"caller", [], ["r"], [⟨.let, "g", .fn [] .unit boxR, none⟩], .i64, boxR,
     .try (.call (.fnRef "f" [] [boxR])
-      [.value (.var "g"), .value (.closure [] .unit Row.pure .unit)] .i64)⟩
+      [.value (.var "g"), .value (.closure [] .unit Row.pure .unit)] .i64), {}⟩
 
 /-- `let n = try caller<{}>(|| raise Box { v: 7 }) catch _ => 0; raise n`, in a
 `main` whose row is `raise<i64>`. The `catch` returns 0 only if a `Box`
@@ -149,7 +149,7 @@ def passedOnPaired : Program :=
         (.call (.fnRef "caller" [] [Row.pure]) [.value (.closure [] .unit raisesBox raiseBox)] .i64)
         (.record "Box") "x" (.int 0) .i64)
       (.raise (.var "n")),
-    raisesI64⟩
+    raisesI64, {}⟩
 
 /-- Instantiating `e` with `{raise<Box>, r}` leaves every row of `f`'s type
 one `raise` label: `k`'s row `{raise<Box>, e}` becomes `{raise<Box>, r}`

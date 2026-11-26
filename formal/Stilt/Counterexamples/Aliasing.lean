@@ -16,7 +16,7 @@ namespace Stilt.Counterexamples
 /-- `fn alias(inout x: i64, inout y: i64) -> i64 { x = 1; y }`. -/
 def alias : FnDecl :=
   ⟨"alias", [], [], [⟨.inout, "x", .i64, none⟩, ⟨.inout, "y", .i64, none⟩], .i64, Row.pure,
-    .seq (.assign ⟨"x", []⟩ (.int 1)) (.var "y")⟩
+    .seq (.assign ⟨"x", []⟩ (.int 1)) (.var "y"), {}⟩
 
 /-- `var a = 0; raise alias(inout a, inout a)`, in a `main` whose row is
 `raise<i64>`. modes.overlapping-inout rejects the call. -/
@@ -24,7 +24,7 @@ def aliased : Program :=
   ⟨⟨[], [], [alias], [], [], [], []⟩,
     .varIn "a" .i64 (.int 0)
       (.raise (.call (.fnRef "alias" [] []) [.inout ⟨"a", []⟩, .inout ⟨"a", []⟩] .i64)),
-    ⟨false, some .i64, [], [], none⟩⟩
+    ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem aliased_wellTyped : aliased.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [aliased]) ⟨rfl, rfl, rfl⟩

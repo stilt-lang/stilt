@@ -61,11 +61,11 @@ private def inner : Expr := handler "Answer" "ask" .unit "_" (row "Ask") (add (.
 `fn once() -> i64 / Ask { Ask.ask() + 1 }` and
 `fn deep() -> i64 / Ask { once() + 100 }`. -/
 private def fns : List FnDecl := [
-  ⟨"twice_asked", [], [], [], .i64, row "Ask", add (.perform ask .unit) (.perform ask .unit)⟩,
+  ⟨"twice_asked", [], [], [], .i64, row "Ask", add (.perform ask .unit) (.perform ask .unit), {}⟩,
   ⟨"checked", [], [], [⟨.let, "n", .i64, none⟩], .i64, row "Fail",
-    .if (lt (.var "n") (.int 0)) .i64 (.perform fail (.var "n")) (add (.var "n") (.var "n"))⟩,
-  ⟨"once", [], [], [], .i64, row "Ask", add (.perform ask .unit) (.int 1)⟩,
-  ⟨"deep", [], [], [], .i64, row "Ask", add (.call (.fnRef "once" [] []) [] .i64) (.int 100)⟩]
+    .if (lt (.var "n") (.int 0)) .i64 (.perform fail (.var "n")) (add (.var "n") (.var "n")), {}⟩,
+  ⟨"once", [], [], [], .i64, row "Ask", add (.perform ask .unit) (.int 1), {}⟩,
+  ⟨"deep", [], [], [], .i64, row "Ask", add (.call (.fnRef "once" [] []) [] .i64) (.int 100), {}⟩]
 
 private def decls : Decls :=
   ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 (controlRow .i64 .i64))]⟩,
@@ -79,7 +79,7 @@ private def call (f : Name) (args : List Expr) (result : Ty :=
 
 /-- A program whose `main` raises the list of `es`' values. -/
 private def program (es : List Expr) : Program :=
-  ⟨decls, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩⟩
+  ⟨decls, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩, {}⟩
 
 /-- Whether values are the integers `ks`. -/
 private def areInts : List Value → List Int → Bool
@@ -152,7 +152,7 @@ example : ¬ (program [.withH "Ask" false byZero (.perform ask .unit)]).PanicFre
 
 /-- A program without functions, whose `main` raises the list of `es`' values. -/
 private def bare (es : List Expr) : Program :=
-  ⟨{ decls with functions := [] }, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩⟩
+  ⟨{ decls with functions := [] }, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩, {}⟩
 
 /-- A `with` whose block performs nothing adds no `div`, and its program, free of
 `panic` too, is total; a performance is a site of `div`. -/

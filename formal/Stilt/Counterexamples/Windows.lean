@@ -36,7 +36,7 @@ def viewChanged : Program :=
       (.letIn "v" (.view listTy) (.view [.var "xs", .int 0, .int 3])
         (.seq (.assign ⟨"xs", [.index (.int 0)]⟩ (.int 9))
           (.raise (.index (.op .copy [.var "v"]) (.int 0))))),
-    ⟨false, some .i64, [], [], none⟩⟩
+    ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem viewChanged_wellTyped : viewChanged.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [viewChanged]) ⟨rfl, rfl, rfl⟩
@@ -94,14 +94,14 @@ theorem viewsRead_needed :
 /-- `fn f() -> View<List<i64>> { var ys = [1, 2]; View.of(ys, 0, 1) }`. -/
 def escaping : FnDecl :=
   ⟨"f", [], [], [], .view listTy, Row.pure,
-    .varIn "ys" listTy (ints [1, 2]) (.view [.var "ys", .int 0, .int 1])⟩
+    .varIn "ys" listTy (ints [1, 2]) (.view [.var "ys", .int 0, .int 1]), {}⟩
 
 /-- `raise f().copy()`, in a `main` whose row is `raise<List<i64>>`. views.escaping rejects
 `f`'s result, which views its local `ys`. -/
 def viewEscaped : Program :=
   ⟨⟨[], [], [escaping], [], [], [], []⟩,
     .raise (.op .copy [.call (.fnRef "f" [] []) [] (.view listTy)]),
-    ⟨false, some listTy, [], [], none⟩⟩
+    ⟨false, some listTy, [], [], none⟩, {}⟩
 
 theorem viewEscaped_wellTyped : viewEscaped.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [viewEscaped]) ⟨rfl, rfl, rfl⟩

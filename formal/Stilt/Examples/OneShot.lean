@@ -41,10 +41,10 @@ private def toDefault : Expr := handler "ToDefault" "fail" .i64 (.int (-1))
 `fn spend(inout x: i64) / Fail { x = x + 5; Fail.fail(x); x = 0 }`. -/
 private def fns : List FnDecl := [
   ⟨"bump", [], [], [⟨.inout, "x", .i64, none⟩], .unit, row "Ask",
-    .assign ⟨"x", []⟩ (add (.var "x") (.perform ask .unit))⟩,
+    .assign ⟨"x", []⟩ (add (.var "x") (.perform ask .unit)), {}⟩,
   ⟨"spend", [], [], [⟨.inout, "x", .i64, none⟩], .unit, row "Fail",
     .seq (.assign ⟨"x", []⟩ (add (.var "x") (.int 5)))
-      (.seq (.perform fail (.var "x")) (.assign ⟨"x", []⟩ (.int 0)))⟩]
+      (.seq (.perform fail (.var "x")) (.assign ⟨"x", []⟩ (.int 0))), {}⟩]
 
 private def decls : Decls :=
   ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 controlRow)]⟩,
@@ -56,7 +56,7 @@ private def callInout (f : Name) : Expr := .call (.fnRef f [] []) [.inout ⟨"n"
 
 /-- A program whose `main` binds `var n = 1` and raises the list of `es`' values. -/
 private def program (es : List Expr) : Program :=
-  ⟨decls, .varIn "n" .i64 (.int 1) (.raise (.list .i64 es)), ⟨false, some (.list .i64), [], [], none⟩⟩
+  ⟨decls, .varIn "n" .i64 (.int 1) (.raise (.list .i64 es)), ⟨false, some (.list .i64), [], [], none⟩, {}⟩
 
 private def areInts : List Value → List Int → Bool
   | [], [] => true

@@ -34,7 +34,7 @@ private def ints (ns : List Int) : Expr := .list .i64 (ns.map .int)
 /-- `fn grow(inout a: List<i64>) { var b = a; b[0] = 1 }`. -/
 def grow : FnDecl :=
   ⟨"grow", [], [], [⟨.inout, "a", listTy, none⟩], .unit, Row.pure,
-    .varIn "b" listTy (.var "a") (.assign ⟨"b", [.index (.int 0)]⟩ (.int 1))⟩
+    .varIn "b" listTy (.var "a") (.assign ⟨"b", [.index (.int 0)]⟩ (.int 1)), {}⟩
 
 /-- `var xs = [0]; grow(inout xs); raise xs[0]`, in a `main` whose row is `raise<i64>`. -/
 def writtenBack : Program :=
@@ -42,7 +42,7 @@ def writtenBack : Program :=
     .varIn "xs" listTy (ints [0])
       (.seq (.call (.fnRef "grow" [] []) [.inout ⟨"xs", []⟩] .unit)
         (.raise (.index (.var "xs") (.int 0)))),
-    ⟨false, some .i64, [], [], none⟩⟩
+    ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem writtenBack_wellTyped : writtenBack.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [writtenBack]) ⟨rfl, rfl, rfl⟩
@@ -114,7 +114,7 @@ x = x.kids[0]; x.items[0] = 9; raise z.kids[0].items[0]`, in a `main` whose row 
 def selfPart : Program :=
   ⟨⟨[treeDecl], [], [], [], [], [], []⟩,
     .varIn "x" treeTy (tree 1 [tree 2 []]) (.letIn "z" treeTy (.var "x") descend),
-    ⟨false, some .i64, [], [], none⟩⟩
+    ⟨false, some .i64, [], [], none⟩, {}⟩
 
 theorem selfPart_wellTyped : selfPart.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide)

@@ -85,7 +85,7 @@ def body (a b : Nat) (extra : List Name) : Expr :=
 /-- The witness's only function, `witness`, which returns `()`. It declares no
 row variable and its row is pure (declarations.function-declarations; effects.rows). -/
 def callee (a b : Nat) (extra : List Name) : FnDecl :=
-  ⟨"witness", [], [], params ss, .unit, Row.pure, body ss a b extra⟩
+  ⟨"witness", [], [], params ss, .unit, Row.pure, body ss a b extra, {}⟩
 
 /-- `var x: τ = init` for each name, then `e` (values.let-and-var). -/
 def vars (τ : Ty) (init : Expr) : List Name → Expr → Expr
@@ -113,7 +113,7 @@ def decls (a b : Nat) (extra : List Name) : Decls :=
 
 /-- The witness: `main` returns the call's result, `()`, and its row is pure. -/
 def witness (a b : Nat) (extra : List Name) : Program :=
-  ⟨decls ss a b extra, main ss, Row.pure⟩
+  ⟨decls ss a b extra, main ss, Row.pure, {}⟩
 
 /-- What the call binds: each parameter's name, with its place (values.inout-argument-order). -/
 def bound : List (Name × Passed) := ss.mapIdx fun i s => (nameOf 'p' i, placePassed s)

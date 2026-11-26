@@ -26,9 +26,19 @@ structure TypeParam where
   name : Name
   bounds : List Name
 
-/-- `fn name<T: B, …, e, …>(params) -> result / row { body }`
-(declarations.function-declarations): its type parameters, with their bounds, and its row
-variables (effects.row-variables). -/
+/-- The limits of a `without` clause that the calculus reads, `panic`, `overflow` and
+`div`, each a promise that the code it covers holds no site of the fact: those a function's
+own clause names, joined with those of its module's header, which cover the bodies of
+the module's functions (facts.without). -/
+structure Limits where
+  panic : Bool := false
+  overflow : Bool := false
+  div : Bool := false
+  deriving DecidableEq, Repr, Inhabited
+
+/-- `fn name<T: B, …, e, …>(params) -> result / row { body } without …`
+(declarations.function-declarations): its type parameters, with their bounds, its row
+variables (effects.row-variables), and the limits its body is checked against. -/
 structure FnDecl where
   name : Name
   /-- Its type parameters, in the order a use instantiates them
@@ -42,6 +52,8 @@ structure FnDecl where
   result : Ty
   row : Row
   body : Expr
+  /-- The limits its body keeps, its own clause's and its module's (facts.without). -/
+  limits : Limits := {}
 
 /-- The type of a function, as its signature gives it (declarations.function-types). -/
 def FnDecl.type (d : FnDecl) : Ty := .fn (d.params.map Param.sig) d.result d.row
@@ -223,6 +235,8 @@ structure Program where
   decls : Decls
   main : Expr
   row : Row
+  /-- The limits `main`'s body keeps, its own clause's and its module's (facts.without). -/
+  limits : Limits := {}
 
 /-! ## The functions of declarations -/
 

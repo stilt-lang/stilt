@@ -136,7 +136,7 @@ witness's body for two places of type `i64`. It panics when `y` sees the write
 to `x` (effects.panic-kinds; std.lists), and returns `()`. -/
 def indexedCallee : FnDecl :=
   ⟨"alias", [], [], [⟨.inout, "x", .i64, none⟩, ⟨.inout, "y", .i64, none⟩], .unit, Row.pure,
-    .seq (.assign ⟨"x", []⟩ (.int 1)) (.letIn "r" .i64 (probe (.var "y")) .unit)⟩
+    .seq (.assign ⟨"x", []⟩ (.int 1)) (.letIn "r" .i64 (probe (.var "y")) .unit), {}⟩
 
 /-- `var xs = [0, 0]; alias(inout xs[0], inout xs[1])`. modes.overlap
 removes the indexes, so the two places have the shape `xs`, and modes.overlapping-inout rejects
@@ -146,7 +146,7 @@ def indexed : Program :=
     .varIn "xs" (.list .i64) (.list .i64 [.int 0, .int 0])
       (.call (.fnRef "alias" [] [])
         [.inout ⟨"xs", [.index (.int 0)]⟩, .inout ⟨"xs", [.index (.int 1)]⟩] .unit),
-    Row.pure⟩
+    Row.pure, {}⟩
 
 theorem indexed_wellTyped : indexed.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [indexed]) ⟨rfl, rfl, rfl⟩

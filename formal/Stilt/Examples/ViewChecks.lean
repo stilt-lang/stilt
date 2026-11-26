@@ -16,7 +16,7 @@ namespace Stilt.Examples.ViewChecks
 /-- `type Doc = { lines: List<str>, n: i64 }` and `fn bump(inout xs: List<i64>)`. -/
 private def decls : Decls :=
   ⟨[⟨"Doc", [("lines", .list .str), ("n", .i64)]⟩], [],
-    [⟨"bump", [], [], [⟨.inout, "xs", .list .i64, none⟩], .unit, Row.pure, .unit⟩],
+    [⟨"bump", [], [], [⟨.inout, "xs", .list .i64, none⟩], .unit, Row.pure, .unit, {}⟩],
     [], [], [], []⟩
 
 private def ints (ns : List Int) : Expr := .list .i64 (ns.map .int)

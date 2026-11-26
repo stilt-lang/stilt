@@ -22,7 +22,7 @@ private def point : RecordDecl := ⟨"Point", [("x", .i64), ("y", .i64)]⟩
 
 /-- A method `size` of a trait impl, whose receiver has the type `τ`. -/
 private def sizeFn (τ : Ty) (body : Expr) : FnDecl :=
-  ⟨"size", [], [], [⟨.let, selfName, τ, none⟩], .i64, Row.pure, body⟩
+  ⟨"size", [], [], [⟨.let, selfName, τ, none⟩], .i64, Row.pure, body, {}⟩
 
 /-- `impl Size for i64 { fn size(self) -> i64 { self } }`. -/
 private def sizeI64 : TraitImpl := ⟨"Size", .int .i64, [sizeFn .i64 (.var selfName)]⟩
@@ -40,12 +40,12 @@ private def sizeOf (τ : Ty) (e : Expr) (result : Ty :=
 through the bound (traits.method-resolution). -/
 private def twice : FnDecl :=
   ⟨"twice", [⟨"T", ["Size"]⟩], [], [⟨.let, "v", .param "T", none⟩], .i64, Row.pure,
-    .op (.arith .add .i64) [sizeOf (.param "T") (.var "v"), sizeOf (.param "T") (.var "v")]⟩
+    .op (.arith .add .i64) [sizeOf (.param "T") (.var "v"), sizeOf (.param "T") (.var "v")], {}⟩
 
 private def decls : Decls := ⟨[point], [], [twice], [], [size], [sizeI64, sizePoint], []⟩
 
 /-- A program whose `main` raises an `i64`. -/
-private def program (main : Expr) : Program := ⟨decls, main, ⟨false, some .i64, [], [], none⟩⟩
+private def program (main : Expr) : Program := ⟨decls, main, ⟨false, some .i64, [], [], none⟩, {}⟩
 
 /-- Both models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=

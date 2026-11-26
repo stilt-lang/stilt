@@ -18,7 +18,7 @@ and `main`, whose row is `raise<shown>`. The examples run programs without
 typing them. -/
 private def program (fns : List FnDecl) (shown : Ty) (main : Expr)
     (records : List RecordDecl := []) (impls : List ImplDecl := []) : Program :=
-  ⟨⟨records, [], fns, impls, [], [], []⟩, main, ⟨false, some shown, [], [], none⟩⟩
+  ⟨⟨records, [], fns, impls, [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
 
 /-- A call of a function declared at the top level. -/
 private def call (f : Name) (args : List Arg) (result : Ty :=
@@ -62,7 +62,7 @@ example : agree (program [] .i64
 /-- `fn fill(inout xs: List<i64>) / raise<i64> { xs[0] = 7; raise 1 }`. -/
 private def fill : FnDecl :=
   ⟨"fill", [], [], [param .inout "xs" (.list .i64)], .unit, ⟨false, some .i64, [], [], none⟩,
-    .seq (.assign (first "xs") (.int 7)) (.raise (.int 1))⟩
+    .seq (.assign (first "xs") (.int 7)) (.raise (.int 1)), {}⟩
 
 /-- After a raise: `var xs = [0]; try fill(inout xs) catch e => (); raise xs`
 raises `[7]`. -/
@@ -86,7 +86,7 @@ example : agree (program [] .i64
 
 /-- `fn bump(inout n: i64) { n = 5 }`. -/
 private def bump : FnDecl :=
-  ⟨"bump", [], [], [param .inout "n"], .unit, Row.pure, .assign (place "n") (.int 5)⟩
+  ⟨"bump", [], [], [param .inout "n"], .unit, Row.pure, .assign (place "n") (.int 5), {}⟩
 
 /-- After a return, through an element: `var xs = [1, 2]; bump(inout xs[1]);
 raise xs` raises `[1, 5]`. -/
@@ -99,12 +99,12 @@ example : agree (program [bump] (.list .i64)
 
 /-- `fn after(inout slot: i64, n: i64) -> i64 { slot }`. -/
 private def after : FnDecl :=
-  ⟨"after", [], [], [param .inout "slot", param .let "n"], .i64, Row.pure, .var "slot"⟩
+  ⟨"after", [], [], [param .inout "slot", param .let "n"], .i64, Row.pure, .var "slot", {}⟩
 
 /-- `fn set(inout x: i64) -> i64 { x = 9; 0 }`. -/
 private def set : FnDecl :=
   ⟨"set", [], [], [param .inout "x"], .i64, Row.pure,
-    .seq (.assign (place "x") (.int 9)) (.int 0)⟩
+    .seq (.assign (place "x") (.int 9)) (.int 0), {}⟩
 
 /-- A later argument changes the place, and the callee sees the change:
 `var a = 1; raise after(inout a, set(inout a))` raises `9`. -/
@@ -137,7 +137,7 @@ private def pointType : RecordDecl := ⟨"P", [("x", .i64), ("y", .i64)]⟩
 private def swap : FnDecl :=
   ⟨"swap", [], [], [param .inout "a", param .inout "b"], .unit, Row.pure,
     .letIn "t" .i64 (.var "a")
-      (.seq (.assign (place "a") (.var "b")) (.assign (place "b") (.var "t")))⟩
+      (.seq (.assign (place "a") (.var "b")) (.assign (place "b") (.var "t"))), {}⟩
 
 /-- The write-back of two `inout` arguments, from a record literal written in
 another order than its fields are declared: `var p = P { y: 2, x: 1 };
@@ -183,7 +183,7 @@ example : agree (program [] .i64
 /-- `fn keep(inout a: i64, n: i64) -> i64 { a = 5; n }`. -/
 private def keep : FnDecl :=
   ⟨"keep", [], [], [param .inout "a", param .let "n"], .i64, Row.pure,
-    .seq (.assign (place "a") (.int 5)) (.var "n")⟩
+    .seq (.assign (place "a") (.int 5)) (.var "n"), {}⟩
 
 /-- `keep(inout a, a)` passes the value `a` had before the call: `var a = 1;
 raise [keep(inout a, a), a]` raises `[1, 5]`. -/
@@ -209,22 +209,22 @@ copy of the receiver, rebound with `var` (modes.what-can-be-modified). -/
 private def bumped : FnDecl :=
   ⟨"bumped", [], [], [param .let selfName (.record "Counter")], .record "Counter", Row.pure,
     .varIn "c" (.record "Counter") (.var selfName)
-      (.seq (.assign (place "c" [.field "n"]) (.int 5)) (.var "c"))⟩
+      (.seq (.assign (place "c" [.field "n"]) (.int 5)) (.var "c")), {}⟩
 
 /-- `fn add(inout self) / raise<i64> { self.n = 7; raise 1 }`. -/
 private def add : FnDecl :=
   ⟨"add", [], [], [param .inout selfName (.record "Counter")], .unit, ⟨false, some .i64, [], [], none⟩,
-    .seq (.assign (this [.field "n"]) (.int 7)) (.raise (.int 1))⟩
+    .seq (.assign (this [.field "n"]) (.int 7)) (.raise (.int 1)), {}⟩
 
 /-- `fn get(inout self, n: i64) -> i64 { self.n }`. -/
 private def get : FnDecl :=
   ⟨"get", [], [], [param .inout selfName (.record "Counter"), param .let "n"], .i64, Row.pure,
-    .field (.var selfName) "n"⟩
+    .field (.var selfName) "n", {}⟩
 
 /-- `fn reset(inout self) -> i64 { self.n = 9; 0 }`. -/
 private def reset : FnDecl :=
   ⟨"reset", [], [], [param .inout selfName (.record "Counter")], .i64, Row.pure,
-    .seq (.assign (this [.field "n"]) (.int 9)) (.int 0)⟩
+    .seq (.assign (this [.field "n"]) (.int 9)) (.int 0), {}⟩
 
 /-- `fn swap(inout self, inout other: Counter) { let t = self; self = other;
 other = t }`. -/
@@ -233,7 +233,7 @@ private def swapWith : FnDecl :=
     [param .inout selfName (.record "Counter"), param .inout "other" (.record "Counter")],
     .unit, Row.pure,
     .letIn "t" (.record "Counter") (.var selfName)
-      (.seq (.assign (this) (.var "other")) (.assign (place "other") (.var "t")))⟩
+      (.seq (.assign (this) (.var "other")) (.assign (place "other") (.var "t"))), {}⟩
 
 /-- `impl Counter { … }`. -/
 private def counterImpl : ImplDecl := ⟨"Counter", [bumped, add, get, reset, swapWith]⟩

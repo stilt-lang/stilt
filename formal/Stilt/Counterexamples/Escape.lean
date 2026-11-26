@@ -42,7 +42,7 @@ abbrev gRow : Row := ⟨false, none, ["g'"], [], none⟩
 own row is `{g'}`. -/
 def keep : FnDecl :=
   ⟨"keep", [], ["g'"], [⟨.let, "g", .fn [] .unit gRow, some "g'"⟩], .fn [] .unit Row.pure, gRow,
-    .var "g"⟩
+    .var "g", {}⟩
 
 /-- `try keep(|| raise true) catch _ => || ()`, which instantiates `g'` with
 `raise<bool>`. -/
@@ -57,7 +57,7 @@ whose row is pure. -/
 def escaped : Program :=
   ⟨⟨[], [], [keep], [], [], [], []⟩,
     .letIn "h" (.fn [] .unit Row.pure) keepRaisingBool (.call (.var "h") [] .unit),
-    Row.pure⟩
+    Row.pure, {}⟩
 
 /-! ## The checker needs the no-escape rule -/
 
