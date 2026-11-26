@@ -357,6 +357,16 @@ import Stilt.OneShot.Runs
 import Stilt.OneShot.Calls
 import Stilt.OneShot.Theorem
 import Stilt.Examples.OneShot
+import Stilt.Locks.Syntax
+import Stilt.Locks.Instances
+import Stilt.Locks.Values
+import Stilt.Locks.Outcomes
+import Stilt.Locks.Handling
+import Stilt.Locks.Steps
+import Stilt.Locks.Runs
+import Stilt.Locks.Calls
+import Stilt.Locks.Theorem
+import Stilt.Examples.Locks
 import Stilt.Shared.Deadlock
 import Stilt.Shared.Fold
 import Stilt.Cycles.Holds

@@ -6,6 +6,7 @@ import Stilt.Windows.Sim
 import Stilt.Windows.Checked
 import Stilt.Parallel.Typed
 import Stilt.OneShot.Theorem
+import Stilt.Locks.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -17,9 +18,9 @@ A program is **accepted** when it is well typed, which takes in mutability
 (modes.what-can-be-modified) and the no-escape check (effects.no-escape), obeys
 the law of exclusivity (modes.law), modifies no source of a view while the view
 lives (views.change-while-viewed) and keeps every view inside its sources' scopes
-(views.escaping), and resumes a continuation at most once on each path
-(handlers.resume-at-most-once). `soundness` says what that gives every run, at every fuel and on
-every input:
+(views.escaping), resumes a continuation at most once on each path
+(handlers.resume-at-most-once), and runs no `when` inside a `when` (shared.locks).
+`soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
   only an error of the type its row allows (`typeSoundness`);
@@ -45,7 +46,10 @@ every input:
   (`parallel_eq_sequential`, par.sequential-meaning and par.panics);
 * the body of an operation of a handler that takes control performs at most one `resume` on
   each path, so no continuation is resumed twice, and `main` performs none
-  (`Program.OneShot.clause`, `Program.OneShot.main`, handlers.resume-at-most-once).
+  (`Program.OneShot.clause`, `Program.OneShot.main`, handlers.resume-at-most-once);
+* a `when`'s block, from a frame whose function values are lock-free, takes no other cell,
+  E0430 having rejected every site of `locks` in it, so a task never waits on a value while it
+  holds one (`Program.Locks.block`, shared.locks and shared.when-order).
 -/
 
 namespace Stilt
@@ -65,6 +69,10 @@ structure Program.Accepted (p : Program) : Prop where
   another in sequence, or in a branch after one that resumed (handlers.resume-at-most-once,
   E0514), and none outside an operation's body. -/
   oneShot : p.OneShot
+  /-- No `when` whose block holds a site of `locks`: a `when`, or a use of a function that has
+  the inferred fact, called or as a value, a closure literal's body included (shared.locks,
+  E0430). -/
+  locks : p.Locks
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
@@ -128,6 +136,17 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
         (Eval.callAs p.decls (Copy.memoryWith w) (eval p.decls (Copy.memoryWith w) fuel) true c
           [.value v] s).OneShot Value.OneShot 1) ∧
       (eval p.decls (Copy.memoryWith w) fuel p.main ([], {})).OneShot Value.OneShot 0
+  /-- shared.locks and shared.when-order: whatever the order of write-back, the block of every
+  `when` of the program, as written or instantiated, run from a frame whose function values
+  are lock-free, holds no cell in any state it reaches that the world it started in didn't, and
+  neither does the rest of a performance, from the world it is resumed in
+  (`Program.Locks.block`). So a task inside a `when` takes no other value before it releases
+  its own, the premise of `Shared.Deadlock.Step`. A call through a function value made by code
+  that locks may still lock (facts.calls-through-function-values). -/
+  locks : ∀ (w : WriteBack) (n : Nat), ∀ b ∈ p.whenBlocks, ∀ (ts : TySubst) (rs : RowSubst)
+      (s : Copy.State), Frame.LockFree p.decls p.decls.locks s.1 →
+      (eval p.decls (Copy.memoryWith w) n ((b.substTys ts).substRows rs) s).TakesNone p.decls
+        p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -144,6 +163,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     p.keepsHeld,
     fun n _ _ _ _ _ _ hf hγ => continuations_stay h.wellTyped.typedDecls n hf hγ,
     fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc,
-    fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩⟩
+    fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
+    fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs⟩
 
 end Stilt

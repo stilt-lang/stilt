@@ -8,7 +8,9 @@ it has still to run, in order, each the list of the values it names, and the
 values it holds, if it is inside a `when`. A task acquires all the values of
 its next `when` in one step, once no task holds any of them, and its next step
 is to release them, since its block runs no `when`. `no_deadlock` proves that a
-system with a task that hasn't ended can always take a step: no deadlock.
+system with a task that hasn't ended can always take a step: no deadlock. That a task
+inside a `when` acquires nothing is, for the core calculus's sequential run, the promise
+`Program.Locks.block`.
 -/
 
 namespace Stilt.Shared.Deadlock
