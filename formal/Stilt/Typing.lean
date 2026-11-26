@@ -179,10 +179,12 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       ExprsFit Γ fx es (List.replicate es.length τ) →
       HasType Γ fx (.list τ es) (.list τ)
   /-- A built-in operation's operands fit the types its signature gives them
-  (values.left-to-right); a function of maps or sets finds keys of key types (std.map-key-bounds). -/
+  (values.left-to-right); a function of maps or sets finds keys of key types (std.map-key-bounds),
+  and the operands' types implement the prelude traits that the operation stands behind
+  (traits.required-traits). -/
   | op {Γ fx o es τs τ} :
       o.Sig τs τ →
-      ExprsFit Γ fx es τs → o.KeysIn D τs τ →
+      ExprsFit Γ fx es τs → o.KeysIn D τs τ → o.BoundsIn D scope τs →
       HasType Γ fx (.op o es) τ
   /-- A view's operands fit `View.all`, `View.of` or `v.view` (views.making-view). -/
   | view {Γ fx es τs τ} :
@@ -227,11 +229,13 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   /-- `Trait.m` at a type that implements the trait, a type parameter through
   a bound included: a function value of the method's type with `Self` that
   type, whose first parameter is the receiver (traits.qualified-calls). A method call
-  through a bound calls it with the receiver first (traits.method-resolution). -/
+  through a bound calls it with the receiver first (traits.method-resolution). The trait is
+  none of `Eq`, `Ord` and `Show`, whose impls the calculus has as operations. -/
   | method {Γ fx Tr t m σ τ} :
       D.trait? Tr = some t →
       t.methods.lookup m = some σ →
       τ.Closed → τ.WellFormed scope → Satisfies D scope τ Tr →
+      PreludeTrait.ofName? Tr = none →
       HasType Γ fx (.method Tr m τ) (σ.substTys [(selfParam, τ)])
   /-- A closure's body sees copies of the variables in scope, which it can't
   modify (expressions.capture), and its effects fit the closure's own row, not the

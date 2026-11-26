@@ -82,17 +82,17 @@ theorem HasType.fnRef_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') 
   rw [heq]
   show HasType D scope' _ _ (.fnRef _ (substTyList s types) rows) _
   rw [substTyList_eq_map]
-  exact .fnRef hd hlen hinst hres (heq ▸ hs.wellFormed hwf) (hs.passesOn hpass) (hs.typeArgs htys)
+  exact .fnRef hd hlen hinst hres (heq ▸ hs.wellFormed hwf) (hs.passesOn hpass) (hs.typeArgs hD htys)
 
 /-- `Trait.m` at a type, instantiated. -/
 theorem HasType.method_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {Γ : Ctx}
     {fx : Effects} {Tr m : Name} {t : TraitDecl} {σ τ : Ty} (ht : D.trait? Tr = some t)
     (hm : t.methods.lookup m = some σ) (hc : τ.Closed) (hwf : τ.WellFormed scope)
-    (hsat : Satisfies D scope τ Tr) :
+    (hsat : Satisfies D scope τ Tr) (hp : PreludeTrait.ofName? Tr = none) :
     HasType D scope' (Γ.substTys s) fx ((Expr.method Tr m τ).substTys s)
       ((σ.substTys [(selfParam, τ)]).substTys s) := by
   rw [methodType_substTys hD ht hm s]
-  exact .method ht hm (hc.substTys hs.ground) (hs.wellFormed hwf) (hs.satisfies hsat)
+  exact .method ht hm (hc.substTys hs.ground) (hs.wellFormed hwf) (hs.satisfies hD hsat) hp
 
 /-- A closure literal, instantiated, from its instantiated body. -/
 theorem HasType.closure_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : Effects}
@@ -229,8 +229,9 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
   | _, _, _, _, .variant hT hlen hwf hC hp, hfx =>
     HasType.variant_substTys hD hs hT hlen hwf hC (ExprsFit.substTys hD hs hp hfx)
   | _, _, _, _, .list hwf hes, hfx => HasType.list_substTys hs hwf (ExprsFit.substTys hD hs hes hfx)
-  | _, _, _, _, .op ho hes hk, hfx =>
+  | _, _, _, _, .op ho hes hk hb, hfx =>
     .op (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx) (hk.substTys ho s)
+      (hb.substTys hD hs ho)
   | _, _, _, _, .view ho hes, hfx => .view (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx)
   | _, _, _, _, .field he hR hlen hf, hfx =>
     HasType.field_substTys hD (HasType.substTys hD hs he hfx) hR hlen hf
@@ -239,7 +240,7 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     .index (HasType.substTys hD hs he hfx) (HasType.substTys hD hs hi hfx) (hfit.substTys s)
   | _, _, _, _, .fnRef hd hlen hinst hres hwf hpass htys, _ =>
     HasType.fnRef_substTys hD hs hd hlen hinst hres hwf hpass htys
-  | _, _, _, _, .method ht hm hc hwf hsat, _ => HasType.method_substTys hD hs ht hm hc hwf hsat
+  | _, _, _, _, .method ht hm hc hwf hsat hp, _ => HasType.method_substTys hD hs ht hm hc hwf hsat hp
   | _, _, _, _, .closure (ρ := ρ) hnd hpt hwf hb hfit, _ => by
     have h := HasType.substTys hD hs hb (hwf.2.2.1 ρ (by simp [Ty.rows, Row.mem_rows_self]))
     rw [Ctx.params_substTys, Ctx.freeze_substTys] at h
@@ -424,7 +425,9 @@ theorem TypeArgsFit.fits (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) {sc
     rcases hb B hB with ⟨q, hq, _⟩ | hi
     · rw [hscope] at hq
       exact nomatch hq
-    · exact .inr hi
+    · exact .inr (hi.imp id fun ⟨t, ht, h⟩ => ⟨t, ht, h.of_types fun q hq => by
+        rw [hscope] at hq
+        exact nomatch hq⟩)
 
 /-- Closed type arguments have no row variable for an instantiation to replace. -/
 theorem TypeArgsFit.substRows {scope : RowScope} {ps : List TypeParam} {τs : List Ty}

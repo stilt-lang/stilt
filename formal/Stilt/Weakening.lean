@@ -59,13 +59,13 @@ theorem HasType.weaken (Δ : Ctx) :
   | _, _, _, _, .record hr hl hw hperm hfs => .record hr hl hw hperm (FieldsFit.weaken Δ hfs)
   | _, _, _, _, .variant ht hl hw hc hes => .variant ht hl hw hc (ExprsFit.weaken Δ hes)
   | _, _, _, _, .list hwf hes => .list hwf (ExprsFit.weaken Δ hes)
-  | _, _, _, _, .op ho hes hk => .op ho (ExprsFit.weaken Δ hes) hk
+  | _, _, _, _, .op ho hes hk hb => .op ho (ExprsFit.weaken Δ hes) hk hb
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.weaken Δ hes)
   | _, _, _, _, .field he hr hl hf => .field (HasType.weaken Δ he) hr hl hf
   | _, _, _, _, .elem he hf => .elem (HasType.weaken Δ he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.weaken Δ he) (HasType.weaken Δ hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
-  | _, _, _, _, .method ht hm hc hwf hsat => .method ht hm hc hwf hsat
+  | _, _, _, _, .method ht hm hc hwf hsat hp => .method ht hm hc hwf hsat hp
   | _, _, _, _, .closure hnd hpt hwf hb hfit =>
     .closure hnd hpt hwf
       (by rw [Ctx.freeze_append, Ctx.params_append]; exact HasType.weaken Δ.freeze hb) hfit
@@ -166,7 +166,8 @@ theorem HandlerFits.of_le {fx : Effects} {eff : EffectDecl} {fields : List (Name
 
 theorem Satisfies.of_le {τ : Ty} {B : Name} (h : Satisfies D s τ B) (hs : s.Le s') :
     Satisfies D s' τ B :=
-  h.imp (fun ⟨p, hp, h⟩ => ⟨p, hs.types p hp, h⟩) id
+  h.imp (fun ⟨p, hp, h⟩ => ⟨p, hs.types p hp, h⟩)
+    (Or.imp id fun ⟨t, ht, hi⟩ => ⟨t, ht, hi.of_types hs.types⟩)
 
 theorem TypeArgsFit.of_le {ps : List TypeParam} {τs : List Ty} (h : TypeArgsFit D s ps τs)
     (hs : s.Le s') : TypeArgsFit D s' ps τs := by
@@ -192,14 +193,14 @@ theorem HasType.of_le (hs : s.Le s') :
   | _, _, _, _, .record hr hl hw hperm hfs => .record hr hl (fun τ h => (hw τ h).of_le hs) hperm (FieldsFit.of_le hs hfs)
   | _, _, _, _, .variant ht hl hw hc hes => .variant ht hl (fun τ h => (hw τ h).of_le hs) hc (ExprsFit.of_le hs hes)
   | _, _, _, _, .list hwf hes => .list (hwf.of_le hs) (ExprsFit.of_le hs hes)
-  | _, _, _, _, .op ho hes hk => .op ho (ExprsFit.of_le hs hes) hk
+  | _, _, _, _, .op ho hes hk hb => .op ho (ExprsFit.of_le hs hes) hk (hb.of_types hs.types)
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.of_le hs hes)
   | _, _, _, _, .field he hr hl hf => .field (HasType.of_le hs he) hr hl hf
   | _, _, _, _, .elem he hf => .elem (HasType.of_le hs he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.of_le hs he) (HasType.of_le hs hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys =>
     .fnRef hf hlen hinst hres (hwf.of_le hs) (hpass.of_le hs) (htys.of_le hs)
-  | _, _, _, _, .method ht hm hc hwf hsat => .method ht hm hc (hwf.of_le hs) (hsat.of_le hs)
+  | _, _, _, _, .method ht hm hc hwf hsat hp => .method ht hm hc (hwf.of_le hs) (hsat.of_le hs) hp
   | _, _, _, _, .closure hnd hpt hwf hb hfit =>
     .closure hnd hpt (hwf.of_le hs) (HasType.of_le hs hb) hfit
   | _, _, _, _, .call hf has hcall =>

@@ -38,14 +38,14 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .record hR hlen _ hperm hf, _, hη, θ => record_ok hs hD.wf hη θ hR hlen hperm hf
   | _, _, _, _, .variant hT hlen _ hC hp, _, hη, θ => variant_ok hs hD.wf hη θ hT hlen hC hp
   | _, _, _, _, .list _ hes, _, hη, θ => list_ok hs hη θ hes
-  | _, _, _, _, .op ho hes _, _, hη, θ => op_ok hs hη θ ho hes
+  | _, _, _, _, .op ho hes _ _, _, hη, θ => op_ok hs hη θ ho hes
   | _, _, _, _, .view ho hes, _, hη, θ => view_ok hs hη θ ho hes
   | _, _, _, _, .field he hR _ hf, _, hη, θ => field_ok hs hη θ hD.wf he hR hf
   | _, _, _, _, .elem he hf, _, hη, θ => elem_ok hs hη θ he hf
   | _, _, _, _, .index he hi hfit, _, hη, θ => index_ok hs hη θ he hi hfit
   | _, _, _, _, .fnRef hd hlen hinst hres _ hpass htys, _, hη, θ =>
     fnRef_ok hη θ hD.wf hd hlen hinst hres hpass htys
-  | _, _, _, _, .method ht hm hc _ hsat, _, hη, θ => method_ok hη θ hD.wf ht hm hc hsat
+  | _, _, _, _, .method ht hm hc _ hsat hp, _, hη, θ => method_ok hη θ hD.wf ht hm hc hsat hp
   | _, _, _, _, .closure hnd _ _ hb hfit, _, hη, θ => closure_ok hη θ hnd hb hfit
   | _, _, _, _, .call hc ha hallow, _, hη, θ => apply_ok hs hη θ hD hc ha hallow
   | _, _, _, _, .letIn _ hi hfit hb, _, hη, θ => letIn_ok hs hη θ hi hfit hb

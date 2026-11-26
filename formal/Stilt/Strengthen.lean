@@ -160,14 +160,14 @@ theorem HasType.strengthen :
   | _, _, _, _, .record hr hl hw hp hfs, _, h => .record hr hl hw hp (FieldsFit.strengthen hfs (part h))
   | _, _, _, _, .variant ht hl hw hc hes, _, h => .variant ht hl hw hc (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .list hwf hes, _, h => .list hwf (ExprsFit.strengthen hes (part h))
-  | _, _, _, _, .op ho hes hk, _, h => .op ho (ExprsFit.strengthen hes (part h)) hk
+  | _, _, _, _, .op ho hes hk hb, _, h => .op ho (ExprsFit.strengthen hes (part h)) hk hb
   | _, _, _, _, .view ho hes, _, h => .view ho (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .field he hr hl hf, _, h => .field (HasType.strengthen he (part h)) hr hl hf
   | _, _, _, _, .elem he hf, _, h => .elem (HasType.strengthen he (part h)) hf
   | _, _, _, _, .index he hi hfit, _, h =>
     .index (HasType.strengthen he (part h)) (HasType.strengthen hi (part h)) hfit
   | _, _, _, _, .fnRef hf hl hi hr hwf hp ht, _, _ => .fnRef hf hl hi hr hwf hp ht
-  | _, _, _, _, .method ht hm hc hwf hsat, _, _ => .method ht hm hc hwf hsat
+  | _, _, _, _, .method ht hm hc hwf hsat hp, _, _ => .method ht hm hc hwf hsat hp
   | _, _, _, _, .closure hnd hpt hwf hb hfit, _, h =>
     .closure hnd hpt hwf (HasType.strengthen hb (closure_agree h)) hfit
   | _, _, _, _, .call hf has hcall, _, h =>

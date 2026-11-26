@@ -65,12 +65,15 @@ include hη
 type at that type. -/
 theorem method_ok (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
     (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ) (hc : τ.Closed)
-    (hsat : Satisfies D scope τ Tr) :
+    (hsat : Satisfies D scope τ Tr) (hp : PreludeTrait.ofName? Tr = none) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((σ.substTys [(selfParam, τ)]).close η))
       (eval D Copy.memory (n + 1) ((Expr.method Tr m τ).substRows θ)) := by
-  rcases hsat with ⟨p, hp, _⟩ | ⟨h, hh, hi⟩
+  rcases hsat with ⟨p, hp, _⟩ | ⟨-, h, hh, hi⟩ | ⟨_, ht', _⟩
   · rw [hη.types] at hp
     exact nomatch hp
+  rotate_left
+  · rw [hp] at ht'
+    exact nomatch ht'
   obtain ⟨i, hi⟩ := Option.isSome_iff_exists.1 hi
   obtain ⟨d, hd, htp, hrp, hty⟩ := hD.implFn ht hm hi
   obtain rfl := Ty.eq_of_head? hh

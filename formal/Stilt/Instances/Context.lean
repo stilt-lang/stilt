@@ -100,21 +100,93 @@ theorem TySubst.Fits.wellFormed (hs : s.Fits D scope scope') {τ : Ty} (h : τ.W
     (τ.substTys s).WellFormed scope' :=
   h.substTys hs.ground hs.viewable (fun _ hp => hs.isSome hp) hs.vars
 
-theorem TySubst.Fits.satisfies (hs : s.Fits D scope scope') {τ : Ty} {B : Name}
-    (h : Satisfies D scope τ B) : Satisfies D scope' (τ.substTys s) B := by
-  rcases h with ⟨p, hp, rfl, hB⟩ | ⟨h, hh, hi⟩
+/-- What implementing a prelude trait asks of a type at its outermost type holds of its
+instance, with its components' instances in `S'`, and the types that implement the trait
+where the instance is: a type parameter implements it through a bound, which the type
+the instantiation gives it meets. -/
+theorem Decls.ImplStep.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope')
+    {t : PreludeTrait} {S S' : Ty → Prop} (hS : ∀ σ, S σ → S' (σ.substTys s))
+    (hI : ∀ σ, D.Implements scope' t σ → S' σ) :
+    ∀ {σ : Ty}, D.ImplStep scope t S σ → D.ImplStep scope' t S' (σ.substTys s)
+  | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => trivial
+  | .tuple τs, h => by
+    show ∀ τ ∈ substTyList s τs, S' τ
+    rw [substTyList_eq_map]
+    intro τ' hτ'
+    obtain ⟨τ, hτ, rfl⟩ := List.mem_map.1 hτ'
+    exact hS τ (h τ hτ)
+  | .list τ, h => hS τ h
+  | .record R args, ⟨hn, r, hr, hl, hf⟩ => by
+    show D.ImplStep scope' t S' (.record R (substTyList s args))
+    rw [substTyList_eq_map]
+    refine ⟨hn, r, hr, by rw [List.length_map]; exact hl, fun f hf' => ?_⟩
+    rw [← RecordDecl.fieldsAt_substTys
+      (hD.paramsDeclared.fields r (List.mem_of_find?_eq_some hr)) hl s] at hf'
+    obtain ⟨g, hg, rfl⟩ := List.mem_map.1 hf'
+    exact hS _ (hf g hg)
+  | .variant T args, ⟨hn, v, hv, hl, hc⟩ => by
+    show D.ImplStep scope' t S' (.variant T (substTyList s args))
+    rw [substTyList_eq_map]
+    refine ⟨hn, v, hv, by rw [List.length_map]; exact hl, fun c hc' τ' hτ' => ?_⟩
+    rw [← VariantDecl.ctorsAt_substTys
+      (hD.paramsDeclared.payloads v (List.mem_of_find?_eq_some hv)) hl s] at hc'
+    obtain ⟨c₀, hc₀, rfl⟩ := List.mem_map.1 hc'
+    obtain ⟨τ, hτ, rfl⟩ := List.mem_map.1 hτ'
+    exact hS _ (hc c₀ hc₀ τ hτ)
+  | .map κ υ, h => by
+    show D.ImplStep scope' t S' (.map (κ.substTys s) (υ.substTys s))
+    cases t with
+    | eq => rw [h.1.substTys s]; exact ⟨h.1, h.2.1, hS υ h.2.2⟩
+    | ord => exact h.elim
+    | «show» => exact ⟨hS κ h.1, hS υ h.2⟩
+  | .set κ, h => by
+    show D.ImplStep scope' t S' (.set (κ.substTys s))
+    cases t with
+    | eq => rw [h.1.substTys s]; exact h
+    | ord => exact h.elim
+    | «show» => exact hS κ h
+  | .param _, ⟨q, hq, hp, hB⟩ => by
+    subst hp
+    obtain ⟨σ, hl, hσ⟩ := hs.covers q hq
+    show D.ImplStep scope' t S' ((s.lookup q.name).getD (.param q.name))
+    rw [hl, Option.getD_some]
+    rcases hσ t.name hB with ⟨r, hr, rfl, hrB⟩ | ⟨hn, _⟩ | ⟨t', ht', hi⟩
+    · exact ⟨r, hr, rfl, hrB⟩
+    · rw [PreludeTrait.ofName?_name] at hn
+      cases hn
+    · rw [PreludeTrait.ofName?_name] at ht'
+      cases ht'
+      exact hi.step.mono hI
+  | .fn .., h | .view _, h | .shared _, h => h.elim
+
+/-- An instance of a type that implements a prelude trait implements it where the
+instance is (traits.unsatisfied-bounds). -/
+theorem Decls.Implements.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope')
+    {t : PreludeTrait} {τ : Ty} (h : D.Implements scope t τ) :
+    D.Implements scope' t (τ.substTys s) := by
+  obtain ⟨S, hτ, hS⟩ := h
+  refine ⟨fun σ' => (∃ σ, S σ ∧ σ' = σ.substTys s) ∨ D.Implements scope' t σ',
+    .inl ⟨τ, hτ, rfl⟩, ?_⟩
+  rintro σ' (⟨σ, hσ, rfl⟩ | hi)
+  · exact (hS σ hσ).substTys hD hs (fun σ hσ => .inl ⟨σ, hσ, rfl⟩) fun _ h => .inr h
+  · exact hi.step.mono fun _ h => .inr h
+
+theorem TySubst.Fits.satisfies (hD : D.WellFormed) (hs : s.Fits D scope scope') {τ : Ty}
+    {B : Name} (h : Satisfies D scope τ B) : Satisfies D scope' (τ.substTys s) B := by
+  rcases h with ⟨p, hp, rfl, hB⟩ | ⟨hn, h, hh, hi⟩ | ⟨t, ht, hi⟩
   · obtain ⟨σ, hl, hσ⟩ := hs.covers p hp
     simpa [Ty.substTys, hl] using hσ B hB
   · rw [Ty.eq_of_head? hh, Head.substTys_type]
-    exact .inr ⟨h, by rw [← Ty.eq_of_head? hh]; exact hh, hi⟩
+    exact .inr (.inl ⟨hn, h, by rw [← Ty.eq_of_head? hh]; exact hh, hi⟩)
+  · exact .inr (.inr ⟨t, ht, hi.substTys hD hs⟩)
 
-theorem TySubst.Fits.typeArgs (hs : s.Fits D scope scope') {ps : List TypeParam} {τs : List Ty}
+theorem TySubst.Fits.typeArgs (hD : D.WellFormed) (hs : s.Fits D scope scope') {ps : List TypeParam} {τs : List Ty}
     (h : TypeArgsFit D scope ps τs) : TypeArgsFit D scope' ps (τs.map (Ty.substTys s)) := by
   unfold TypeArgsFit at h ⊢
   induction h with
   | nil => exact .nil
   | cons hx _ ih =>
-    exact .cons ⟨hx.1.substTys hs.ground, hs.wellFormed hx.2.1, fun B hB => hs.satisfies (hx.2.2 B hB)⟩ ih
+    exact .cons ⟨hx.1.substTys hs.ground, hs.wellFormed hx.2.1, fun B hB => hs.satisfies hD (hx.2.2 B hB)⟩ ih
 
 theorem TySubst.Fits.callAllowed (hs : s.Fits D scope scope') {fx : Effects} {σ : Row}
     (h : CallAllowed scope fx σ) : CallAllowed scope' fx σ :=
@@ -237,6 +309,31 @@ theorem Op.KeysIn.substTys {D : Decls} {o : Op} {τs : List Ty} {τ : Ty} (hk : 
     cases h <;> rename_i hk' <;>
       simpa [Op.KeysIn, Op.keyTypes, Op.substTys, Ty.substTys, hk'.substTys] using hk
   | _ => intro κ hκ; simp [Op.keyTypes, Op.substTys] at hκ
+
+/-- An instance of an operation needs its traits of the instances of its operands' types,
+which implement them where the instance is. -/
+theorem Op.BoundsIn.substTys {D : Decls} {scope scope' : RowScope} {s : TySubst} {o : Op}
+    {τs : List Ty} {τ : Ty} (hD : D.WellFormed)
+    (hs : s.Fits D scope scope') (h : Op.Sig o τs τ) (hb : o.BoundsIn D scope τs) :
+    (o.substTys s).BoundsIn D scope' (τs.map (Ty.substTys s)) := by
+  cases h with
+  | structural =>
+    intro p hp
+    simp only [Op.substTys, List.map, Op.traitsNeeded, List.mem_singleton] at hp
+    subst hp
+    exact (hb _ List.mem_cons_self).substTys hD hs
+  | showValue =>
+    intro p hp
+    simp only [Op.substTys, List.map, Op.traitsNeeded, List.mem_singleton] at hp
+    subst hp
+    exact (hb _ List.mem_cons_self).substTys hD hs
+  | sortedByKey =>
+    intro p hp
+    simp only [Op.substTys, List.map, Ty.substTys, Op.traitsNeeded, List.mem_singleton] at hp
+    subst hp
+    exact (hb _ List.mem_cons_self).substTys hD hs
+  | world h => exact Op.boundsIn_of_nil (by cases h <;> rfl)
+  | _ => exact Op.boundsIn_of_nil rfl
 
 /-- A place with its indexes' types instantiated. -/
 def Place.substTys (s : TySubst) (p : Place) : Place := ⟨p.root, substPathTys s p.path⟩

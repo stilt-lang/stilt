@@ -59,7 +59,7 @@ theorem Lenient.HasType.strict :
     .record hr hl hw hperm (Lenient.FieldsFit.strict hfs hne)
   | _, _, _, _, _, _, .variant ht hl hw hc hes, hne => .variant ht hl hw hc (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .list hwf hes, hne => .list hwf (Lenient.ExprsFit.strict hes hne)
-  | _, _, _, _, _, _, .op ho hes hk, hne => .op ho (Lenient.ExprsFit.strict hes hne) hk
+  | _, _, _, _, _, _, .op ho hes hk hb, hne => .op ho (Lenient.ExprsFit.strict hes hne) hk hb
   | _, _, _, _, _, _, .view ho hes, hne => .view ho (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .field he hr hl hf, hne => .field (Lenient.HasType.strict he hne) hr hl hf
   | _, _, _, _, _, _, .elem he hf, hne => .elem (Lenient.HasType.strict he hne) hf
@@ -67,7 +67,7 @@ theorem Lenient.HasType.strict :
     have h := both hne
     .index (Lenient.HasType.strict he h.1) (Lenient.HasType.strict hi h.2) (strictFits hfit h.2)
   | _, _, _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys, _ => .fnRef hf hlen hinst hres hwf hpass htys
-  | _, _, _, _, _, _, .method ht hm hc hwf hsat, _ => .method ht hm hc hwf hsat
+  | _, _, _, _, _, _, .method ht hm hc hwf hsat hp, _ => .method ht hm hc hwf hsat hp
   | _, _, _, _, _, _, .closure hnd hpt hwf hb hfit, hne =>
     have h := (both hne).2
     .closure hnd hpt hwf (Lenient.HasType.strict hb h) (strictFits hfit h)
@@ -207,13 +207,13 @@ theorem HasType.lenient :
   | _, _, _, _, _, .record hr hl hw hperm hfs => .record hr hl hw hperm (FieldsFit.lenient hfs)
   | _, _, _, _, _, .variant ht hl hw hc hes => .variant ht hl hw hc (ExprsFit.lenient hes)
   | _, _, _, _, _, .list hwf hes => .list hwf (ExprsFit.lenient hes)
-  | _, _, _, _, _, .op ho hes hk => .op ho (ExprsFit.lenient hes) hk
+  | _, _, _, _, _, .op ho hes hk hb => .op ho (ExprsFit.lenient hes) hk hb
   | _, _, _, _, _, .view ho hes => .view ho (ExprsFit.lenient hes)
   | _, _, _, _, _, .field he hr hl hf => .field (HasType.lenient he) hr hl hf
   | _, _, _, _, _, .elem he hf => .elem (HasType.lenient he) hf
   | _, _, _, _, _, .index he hi hfit => .index (HasType.lenient he) (HasType.lenient hi) (.inl hfit)
   | _, _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
-  | _, _, _, _, _, .method ht hm hc hwf hsat => .method ht hm hc hwf hsat
+  | _, _, _, _, _, .method ht hm hc hwf hsat hp => .method ht hm hc hwf hsat hp
   | _, _, _, _, _, .closure hnd hpt hwf hb hfit =>
     .closure hnd hpt hwf (HasType.lenient hb) (.inl hfit)
   | _, _, _, _, _, .call hc ha hall => .call (HasType.lenient hc) (ArgsFit.lenient ha) hall

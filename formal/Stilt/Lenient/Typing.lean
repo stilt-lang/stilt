@@ -91,7 +91,7 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
   | op {N Γ fx o es τs τ} :
       o.Sig τs τ →
       ExprsFit N Γ fx es τs →
-      o.KeysIn D τs τ →
+      o.KeysIn D τs τ → o.BoundsIn D scope τs →
       HasType N Γ fx (.op o es) τ
   | view {N Γ fx es τs τ} :
       Op.Sig .view τs τ →
@@ -123,6 +123,7 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       D.trait? Tr = some t →
       t.methods.lookup m = some σ →
       τ.Closed → τ.WellFormed scope → Satisfies D scope τ Tr →
+      PreludeTrait.ofName? Tr = none →
       HasType N Γ fx (.method Tr m τ) (σ.substTys [(selfParam, τ)])
   /-- A closure's parameters hide the parameters of `N` with their names. -/
   | closure {N Γ fx ps result ρ body σ} :

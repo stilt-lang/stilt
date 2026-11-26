@@ -84,12 +84,12 @@ example : twice.WellTyped decls twice.scope := by
   have hm : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (.method "Size" "size" (.param "T")) (.fn [(.let, .param "T")] .i64 Row.pure) :=
     .method (t := size) (m := "size") (σ := .fn [(.let, .param selfParam)] .i64 Row.pure) rfl rfl
-      (param_closed _) hT hsat
+      (param_closed _) hT hsat rfl
   have hcall : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (sizeOf (.param "T") (.var "v")) .i64 :=
     .call hm (.value (by decide) (.var rfl) (.refl _) .nil)
       ⟨Row.pure_within _, fun h => by simp at h, fun h => (nomatch h), rfl⟩
-  exact ⟨.i64, .op .arith (.cons hcall (.refl _) (.cons hcall (.refl _) .nil)) (Op.keysIn_of_nil rfl), .refl _⟩
+  exact ⟨.i64, .op .arith (.cons hcall (.refl _) (.cons hcall (.refl _) .nil)) (Op.keysIn_of_nil rfl) (Op.boundsIn_of_nil rfl), .refl _⟩
 
 /-- `twice(true)` has no type: `bool` has no impl of `Size`, so the bound is
 unsatisfied (traits.unsatisfied-bounds). -/
@@ -101,18 +101,20 @@ example (s : RowScope) (Γ : Ctx) (fx : Effects) (τ : Ty) :
     obtain rfl : twice = _ := Option.some.inj (Eq.trans rfl hd)
     cases htys with
     | cons hx _ =>
-      rcases hx.2.2 "Size" (by simp) with ⟨_, _, h, _⟩ | ⟨_, hh, hi⟩
+      rcases hx.2.2 "Size" (by simp) with ⟨_, _, h, _⟩ | ⟨_, _, hh, hi⟩ | ⟨_, ht, _⟩
       · exact nomatch h
       · cases hh
         exact absurd hi (by decide)
+      · exact nomatch ht
 
 /-- Without a bound, a body knows nothing of `T`: `fn bad<T>(v: T) -> i64 {
 v.size() }` can't call `size` (traits.unsatisfied-bounds). -/
 example : ¬Satisfies decls ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", []⟩]⟩ (.param "T") "Size" := by
-  rintro (⟨p, hp, _, hB⟩ | ⟨_, hh, _⟩)
+  rintro (⟨p, hp, _, hB⟩ | ⟨_, _, hh, _⟩ | ⟨_, ht, _⟩)
   · simp only [List.mem_singleton] at hp
     subst hp
     exact nomatch hB
   · exact nomatch hh
+  · exact nomatch ht
 
 end Stilt.Examples.Generics

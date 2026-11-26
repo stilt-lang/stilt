@@ -69,7 +69,7 @@ example : HasType ⟨[], [], [], [], [], [], []⟩ RowScope.closed [] ⟨Row.pur
   have hwf : Ty.i64.WellFormed RowScope.closed :=
     ⟨fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.params] at h,
       fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.views] at h⟩
-  refine .op .copy (.cons (.view (.viewAll rfl) (.cons ?_ (.refl _) .nil)) (.refl _) .nil) (Op.keysIn_of_nil rfl)
+  refine .op .copy (.cons (.view (.viewAll rfl) (.cons ?_ (.refl _) .nil)) (.refl _) .nil) (Op.keysIn_of_nil rfl) (Op.boundsIn_of_nil rfl)
   exact .list hwf (.cons (.int (by decide)) (.refl _) .nil)
 
 /-- Only `str` and lists are viewable: `View.all(1)` has no type (views.viewable-types,

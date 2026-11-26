@@ -94,7 +94,7 @@ theorem HasType.erase_eq : ∀ {Γ fx e τ}, HasType D s Γ fx e τ → e.erase 
   | _, _, _, _, .fnRef .. | _, _, _, _, .method .. | _, _, _, _, .break _
   | _, _, _, _, .continue _ => rfl
   | _, _, _, _, .record _ _ _ _ h => by simp [Expr.erase, FieldsFit.erase_eq h]
-  | _, _, _, _, .variant _ _ _ _ h | _, _, _, _, .list _ h | _, _, _, _, .op _ h _
+  | _, _, _, _, .variant _ _ _ _ h | _, _, _, _, .list _ h | _, _, _, _, .op _ h _ _
   | _, _, _, _, .view _ h => by
     simp [Expr.erase, ExprsFit.erase_eq h]
   | _, _, _, _, .field h _ _ _ | _, _, _, _, .elem h _ | _, _, _, _, .raise _ h _

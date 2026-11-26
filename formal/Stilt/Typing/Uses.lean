@@ -1,5 +1,4 @@
-import Stilt.Generics
-import Stilt.Ops
+import Stilt.Typing.Bounds
 
 /-!
 # Uses of generic functions
@@ -33,13 +32,17 @@ def PassesOnPairs (scope : RowScope) (d : FnDecl) (s : RowSubst) : Prop :=
   ∀ v E ρ r, d.pairs v E → s.lookup v = some ρ → r ∈ ρ.vars →
     scope.passOn r (E.substRows s)
 
-/-- `τ` implements the trait `B`, as far as a body whose type parameters
-`scope` describes knows: a type parameter through its bounds, which are all
-the body knows of it, and a type with a head through the program's impl of `B`
-for that head (traits.unsatisfied-bounds and traits.implementing-trait). -/
+/-- `τ` implements the trait `B`, as far as a body whose type parameters `scope` describes
+knows: a type parameter through its bounds, which are all the body knows of it; a type
+with a head through the program's impl of `B` for that head (traits.unsatisfied-bounds and
+traits.implementing-trait); and for `Eq`, `Ord` and `Show`, a type that implements them
+through the built-in and structural impls, which the calculus's operations compute
+(traits.built-in-impls and traits.structural-impls). The model leaves out the impls of
+`Eq`, `Ord` and `Show` that a program writes. -/
 def Satisfies (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) : Prop :=
   (∃ p ∈ scope.types, τ = .param p.name ∧ B ∈ p.bounds) ∨
-    ∃ h, τ.head? = some h ∧ (D.traitImpl? B h).isSome
+    (PreludeTrait.ofName? B = none ∧ ∃ h, τ.head? = some h ∧ (D.traitImpl? B h).isSome) ∨
+    ∃ t, PreludeTrait.ofName? B = some t ∧ D.Implements scope t τ
 
 /-- The type arguments of a use of a function, one for each of its type
 parameters: closed, well formed where the use is, and meeting the parameter's
