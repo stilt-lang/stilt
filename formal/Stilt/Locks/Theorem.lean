@@ -53,7 +53,7 @@ theorem eval_takesNone {D : Decls} {L : List Name} (hD : D.LocksClosed L) (w : W
       simp only [Bool.not_eq_true'] at he
       exact method τ he
     case closure ps result ρ body =>
-      exact bind (capture w) (fun _ hc => pure (.closure he (captureOf_forall hc)))
+      exact bind (capture w _) (fun _ hc => pure (.closure he hc))
     case call callee as _ =>
       exact bind (ih callee he.1) (fun _ hf => bind (args ih as he.2)
         (fun _ hp => callAs w hD ih false hf hp))

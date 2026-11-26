@@ -159,10 +159,10 @@ theorem read (x : Name) :
       (Eval.inspect fun s => (Copy.memoryWith w).read s x []) :=
   inspect fun _ _ hs h => Frame.LockFree.read hs h
 
-theorem capture :
+theorem capture (keep : Name → Bool) :
     Eval.TakesNone D L (fun c : List (Name × Value) => ∀ xv ∈ c, xv.2.LockFree D L)
-      (Eval.inspect (Copy.memoryWith w).capture) :=
-  inspect fun _ _ hs h => by cases h; exact hs
+      (Eval.inspect ((Copy.memoryWith w).capture · keep)) :=
+  inspect fun _ _ hs h => by cases h; exact fun xv hxv => hs xv (mem_of_mem_newestOf hxv)
 
 /-- `with h { block }` lets go of the cells its dropped rests hold. -/
 theorem letGo {m : Eval Copy.State α} (hm : Eval.TakesNone D L P m) :
