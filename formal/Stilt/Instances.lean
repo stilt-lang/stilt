@@ -260,6 +260,11 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
       (Ctx.holding_substTys s ns _ ▸ HasType.substTys hD hs hb hfx) (substExprTys_vars s hv)
     obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
     exact hs.wellFormed (hwf q hq)
+  | _, _, _, _, .letElse hr hx hm, hfx =>
+    .letElse hr (HasType.substTys hD hs hx hfx) (HasType.substTys hD hs hm hfx)
+  | _, _, _, _, .orElse ho h₁ h₂ hf hm, hfx =>
+    .orElse ho (HasType.substTys hD hs h₁ hfx) (HasType.substTys hD hs h₂ hfx) (hf.substTys s)
+      (HasType.substTys hD hs hm hfx)
   | _, _, _, _, .assign hp he hfit, hfx =>
     HasType.assign_substTys (PlaceFits.substTys hD hs hp hfx) (HasType.substTys hD hs he hfx) hfit
   | _, _, _, _, .seq ha hfit hb, hfx =>

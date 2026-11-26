@@ -1,5 +1,6 @@
 import Stilt.Soundness.Methods
 import Stilt.Strengthen
+import Stilt.Else
 
 /-!
 # The forms of expressions
@@ -195,6 +196,14 @@ theorem try_ok {e : Expr} {τ : Ty} (he : HasType D scope Γ { fx with marked :=
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
       (eval D Copy.memory (n + 1) ((Expr.try e).substRows θ)) :=
   hs he hη θ
+
+/-- A let-else and an `Option` fallback end soundly when the `match` each means does, which
+they run as (`eval_form`). -/
+theorem form_ok {k : Form} {m : Expr} {τ : Ty} (hm : HasType D scope Γ fx m τ) :
+    Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
+      (eval D Copy.memory (n + 1) ((Expr.form k m).substRows θ)) := by
+  rw [Expr.substRows, eval_form]
+  exact hs hm hη θ
 
 end
 

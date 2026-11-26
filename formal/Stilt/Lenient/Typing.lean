@@ -238,6 +238,16 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       HasType (N.removeAll (ns.map Prod.fst)) (Γ.holding ns) fx body σ →
       (∀ h ∈ hs, ∃ x, h = .var x) →
       HasType N Γ fx (.held ns hs body) σ
+  | letElse {N Γ fx e τ p bs rest x} :
+      ¬ p.Irrefutable D → HasType N Γ fx x .never →
+      HasType N Γ fx (.match e τ [⟨p, bs, rest⟩, ⟨.wild, [], x⟩]) τ →
+      HasType N Γ fx (.form .letElse (.match e τ [⟨p, bs, rest⟩, ⟨.wild, [], x⟩])) τ
+  | orElse {N Γ fx e₁ T τ v e₂ σ} :
+      D.IsOption T → HasType N Γ fx e₁ (.variant T [τ]) → HasType N Γ fx e₂ σ →
+      LenientFits vs N e₂ σ τ →
+      HasType N Γ fx (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], .var v⟩, ⟨.wild, [], e₂⟩]) τ →
+      HasType N Γ fx
+        (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], .var v⟩, ⟨.wild, [], e₂⟩])) τ
 
 /-- Each expression is checked against the type at its position. -/
 inductive ExprsFit : List Name → Ctx → Effects → List Expr → List Ty → Prop

@@ -76,6 +76,9 @@ theorem HasType.weaken (Δ : Ctx) :
     .varIn hwf (HasType.weaken Δ he) hfit (HasType.weaken Δ hb)
   | _, _, _, _, .held (ns := ns) hnd hwf hes hb hv =>
     .held hnd hwf (ExprsFit.weaken Δ hes) (Ctx.holding_append Δ ns _ ▸ HasType.weaken Δ hb) hv
+  | _, _, _, _, .letElse hr hx hm => .letElse hr (HasType.weaken Δ hx) (HasType.weaken Δ hm)
+  | _, _, _, _, .orElse ho h₁ h₂ hf hm =>
+    .orElse ho (HasType.weaken Δ h₁) (HasType.weaken Δ h₂) hf (HasType.weaken Δ hm)
   | _, _, _, _, .assign hp he hfit => .assign (PlaceFits.weaken Δ hp) (HasType.weaken Δ he) hfit
   | _, _, _, _, .seq ha hfit hb => .seq (HasType.weaken Δ ha) hfit (HasType.weaken Δ hb)
   | _, _, _, _, .if hwf hc hfc ha hfa hb hfb =>
@@ -211,6 +214,9 @@ theorem HasType.of_le (hs : s.Le s') :
     .varIn (hwf.of_le hs) (HasType.of_le hs he) hfit (HasType.of_le hs hb)
   | _, _, _, _, .held hnd hwf hes hb hv =>
     .held hnd (fun p hp => (hwf p hp).of_le hs) (ExprsFit.of_le hs hes) (HasType.of_le hs hb) hv
+  | _, _, _, _, .letElse hr hx hm => .letElse hr (HasType.of_le hs hx) (HasType.of_le hs hm)
+  | _, _, _, _, .orElse ho h₁ h₂ hf hm =>
+    .orElse ho (HasType.of_le hs h₁) (HasType.of_le hs h₂) hf (HasType.of_le hs hm)
   | _, _, _, _, .assign hp he hfit => .assign (PlaceFits.of_le hs hp) (HasType.of_le hs he) hfit
   | _, _, _, _, .seq ha hfit hb => .seq (HasType.of_le hs ha) hfit (HasType.of_le hs hb)
   | _, _, _, _, .if hwf hc hfc ha hfa hb hfb =>

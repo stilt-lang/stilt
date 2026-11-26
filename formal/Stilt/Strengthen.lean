@@ -180,6 +180,11 @@ theorem HasType.strengthen :
     .held hnd hwf (ExprsFit.strengthen hes (part h)) (HasType.strengthen hb
       (Ctx.agree_holding _ (P := fun z => _ = true) fun z hz hv => h z (by simp [Expr.free, hz, hv])))
       hvar
+  | _, _, _, _, .letElse hr hx hm, _, h =>
+    .letElse hr (HasType.strengthen hx (part h)) (HasType.strengthen hm (part h))
+  | _, _, _, _, .orElse ho h₁ h₂ hf hm, _, h =>
+    .orElse ho (HasType.strengthen h₁ (part h)) (HasType.strengthen h₂ (part h)) hf
+      (HasType.strengthen hm (part h))
   | _, _, _, _, .assign (p := ⟨_, _⟩) hp he hfit, _, h =>
     .assign (PlaceFits.strengthen hp (assign_agree h)) (HasType.strengthen he (part h)) hfit
   | _, _, _, _, .seq ha hfit hb, _, h =>

@@ -71,6 +71,8 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .withControl hne heff hh hr hfits hb hfit _ _, _, hη, θ =>
     withControl_ok hs hη θ hD hne heff hh hr hfits hb hfit
   | _, _, _, _, .held hnd _ hes hb _, _, hη, θ => held_ok hs hη θ hnd hes hb
+  | _, _, _, _, .letElse _ _ hm, _, hη, θ | _, _, _, _, .orElse _ _ _ _ hm, _, hη, θ =>
+    form_ok hs hη θ hm
 
 /-- The fundamental lemma, at every fuel. -/
 theorem Decls.Typed.sound (hD : D.Typed) : ∀ n, Sound D n

@@ -115,6 +115,7 @@ theorem HasType.distinctParams :
     simp [Expr.distinctParams, HasType.distinctParams he, HasType.distinctParams hb]
   | _, _, _, _, .held _ _ hes hb _ => by
     simp [Expr.distinctParams, ExprsFit.distinctParams hes, HasType.distinctParams hb]
+  | _, _, _, _, .letElse _ _ hm | _, _, _, _, .orElse _ _ _ _ hm => by simpa [Expr.distinctParams] using HasType.distinctParams hm
   | _, _, .assign ⟨_, _⟩ _, _, .assign hp he _ => by
     simp [Expr.distinctParams, PlaceFits.distinctParams hp, HasType.distinctParams he]
   | _, _, _, _, .seq ha _ hb => by

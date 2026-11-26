@@ -120,7 +120,8 @@ theorem HasType.not_move {D : Decls} {scope : RowScope} :
   | _, _, _, _, .while .., _ | _, _, _, _, .loopBreaks .., _ | _, _, _, _, .loopForever .., _
   | _, _, _, _, .break .., _ | _, _, _, _, .continue .., _ | _, _, _, _, .return .., _
   | _, _, _, _, .perform .., _ | _, _, _, _, .resume .., _ | _, _, _, _, .withH .., _
-  | _, _, _, _, .withControl .., _ | _, _, _, _, .held .., _ => nofun
+  | _, _, _, _, .withControl .., _ | _, _, _, _, .held .., _ | _, _, _, _, .letElse .., _
+  | _, _, _, _, .orElse .., _ => nofun
 
 theorem Expr.substRows_ne_move {e : Expr} (h : ∀ x, e ≠ .move x) (θ : RowSubst) :
     ∀ x, e.substRows θ ≠ .move x := by
