@@ -53,7 +53,8 @@ pub use assemble::Source;
 pub use header::header;
 pub use hints::Hints;
 
-/// The flags of every release build's C: the optimizer at `-O2`, a
+/// The flags of every release build's C: the optimizer at `-O2`, but for what
+/// [`target_flags`] says, a
 /// freestanding program that includes no system header, signed overflow defined, since the
 /// C's own checks come first, no type-based aliasing, since a word may be read as any type,
 /// no fused multiply and add, which would round once where the reference interpreter rounds twice
@@ -79,14 +80,19 @@ pub const FLAGS: &[&str] = &[
     "-w",
 ];
 
-/// The flags of a target's builds: on aarch64, no merging of neighbouring loads and stores
-/// into pairs, since a load of a pair right after a store to half of it can't take the
-/// store's value and waits for it to reach the cache, which takes nbody from 64 ms to 41 ms
-/// and changes no other program of the benchmark suite by more than 3%.
+/// The flags of a target's builds, after [`FLAGS`]: on aarch64, no merging of neighbouring
+/// loads and stores into pairs, since a load of a pair right after a store to half of it can't
+/// take the store's value and waits for it to reach the cache, which takes nbody from 64 ms to
+/// 41 ms and changes no other program of the benchmark suite by more than 3%. On x86-64, the
+/// optimizer at `-O1`, which the last `-O` makes it: at `-O2`, clang 22's jump threading spends
+/// more than 20 minutes on some large functions for x86-64, as the nightly's generated programs
+/// found, where it takes a second for aarch64, and `-O1` runs no jump threading.
 #[must_use]
 pub fn target_flags(triple: &str) -> &'static [&'static str] {
     if triple.starts_with("arm64") || triple.starts_with("aarch64") {
         &["-mllvm", "-aarch64-enable-ldst-opt=false"]
+    } else if triple.starts_with("x86_64") {
+        &["-O1"]
     } else {
         &[]
     }
