@@ -5,6 +5,7 @@ import Stilt.Held.Run
 import Stilt.Windows.Sim
 import Stilt.Windows.Checked
 import Stilt.Parallel.Typed
+import Stilt.OneShot.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -16,7 +17,8 @@ A program is **accepted** when it is well typed, which takes in mutability
 (modes.what-can-be-modified) and the no-escape check (effects.no-escape), obeys
 the law of exclusivity (modes.law), modifies no source of a view while the view
 lives (views.change-while-viewed) and keeps every view inside its sources' scopes
-(views.escaping). `soundness` says what that gives every run, at every fuel and on
+(views.escaping), and resumes a continuation at most once on each path
+(handlers.resume-at-most-once). `soundness` says what that gives every run, at every fuel and on
 every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -40,7 +42,10 @@ every input:
   task (`continuations_stay`, tasks.continuations-stay-in-task);
 * calls of closures with empty rows run at the same time end as they do run one after
   another, with their values in order or as the first that gives none
-  (`parallel_eq_sequential`, par.sequential-meaning and par.panics).
+  (`parallel_eq_sequential`, par.sequential-meaning and par.panics);
+* the body of an operation of a handler that takes control performs at most one `resume` on
+  each path, so no continuation is resumed twice, and `main` performs none
+  (`Program.OneShot.clause`, `Program.OneShot.main`, handlers.resume-at-most-once).
 -/
 
 namespace Stilt
@@ -56,6 +61,10 @@ structure Program.Accepted (p : Program) : Prop where
   viewsRead : p.ViewsRead
   /-- No view outlives its sources' scopes (views.escaping, E0422). -/
   viewsContained : p.ViewsContained
+  /-- No body may resume twice on a path: no `resume` in a loop, in a closure literal, after
+  another in sequence, or in a branch after one that resumed (handlers.resume-at-most-once,
+  E0514), and none outside an operation's body. -/
+  oneShot : p.OneShot
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
@@ -110,6 +119,15 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
           (eval p.decls Copy.memory n) c.1 (c.2.map .value)) (γ, x) =
         Eval.sequentially (calls.map fun c => Eval.call p.decls Copy.memory
           (eval p.decls Copy.memory n) c.1 (c.2.map .value)) (γ, x)
+  /-- handlers.resume-at-most-once: whatever the order of write-back, the body of an operation
+  of a handler that takes control, called by a `with` on one-shot values from a one-shot state,
+  performs at most one `resume` on each path, so it runs the rest of the block at most once;
+  and `main` performs none (`Program.OneShot.clause`, `Program.OneShot.main`). -/
+  oneShot : ∀ w : WriteBack,
+      (∀ {c v : Value} {s : Copy.State}, c.OneShot → v.OneShot → State.OneShot s →
+        (Eval.callAs p.decls (Copy.memoryWith w) (eval p.decls (Copy.memoryWith w) fuel) true c
+          [.value v] s).OneShot Value.OneShot 1) ∧
+      (eval p.decls (Copy.memoryWith w) fuel p.main ([], {})).OneShot Value.OneShot 0
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -125,6 +143,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     modesAgreement p fuel input h.wellTyped h.exclusive, h.wellTyped.cycles fuel input,
     p.keepsHeld,
     fun n _ _ _ _ _ _ hf hγ => continuations_stay h.wellTyped.typedDecls n hf hγ,
-    fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc⟩
+    fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc,
+    fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩⟩
 
 end Stilt
