@@ -296,17 +296,18 @@ def FnDecl.entryRoles (d : FnDecl) : Descent → Roles
       | .lit _ => []
     | none => []
 
-/-- A ranking of the functions that `lim` covers, with the position `desc f` of each
-function's descending parameter: each body is free of `div`, naming only functions that
-`lim` covers and ranks below it, and calling itself only on a strict part of its descending
-parameter (facts.descending-self-calls). So the functions of one recursive group are one
-function, whose self-calls descend. -/
+/-- A ranking of the functions that `lim` covers, with the way `desc f` that each function's
+self-calls go down: each body is free of `div`, naming only functions that `lim` covers and
+ranks below it, and calling itself only on a strict part of its descending parameter
+(facts.descending-self-calls) or with its counter stepped toward its bound
+(facts.shrinking-recursion), all its self-calls the same way. So the functions of one
+recursive group are one function, whose self-calls all descend or all shrink. -/
 def Decls.Ranked (D : Decls) (lim : Limited) (B : Name → Nat) (desc : Name → Descent) : Prop :=
   ∀ name d, D.fn? name = some d → lim.fn name = true →
     d.body.divFree lim B (some (name, desc name)) (d.entryRoles (desc name)) = true
 
-/-- Every function of the program and `main` hold no site of `div`, and the
-functions call each other without recursion but self-calls that descend (facts.without-div). -/
+/-- Every function of the program and `main` hold no site of `div`, and the functions call
+each other without recursion but self-calls that descend or shrink (facts.without-div). -/
 def Program.DivFree (p : Program) : Prop :=
   ∃ B desc, p.decls.Ranked Limited.all B desc ∧ p.main.divFree Limited.all B none [] = true
 
