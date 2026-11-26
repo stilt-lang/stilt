@@ -2,14 +2,15 @@ import Stilt.Ends.Syntax
 import Stilt.Ends.Counter
 
 /-!
-# Descending calls pass smaller values
+# Self-calls that go down pass smaller measures
 
-What the roles promise of a run, in copy-in, copy-out, whatever its order of write-back. A
-call starts with its descending parameter holding the value its argument passed
-(`enter_lookup`); code keeps every variable it doesn't write, so a variable keeps its role's
-bound (`Roles.Inv.after`); an expression with a role gives a value that its role bounds
+What the roles promise of a run, in copy-in, copy-out, whatever its order of write-back.
+Code keeps every variable it doesn't write, so a variable keeps what its role says of it
+(`Roles.Inv.after`); an expression with a role gives a value that its role describes
 (`eval_roleIn`); and so a self-call that descends passes, at the descending position, a
-value smaller than the one its caller was called with (`args_descend`).
+value smaller than the one its caller was called with (`args_descend`), and one that shrinks
+passes a counter closer to its bound (`args_shrink`): the call's measure goes down
+(`Descent.measure`).
 -/
 
 namespace Stilt
@@ -20,9 +21,50 @@ noncomputable def Passed.size : Passed → Nat
   | .place _ _ => 0
 
 /-- The size of the argument at position `k`. -/
-noncomputable def Passed.sizeAt (passed : List Passed) (k : Nat) : Nat := (passed[k]?.map Passed.size).getD 0
+noncomputable def Passed.sizeAt (passed : List Passed) (k : Nat) : Nat :=
+  (passed[k]?.map Passed.size).getD 0
 
-variable {R : Roles} {m : Nat}
+/-- The integer an argument passes by value. -/
+def Passed.int? : Passed → Option Int
+  | .value v | .moved _ v => v.int?
+  | .place _ _ => none
+
+/-- The integer of the argument at position `k`. -/
+def Passed.intAt (passed : List Passed) (k : Nat) : Option Int := passed[k]?.bind Passed.int?
+
+/-- The integer a counter's bound has in a call. -/
+def ShrinkBound.valAt : ShrinkBound → List Passed → Option Int
+  | .lit c, _ => some c
+  | .param j, passed => Passed.intAt passed j
+
+/-- What a call's body knows of the call: for self-calls that descend, the size of the
+argument at the descending position; for self-calls that shrink, the counter's distance from
+its bound, which way it goes, and the integers of the counter and the bound. -/
+noncomputable def Descent.meas : Descent → List Passed → Meas
+  | .parts k, passed => ⟨Passed.sizeAt passed k, true, none, none⟩
+  | .shrinks k grow b, passed =>
+    ⟨match Passed.intAt passed k, b.valAt passed with
+      | some x, some y => countDistance grow x y
+      | _, _ => 0, grow, Passed.intAt passed k, b.valAt passed⟩
+
+/-- A call's measure, which each self-call that goes down brings down. -/
+noncomputable def Descent.measure (d : Descent) (passed : List Passed) : Nat := (d.meas passed).size
+
+/-- What a run knows of a call agrees with the way its self-calls go down. -/
+def Meas.Fits (μ : Meas) : Descent → Prop
+  | .parts _ => True
+  | .shrinks _ grow b => μ.grow = grow ∧ (∀ c, b = .lit c → μ.limit = some c) ∧
+    ∀ x y, μ.start = some x → μ.limit = some y → countDistance grow x y ≤ μ.size
+
+theorem Descent.meas_fits (d : Descent) (passed : List Passed) : (d.meas passed).Fits d := by
+  cases d with
+  | parts => trivial
+  | shrinks k grow b =>
+    refine ⟨rfl, fun c hc => by subst hc; rfl, fun x y hx hy => ?_⟩
+    simp only [Descent.meas] at hx hy ⊢
+    rw [hx, hy]; exact Nat.le_refl _
+
+variable {R : Roles} {m : Meas}
 
 /-- Code that keeps the variables outside `W` keeps the roles of a frame that `W` avoids. -/
 theorem Roles.Inv.afterAt {α : Type} {W L : List Name} {P : α → Prop} {m' : Eval Copy.State α}
@@ -49,10 +91,10 @@ theorem Roles.Inv.afterEval {D : Decls} {w : WriteBack} {e : Expr} {s s' : Copy.
   let ⟨N, hN⟩ := hd
   hI.evalAt hA (hN N (Nat.le_refl _))
 
-/-- What an expression with a role gives is bounded by its role. -/
+/-- What an expression with a role gives, its role describes. -/
 theorem eval_roleIn {D : Decls} {w : WriteBack} :
     ∀ (n : Nat) (e : Expr) {s s' : Copy.State} {u : Value}, R.Inv s.1 m → e.roleIn R ≠ .other →
-      eval D (Copy.memoryWith w) n e s = .done u s' → (e.roleIn R).Bounds (sizeOf u) m
+      eval D (Copy.memoryWith w) n e s = .done u s' → (e.roleIn R).Holds u m
   | 0, _, _, _, _, _, _, h => by cases h
   | n + 1, .var x, s, _, _, hI, hr, h | n + 1, .move x, s, _, _, hI, hr, h => by
     obtain ⟨u', hl, hb⟩ := hI x hr
@@ -66,7 +108,7 @@ theorem eval_roleIn {D : Decls} {w : WriteBack} :
     obtain ⟨u₀, s₁, h₁, h₂⟩ := Eval.bind_done h
     obtain ⟨hg, -⟩ := Eval.ofExcept_done h₂
     have hr' := Role.step_ne hr
-    exact Role.Bounds.step hr' (eval_roleIn n e hI hr' h₁) (Value.get_field_lt hg)
+    exact (eval_roleIn n e hI hr' h₁).step (Value.get_field_lt hg)
   | n + 1, .int _, _, _, _, _, hr, _ | n + 1, .bool _, _, _, _, _, hr, _
   | n + 1, .unit, _, _, _, _, hr, _ | n + 1, .record .., _, _, _, _, hr, _
   | n + 1, .variant .., _, _, _, _, hr, _ | n + 1, .list .., _, _, _, _, hr, _
@@ -84,36 +126,35 @@ theorem eval_roleIn {D : Decls} {w : WriteBack} :
   | n + 1, .perform .., _, _, _, _, hr, _ | n + 1, .withH .., _, _, _, _, hr, _
   | n + 1, .held .., _, _, _, _, hr, _ => absurd rfl hr
 
-/-- What an expression gives, its role bounds. -/
-theorem roleIn_bounds {D : Decls} {w : WriteBack} {e : Expr} {s s' : Copy.State} {u : Value}
+/-- What an expression gives, its role describes. -/
+theorem roleIn_holds {D : Decls} {w : WriteBack} {e : Expr} {s s' : Copy.State} {u : Value}
     (hI : R.Inv s.1 m) (hd : ∃ N, ∀ n, N ≤ n → eval D (Copy.memoryWith w) n e s = .done u s') :
-    (e.roleIn R).Bounds (sizeOf u) m := by
+    (e.roleIn R).Holds u m := by
   by_cases hr : e.roleIn R = .other
   · rw [hr]; trivial
   · obtain ⟨N, hN⟩ := hd
     exact eval_roleIn N e hI hr (hN N (Nat.le_refl _))
 
-/-- A self-call that descends passes, at the descending position, a value smaller than `m`,
-the size of the value its caller's descending parameter holds. -/
-theorem args_descend {D : Decls} {w : WriteBack} (n : Nat) :
+/-- The argument at position `k` of a call whose arguments' evaluation ended: one that `ok`
+accepts, evaluated from a frame that meets the roles, gives what the call passes there. -/
+theorem args_at {D : Decls} {w : WriteBack} {ok : Expr → Bool} (n : Nat) :
     ∀ (k : Nat) (args : List Arg) {s s' : Copy.State} {passed : List Passed}, R.Inv s.1 m →
-      R.Avoids (argsWrites args) → argPart R k args = true →
-      Eval.args (eval D (Copy.memoryWith w) n) args s = .done passed s' → Passed.sizeAt passed k < m
+      R.Avoids (argsWrites args) → argWith ok k args = true →
+      Eval.args (eval D (Copy.memoryWith w) n) args s = .done passed s' →
+      ∃ e s₁ u s₂, ok e = true ∧ R.Inv s₁.1 m ∧ eval D (Copy.memoryWith w) n e s₁ = .done u s₂ ∧
+        passed[k]? = some (Passed.ofArg e u)
   | 0, .value e :: args, s, _, _, hI, _, hp, h => by
     obtain ⟨u, s₁, h₁, h₂⟩ := Eval.bind_done h
     obtain ⟨vs, s₂, -, h₃⟩ := Eval.bind_done h₂
     cases h₃
-    have hr : e.roleIn R = .part := by simpa [argPart] using hp
-    have := eval_roleIn n e hI (by rw [hr]; exact nofun) h₁
-    rw [hr] at this
-    cases e <;> exact this
+    exact ⟨e, s, u, s₁, by simpa [argWith] using hp, hI, h₁, rfl⟩
   | k + 1, .value e :: args, s, _, _, hI, hA, hp, h => by
     obtain ⟨u, s₁, h₁, h₂⟩ := Eval.bind_done h
     obtain ⟨vs, s₂, h₃, h₄⟩ := Eval.bind_done h₂
     cases h₄
-    have hA' : R.Avoids (argsWrites args) := hA.mono (List.subset_append_right _ _)
     have hI₁ : R.Inv s₁.1 m := hI.evalAt (hA.mono (List.subset_append_left _ _)) h₁
-    simpa [Passed.sizeAt] using args_descend n k args hI₁ hA' (by simpa [argPart] using hp) h₃
+    simpa using args_at n k args hI₁ (hA.mono (List.subset_append_right _ _))
+      (by simpa [argWith] using hp) h₃
   | k + 1, .inout ⟨x, ps⟩ :: args, s, _, _, hI, hA, hp, h => by
     obtain ⟨p, s₁, h₁, h₂⟩ := Eval.bind_done h
     obtain ⟨vs, s₂, h₃, h₄⟩ := Eval.bind_done h₂
@@ -125,128 +166,106 @@ theorem args_descend {D : Decls} {w : WriteBack} (n : Nat) :
       List.mem_cons_of_mem _ (List.mem_append_left _ hz)
     have hA' : R.Avoids (argsWrites args) := hA.mono fun z hz =>
       List.mem_cons_of_mem _ (List.mem_append_right _ hz)
-    simpa [Passed.sizeAt] using
-      args_descend n k args (hI.keep hA₁ hk.2) hA' (by simpa [argPart] using hp) h₃
+    simpa using args_at n k args (hI.keep hA₁ hk.2) hA' (by simpa [argWith] using hp) h₃
   | 0, .inout _ :: _, _, _, _, _, _, hp, _ | 0, [], _, _, _, _, _, hp, _
-  | _ + 1, [], _, _, _, _, _, hp, _ => by simp [argPart] at hp
+  | _ + 1, [], _, _, _, _, _, hp, _ => by simp [argWith] at hp
 
-/-! ## A call's descending parameter -/
+theorem argPart_eq (R : Roles) : ∀ (k : Nat) (args : List Arg),
+    argPart R k args = argWith (fun e => e.roleIn R == .part) k args
+  | 0, .value _ :: _ | 0, .inout _ :: _ | 0, [] | _ + 1, [] => rfl
+  | k + 1, _ :: args => by simp [argPart, argWith, argPart_eq R k args]
 
-/-- A call's frame holds, for a name that none of its later parameters has, what the
-earlier frame held. -/
-theorem Copy.enter_lookup_other {caller : Copy.Frame} {y : Name} :
-    ∀ (bound : List (Name × Passed)) {init callee : Copy.Frame}, Copy.enter caller init bound = .ok callee →
-      y ∉ bound.map Prod.fst → callee.lookup y = init.lookup y
-  | [], _, _, h, _ => by cases h; rfl
-  | (y', a) :: bound, init, callee, h, hy => by
-    simp only [List.map_cons, List.mem_cons, not_or] at hy
-    have hne : (y == y') = false := by simpa using hy.1
-    cases a with
-    | value v | moved _ v =>
-      rw [Copy.enter_lookup_other bound h hy.2]
-      simp [List.lookup, hne]
-    | place x p =>
-      change ((fun v => (y', v) :: init) <$> Copy.read caller x p >>= fun fr =>
-        Copy.enter caller fr bound) = _ at h
-      cases hr : Copy.read caller x p with
-      | error f => rw [hr] at h; cases h
-      | ok v =>
-        rw [hr] at h
-        rw [Copy.enter_lookup_other bound h hy.2]
-        simp [List.lookup, hne]
+/-- A self-call that descends passes, at the descending position, a value smaller than the
+size of the value its caller's descending parameter holds. -/
+theorem args_descend {D : Decls} {w : WriteBack} (n : Nat) {k : Nat} {args : List Arg}
+    {s s' : Copy.State} {passed : List Passed} (hI : R.Inv s.1 m) (hA : R.Avoids (argsWrites args))
+    (hp : argPart R k args = true)
+    (h : Eval.args (eval D (Copy.memoryWith w) n) args s = .done passed s') :
+    Passed.sizeAt passed k < m.size := by
+  rw [argPart_eq] at hp
+  obtain ⟨e, s₁, u, s₂, he, hI₁, h₁, hk⟩ := args_at n k args hI hA hp h
+  have hr : e.roleIn R = .part := by simpa using he
+  have := eval_roleIn n e hI₁ (by rw [hr]; exact nofun) h₁
+  rw [hr] at this
+  simp only [Passed.sizeAt, hk, Option.map_some, Option.getD_some]
+  cases e <;> exact this
 
-/-- A call's frame holds what a parameter of a name no other parameter has is passed. -/
-theorem Copy.enter_lookup {caller : Copy.Frame} {y : Name} {u : Value} :
-    ∀ (bound : List (Name × Passed)) {init callee : Copy.Frame} {a : Passed},
-      Copy.enter caller init bound = .ok callee → (bound.map Prod.fst).Nodup → (y, a) ∈ bound →
-      (a = .value u ∨ ∃ z, a = .moved z u) → callee.lookup y = some u
-  | [], _, _, _, _, _, hm, _ => nomatch hm
-  | (y', a') :: bound, init, callee, a, h, hn, hm, ha => by
-    simp only [List.map_cons, List.nodup_cons] at hn
-    rcases List.mem_cons.1 hm with he | hm'
-    · cases he
-      rcases ha with rfl | ⟨z, rfl⟩ <;>
-      · rw [Copy.enter_lookup_other bound h hn.1]
-        simp [List.lookup]
-    · cases a' with
-      | value v | moved _ v => exact Copy.enter_lookup bound h hn.2 hm' ha
-      | place x p =>
-        change ((fun v => (y', v) :: init) <$> Copy.read caller x p >>= fun fr =>
-          Copy.enter caller fr bound) = _ at h
-        cases hr : Copy.read caller x p with
-        | error f => rw [hr] at h; cases h
-        | ok v => rw [hr] at h; exact Copy.enter_lookup bound h hn.2 hm' ha
+/-- A step of a counter by a positive literal gives an integer moved by it. -/
+theorem eval_movesBy {D : Decls} {w : WriteBack} {e : Expr} {p : Name} {grow : Bool}
+    (he : e.movesBy p grow = true) {n : Nat} {s s' : Copy.State} {x : Int} {u : Value}
+    (hx : s.1.lookup p = some (.int x)) (h : eval D (Copy.memoryWith w) n e s = .done u s') :
+    ∃ k, 0 < k ∧ u = .int (stepped grow x k) := by
+  unfold Expr.movesBy at he
+  split at he
+  · rename_i o kt l r
+    simp only [Bool.and_eq_true, beq_iff_eq, Option.any_eq_true, decide_eq_true_eq] at he
+    obtain ⟨⟨hl, k, hr, hk⟩, ho⟩ := he
+    rw [Expr.eq_of_readVar? hl] at h
+    have hr' : r = .int k := by cases r <;> simp_all [Expr.intLit?]
+    rw [hr'] at h
+    obtain ⟨m', us, h₅, h₆⟩ := eval_op_reaches (.of_eq h) (fun _ h => by cases h)
+    obtain ⟨a, s₃, b, h₇, h₈, rfl⟩ := Eval.list_pair_reaches h₅
+    obtain ⟨rfl, hl⟩ := eval_var_reaches h₇
+    obtain ⟨hb, rfl⟩ := eval_int_reaches h₈
+    subst hb
+    rw [hx] at hl
+    cases hl
+    obtain ⟨x', k', r, hx', hk', hr, rfl⟩ := arith_apply h₆
+    cases hx'; cases hk'
+    refine ⟨k, hk, ?_⟩
+    cases grow <;> simp only [Bool.false_eq_true, ↓reduceIte] at ho <;> subst ho <;>
+      simp only [IntTy.arith, IntTy.check] at hr <;> split at hr <;> cases hr <;> rfl
+  · cases he
 
-/-- Pairing parameters with arguments keeps their names, and pairs a `let` parameter with a
-value. -/
-theorem bindArgs_spec : ∀ {params : List Param} {passed : List Passed}
-    {bound : List (Name × Passed)}, bindArgs params passed = some bound →
-      bound.map Prod.fst = params.map Param.name ∧ ∀ k p, params[k]? = some p → p.mode = .let →
-        ∃ a u, (p.name, a) ∈ bound ∧ (a = .value u ∨ ∃ z, a = .moved z u) ∧
-          sizeOf u = Passed.sizeAt passed k
-  | [], [], _, h => by cases h; exact ⟨rfl, fun _ _ hp => by simp at hp⟩
-  | p :: ps, a :: as, bound, h => by
-    simp only [bindArgs] at h
-    have key : ∀ rest, bindArgs ps as = some rest → bound = (p.name, a) :: rest →
-        bound.map Prod.fst = (p :: ps).map Param.name ∧ ∀ k q, (p :: ps)[k]? = some q →
-          q.mode = .let → ∃ a' u, (q.name, a') ∈ bound ∧ (a' = .value u ∨ ∃ z, a' = .moved z u) ∧
-            sizeOf u = Passed.sizeAt (a :: as) k := by
-      intro rest hr hb
-      subst hb
-      obtain ⟨hn, hk⟩ := bindArgs_spec hr
-      refine ⟨by simp [hn], fun k q hq hmode => ?_⟩
-      cases k with
-      | zero =>
-        simp only [List.getElem?_cons_zero, Option.some.injEq] at hq
-        subst hq
-        rw [hmode] at h
-        cases a with
-        | value v => exact ⟨_, v, List.mem_cons_self, .inl rfl, rfl⟩
-        | moved z v => exact ⟨_, v, List.mem_cons_self, .inr ⟨z, rfl⟩, rfl⟩
-        | place x path => simp at h
-      | succ k =>
-        obtain ⟨a', u, hm, ha, hs⟩ := hk k q (by simpa using hq) hmode
-        exact ⟨a', u, List.mem_cons_of_mem _ hm, ha, by simpa [Passed.sizeAt] using hs⟩
-    cases hpm : p.mode <;> rw [hpm] at h <;> cases a <;> simp only [reduceCtorEq] at h <;>
-      (try split at h) <;>
-      first
-        | (obtain ⟨rest, hr, rfl⟩ := Option.map_eq_some_iff.1 h; exact key rest hr rfl)
-        | cases h
-  | [], _ :: _, _, h | _ :: _, [], _, h => by simp [bindArgs] at h
+/-- A counter short of its bound, stepped toward it, gets closer to it. -/
+theorem countDistance_stepped {grow : Bool} {x y k : Int} (hg : if grow then x ≤ y else y ≤ x)
+    (hk : 0 < k) : countDistance grow (stepped grow x k) y < countDistance grow x y := by
+  cases grow <;> simp only [Bool.false_eq_true, ↓reduceIte] at hg <;>
+    simp only [countDistance, stepped, Bool.false_eq_true, ↓reduceIte] <;> omega
 
-/-- A call's frame meets the roles its body starts with, against the size of what its
-argument at the descending position passes. -/
-theorem enter_roles {d : FnDecl} {k : Nat} {passed : List Passed} {bound : List (Name × Passed)}
-    {caller callee : Copy.Frame} (hb : bindArgs d.params passed = some bound)
-    (he : Copy.enter caller [] bound = .ok callee) :
-    (d.entryRoles k).Inv callee (Passed.sizeAt passed k) := by
-  unfold FnDecl.entryRoles
-  split
-  · rename_i p hp
-    split
-    · rename_i hc
-      obtain ⟨hmode, hnd, -⟩ := hc
-      obtain ⟨hn, hk⟩ := bindArgs_spec hb
-      obtain ⟨a, u, hm, ha, hs⟩ := hk k p hp hmode
-      intro x hx
-      simp only [Roles.of_cons] at hx ⊢
-      split at hx
-      · subst_vars
-        refine ⟨u, Copy.enter_lookup bound he (hn ▸ hnd) hm ha, ?_⟩
-        simp only [↓reduceIte]
-        exact Nat.le_of_eq hs
-      · exact absurd rfl hx
-    · exact Roles.Inv.nil _ _
-  · exact Roles.Inv.nil _ _
-
-/-- The roles a body starts with avoid what it writes. -/
-theorem entryRoles_avoids (d : FnDecl) (k : Nat) : (d.entryRoles k).Avoids d.body.writes := by
-  unfold FnDecl.entryRoles
-  split
-  · split
-    · rename_i hc
-      exact (Roles.Avoids.nil _).cons fun _ => hc.2.2
-    · exact Roles.Avoids.nil _
-  · exact Roles.Avoids.nil _
+/-- A self-call that shrinks passes a counter closer to its bound than its caller's, and the
+bound unchanged, so the call's measure is smaller than the caller's. -/
+theorem args_shrink {D : Decls} {w : WriteBack} (n : Nat) {k : Nat} {grow : Bool}
+    {b : ShrinkBound} (hfit : m.Fits (.shrinks k grow b)) {args : List Arg} {s s' : Copy.State}
+    {passed : List Passed} (hI : R.Inv s.1 m) (hA : R.Avoids (argsWrites args))
+    (hp : (Descent.shrinks k grow b).calls R args = true)
+    (h : Eval.args (eval D (Copy.memoryWith w) n) args s = .done passed s') :
+    (Descent.shrinks k grow b).measure passed < m.size := by
+  simp only [Descent.calls, Bool.and_eq_true] at hp
+  obtain ⟨hpk, hpb⟩ := hp
+  obtain ⟨e, s₁, u, s₂, he, hI₁, h₁, hk⟩ := args_at n k args hI hA hpk h
+  unfold Expr.shrinksIn at he
+  split at he
+  · rename_i o t l r
+    obtain ⟨p, -, hpg⟩ := (Option.any_eq_true _ _).1 he
+    simp only [Bool.and_eq_true, beq_iff_eq] at hpg
+    obtain ⟨hg, hmv⟩ := hpg
+    obtain ⟨up, hlu, hhold⟩ := hI₁ p (by rw [hg]; exact nofun)
+    rw [hg] at hhold
+    obtain ⟨x, y, hx, hy, rfl, hguard, hdist⟩ := hhold
+    obtain ⟨kk, hkk, rfl⟩ := eval_movesBy hmv hlu h₁
+    have hint : Passed.intAt passed k = some (stepped grow x kk) := by
+      simp [Passed.intAt, hk, Passed.ofArg, Passed.int?, Value.int?]
+    have hb : b.valAt passed = some y := by
+      cases b with
+      | lit c =>
+        have := hfit.2.1 c rfl
+        rw [this] at hy
+        cases hy
+        rfl
+      | param j =>
+        simp only [ShrinkBound.passedIn] at hpb
+        obtain ⟨e', s₃, u', s₄, he', hI₃, h₃, hj⟩ := args_at n j args hI hA hpb h
+        have hr : e'.roleIn R = .limit := by simpa using he'
+        have := eval_roleIn n e' hI₃ (by rw [hr]; exact nofun) h₃
+        rw [hr] at this
+        change u'.int? = m.limit at this
+        rw [hy] at this
+        simp only [ShrinkBound.valAt, Passed.intAt, hj, Option.bind_some]
+        cases e' <;> exact this
+    rw [hfit.1] at hguard hdist
+    simp only [Descent.measure, Descent.meas, hint, hb]
+    exact Nat.lt_of_lt_of_le (countDistance_stepped hguard hkk) hdist
+  · simp at he
 
 end Stilt

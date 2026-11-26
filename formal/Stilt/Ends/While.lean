@@ -14,9 +14,6 @@ it; and neither wrote what the bound reads, so the bound kept its value
 
 namespace Stilt
 
-/-- How many turns at most a counter at `x` has left before it passes `y`. -/
-def countDistance (grow : Bool) (x y : Int) : Nat := (if grow then y - x + 1 else x - y + 1).toNat
-
 /-- The distance of a frame's counter from its bound, `0` when either has no integer. -/
 def Bound.distance (v : Name) (grow : Bool) (b : Bound) (s : Copy.Frame) : Nat :=
   match s.lookup v, b.val s with

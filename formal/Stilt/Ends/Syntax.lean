@@ -36,11 +36,77 @@ def argPart (R : Roles) : Nat → List Arg → Bool
   | k + 1, _ :: args => argPart R k args
   | _, _ => false
 
+/-- Whether the argument at position `k` meets `ok`. -/
+def argWith (ok : Expr → Bool) : Nat → List Arg → Bool
+  | 0, .value e :: _ => ok e
+  | k + 1, _ :: args => argWith ok k args
+  | _, _ => false
+
+/-- The bound of a function's counter (facts.shrinking-recursion): a literal, or the
+parameter at a position, which every self-call passes unchanged. -/
+inductive ShrinkBound where
+  | lit (c : Int)
+  | param (j : Nat)
+  deriving DecidableEq, Repr
+
+/-- How a function's self-calls go down: on strict parts of the parameter at position `k`
+(facts.descending-self-calls), or, for the integer parameter at `k`, toward its bound, up when
+`grow` and down otherwise (facts.shrinking-recursion). -/
+inductive Descent where
+  | parts (k : Nat)
+  | shrinks (k : Nat) (grow : Bool) (bound : ShrinkBound)
+  deriving DecidableEq, Repr
+
+/-- Whether an argument steps a guarded counter toward its bound: `p + s` or `p - s`, with
+`s` a positive literal. -/
+def Expr.shrinksIn (R : Roles) (grow : Bool) : Expr → Bool
+  | .op (.arith o t) [l, r] =>
+    l.readVar?.any fun p => R.of p == .guarded && (Expr.op (.arith o t) [l, r]).movesBy p grow
+  | _ => false
+
+/-- Whether a self-call passes its bound unchanged, when the bound is a parameter. -/
+def ShrinkBound.passedIn (R : Roles) : ShrinkBound → List Arg → Bool
+  | .lit _, _ => true
+  | .param j, args => argWith (fun e => e.roleIn R == .limit) j args
+
+/-- Whether a self-call goes down as its function's self-calls do: its argument at the
+descending position holds a strict part of the descending parameter, or it steps the
+counter, short of its bound, toward it, and passes the bound unchanged. -/
+def Descent.calls (R : Roles) : Descent → List Arg → Bool
+  | .parts k, args => argPart R k args
+  | .shrinks k grow b, args => argWith (Expr.shrinksIn R grow) k args && b.passedIn R args
+
+/-- Whether a reading of a test shows a counter short of its bound: it compares a counter
+with the function's bound, by `<` or `<=` when the counter grows and by `>` or `>=` when it
+shrinks, mirrored or not; the bound is the function's literal, or a variable that holds the
+parameter its bound is. -/
+def guardReading (R : Roles) (grow : Bool) (b : ShrinkBound) : Name × Cmp × Bound → Bool
+  | (v, cmp, bnd) => (R.of v == .counter || R.of v == .guarded) && cmp.counts == some grow &&
+    match b, bnd with
+    | .lit c, .lit c' => c == c'
+    | .param _, .var q => R.of q == .limit
+    | _, _ => false
+
+/-- The test that holds when a comparison doesn't, `false` for any other test. -/
+def Expr.negated : Expr → Expr
+  | .op (.compare cmp t) [l, r] => .op (.compare cmp.negate t) [l, r]
+  | _ => .bool false
+
 section
 
--- Where code is: in the body of the function `f`, whose descending parameter is at
--- position `k`, when `me = some (f, k)`, and in `main`'s when `me = none`.
-variable (lim : Limited) (B : Name → Nat) (me : Option (Name × Nat))
+-- Where code is: in the body of the function `f`, whose self-calls go down as `d` says,
+-- when `me = some (f, d)`, and in `main`'s when `me = none`.
+variable (lim : Limited) (B : Name → Nat) (me : Option (Name × Descent))
+
+/-- The roles where a test held: a counter that a reading of the test shows short of its
+bound is guarded (facts.guarding-tests). -/
+def Roles.held (R : Roles) (c : Expr) : Roles :=
+  match me with
+  | some (_, .shrinks _ grow b) =>
+    match c.countings.find? (guardReading R grow b) with
+    | some (v, _, _) => (v, .guarded) :: R
+    | none => R
+  | _ => R
 
 /-- Whether code where `me` says may name `g` with no `div`: `lim` covers it, and, in a
 function's body, `g` is ranked below that function, so that it isn't in its recursive
@@ -52,9 +118,9 @@ def Expr.isSelf : Expr → Bool
   | .fnRef g _ _ => me.any (·.1 == g)
   | _ => false
 
-/-- Whether a self-call's arguments descend: the one at the descending position holds a
-strict part of the descending parameter (facts.descending-self-calls). -/
-def descends (R : Roles) (args : List Arg) : Bool := me.any fun (_, k) => argPart R k args
+/-- Whether a self-call's arguments go down as the function's self-calls do
+(facts.descending-self-calls and facts.shrinking-recursion). -/
+def descends (R : Roles) (args : List Arg) : Bool := me.any fun (_, d) => d.calls R args
 
 mutual
 
@@ -93,7 +159,8 @@ def Expr.divFree : Roles → Expr → Bool
   | R, .varIn x _ init body => init.divFree R && body.divFree ((x, .other) :: R)
   | R, .assign ⟨_, path⟩ value => pathDivFree R path && value.divFree R
   | R, .seq a b => a.divFree R && b.divFree R
-  | R, .if c _ a b => c.divFree R && a.divFree R && b.divFree R
+  | R, .if c _ a b =>
+    c.divFree R && a.divFree (R.held me c) && b.divFree (R.held me c.negated)
   | R, .match e _ arms => e.divFree R && armsDivFree R (e.roleIn R) arms
   | R, .for _ _ e body => e.divFree R && body.divFree []
   | R, .raise e => e.divFree R
@@ -195,23 +262,37 @@ def armsDepth : List Arm → Nat
 
 end
 
-/-- The roles a body starts with: its parameter at position `k` holds the whole descending
-parameter when it is a `let` parameter, the only parameter of its name, that the body never
-writes (facts.descending-self-calls); with no such parameter, no variable has a role. -/
-def FnDecl.entryRoles (d : FnDecl) (k : Nat) : Roles :=
+/-- The name of the parameter at position `k`, when it is a `let` parameter, the only
+parameter of its name, that the body never writes. -/
+def FnDecl.letParam? (d : FnDecl) (k : Nat) : Option Name :=
   match d.params[k]? with
   | some p =>
-    if p.mode = .let ∧ (d.params.map Param.name).Nodup ∧ p.name ∉ d.body.writes then
-      [(p.name, .whole)]
-    else []
-  | none => []
+    if p.mode = .let ∧ (d.params.map Param.name).Nodup ∧ p.name ∉ d.body.writes then some p.name
+    else none
+  | none => none
+
+/-- The roles a body starts with: its descending parameter holds the whole of itself
+(facts.descending-self-calls), or its counter is a counter and the parameter its bound is a
+limit (facts.shrinking-recursion), each when `FnDecl.letParam?` finds it; with no such
+parameter, no variable has a role. -/
+def FnDecl.entryRoles (d : FnDecl) : Descent → Roles
+  | .parts k => match d.letParam? k with
+    | some x => [(x, .whole)]
+    | none => []
+  | .shrinks k _ b => match d.letParam? k with
+    | some x => (x, .counter) :: match b with
+      | .param j => (match d.letParam? j with
+        | some q => if q = x then [] else [(q, .limit)]
+        | none => [])
+      | .lit _ => []
+    | none => []
 
 /-- A ranking of the functions that `lim` covers, with the position `desc f` of each
 function's descending parameter: each body is free of `div`, naming only functions that
 `lim` covers and ranks below it, and calling itself only on a strict part of its descending
 parameter (facts.descending-self-calls). So the functions of one recursive group are one
 function, whose self-calls descend. -/
-def Decls.Ranked (D : Decls) (lim : Limited) (B : Name → Nat) (desc : Name → Nat) : Prop :=
+def Decls.Ranked (D : Decls) (lim : Limited) (B : Name → Nat) (desc : Name → Descent) : Prop :=
   ∀ name d, D.fn? name = some d → lim.fn name = true →
     d.body.divFree lim B (some (name, desc name)) (d.entryRoles (desc name)) = true
 
@@ -224,16 +305,23 @@ def Program.DivFree (p : Program) : Prop :=
 those declared before it. -/
 def Decls.rank (D : Decls) (f : Name) : Nat := D.fns.findIdx (·.name == f)
 
-/-- The position of a function's descending parameter: the first at which its body passes
-the check, `0` when none does. -/
-def Decls.desc (D : Decls) (f : Name) : Nat :=
+/-- The ways a function's self-calls may go down that `Decls.desc` tries: on strict parts of
+each parameter, and with each parameter shrinking or growing toward `0` or toward another
+parameter. -/
+def FnDecl.descents (d : FnDecl) : List Descent :=
+  (List.range d.params.length).flatMap fun k => .parts k :: [true, false].flatMap fun g =>
+    .shrinks k g (.lit 0) :: (List.range d.params.length).map fun j => .shrinks k g (.param j)
+
+/-- How a function's self-calls go down: the first of `FnDecl.descents` with which its body
+passes the check. -/
+def Decls.desc (D : Decls) (f : Name) : Descent :=
   match D.fn? f with
-  | some d => ((List.range d.params.length).find? fun k =>
-      d.body.divFree Limited.all D.rank (some (f, k)) (d.entryRoles k)).getD 0
-  | none => 0
+  | some d => (d.descents.find? fun k =>
+      d.body.divFree Limited.all D.rank (some (f, k)) (d.entryRoles k)).getD (.parts 0)
+  | none => .parts 0
 
 /-- Whether every function's body is free of `div` under the ranking and the positions. -/
-def Decls.rankedBy (D : Decls) (B : Name → Nat) (desc : Name → Nat) : Bool :=
+def Decls.rankedBy (D : Decls) (B : Name → Nat) (desc : Name → Descent) : Bool :=
   D.fns.all fun d => d.body.divFree Limited.all B (some (d.name, desc d.name)) (d.entryRoles (desc d.name))
 
 /-- The check of `Program.DivFree` for a program whose functions call only those
@@ -241,7 +329,7 @@ declared before them, and themselves when the calls descend. -/
 def Program.divFree (p : Program) : Bool :=
   p.decls.rankedBy p.decls.rank p.decls.desc && p.main.divFree Limited.all p.decls.rank none []
 
-theorem Decls.ranked_of_rankedBy {D : Decls} {B : Name → Nat} {desc : Name → Nat}
+theorem Decls.ranked_of_rankedBy {D : Decls} {B : Name → Nat} {desc : Name → Descent}
     (h : D.rankedBy B desc = true) : D.Ranked Limited.all B desc := by
   intro name d hd _
   have hmem := List.mem_of_find?_eq_some hd

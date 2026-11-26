@@ -13,7 +13,7 @@ namespace Stilt
 
 section
 
-variable (s : TySubst) {lim : Limited} {B : Name → Nat} {me : Option (Name × Nat)}
+variable (s : TySubst) {lim : Limited} {B : Name → Nat} {me : Option (Name × Descent)}
 
 theorem Expr.callable_substTys (e : Expr) : (e.substTys s).callable = e.callable := by
   cases e <;> first | rfl | (rename_i t _; cases t; rfl)
@@ -37,9 +37,56 @@ theorem argPart_substTys (R : Roles) : ∀ (k : Nat) (args : List Arg),
     simp [substArgTys, argPart, argPart_substTys R k args]
   | 0, [] | _ + 1, [] => rfl
 
+theorem argWith_substTys {ok : Expr → Bool} (hok : ∀ e, ok (e.substTys s) = ok e) :
+    ∀ (k : Nat) (args : List Arg), argWith ok k (substArgTys s args) = argWith ok k args
+  | 0, .value e :: _ => by simp [substArgTys, argWith, hok e]
+  | 0, .inout ⟨_, _⟩ :: _ => rfl
+  | k + 1, .value _ :: args | k + 1, .inout ⟨_, _⟩ :: args => by
+    simp [substArgTys, argWith, argWith_substTys hok k args]
+  | 0, [] | _ + 1, [] => rfl
+
+theorem Expr.shrinksIn_substTys (R : Roles) (grow : Bool) (e : Expr) :
+    (e.substTys s).shrinksIn R grow = e.shrinksIn R grow := by
+  cases e
+  case op o es =>
+    rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩ <;> cases o <;> try rfl
+    simp only [Expr.substTys, substExprTys, Op.substTys, Expr.shrinksIn, Expr.movesBy,
+      Expr.readVar?_substTys, Expr.intLit?_substTys]
+  all_goals first | rfl | (rename_i t _; cases t; rfl)
+
 theorem descends_substTys (R : Roles) (args : List Arg) :
     descends me R (substArgTys s args) = descends me R args := by
-  simp [descends, argPart_substTys]
+  unfold descends
+  congr 1
+  funext ⟨_, d⟩
+  cases d with
+  | parts k => simp [Descent.calls, argPart_substTys]
+  | shrinks k g b =>
+    have h₁ := argWith_substTys s (ok := Expr.shrinksIn R g) (Expr.shrinksIn_substTys s R g) k args
+    cases b with
+    | lit c => simp [Descent.calls, ShrinkBound.passedIn, h₁]
+    | param j =>
+      have h₂ := argWith_substTys s (ok := fun e => e.roleIn R == .limit)
+        (fun e => by simp [Expr.roleIn_substTys]) j args
+      simp [Descent.calls, ShrinkBound.passedIn, h₁, h₂]
+
+theorem Expr.negated_substTys : ∀ e : Expr, (e.substTys s).negated.countings = e.negated.countings
+  | .op o es => by
+    rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩ <;> cases o <;> try rfl
+    simp only [Expr.substTys, substExprTys, Op.substTys, Expr.negated, Expr.countings,
+      Expr.readVar?_substTys, Expr.bound?_substTys]
+  | .assign ⟨_, _⟩ _ => rfl
+  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
+  | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
+  | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH ..
+  | .held .. | .try .. | .tryCatch .. | .while .. | .loop .. | .return .. | .view .. | .if .. => rfl
+
+theorem Roles.held_substTys (R : Roles) (c : Expr) : R.held me (c.substTys s) = R.held me c := by
+  unfold Roles.held; rw [Expr.countings_substTys]
+
+theorem Roles.held_negated_substTys (R : Roles) (c : Expr) :
+    R.held me (c.substTys s).negated = R.held me c.negated := by
+  unfold Roles.held; rw [Expr.negated_substTys]
 
 mutual
 
@@ -72,8 +119,8 @@ theorem Expr.divFree_substTys : ∀ (R : Roles) (e : Expr),
   | R, .assign ⟨_, p⟩ v => by
     simp [Expr.substTys, Expr.divFree, pathDivFree_substTys R p, Expr.divFree_substTys R v]
   | R, .if c _ a b => by
-    simp [Expr.substTys, Expr.divFree, Expr.divFree_substTys R c, Expr.divFree_substTys R a,
-      Expr.divFree_substTys R b]
+    simp [Expr.substTys, Expr.divFree, Expr.divFree_substTys R c, Expr.divFree_substTys _ a,
+      Expr.divFree_substTys _ b, Roles.held_substTys, Roles.held_negated_substTys]
   | R, .match e _ arms => by
     simp [Expr.substTys, Expr.divFree, Expr.divFree_substTys R e, armsDivFree_substTys R _ arms,
       Expr.roleIn_substTys]
@@ -183,7 +230,7 @@ end
 
 section
 
-variable (s : RowSubst) {lim : Limited} {B : Name → Nat} {me : Option (Name × Nat)}
+variable (s : RowSubst) {lim : Limited} {B : Name → Nat} {me : Option (Name × Descent)}
 
 theorem Expr.callable_substRows (e : Expr) : (e.substRows s).callable = e.callable := by
   cases e <;> first | rfl | (rename_i t _; cases t; rfl)
@@ -207,9 +254,56 @@ theorem argPart_substRows (R : Roles) : ∀ (k : Nat) (args : List Arg),
     simp [substArgRows, argPart, argPart_substRows R k args]
   | 0, [] | _ + 1, [] => rfl
 
+theorem argWith_substRows {ok : Expr → Bool} (hok : ∀ e, ok (e.substRows s) = ok e) :
+    ∀ (k : Nat) (args : List Arg), argWith ok k (substArgRows s args) = argWith ok k args
+  | 0, .value e :: _ => by simp [substArgRows, argWith, hok e]
+  | 0, .inout ⟨_, _⟩ :: _ => rfl
+  | k + 1, .value _ :: args | k + 1, .inout ⟨_, _⟩ :: args => by
+    simp [substArgRows, argWith, argWith_substRows hok k args]
+  | 0, [] | _ + 1, [] => rfl
+
+theorem Expr.shrinksIn_substRows (R : Roles) (grow : Bool) (e : Expr) :
+    (e.substRows s).shrinksIn R grow = e.shrinksIn R grow := by
+  cases e
+  case op o es =>
+    rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩ <;> cases o <;> try rfl
+    simp only [Expr.substRows, substExprRows, Expr.shrinksIn, Expr.movesBy,
+      Expr.readVar?_substRows, Expr.intLit?_substRows]
+  all_goals first | rfl | (rename_i t _; cases t; rfl)
+
 theorem descends_substRows (R : Roles) (args : List Arg) :
     descends me R (substArgRows s args) = descends me R args := by
-  simp [descends, argPart_substRows]
+  unfold descends
+  congr 1
+  funext ⟨_, d⟩
+  cases d with
+  | parts k => simp [Descent.calls, argPart_substRows]
+  | shrinks k g b =>
+    have h₁ := argWith_substRows s (ok := Expr.shrinksIn R g) (Expr.shrinksIn_substRows s R g) k args
+    cases b with
+    | lit c => simp [Descent.calls, ShrinkBound.passedIn, h₁]
+    | param j =>
+      have h₂ := argWith_substRows s (ok := fun e => e.roleIn R == .limit)
+        (fun e => by simp [Expr.roleIn_substRows]) j args
+      simp [Descent.calls, ShrinkBound.passedIn, h₁, h₂]
+
+theorem Expr.negated_substRows : ∀ e : Expr, (e.substRows s).negated.countings = e.negated.countings
+  | .op o es => by
+    rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩ <;> cases o <;> try rfl
+    simp only [Expr.substRows, substExprRows, Expr.negated, Expr.countings,
+      Expr.readVar?_substRows, Expr.bound?_substRows]
+  | .assign ⟨_, _⟩ _ => rfl
+  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
+  | .record .. | .variant .. | .list .. | .field .. | .index .. | .closure .. | .call ..
+  | .letIn .. | .varIn .. | .seq .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH ..
+  | .held .. | .try .. | .tryCatch .. | .while .. | .loop .. | .return .. | .view .. | .if .. => rfl
+
+theorem Roles.held_substRows (R : Roles) (c : Expr) : R.held me (c.substRows s) = R.held me c := by
+  unfold Roles.held; rw [Expr.countings_substRows]
+
+theorem Roles.held_negated_substRows (R : Roles) (c : Expr) :
+    R.held me (c.substRows s).negated = R.held me c.negated := by
+  unfold Roles.held; rw [Expr.negated_substRows]
 
 mutual
 
@@ -242,8 +336,8 @@ theorem Expr.divFree_substRows : ∀ (R : Roles) (e : Expr),
   | R, .assign ⟨_, p⟩ v => by
     simp [Expr.substRows, Expr.divFree, pathDivFree_substRows R p, Expr.divFree_substRows R v]
   | R, .if c _ a b => by
-    simp [Expr.substRows, Expr.divFree, Expr.divFree_substRows R c, Expr.divFree_substRows R a,
-      Expr.divFree_substRows R b]
+    simp [Expr.substRows, Expr.divFree, Expr.divFree_substRows R c, Expr.divFree_substRows _ a,
+      Expr.divFree_substRows _ b, Roles.held_substRows, Roles.held_negated_substRows]
   | R, .match e _ arms => by
     simp [Expr.substRows, Expr.divFree, Expr.divFree_substRows R e, armsDivFree_substRows R _ arms,
       Expr.roleIn_substRows]

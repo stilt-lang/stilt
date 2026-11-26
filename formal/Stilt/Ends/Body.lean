@@ -1,36 +1,38 @@
 import Stilt.Ends.While
+import Stilt.Ends.Tests
 
 /-!
 # Bodies that halt
 
 Code free of `div` halts from every state whose frame meets its roles, given that the calls
 it may make halt (`CallsHalt`): of a function ranked below the one whose body it is, and of
-that function itself on an argument at the descending position smaller than the one the
-body was called with (`eval_halts`). The proof goes by induction on the depth of the code,
+that function itself on arguments whose measure is smaller than the call's the body runs
+(`eval_halts`). The proof goes by induction on the depth of the code,
 case by case on the expression, as `Stilt.Ends.Runs` runs its parts.
 -/
 
 namespace Stilt
 
 /-- The calls that code where `me` says may make halt: of every function it may name, on any
-arguments, and of the function whose body it is, on arguments smaller than `m` at its
-descending position. -/
+arguments, and of the function whose body it is, on arguments whose measure is smaller than
+the call's, of which `m` is what the body knows. -/
 def CallsHalt (D : Decls) (w : WriteBack) (lim : Limited) (B : Name → Nat)
-    (me : Option (Name × Nat)) (m : Nat) : Prop :=
+    (me : Option (Name × Descent)) (m : Meas) : Prop :=
   (∀ g types rows passed s, lim.names B me g = true →
     Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
       (.function g types rows) passed) (fun _ => True) s) ∧
-  (∀ f k, me = some (f, k) → ∀ types rows passed s, Passed.sizeAt passed k < m →
+  (∀ f d, me = some (f, d) → ∀ types rows passed s, d.measure passed < m.size →
     Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
-      (.function f types rows) passed) (fun _ => True) s)
+      (.function f types rows) passed) (fun _ => True) s) ∧
+  (∀ f d, me = some (f, d) → m.Fits d)
 
 /-- Binding a `let` or a `var` in copy-in, copy-out pushes it on the frame. -/
 theorem Copy.bindInit_fst (w : WriteBack) (s : Copy.State) (x : Name) (init : Expr) (v : Value) :
     ((Copy.memoryWith w).bindInit s x init v).1 = (x, v) :: s.1 := by
   cases init <;> rfl
 
-variable {D : Decls} {w : WriteBack} {lim : Limited} {B : Name → Nat} {me : Option (Name × Nat)}
-  {m : Nat}
+variable {D : Decls} {w : WriteBack} {lim : Limited} {B : Name → Nat}
+  {me : Option (Name × Descent)} {m : Meas}
 
 open Halts in
 /-- A call of a named function, free of `div` where `me` says, halts. -/
@@ -55,7 +57,7 @@ theorem halts_callFn (hC : CallsHalt D w lim B me m) {k : Nat} (ih : HaltsRun D 
   subst hv
   split at hcd
   · rename_i hself
-    obtain ⟨⟨f', k'⟩, hme, hk⟩ := (Option.any_eq_true _ _).1 (by simpa [descends] using hcd)
+    obtain ⟨⟨f', d⟩, hme, hk⟩ := (Option.any_eq_true _ _).1 (by simpa [descends] using hcd)
     obtain ⟨_, hme', hmf⟩ := (Option.any_eq_true _ _).1 (by simpa [Expr.isSelf] using hself)
     rw [hme] at hme'
     cases hme'
@@ -63,8 +65,40 @@ theorem halts_callFn (hC : CallsHalt D w lim B me m) {k : Nat} (ih : HaltsRun D 
     simp only [beq_iff_eq] at hmf
     subst hmf
     obtain ⟨N, hN⟩ := hdp
-    exact hC.2 _ k' rfl types rows passed s'' (args_descend N k' as hI' hA hk (hN N (Nat.le_refl _)))
+    refine hC.2.1 _ d rfl types rows passed s'' ?_
+    cases d with
+    | parts k' => exact args_descend N hI' hA hk (hN N (Nat.le_refl _))
+    | shrinks k' grow b => exact args_shrink N (hC.2.2 _ _ rfl) hI' hA hk (hN N (Nat.le_refl _))
   · exact hC.1 f types rows passed s'' hcd
+
+open Halts in
+/-- An `if`, free of `div` where `me` says, halts: a counter that its test, or the negation of a
+comparison that failed, shows short of its bound is guarded in its branch. -/
+theorem halts_if (hC : CallsHalt D w lim B me m) {k : Nat} (ih : HaltsRun D w lim B me m k)
+    {c a b : Expr} {R : Roles} (hcd : c.divFree lim B me R = true)
+    (had : a.divFree lim B me (R.held me c) = true)
+    (hbd : b.divFree lim B me (R.held me c.negated) = true) (hcn : c.depth ≤ k) (han : a.depth ≤ k)
+    (hbn : b.depth ≤ k) (hA : R.Avoids (c.writes ++ (a.writes ++ b.writes))) (s : Copy.State)
+    (hI : R.Inv s.1 m) :
+    Halts (fun n => (eval D (Copy.memoryWith w) n c >>= Eval.asBool) >>= fun v =>
+      if v then eval D (Copy.memoryWith w) n a else eval D (Copy.memoryWith w) n b)
+      (fun _ => True) s := by
+  have hA₁ : R.Avoids c.writes := hA.mono (List.subset_append_left _ _)
+  have hA₂ : R.Avoids (a.writes ++ b.writes) := hA.mono (List.subset_append_right _ _)
+  refine bind (bind (ih c R hcd hcn hA₁ s hI) fun v _ _ _ => const (Eval.Ends.asBool v))
+    fun v s' _ hd' => ?_
+  obtain ⟨N, hN⟩ := hd'
+  obtain ⟨u, s₁, h₁, h₂⟩ := Eval.bind_done (hN N (Nat.le_refl _))
+  obtain ⟨rfl, rfl⟩ := Eval.asBool_done h₂
+  have hk : Frame.Keeps c.writes c.resizes s.1 s'.1 := by
+    have := eval_keeps D w N c _ _ (List.Subset.refl _) (List.Subset.refl _) s
+    rw [h₁] at this
+    exact this.2
+  cases v
+  · exact ih b _ hbd hbn (hA₂.mono (List.subset_append_right _ _)).held s'
+      (hI.held hC.2.2 (fun _ hr => ⟨s', .of_eq (eval_negated hr h₁)⟩) hk hA₁)
+  · exact ih a _ had han (hA₂.mono (List.subset_append_left _ _)).held s'
+      (hI.held hC.2.2 (fun _ _ => ⟨s', .of_eq h₁⟩) hk hA₁)
 
 open Halts in
 /-- Evaluating an expression free of `div` where `me` says, within the depth of its text,
@@ -144,7 +178,7 @@ theorem eval_halts (hC : CallsHalt D w lim B me m) : ∀ k, HaltsRun D w lim B m
       · rw [Copy.bindInit_fst]
         refine (hI.afterEval hA₁ hdv).cons ?_
         split
-        · exact roleIn_bounds hI hdv
+        · exact roleIn_holds hI hdv
         · trivial
     case varIn x τ init body =>
       have hA₁ : R.Avoids init.writes := hA.mono (List.subset_append_left _ _)
@@ -163,17 +197,11 @@ theorem eval_halts (hC : CallsHalt D w lim B me m) : ∀ k, HaltsRun D w lim B m
       exact bind (ih a R hd.1 hn.1 hA₁ s hI) fun _ s' _ hd' =>
         ih b R hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) s' (hI.afterEval hA₁ hd')
     case «if» c τ a b =>
-      have hA₁ : R.Avoids c.writes := hA.mono (List.subset_append_left _ _)
-      have hA₂ : R.Avoids (a.writes ++ b.writes) := hA.mono (List.subset_append_right _ _)
-      exact bind (bind (ih c R hd.1.1 hn.1 hA₁ s hI) fun v _ _ _ => const (Eval.Ends.asBool v))
-        fun v s' _ hd' =>
-          have hI' := hI.after (keepsBool D w · c) hA₁ hd'
-          ite v (ih a R hd.1.2 hn.2.1 (hA₂.mono (List.subset_append_left _ _)) s' hI')
-            (ih b R hd.2 hn.2.2 (hA₂.mono (List.subset_append_right _ _)) s' hI')
+      exact halts_if hC ih hd.1.1 hd.1.2 hd.2 hn.1 hn.2.1 hn.2.2 hA s hI
     case «match» e τ arms =>
       have hA₁ : R.Avoids e.writes := hA.mono (List.subset_append_left _ _)
       exact bind (ih e R hd.1 hn.1 hA₁ s hI) fun v s' _ hdv =>
-        select ih hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) v (roleIn_bounds hI hdv) s'
+        select ih hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) v (roleIn_holds hI hdv) s'
           (hI.afterEval hA₁ hdv)
     case «for» x τ e body =>
       exact loop ih x hd.1 hn.1 (hA.mono (List.subset_append_left _ _)) hd.2 hn.2 s hI

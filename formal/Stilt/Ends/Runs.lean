@@ -1,6 +1,6 @@
 import Stilt.Ends.Halts
 import Stilt.Ends.Instances
-import Stilt.Ends.Descent
+import Stilt.Ends.Entry
 
 /-!
 # Runs that halt
@@ -16,10 +16,10 @@ too (`Roles.Inv.after`).
 namespace Stilt
 
 /-- Running an expression free of `div` where `me` says, of depth at most `k`, halts from
-every state whose frame meets its roles against `m`, when no variable with a role is
-written. -/
+every state whose frame meets its roles, against what `m` knows of the call, when no
+variable with a role is written. -/
 def HaltsRun (D : Decls) (w : WriteBack) (lim : Limited) (B : Name → Nat)
-    (me : Option (Name × Nat)) (m k : Nat) : Prop :=
+    (me : Option (Name × Descent)) (m : Meas) (k : Nat) : Prop :=
   ∀ e R, e.divFree lim B me R = true → e.depth ≤ k → R.Avoids e.writes → ∀ s : Copy.State,
     R.Inv s.1 m → Halts (fun n => eval D (Copy.memoryWith w) n e) (fun _ => True) s
 
@@ -82,8 +82,8 @@ theorem withVarsAt (M : Memory σ) {F : Nat → Eval σ α} :
   | [], _, h => h
   | (x, v) :: bs, _, h => withVar M x v (withVarsAt M bs _ h)
 
-variable {D : Decls} {w : WriteBack} {lim : Limited} {B : Name → Nat} {me : Option (Name × Nat)}
-  {m k : Nat}
+variable {D : Decls} {w : WriteBack} {lim : Limited} {B : Name → Nat} {me : Option (Name × Descent)}
+  {m : Meas} {k : Nat}
 
 section Runs
 
@@ -159,7 +159,7 @@ theorem arms_mem : ∀ {arms : List Arm} {arm : Arm} {R : Roles} {r : Role},
 
 theorem select {arms : List Arm} {R : Roles} {r : Role} (hd : armsDivFree lim B me R r arms = true)
     (hn : armsDepth arms ≤ k) (hA : R.Avoids (armsWrites arms)) (v : Value)
-    (hv : r.Bounds (sizeOf v) m) (s : Copy.State) (hI : R.Inv s.1 m) :
+    (hv : r.Holds v m) (s : Copy.State) (hI : R.Inv s.1 m) :
     Halts (fun n => Eval.select (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) arms v)
       (fun _ => True) s := by
   unfold Eval.select
@@ -175,7 +175,7 @@ theorem select {arms : List Arm} {R : Roles} {r : Role} (hd : armsDivFree lim B 
       refine withVarsAt _ _ s (h _ _ hda hna ?_ _ ?_)
       · exact Roles.Avoids.bindAll (Arm.role_avoids) (hA.mono (armsWrites_mem hmem))
       · rw [Copy.foldl_bind]
-        exact hI.bindAll _ _ hlen (Arm.role_bounds hv hmatch)
+        exact hI.bindAll _ _ hlen (Arm.role_holds hv hmatch)
     · exact const (Eval.Ends.fail _)
 
 theorem assign (x : Name) {ps : List Projection} {R : Roles} (hd : pathDivFree lim B me R ps = true)

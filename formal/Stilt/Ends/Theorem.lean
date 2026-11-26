@@ -11,9 +11,11 @@ write-back: a call of a function of the set (`Decls.Ranked.call`), a run whose `
 such code (`Program.runCopyWith_halts`) and a program free of `div` whole
 (`Program.DivFree.halts`), and in place when it is well typed and obeys the law
 of exclusivity. A call halts by induction on its function's rank, since a body calls only
-functions ranked below its own, then on the size of the value at its descending position,
-since a self-call that descends passes a smaller one there
-(facts.descending-self-calls); and a body halts by induction on the depth of its
+functions ranked below its own, then on its measure, since a self-call that goes down passes
+a smaller one: the size of the value at the descending position, which a self-call that
+descends passes a strict part of (facts.descending-self-calls), or the distance of its counter
+from its bound, which a self-call that shrinks brings down (facts.shrinking-recursion); and a
+body halts by induction on the depth of its
 text (`eval_halts`): a `for` loop runs its body at its own fuel, turn after turn, and a
 `while` that counts takes a turn more of fuel for each turn it makes, of which its values
 allow finitely many (`Halts.whileCounts`).
@@ -57,15 +59,15 @@ theorem Halts.invokeWith {σ : Type} (M : Memory σ) (captured : List (Name × V
 state, the call halts, never running out of fuel from some fuel on, and ending as no
 performance. The function counts as one without `div` wherever it is named; it calls only
 the functions `lim` covers, ranked below it, itself on strict parts of its descending
-parameter, and no function value it is given (facts.without-div and
-facts.descending-self-calls). -/
-theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} {desc : Name → Nat}
+parameter or on a counter closer to its bound, and no function value it is given
+(facts.without-div, facts.descending-self-calls and facts.shrinking-recursion). -/
+theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} {desc : Name → Descent}
     (hR : D.Ranked lim B desc) (w : WriteBack) {f : Name} {types : List Ty} {rows : List Row}
     (hf : lim.fn f = true) (passed : List Passed) (s : Copy.State) :
     Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
       (.function f types rows) passed) (fun _ => True) s := by
   suffices H : ∀ r f, B f = r → lim.fn f = true → ∀ q (passed : List Passed),
-      Passed.sizeAt passed (desc f) = q → ∀ types rows s,
+      (desc f).measure passed = q → ∀ types rows s,
         Halts (fun n => Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n)
           (.function f types rows) passed) (fun _ => True) s from
     H _ f rfl hf _ passed rfl types rows s
@@ -88,13 +90,17 @@ theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} {desc : Name → Nat}
       cases hc : Copy.enter s.1 [] bound with
       | error e => rw [hc] at he; cases he
       | ok fr => rw [hc] at he; cases he; exact ⟨fr, rfl, rfl⟩
-    have hC : CallsHalt D w lim B (some (f, desc f)) (Passed.sizeAt passed (desc f)) := by
-      refine ⟨fun g types' rows' passed' s' hg => ?_, fun f' k' hme types' rows' passed' s' hlt => ?_⟩
+    have hC : CallsHalt D w lim B (some (f, desc f)) ((desc f).meas passed) := by
+      refine ⟨fun g types' rows' passed' s' hg => ?_, fun f' k' hme types' rows' passed' s' hlt => ?_,
+        fun f' k' hme => ?_⟩
       · simp only [Limited.names, Option.all_some, Bool.and_eq_true, decide_eq_true_eq] at hg
         exact ihr (B g) (hBf ▸ hg.2) g rfl hg.1 _ passed' rfl types' rows' s'
       · simp only [Option.some.injEq, Prod.mk.injEq] at hme
         obtain ⟨rfl, rfl⟩ := hme
         exact ihq _ (hq ▸ hlt) passed' rfl types' rows' s'
+      · simp only [Option.some.injEq, Prod.mk.injEq] at hme
+        obtain ⟨rfl, rfl⟩ := hme
+        exact Descent.meas_fits _ _
     refine eval_halts hC _ _ _ ?_ (Nat.le_refl _) ?_ _ (enter_roles hb hfr)
     · rw [Expr.divFree_substRows, Expr.divFree_substTys]; exact hdd
     · rw [Expr.writes_substRows, Expr.writes_substTys]; exact entryRoles_avoids d _
@@ -102,13 +108,13 @@ theorem Decls.Ranked.call {D : Decls} {B : Name → Nat} {desc : Name → Nat}
 /-- **Without div**, for `main`: when the functions that `lim` covers are ranked and
 `main`'s body is free of `div`, the run halts in copy-in, copy-out, whatever its order of
 write-back, never running out of fuel from some fuel on. -/
-theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} {desc : Name → Nat}
+theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} {desc : Name → Descent}
     (hR : p.decls.Ranked lim B desc) (hm : p.main.divFree lim B none [] = true) (w : WriteBack)
     (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → p.runCopyWith w fuel input ≠ .outOfFuel := by
-  have hC : CallsHalt p.decls w lim B none 0 :=
+  have hC : CallsHalt p.decls w lim B none { size := 0 } :=
     ⟨fun _ _ _ passed s hg => hR.call w (by simpa [Limited.names] using hg) passed s,
-      fun _ _ h => nomatch h⟩
+      fun _ _ h => (nomatch h), fun _ _ h => (nomatch h)⟩
   obtain ⟨N, o, ho, hn⟩ := eval_halts hC _ p.main [] hm (Nat.le_refl _) (Roles.Avoids.nil _)
     ([], World.start input) (Roles.Inv.nil _ _)
   refine ⟨N, fun fuel hf => ?_⟩
@@ -122,7 +128,7 @@ theorem Program.runCopyWith_halts {p : Program} {B : Name → Nat} {desc : Name 
 
 /-- **Without div** for `main`, in place: on a well-typed program that obeys the law of
 exclusivity, in-place mutation shows what copy-in, copy-out does. -/
-theorem Program.runInPlace_halts {p : Program} {B : Name → Nat} {desc : Name → Nat}
+theorem Program.runInPlace_halts {p : Program} {B : Name → Nat} {desc : Name → Descent}
     (hR : p.decls.Ranked lim B desc) (hm : p.main.divFree lim B none [] = true) (hwt : p.WellTyped) (hex : p.Exclusive) (input : String) :
     ∃ N, ∀ fuel, N ≤ fuel → (p.runInPlace fuel input).observe ≠ .outOfFuel := by
   obtain ⟨N, hN⟩ := p.runCopyWith_halts hR hm .leftToRight input
@@ -151,7 +157,7 @@ functions that a cover of panic-free functions holds, and free of `div`, naming 
 ranked functions, ends with `()`, with an error of the type its row allows, or with a panic
 of the kind `overflow` or `deadlock`, as the reference interpreter runs it, with every fuel
 from some fuel on (facts.without-div). -/
-theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} {desc : Name → Nat}
+theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} {desc : Name → Descent}
     (hwt : p.WellTyped) (hD : p.decls.PanicCover lim) (hpm : p.main.panicFree lim = true)
     (hR : p.decls.Ranked lim' B desc) (hdm : p.main.divFree lim' B none [] = true) (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
       (p.runCopy fuel input).observe = .returned .unit ∨

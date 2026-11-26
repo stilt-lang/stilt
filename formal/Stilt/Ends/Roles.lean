@@ -1,19 +1,24 @@
 import Stilt.Panics.Writes
 import Stilt.Matching
+import Stilt.Maps
 
 /-!
 # Roles of variables
 
-The check of descending self-calls (facts.descending-self-calls) follows what each variable
-of a body holds: the function's descending parameter itself (`whole`), a strict part of it,
-reached from it by at least one step through a field, a tuple element or a variant's payload
-(`part`), or anything else (`other`). A pattern that matches a variable with a role takes the
-steps of its constructors, and a place rooted in such a variable takes the steps of its
-fields. A variable keeps its role only where nothing writes it.
+The check of a function's self-calls follows what each variable of its body holds. For
+descending self-calls (facts.descending-self-calls): the function's descending parameter
+itself (`whole`), a strict part of it, reached from it by at least one step through a field, a
+tuple element or a variant's payload (`part`), or anything else (`other`). A pattern that
+matches a variable with a role takes the steps of its constructors, and a place rooted in
+such a variable takes the steps of its fields. For self-calls that shrink
+(facts.shrinking-recursion): the integer parameter that shrinks (`counter`), the parameter
+its bound is (`limit`), and the counter where a test has shown it short of its bound
+(`guarded`). A variable keeps its role only where nothing writes it.
 
 Values are finite trees, and a part of a record, a tuple or a variant is smaller than it
 (`sizeOf`). So when a variable's role is `whole`, its value is no larger than the parameter's,
-and when it is `part`, smaller (`Roles.Inv`).
+and when it is `part`, smaller; a counter and a limit hold the integers the call was passed,
+and a guarded counter is short of its bound (`Roles.Inv`).
 -/
 
 namespace Stilt
@@ -23,6 +28,9 @@ inductive Role where
   | other
   | whole
   | part
+  | counter
+  | limit
+  | guarded
   deriving DecidableEq, Repr
 
 /-- The roles of a body's variables, the newest binding first. -/
@@ -35,8 +43,8 @@ def Roles.of : Roles → Name → Role
 
 /-- The role of a part of a value of role `r`, through one step. -/
 def Role.step : Role → Role
-  | .other => .other
-  | _ => .part
+  | .whole | .part => .part
+  | _ => .other
 
 /-- The role of what an expression gives: a variable's, or, through a field, a strict part of
 a value with a role. Steps are never taken through a call, an index or a function value
@@ -84,15 +92,31 @@ def Arm.role (r : Role) (arm : Arm) : Role :=
 def Roles.bindAll (R : Roles) (xs : List Name) (r : Role) : Roles :=
   xs.foldl (fun R x => (x, r) :: R) R
 
-/-- The bound a role gives a value's size, against the size `m` of the parameter's. -/
-def Role.Bounds : Role → Nat → Nat → Prop
-  | .other, _, _ => True
-  | .whole, a, m => a ≤ m
-  | .part, a, m => a < m
+/-- How many turns at most a counter at `x` has left before it passes `y`. -/
+def countDistance (grow : Bool) (x y : Int) : Nat := (if grow then y - x + 1 else x - y + 1).toNat
 
-/-- Each variable with a role holds a value that its role bounds against `m`. -/
-def Roles.Inv (R : Roles) (fr : Copy.Frame) (m : Nat) : Prop :=
-  ∀ x, R.of x ≠ .other → ∃ u, fr.lookup x = some u ∧ (R.of x).Bounds (sizeOf u) m
+/-- What a run knows of the call whose body it runs: the call's measure, the size of its
+descending argument or its counter's distance from its bound, and, for self-calls that
+shrink, which way the counter goes and the integers its counter and its bound were passed. -/
+structure Meas where
+  size : Nat
+  grow : Bool := true
+  start : Option Int := none
+  limit : Option Int := none
+
+/-- What a role says of a variable's value, against what the run knows of its call. -/
+def Role.Holds : Role → Value → Meas → Prop
+  | .other, _, _ => True
+  | .whole, u, μ => sizeOf u ≤ μ.size
+  | .part, u, μ => sizeOf u < μ.size
+  | .counter, u, μ => u.int? = μ.start
+  | .limit, u, μ => u.int? = μ.limit
+  | .guarded, u, μ => ∃ x y, μ.start = some x ∧ μ.limit = some y ∧ u = .int x ∧
+      (if μ.grow then x ≤ y else y ≤ x) ∧ countDistance μ.grow x y ≤ μ.size
+
+/-- Each variable with a role holds a value that its role describes. -/
+def Roles.Inv (R : Roles) (fr : Copy.Frame) (m : Meas) : Prop :=
+  ∀ x, R.of x ≠ .other → ∃ u, fr.lookup x = some u ∧ (R.of x).Holds u m
 
 /-- No variable with a role is among `W`. -/
 def Roles.Avoids (R : Roles) (W : List Name) : Prop :=
@@ -100,12 +124,12 @@ def Roles.Avoids (R : Roles) (W : List Name) : Prop :=
 
 namespace Roles
 
-variable {R : Roles} {m : Nat}
+variable {R : Roles} {m : Meas}
 
 theorem of_cons (x y : Name) (r : Role) (R : Roles) :
     Roles.of ((y, r) :: R) x = if x = y then r else R.of x := rfl
 
-theorem Inv.nil (fr : Copy.Frame) (m : Nat) : Roles.Inv [] fr m := fun _ h => absurd rfl h
+theorem Inv.nil (fr : Copy.Frame) (m : Meas) : Roles.Inv [] fr m := fun _ h => absurd rfl h
 
 theorem Avoids.nil (W : List Name) : Roles.Avoids [] W := fun _ h => absurd rfl h
 
@@ -127,7 +151,7 @@ theorem Inv.keep {W L : List Name} {fr fr' : Copy.Frame} (h : R.Inv fr m) (hA : 
   exact h x hx
 
 theorem Inv.cons {fr : Copy.Frame} {x : Name} {r : Role} {u : Value} (h : R.Inv fr m)
-    (hu : r.Bounds (sizeOf u) m) : Roles.Inv ((x, r) :: R) ((x, u) :: fr) m := by
+    (hu : r.Holds u m) : Roles.Inv ((x, r) :: R) ((x, u) :: fr) m := by
   intro y hy
   rw [of_cons] at hy ⊢
   by_cases hyx : y = x
@@ -143,7 +167,7 @@ theorem Inv.cons {fr : Copy.Frame} {x : Name} {r : Role} {u : Value} (h : R.Inv 
 /-- Binding names in order, each to a value its role bounds, keeps the roles. -/
 theorem Inv.bindAll {r : Role} :
     ∀ (xs : List Name) (us : List Value) {R : Roles} {fr : Copy.Frame}, R.Inv fr m →
-      xs.length = us.length → (∀ u ∈ us, r.Bounds (sizeOf u) m) →
+      xs.length = us.length → (∀ u ∈ us, r.Holds u m) →
       (R.bindAll xs r).Inv ((xs.zip us).foldl (fun fr b => (b.1, b.2) :: fr) fr) m
   | [], [], _, _, h, _, _ => h
   | x :: xs, u :: us, _, _, h, hl, hu =>
@@ -162,18 +186,14 @@ theorem Avoids.bindAll {W : List Name} {r : Role} {xs : List Name} (hx : r ≠ .
 
 end Roles
 
-theorem Role.Bounds.step {r : Role} {a b m : Nat} (hr : r ≠ .other) (h : r.Bounds b m) (hab : a < b) :
-    r.step.Bounds a m := by
-  cases r
-  · exact absurd rfl hr
-  · show a < m; exact Nat.lt_of_lt_of_le hab h
-  · show a < m; exact Nat.lt_trans hab h
-
-theorem Role.Bounds.mono {r : Role} {a b m : Nat} (h : r.Bounds b m) (hab : a ≤ b) : r.Bounds a m := by
+/-- A part of a value of a role holds of the role's step. -/
+theorem Role.Holds.step {r : Role} {u v : Value} {m : Meas} (h : r.Holds v m)
+    (huv : sizeOf u < sizeOf v) : r.step.Holds u m := by
   cases r
   · trivial
-  · exact Nat.le_trans hab h
-  · exact Nat.lt_of_le_of_lt hab h
+  · show sizeOf u < m.size; exact Nat.lt_of_lt_of_le huv h
+  · show sizeOf u < m.size; exact Nat.lt_trans huv h
+  all_goals trivial
 
 theorem Role.step_ne {r : Role} (h : r.step ≠ .other) : r ≠ .other := by
   cases r <;> simp_all [Role.step]
@@ -280,10 +300,22 @@ theorem matchOnFields_lt : ∀ (fps : List (Name × Pattern)) {fields : List (Na
 
 end
 
-/-- What an arm binds, when its scrutinee holds a value of role `r`, its role bounds. -/
-theorem Arm.role_bounds {arm : Arm} {r : Role} {v : Value} {us : List Value} {m : Nat}
-    (hv : r.Bounds (sizeOf v) m) (h : arm.pattern.matchOn v = some us) :
-    ∀ u ∈ us, (arm.role r).Bounds (sizeOf u) m := by
+/-- A pattern within that takes no step binds the value it matches, if anything. -/
+theorem Pattern.matchOn_same : ∀ (p : Pattern) {v : Value} {us : List Value}, p.within = true →
+    p.steps = false → p.matchOn v = some us → ∀ u ∈ us, u = v
+  | .wild, _, _, _, _, h => by simp [Pattern.matchOn] at h; subst h; simp
+  | .bind _, _, _, _, _, h => by
+    simp only [Pattern.matchOn, Option.some.injEq] at h; subst h; simp
+  | .int _, v, _, _, _, h | .bool _, v, _, _, _, h | .str _, v, _, _, _, h | .unit, v, _, _, _, h => by
+    cases v <;> simp only [Pattern.matchOn] at h <;> (try split at h) <;> simp_all
+  | .tuple _, _, _, _, hs, _ | .record _ _, _, _, _, hs, _ | .variant _ _ _, _, _, _, hs, _ => by
+    simp [Pattern.steps] at hs
+  | .or _ _, _, _, hw, _, _ | .list _ _, _, _, hw, _, _ => by simp [Pattern.within] at hw
+
+/-- What an arm binds, when its scrutinee holds a value of role `r`, its role describes. -/
+theorem Arm.role_holds {arm : Arm} {r : Role} {v : Value} {us : List Value} {m : Meas}
+    (hv : r.Holds v m) (h : arm.pattern.matchOn v = some us) :
+    ∀ u ∈ us, (arm.role r).Holds u m := by
   intro u hu
   unfold Arm.role
   split
@@ -291,11 +323,10 @@ theorem Arm.role_bounds {arm : Arm} {r : Role} {v : Value} {us : List Value} {m 
     simp only [Bool.and_eq_true] at hw
     split
     · rename_i hs
-      cases r with
-      | other => trivial
-      | whole => exact Nat.lt_of_lt_of_le (Pattern.matchOn_lt _ hw.1 hs h u hu) hv
-      | part => exact Nat.lt_trans (Pattern.matchOn_lt _ hw.1 hs h u hu) hv
-    · exact hv.mono (Pattern.matchOn_le _ hw.1 h u hu)
+      exact hv.step (Pattern.matchOn_lt _ hw.1 hs h u hu)
+    · rename_i hs
+      rw [Pattern.matchOn_same _ hw.1 (by simpa using hs) h u hu]
+      exact hv
   · trivial
 
 /-- An arm gives its binders a role only when its body writes none of them. -/

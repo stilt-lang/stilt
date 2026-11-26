@@ -9,8 +9,11 @@ fuel 10, whatever the number of turns, and not at 9. It rejects `f(n) = f(n)`,
 recursion that doesn't descend, which runs out of the fuel it is given. It accepts a
 self-call on a strict part of a parameter (facts.descending-self-calls): `sum` of a tree,
 through a pattern, through a binding that holds a part and through a field of a record, and
-rejects one on the parameter whole, on a tree it builds, on a part it writes, on an element
-of a list, and recursion on an integer. It accepts a `while` that counts toward its
+rejects one on the parameter whole, on a tree it builds, on a part it writes and on an element
+of a list. It accepts self-calls that shrink (facts.shrinking-recursion), `count(n - 1)` in the
+`else` branch of `n <= 0` and `go(i + 1, n)` under `i < n`, and rejects one under `n == 0`, one
+that steps away from its bound, and one that changes its bound. It accepts a `while` that
+counts toward its
 bound (facts.counting-loops), which needs a fuel more for each turn, and
 rejects one whose step is missing, conditional, after a `continue`, zero or
 away from the bound, or whose body writes what the bound reads.
@@ -112,13 +115,43 @@ private def wrapped : Decls :=
 example : Decls.rankedBy wrapped wrapped.rank wrapped.desc = true := rfl
 
 /-- `for u in [l] { sum(u) }`: an element of a list is no strict part, and no variable has a
-role inside a loop. `fn count(n: i64) -> i64 { if n <= 0 { 0 } else { count(n - 1) } }`
-recurses on an integer, which the model leaves out (facts.shrinking-recursion). -/
+role inside a loop. -/
 example : (treeProgram (onTree (.for "u" (.variant "Tree" []) (.list (.variant "Tree" []) [.var "l"])
     (call "sum" (.var "u")))) three).divFree = false := rfl
-example : (Program.mk ⟨[], [], [fn "count" (.if (.op (.compare .le .i64) [.var "n", .int 0]) .i64 (.int 0)
-    (call "count" (.op (.arith .sub .i64) [.var "n", .int 1])))], [], [], [], []⟩ (.int 0) Row.pure {}).divFree =
-    false := rfl
+
+/-! ## Shrinking recursion -/
+
+private def cmp (c : Cmp) (a b : Expr) : Expr := .op (.compare c .i64) [a, b]
+private def sub (a b : Expr) : Expr := .op (.arith .sub .i64) [a, b]
+
+/-- `fn count(n: i64) -> i64 { if test { 0 } else { count(step) } }`, and `count(5)`. -/
+private def counting (test step : Expr) : Program :=
+  ⟨⟨[], [], [fn "count" (.if test .i64 (.int 0) (call "count" step))], [], [], [], []⟩,
+    .raise (call "count" (.int 5)), ⟨false, some .i64, [], [], none⟩, {}⟩
+
+/-- `if n <= 0 { 0 } else { count(n - 1) }` shrinks: the `else` branch of `n <= 0` gives
+`n > 0`. -/
+example : (counting (cmp .le (.var "n") (.int 0)) (sub (.var "n") (.int 1))).divFree = true := rfl
+example : ((counting (cmp .le (.var "n") (.int 0)) (sub (.var "n") (.int 1))).runCopy 40).observe =
+    .raised (.int 0) := rfl
+
+/-- `if n == 0 { 0 } else { count(n - 1) }` doesn't, nor does `count(n + 1)` after `n <= 0`. -/
+example : (counting (cmp .eq (.var "n") (.int 0)) (sub (.var "n") (.int 1))).divFree = false := rfl
+example : (counting (cmp .le (.var "n") (.int 0)) (add (.var "n") (.int 1))).divFree = false := rfl
+
+/-- `fn go(i: i64, n: i64) -> i64 { if i < n { go(i + 1, n) } else { i } }`: the bound is a
+parameter that every self-call passes unchanged. `go(i + 1, n - 1)` changes it. -/
+private def going (next : Expr) : Program :=
+  ⟨⟨[], [], [⟨"go", [], [], [⟨.let, "i", .i64, none⟩, ⟨.let, "n", .i64, none⟩], .i64, Row.pure,
+      .if (cmp .lt (.var "i") (.var "n")) .i64
+        (.call (.fnRef "go" [] []) [.value (add (.var "i") (.int 1)), .value next] .i64) (.var "i"),
+      {}⟩], [], [], [], []⟩,
+    .raise (.call (.fnRef "go" [] []) [.value (.int 0), .value (.int 3)] .i64),
+    ⟨false, some .i64, [], [], none⟩, {}⟩
+
+example : (going (.var "n")).divFree = true := rfl
+example : ((going (.var "n")).runCopy 40).observe = .raised (.int 3) := rfl
+example : (going (sub (.var "n") (.int 1))).divFree = false := rfl
 
 private def lt (a b : Expr) : Expr := .op (.compare .lt .i64) [a, b]
 private def step (x : Name) (o : Arith) (k : Int) : Expr := .assign ⟨x, []⟩ (.op (.arith o .i64) [.var x, .int k])
