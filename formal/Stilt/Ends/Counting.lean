@@ -161,7 +161,15 @@ def Expr.steps (v : Name) (grow : Bool) : Expr → Bool
       (a.contFree && decide (v ∉ a.writes) && b.steps v grow)
   | e => e.isStep v grow
 
-/-- Whether `while c { body }` counts, by one reading of its condition. -/
+/-- Whether `while c { body }` counts, by one reading of its condition (facts.counting-loops):
+the condition compares a variable, its counter, with a bound, by `<`, `<=`, `>` or `>=`,
+alone or as the first conjunct of an `&&` chain, mirrored or not; the bound is made of
+literals, variables and lengths of variables' lists by `+`, `-` and `*`, none of which the
+body or the condition writes; and the body steps the counter toward the bound as a statement
+of its own block, with no `continue` before it, and writes it nowhere else (`Expr.steps`).
+Narrower than the Reference: a step is by a positive literal, not by a name known positive,
+a bound holds no constant, and a length is of a variable that the body doesn't write at all,
+not of a place whose length it doesn't change. -/
 def Expr.countsIn (c body : Expr) : Bool :=
   c.countings.any fun (v, cmp, b) => match cmp.counts with
     | some grow => body.steps v grow && decide (v ∉ c.writes) &&

@@ -285,10 +285,6 @@ import Stilt.Writes.Places
 import Stilt.Writes.Agreement
 import Stilt.Writes.Examples
 import Stilt.Counterexamples.Writes
-import Stilt.Div.Syntax
-import Stilt.Div.Check
-import Stilt.Div.Fuel
-import Stilt.Div.Terminates
 import Stilt.Panics.Ops
 import Stilt.Panics.Writes
 import Stilt.Panics.Guards
@@ -322,9 +318,14 @@ import Stilt.Ends.Runs
 import Stilt.Ends.NoCont
 import Stilt.Ends.Counter
 import Stilt.Ends.While
+import Stilt.Ends.Roles
+import Stilt.Ends.Descent
+import Stilt.Ends.Entry
+import Stilt.Ends.Tests
+import Stilt.Ends.Body
 import Stilt.Ends.Theorem
 import Stilt.Limits
-import Stilt.Counterexamples.Div
+import Stilt.Counterexamples.Ends
 import Stilt.Guards.Syntax
 import Stilt.Guards.Match
 import Stilt.Guards.Typing

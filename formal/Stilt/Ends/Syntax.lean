@@ -13,10 +13,11 @@ anything else gives, and no performance, which calls the handler's clause
 `when` (shared.when-on-value-already-held). Naming a function adds `div` unless it is one
 of the functions a limit covers (`Limited`). The functions it covers are **ranked**
 (`Decls.Ranked`): a body names only functions ranked below its own, so no two of them are
-in one recursive group, and calls its own function only when the call descends
-(facts.descending-self-calls): its argument at the position of the function's descending
-parameter holds a strict part of that parameter, as the roles of the body's variables say
-(`Stilt.Ends.Roles`).
+in one recursive group, and calls its own function only when the call goes down as the
+function's `Descent` says: its argument at the position of the descending parameter holds a
+strict part of that parameter (facts.descending-self-calls), or it steps the function's
+counter toward its bound under a test that shows the counter short of it
+(facts.shrinking-recursion), as the roles of the body's variables say (`Stilt.Ends.Roles`).
 
 `main` is ranked above every function, so it names any that the limit covers.
 -/
@@ -99,7 +100,9 @@ section
 variable (lim : Limited) (B : Name → Nat) (me : Option (Name × Descent))
 
 /-- The roles where a test held: a counter that a reading of the test shows short of its
-bound is guarded (facts.guarding-tests). -/
+bound is guarded. Of the tests that guard code (facts.guarding-tests), the model reads a
+comparison alone, mirrored or as the first conjunct of an `&&` chain, in the branch where it
+held, and the negation of a comparison in the branch where it failed (`Expr.negated`). -/
 def Roles.held (R : Roles) (c : Expr) : Roles :=
   match me with
   | some (_, .shrinks _ grow b) =>
@@ -131,14 +134,20 @@ value, the handler's clause, is; a `with` and a `when` add nothing of their own
 (handlers.implicit-effects-and-capabilities). Naming a function, to call it or as a value,
 adds `div` unless `lim` covers it, a function limited by `without div` counting as one
 without `div` wherever it is named (facts.without), and, in a function's body, unless it is
-ranked below that function. A call of the function itself adds nothing when it descends
-(facts.descending-self-calls); a use of it as a value is a site. A `let` binding gives its
-name the role of its value when its body doesn't write it, and a `match` arm its binders
-the role of what they hold (`Arm.role`); every other binder has none, and in a closure
-literal's body, a loop, a `catch` handler and a `when` block no variable has one. The
-sites are facts.div's, and a few more: every call through a function value is one, as
-through a stored one (facts.calls-through-function-values), a parameter not marked
-`escaping` included, and so is every recursive call that doesn't descend. -/
+ranked below that function. A call of the function itself adds nothing when it goes down as
+`me` says, descending or shrinking (facts.descending-self-calls and facts.shrinking-recursion);
+a use of it as a value is a site. So a counting loop, and the self-calls of a function that
+shrink, add no `div`, and a caller that names the function inherits none
+(facts.what-proofs-change, whose half on `panic` is `Op.panicFreeOn`'s; the calculus has no
+analysis, no release build and no package API). A `let` binding gives its name the role of
+its value when its body doesn't write it, a `match` arm its binders the role of what they
+hold (`Arm.role`), and a test the counter it shows short of its bound the role `guarded` in
+its branch (`Roles.held`); every other binder has none, and in a closure literal's body, a
+loop, a `catch` handler and a `when` block no variable has one. The sites are facts.div's,
+and a few more: every call through a function value is one, as through a stored one
+(facts.calls-through-function-values), a parameter not marked `escaping` and a bound in
+generic code included, and so is every recursive call that goes down in no way the model
+knows. -/
 def Expr.divFree : Roles → Expr → Bool
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
   | _, .fnRef f _ _ => lim.names B me f
