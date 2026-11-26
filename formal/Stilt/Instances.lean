@@ -183,6 +183,16 @@ theorem HasType.assign_substTys {Γ : Ctx} {fx : Effects} {p : Place} {e : Expr}
   rw [Expr.substTys_assign]
   exact .assign hp he (hfit.substTys s)
 
+/-- Handles that are bindings stay bindings in an instance. -/
+theorem substExprTys_vars (s : TySubst) :
+    ∀ {hs : List Expr}, (∀ h ∈ hs, ∃ x, h = .var x) → ∀ h ∈ substExprTys s hs, ∃ x, h = .var x
+  | [], _, _, hh => nomatch hh
+  | e :: es, hv, h, hh => by
+    rcases List.mem_cons.1 hh with rfl | hh
+    · obtain ⟨x, rfl⟩ := hv e (List.mem_cons_self ..)
+      exact ⟨x, rfl⟩
+    · exact substExprTys_vars s (fun h hh => hv h (List.mem_cons_of_mem _ hh)) h hh
+
 mutual
 
 /-- **Instantiation**: a derivation of a body, with ground types for its type
@@ -222,11 +232,11 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
   | _, _, _, _, .varIn hwf hi hfit hb, hfx =>
     .varIn (hs.wellFormed hwf) (HasType.substTys hD hs hi hfx) (hfit.substTys s)
       (HasType.substTys hD hs hb hfx)
-  | _, _, _, _, .held (ns := ns) hnd hwf hes hb, hfx => by
+  | _, _, _, _, .held (ns := ns) hnd hwf hes hb hv, hfx => by
     have hes' := ExprsFit.substTys hD hs hes hfx
     simp only [List.map_map, Function.comp_def, Ty.substTys] at hes'
     refine .held (by simpa [Function.comp_def] using hnd) (fun p hp => ?_) (by simpa [Function.comp_def] using hes')
-      (Ctx.holding_substTys s ns _ ▸ HasType.substTys hD hs hb hfx)
+      (Ctx.holding_substTys s ns _ ▸ HasType.substTys hD hs hb hfx) (substExprTys_vars s hv)
     obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
     exact hs.wellFormed (hwf q hq)
   | _, _, _, _, .assign hp he hfit, hfx =>
@@ -268,13 +278,14 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     rw [Ty.substTys_of_params hB.2.1] at h
     rw [Ty.substTys_of_params hR.2.1]
     exact .resume hr hB hR (HasType.substTys hD hs he hfx) h
-  | _, _, _, _, .withH hE heff hh hr hfs hb, hfx =>
+  | _, _, _, _, .withH hE heff hh hr hfs hb hops, hfx =>
     .withH hE heff (HasType.substTys hD hs hh hfx) hr (hfs.substTys hs) (HasType.substTys hD hs hb hfx)
-  | _, _, _, _, .withControl hE heff hh hr hfs hb hfit hg, hfx => by
+      hops
+  | _, _, _, _, .withControl hE heff hh hr hfs hb hfit hg hops, hfx => by
     have h := hfit.substTys s
     rw [Ty.substTys_of_params hg.2.1] at h ⊢
     exact .withControl hE heff (HasType.substTys hD hs hh hfx) hr (hfs.substTys hs)
-      (HasType.substTys hD hs hb hfx) h hg
+      (HasType.substTys hD hs hb hfx) h hg hops
 
 theorem ExprsFit.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     ∀ {Γ fx es τs}, ExprsFit D scope Γ fx es τs → fx.row.ParamFree →

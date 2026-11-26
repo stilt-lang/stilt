@@ -66,11 +66,11 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .return he hfit, _, hη, θ => return_ok hs hη θ he hfit
   | _, _, _, _, .perform hne hop hA hB hE he hfit, _, hη, θ => perform_ok hs hη θ hne hop hA hB hE he hfit
   | _, _, _, _, .resume hr hB hR he hfit, _, hη, θ => resume_ok hs hη θ hr hB hR he hfit
-  | _, _, _, _, .withH hne heff hh hr hfits hb, _, hη, θ =>
+  | _, _, _, _, .withH hne heff hh hr hfits hb _, _, hη, θ =>
     withH_ok hs hη θ hD hne heff hh hr hfits hb
-  | _, _, _, _, .withControl hne heff hh hr hfits hb hfit _, _, hη, θ =>
+  | _, _, _, _, .withControl hne heff hh hr hfits hb hfit _ _, _, hη, θ =>
     withControl_ok hs hη θ hD hne heff hh hr hfits hb hfit
-  | _, _, _, _, .held hnd _ hes hb, _, hη, θ => held_ok hs hη θ hnd hes hb
+  | _, _, _, _, .held hnd _ hes hb _, _, hη, θ => held_ok hs hη θ hnd hes hb
 
 /-- The fundamental lemma, at every fuel. -/
 theorem Decls.Typed.sound (hD : D.Typed) : ∀ n, Sound D n

@@ -176,9 +176,10 @@ theorem HasType.strengthen :
     .letIn hwf (HasType.strengthen he (part h)) hfit (HasType.strengthen hb (scope h))
   | _, _, _, _, .varIn hwf he hfit hb, _, h =>
     .varIn hwf (HasType.strengthen he (part h)) hfit (HasType.strengthen hb (scope h))
-  | _, _, _, _, .held hnd hwf hes hb, _, h =>
+  | _, _, _, _, .held hnd hwf hes hb hvar, _, h =>
     .held hnd hwf (ExprsFit.strengthen hes (part h)) (HasType.strengthen hb
       (Ctx.agree_holding _ (P := fun z => _ = true) fun z hz hv => h z (by simp [Expr.free, hz, hv])))
+      hvar
   | _, _, _, _, .assign (p := ⟨_, _⟩) hp he hfit, _, h =>
     .assign (PlaceFits.strengthen hp (assign_agree h)) (HasType.strengthen he (part h)) hfit
   | _, _, _, _, .seq ha hfit hb, _, h =>
@@ -205,11 +206,11 @@ theorem HasType.strengthen :
     .perform hne hop hA hB hm (HasType.strengthen he (part h)) hfit
   | _, _, _, _, .resume hr hB hR he hfit, _, h =>
     .resume hr hB hR (HasType.strengthen he (part h)) hfit
-  | _, _, _, _, .withH hne heff hh hr hfs hb, _, h =>
-    .withH hne heff (HasType.strengthen hh (part h)) hr hfs (HasType.strengthen hb (part h))
-  | _, _, _, _, .withControl hne heff hh hr hfs hb hfit hg, _, h =>
+  | _, _, _, _, .withH hne heff hh hr hfs hb hops, _, h =>
+    .withH hne heff (HasType.strengthen hh (part h)) hr hfs (HasType.strengthen hb (part h)) hops
+  | _, _, _, _, .withControl hne heff hh hr hfs hb hfit hg hops, _, h =>
     .withControl hne heff (HasType.strengthen hh (part h)) hr hfs
-      (HasType.strengthen hb (part h)) hfit hg
+      (HasType.strengthen hb (part h)) hfit hg hops
 
 theorem ExprsFit.strengthen :
     ∀ {Γ fx es τs}, ExprsFit D s Γ fx es τs →

@@ -74,8 +74,8 @@ theorem HasType.weaken (Δ : Ctx) :
     .letIn hwf (HasType.weaken Δ he) hfit (HasType.weaken Δ hb)
   | _, _, _, _, .varIn hwf he hfit hb =>
     .varIn hwf (HasType.weaken Δ he) hfit (HasType.weaken Δ hb)
-  | _, _, _, _, .held (ns := ns) hnd hwf hes hb =>
-    .held hnd hwf (ExprsFit.weaken Δ hes) (Ctx.holding_append Δ ns _ ▸ HasType.weaken Δ hb)
+  | _, _, _, _, .held (ns := ns) hnd hwf hes hb hv =>
+    .held hnd hwf (ExprsFit.weaken Δ hes) (Ctx.holding_append Δ ns _ ▸ HasType.weaken Δ hb) hv
   | _, _, _, _, .assign hp he hfit => .assign (PlaceFits.weaken Δ hp) (HasType.weaken Δ he) hfit
   | _, _, _, _, .seq ha hfit hb => .seq (HasType.weaken Δ ha) hfit (HasType.weaken Δ hb)
   | _, _, _, _, .if hwf hc hfc ha hfa hb hfb =>
@@ -96,10 +96,10 @@ theorem HasType.weaken (Δ : Ctx) :
   | _, _, _, _, .perform hne hop hA hB hm he hfit =>
     .perform hne hop hA hB hm (HasType.weaken Δ he) hfit
   | _, _, _, _, .resume hr hB hR he hfit => .resume hr hB hR (HasType.weaken Δ he) hfit
-  | _, _, _, _, .withH hne heff hh hr hfs hb =>
-    .withH hne heff (HasType.weaken Δ hh) hr hfs (HasType.weaken Δ hb)
-  | _, _, _, _, .withControl hne heff hh hr hfs hb hfit hg =>
-    .withControl hne heff (HasType.weaken Δ hh) hr hfs (HasType.weaken Δ hb) hfit hg
+  | _, _, _, _, .withH hne heff hh hr hfs hb hops =>
+    .withH hne heff (HasType.weaken Δ hh) hr hfs (HasType.weaken Δ hb) hops
+  | _, _, _, _, .withControl hne heff hh hr hfs hb hfit hg hops =>
+    .withControl hne heff (HasType.weaken Δ hh) hr hfs (HasType.weaken Δ hb) hfit hg hops
 
 theorem ExprsFit.weaken (Δ : Ctx) :
     ∀ {Γ fx es τs}, ExprsFit D s Γ fx es τs → ExprsFit D s (Γ ++ Δ) fx es τs
@@ -208,8 +208,8 @@ theorem HasType.of_le (hs : s.Le s') :
     .letIn (hwf.of_le hs) (HasType.of_le hs he) hfit (HasType.of_le hs hb)
   | _, _, _, _, .varIn hwf he hfit hb =>
     .varIn (hwf.of_le hs) (HasType.of_le hs he) hfit (HasType.of_le hs hb)
-  | _, _, _, _, .held hnd hwf hes hb =>
-    .held hnd (fun p hp => (hwf p hp).of_le hs) (ExprsFit.of_le hs hes) (HasType.of_le hs hb)
+  | _, _, _, _, .held hnd hwf hes hb hv =>
+    .held hnd (fun p hp => (hwf p hp).of_le hs) (ExprsFit.of_le hs hes) (HasType.of_le hs hb) hv
   | _, _, _, _, .assign hp he hfit => .assign (PlaceFits.of_le hs hp) (HasType.of_le hs he) hfit
   | _, _, _, _, .seq ha hfit hb => .seq (HasType.of_le hs ha) hfit (HasType.of_le hs hb)
   | _, _, _, _, .if hwf hc hfc ha hfa hb hfb =>
@@ -233,10 +233,10 @@ theorem HasType.of_le (hs : s.Le s') :
   | _, _, _, _, .perform hne hop hA hB hm he hfit =>
     .perform hne hop hA hB hm (HasType.of_le hs he) hfit
   | _, _, _, _, .resume hr hB hR he hfit => .resume hr hB hR (HasType.of_le hs he) hfit
-  | _, _, _, _, .withH hne heff hh hr hfs hb =>
-    .withH hne heff (HasType.of_le hs hh) hr (hfs.of_le hs) (HasType.of_le hs hb)
-  | _, _, _, _, .withControl hne heff hh hr hfs hb hfit hg =>
-    .withControl hne heff (HasType.of_le hs hh) hr (hfs.of_le hs) (HasType.of_le hs hb) hfit hg
+  | _, _, _, _, .withH hne heff hh hr hfs hb hops =>
+    .withH hne heff (HasType.of_le hs hh) hr (hfs.of_le hs) (HasType.of_le hs hb) hops
+  | _, _, _, _, .withControl hne heff hh hr hfs hb hfit hg hops =>
+    .withControl hne heff (HasType.of_le hs hh) hr (hfs.of_le hs) (HasType.of_le hs hb) hfit hg hops
 
 theorem ExprsFit.of_le (hs : s.Le s') :
     ∀ {Γ fx es τs}, ExprsFit D s Γ fx es τs → ExprsFit D s' Γ fx es τs

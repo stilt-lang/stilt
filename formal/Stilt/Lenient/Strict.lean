@@ -74,9 +74,9 @@ theorem Lenient.HasType.strict :
   | _, _, _, _, _, _, .call hc ha hall, hne =>
     have h := both hne
     .call (Lenient.HasType.strict hc h.1) (Lenient.ArgsFit.strict ha h.2) hall
-  | _, _, _, _, _, _, .held hnd hwf hes hb, hne =>
+  | _, _, _, _, _, _, .held hnd hwf hes hb hv, hne =>
     have h := both hne
-    .held hnd hwf (Lenient.ExprsFit.strict hes h.1) (Lenient.HasType.strict hb h.2)
+    .held hnd hwf (Lenient.ExprsFit.strict hes h.1) (Lenient.HasType.strict hb h.2) hv
   | _, _, _, _, _, _, .letIn hwf hi hfit hb, hne =>
     have h := both hne
     .letIn hwf (Lenient.HasType.strict hi h.1) (strictFits hfit h.1)
@@ -127,13 +127,13 @@ theorem Lenient.HasType.strict :
     .perform hne' hop hA hB hm (Lenient.HasType.strict he hne) (strictFits hfit hne)
   | _, _, _, _, _, _, .resume hr hB hR he hfit, hne =>
     .resume hr hB hR (Lenient.HasType.strict he hne) (strictFits hfit hne)
-  | _, _, _, _, _, _, .withH hE heff hh hr hfs hb, hne =>
+  | _, _, _, _, _, _, .withH hE heff hh hr hfs hb hops, hne =>
     have h := both hne
-    .withH hE heff (Lenient.HasType.strict hh h.1) hr hfs (Lenient.HasType.strict hb h.2)
-  | _, _, _, _, _, _, .withControl hE heff hh hr hfs hb hfit hg, hne =>
+    .withH hE heff (Lenient.HasType.strict hh h.1) hr hfs (Lenient.HasType.strict hb h.2) hops
+  | _, _, _, _, _, _, .withControl hE heff hh hr hfs hb hfit hg hops, hne =>
     have h := both hne
     .withControl hE heff (Lenient.HasType.strict hh h.1) hr hfs (Lenient.HasType.strict hb h.2)
-      (strictFits hfit h.2) hg
+      (strictFits hfit h.2) hg hops
 
 theorem Lenient.ExprsFit.strict :
     ∀ {N Γ fx es τs}, Lenient.ExprsFit D scope vs N Γ fx es τs →
@@ -221,7 +221,8 @@ theorem HasType.lenient :
     .letIn hwf (HasType.lenient hi) (.inl hfit) (HasType.lenient hb)
   | _, _, _, _, _, .varIn hwf hi hfit hb =>
     .varIn hwf (HasType.lenient hi) (.inl hfit) (HasType.lenient hb)
-  | _, _, _, _, _, .held hnd hwf hes hb => .held hnd hwf (ExprsFit.lenient hes) (HasType.lenient hb)
+  | _, _, _, _, _, .held hnd hwf hes hb hv =>
+    .held hnd hwf (ExprsFit.lenient hes) (HasType.lenient hb) hv
   | _, _, _, _, _, .assign hp he hfit =>
     .assign (PlaceFits.lenient hp) (HasType.lenient he) (.inl hfit)
   | _, _, _, _, _, .seq ha hfit hb => .seq (HasType.lenient ha) (.inl hfit) (HasType.lenient hb)
@@ -246,10 +247,10 @@ theorem HasType.lenient :
   | _, _, _, _, _, .perform hne hop hA hB hm he hfit =>
     .perform hne hop hA hB hm (HasType.lenient he) (.inl hfit)
   | _, _, _, _, _, .resume hr hB hR he hfit => .resume hr hB hR (HasType.lenient he) (.inl hfit)
-  | _, _, _, _, _, .withH hE heff hh hr hfs hb =>
-    .withH hE heff (HasType.lenient hh) hr hfs (HasType.lenient hb)
-  | _, _, _, _, _, .withControl hE heff hh hr hfs hb hfit hg =>
-    .withControl hE heff (HasType.lenient hh) hr hfs (HasType.lenient hb) (.inl hfit) hg
+  | _, _, _, _, _, .withH hE heff hh hr hfs hb hops =>
+    .withH hE heff (HasType.lenient hh) hr hfs (HasType.lenient hb) hops
+  | _, _, _, _, _, .withControl hE heff hh hr hfs hb hfit hg hops =>
+    .withControl hE heff (HasType.lenient hh) hr hfs (HasType.lenient hb) (.inl hfit) hg hops
 
 theorem ExprsFit.lenient :
     ∀ {N Γ fx es τs}, ExprsFit D scope Γ fx es τs → Lenient.ExprsFit D scope vs N Γ fx es τs

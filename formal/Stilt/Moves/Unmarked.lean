@@ -102,7 +102,7 @@ theorem HasType.erase_eq : ∀ {Γ fx e τ}, HasType D s Γ fx e τ → e.erase 
   | _, _, _, _, .return h _ | _, _, _, _, .perform _ _ _ _ _ h _
   | _, _, _, _, .resume _ _ _ h _ => by
     simp [Expr.erase, HasType.erase_eq h]
-  | _, _, _, _, .withH _ _ h₁ _ _ h₂ | _, _, _, _, .withControl _ _ h₁ _ _ h₂ _ _ => by
+  | _, _, _, _, .withH _ _ h₁ _ _ h₂ _ | _, _, _, _, .withControl _ _ h₁ _ _ h₂ _ _ _ => by
     simp [Expr.erase, HasType.erase_eq h₁, HasType.erase_eq h₂]
   | _, _, _, _, .index h₁ h₂ _ | _, _, _, _, .seq h₁ _ h₂ | _, _, _, _, .letIn _ h₁ _ h₂
   | _, _, _, _, .varIn _ h₁ _ h₂ | _, _, _, _, .for _ h₁ h₂ _
@@ -110,7 +110,7 @@ theorem HasType.erase_eq : ∀ {Γ fx e τ}, HasType D s Γ fx e τ → e.erase 
     simp [Expr.erase, HasType.erase_eq h₁, HasType.erase_eq h₂]
   | _, _, _, _, .tryCatch _ _ h₁ _ h₂ _ => by
     simp [Expr.erase, HasType.erase_eq h₁, HasType.erase_eq h₂]
-  | _, _, _, _, .held _ _ h₁ h₂ => by simp [Expr.erase, ExprsFit.erase_eq h₁, HasType.erase_eq h₂]
+  | _, _, _, _, .held _ _ h₁ h₂ _ => by simp [Expr.erase, ExprsFit.erase_eq h₁, HasType.erase_eq h₂]
   | _, _, _, _, .closure _ _ _ h _ => by simp [Expr.erase, HasType.erase_eq h]
   | _, _, _, _, .call h₁ h₂ _ => by simp [Expr.erase, HasType.erase_eq h₁, ArgsFit.erase_eq h₂]
   | _, _, .assign ⟨_, _⟩ _, _, .assign h₁ h₂ _ => by

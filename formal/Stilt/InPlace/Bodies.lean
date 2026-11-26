@@ -113,7 +113,7 @@ theorem HasType.distinctParams :
     simp [Expr.distinctParams, HasType.distinctParams he, HasType.distinctParams hb]
   | _, _, _, _, .varIn _ he _ hb => by
     simp [Expr.distinctParams, HasType.distinctParams he, HasType.distinctParams hb]
-  | _, _, _, _, .held _ _ hes hb => by
+  | _, _, _, _, .held _ _ hes hb _ => by
     simp [Expr.distinctParams, ExprsFit.distinctParams hes, HasType.distinctParams hb]
   | _, _, .assign ⟨_, _⟩ _, _, .assign hp he _ => by
     simp [Expr.distinctParams, PlaceFits.distinctParams hp, HasType.distinctParams he]
@@ -138,7 +138,7 @@ theorem HasType.distinctParams :
   | _, _, _, _, .return he _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
   | _, _, _, _, .perform _ _ _ _ _ he _ | _, _, _, _, .resume _ _ _ he _ => by
     simpa [Expr.distinctParams] using HasType.distinctParams he
-  | _, _, _, _, .withH _ _ hh _ _ hb | _, _, _, _, .withControl _ _ hh _ _ hb _ _ => by
+  | _, _, _, _, .withH _ _ hh _ _ hb _ | _, _, _, _, .withControl _ _ hh _ _ hb _ _ _ => by
     simp [Expr.distinctParams, HasType.distinctParams hh, HasType.distinctParams hb]
 
 theorem ExprsFit.distinctParams :

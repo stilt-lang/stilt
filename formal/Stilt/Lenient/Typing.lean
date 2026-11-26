@@ -219,17 +219,20 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       HasType N Γ fx h (.record R) → D.record? R = some r →
       HandlerFits scope fx eff r.fields none →
       HasType N Γ { fx with row := fx.row.withEffect E } b τ →
+      (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType N Γ fx (.withH E false h b) τ
   | withControl {N Γ fx E eff h R r b σ τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
       HasType N Γ fx h (.record R) → D.record? R = some r →
       HandlerFits scope fx eff r.fields (some τ) →
       HasType N Γ { fx with row := fx.row.withEffect E } b σ → LenientFits vs N b σ τ →
-      τ.Ground → HasType N Γ fx (.withH E true h b) τ
+      τ.Ground → (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
+      HasType N Γ fx (.withH E true h b) τ
   | held {N Γ fx ns hs body σ} :
       (ns.map Prod.fst).Nodup → (∀ p ∈ ns, p.2.WellFormed scope) →
       ExprsFit N Γ fx hs (ns.map fun p => .shared p.2) →
       HasType (N.removeAll (ns.map Prod.fst)) (Γ.holding ns) fx body σ →
+      (∀ h ∈ hs, ∃ x, h = .var x) →
       HasType N Γ fx (.held ns hs body) σ
 
 /-- Each expression is checked against the type at its position. -/

@@ -386,27 +386,35 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx e σ → Fits σ B →
       HasType Γ fx (.perform Operation.resume e) R
   /-- `with h { block }` of a handler that resumes every performance has its
-  block's type; the block may perform the handler's effect (handlers.with). -/
+  block's type; the block may perform the handler's effect (handlers.with). The handler
+  implements no operation that the effect doesn't declare (E0511,
+  handlers.handler-literals). -/
   | withH {Γ fx E eff h R r b τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
       HasType Γ fx h (.record R) → D.record? R = some r →
       HandlerFits scope fx eff r.fields none →
       HasType Γ { fx with row := fx.row.withEffect E } b τ →
+      (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType Γ fx (.withH E false h b) τ
   /-- A `with` of a handler that takes control has the handler's type, which
-  its block's fits (handlers.resuming). -/
+  its block's fits (handlers.resuming). The handler implements no operation that the
+  effect doesn't declare (E0511, handlers.handler-literals). -/
   | withControl {Γ fx E eff h R r b σ τ} :
       E ≠ Operation.resume.effect → D.effect? E = some eff →
       HasType Γ fx h (.record R) → D.record? R = some r →
       HandlerFits scope fx eff r.fields (some τ) →
       HasType Γ { fx with row := fx.row.withEffect E } b σ → Fits σ τ → τ.Ground →
+      (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType Γ fx (.withH E true h b) τ
   /-- `when a, b { block }`: each handle a `Shared<T>` of its name's `T`, the names
-  distinct, and the block typed with each name a `var` of its `T` (shared.when). -/
+  distinct, and the block typed with each name a `var` of its `T` (shared.when). Each
+  handle is a binding, a local or a parameter: any other expression, a name given twice
+  and a name of a type other than `Shared<T>` are E0433 (shared.when). -/
   | held {Γ fx ns hs body σ} :
       (ns.map Prod.fst).Nodup → (∀ p ∈ ns, p.2.WellFormed scope) →
       ExprsFit Γ fx hs (ns.map fun p => .shared p.2) →
       HasType (Γ.holding ns) fx body σ →
+      (∀ h ∈ hs, ∃ x, h = .var x) →
       HasType Γ fx (.held ns hs body) σ
 
 /-- Each expression fits the type at its position. -/
