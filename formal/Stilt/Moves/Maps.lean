@@ -13,49 +13,9 @@ operation, applied to erased operands, gives its value erased.
 
 namespace Stilt
 
-theorem eraseValues_eq_map : ∀ vs : List Value, eraseValues vs = vs.map Value.erase
-  | [] => rfl
-  | v :: vs => by simp [eraseValues, eraseValues_eq_map vs]
-
 /-- An entry with its marks erased. -/
 def eraseEntry (e : Value × Value) : Value × Value := (e.1.erase, e.2.erase)
 
-mutual
-
-theorem Value.keyEq_erase : ∀ (a b : Value), a.erase.keyEq b.erase = a.keyEq b
-  | .record R fs, .record S gs => by
-    simp only [Value.erase, Value.keyEq, fieldsKeyEq_erase fs gs]
-  | .variant T C vs, .variant U D ws => by
-    simp only [Value.erase, Value.keyEq, payloadKeyEq_erase vs ws]
-  | .list vs, .list ws => by
-    simp only [Value.erase, Value.keyEq, payloadKeyEq_erase vs ws]
-  | .list _, .int _ | .list _, .float _ | .list _, .str _ | .list _, .bool _
-  | .list _, .unit | .list _, .record .. | .list _, .variant ..
-  | .list _, .closure .. | .list _, .function .. | .list _, .handle .. | .list _, .window .. => rfl
-  | .record _ _, .int _ | .record _ _, .float _ | .record _ _, .str _ | .record _ _, .bool _
-  | .record _ _, .unit | .record _ _, .variant .. | .record _ _, .list _
-  | .record _ _, .closure .. | .record _ _, .function .. | .record _ _, .handle ..
-  | .record _ _, .window .. => rfl
-  | .variant .., .int _ | .variant .., .float _ | .variant .., .str _ | .variant .., .bool _
-  | .variant .., .unit | .variant .., .record .. | .variant .., .list _
-  | .variant .., .closure .. | .variant .., .function .. | .variant .., .handle ..
-  | .variant .., .window .. => rfl
-  | .int _, b | .float _, b | .str _, b | .bool _, b | .unit, b
-  | .closure .., b | .function .., b | .handle .., b | .window .., b => by cases b <;> rfl
-
-theorem fieldsKeyEq_erase : ∀ (fs gs : List (Name × Value)),
-    Value.keyEq.fieldsKeyEq (eraseBindings fs) (eraseBindings gs) = Value.keyEq.fieldsKeyEq fs gs
-  | [], [] | [], _ :: _ | _ :: _, [] => rfl
-  | (_, a) :: fs, (_, b) :: gs => by
-    simp only [eraseBindings, Value.keyEq.fieldsKeyEq, Value.keyEq_erase a b, fieldsKeyEq_erase fs gs]
-
-theorem payloadKeyEq_erase : ∀ (vs ws : List Value),
-    Value.keyEq.payloadKeyEq (eraseValues vs) (eraseValues ws) = Value.keyEq.payloadKeyEq vs ws
-  | [], [] | [], _ :: _ | _ :: _, [] => rfl
-  | a :: vs, b :: ws => by
-    simp only [eraseValues, Value.keyEq.payloadKeyEq, Value.keyEq_erase a b, payloadKeyEq_erase vs ws]
-
-end
 
 theorem Value.erase_tuple (vs : List Value) : (Value.tuple vs).erase = .tuple (eraseValues vs) := by
   simp only [Value.tuple, Value.erase, positions, eraseBindings_positionsFrom]
@@ -177,9 +137,6 @@ theorem Entries.index_erase (d : Option Value) :
   rw [Entries.find_erase]
   cases Entries.find k es <;> cases d <;> rfl
 
-theorem Keys.has_erase : Keys.has k.erase (ks.map Value.erase) = Keys.has k ks := by
-  simp [Keys.has, Function.comp_def, Value.keyEq_erase]
-
 theorem Keys.insert_erase :
     Keys.insert k.erase (ks.map Value.erase) = (Keys.insert k ks).map Value.erase := by
   unfold Keys.insert
@@ -202,10 +159,6 @@ theorem Keys.insertAll_erase : ∀ ks xs : List Value,
 theorem SetCombine.run_erase (c : SetCombine) (a b : List Value) :
     c.run (a.map Value.erase) (b.map Value.erase) = (c.run a b).map Value.erase := by
   cases c <;> simp [SetCombine.run, List.filter_map, Function.comp_def, Keys.has_erase]
-
-theorem SetRelation.test_erase (r : SetRelation) (a b : List Value) :
-    r.test (a.map Value.erase) (b.map Value.erase) = r.test a b := by
-  cases r <;> simp [SetRelation.test, Function.comp_def, Keys.has_erase]
 
 theorem Keys.insertAll_nil_erase (xs : List Value) :
     Keys.insertAll [] (xs.map Value.erase) = (Keys.insertAll [] xs).map Value.erase :=

@@ -11,8 +11,9 @@ declaration order, a variant first by its constructor's place in its type's
 declaration, then by its payload, and a shorter list before a longer one that
 starts with it. `==` on a float is IEEE 754's, and `compare` its total order,
 in which NaNs are equal and greatest and `-0.0` comes before `0.0`
-(traits.floats). Maps, whose equality ignores the order of their entries
-(traits.map-equality), are outside: the export compares only types without one.
+(traits.floats). Two maps are equal when they hold the same entries in any order, and two
+sets when they hold the same elements (traits.map-equality and std.set-impls); maps and
+sets have no order (`Decls.Implements`).
 -/
 
 namespace Stilt
@@ -47,21 +48,39 @@ abbrev CtorOrders := List (Name × List Name)
 def CtorOrders.place (orders : CtorOrders) (T C : Name) : Nat :=
   ((orders.lookup T).getD []).idxOf C
 
+/-- The value of the first of a map's entries, each the list of its key and its value,
+whose key `eq` finds equal to `k` (std.finding-keys). -/
+def Value.entryAt (k : Value) : List Value → Option Value
+  | [] => none
+  | .list [k', w] :: es => if k.keyEq k' then some w else Value.entryAt k es
+  | _ :: es => Value.entryAt k es
+
+/-- Whether two sets' records hold the same elements, in any order: the structural `Eq`
+of `Set` compares their maps (std.set-impls). -/
+def sameSets : List (Name × Value) → List (Name × Value) → Bool
+  | (_, .list a) :: _, (_, .list b) :: _ => SetRelation.test .equal a b
+  | _, _ => false
+
 mutual
 
-/-- Structural equality (traits.structural-calls); two handles are equal when they name one
-cell. -/
+/-- Structural equality (traits.structural-calls), and the equality of maps and sets, which
+hold the same entries or elements in any order (traits.map-equality and std.set-impls); two
+handles are equal when they name one cell. -/
 def Value.same : Value → Value → Bool
   | .int a, .int b => a == b
   | .float x, .float y => FloatVal.compare .eq x y == some true
   | .bool a, .bool b => a == b
   | .str s, .str t => s == t
   | .unit, .unit => true
-  | .record _ fs, .record _ gs => sameFields fs gs
+  | .record R fs, .record _ gs =>
+    if R = mapName then sameMaps fs gs
+    else if R = setName then sameSets fs gs
+    else sameFields fs gs
   | .variant _ C vs, .variant _ D ws => C == D && sameValues vs ws
   | .list vs, .list ws => sameValues vs ws
   | .handle u k, .handle u' k' => decide (u = u') && k == k'
   | _, _ => false
+termination_by structural v => v
 
 /-- Element by element, a list's length included. -/
 def sameValues : List Value → List Value → Bool
@@ -74,6 +93,23 @@ def sameFields : List (Name × Value) → List (Name × Value) → Bool
   | [], [] => true
   | (_, v) :: fs, (_, w) :: gs => v.same w && sameFields fs gs
   | _, _ => false
+
+/-- Two maps' records, by their entries: maps of different lengths are unequal, and
+otherwise each key of the first, in insertion order, is found in the second, and the two
+values are equal; a map's default takes no part (traits.map-equality). -/
+def sameMaps : List (Name × Value) → List (Name × Value) → Bool
+  | (_, .list es) :: _, (_, .list bs) :: _ => es.length == bs.length && sameEntries es bs
+  | _, _ => false
+
+/-- Each of the entries `es` found in `bs` with an equal value. -/
+def sameEntries : List Value → List Value → Bool
+  | [], _ => true
+  | .list [k, v] :: es, bs =>
+    (match Value.entryAt k bs with
+      | some w => v.same w
+      | none => false) && sameEntries es bs
+  | _ :: _, _ => false
+termination_by structural es => es
 
 end
 
@@ -105,6 +141,38 @@ def orderFields (orders : CtorOrders) : List (Name × Value) → List (Name × V
   | _, _ => .eq
 
 end
+
+/-- An entry's value among entries written as a map's record holds them is the one that
+`Entries.find` finds. -/
+theorem Value.entryAt_map_entry (k : Value) :
+    ∀ es : List (Value × Value), Value.entryAt k (es.map Value.entry) = Entries.find k es
+  | [] => rfl
+  | (k', w) :: es => by
+    simp only [List.map_cons, Value.entry, Value.entryAt, Entries.find, List.find?_cons]
+    cases k.keyEq k' with
+    | true => rfl
+    | false => exact Value.entryAt_map_entry k es
+
+theorem sameEntries_map_entry (bs : List Value) : ∀ a : List (Value × Value),
+    sameEntries (a.map Value.entry) bs =
+      a.all fun e => match Value.entryAt e.1 bs with
+        | some w => e.2.same w
+        | none => false
+  | [] => by simp [sameEntries]
+  | (k, v) :: a => by
+    simp only [List.map_cons, Value.entry, sameEntries, List.all_cons, sameEntries_map_entry bs a]
+
+/-- `==` on two maps is `Entries.equal` with the values compared by `Value.same`: the same
+length, and each key of the first, in order, found in the second with an equal value,
+whatever the order of the entries and whatever the defaults (traits.map-equality). At a
+key type of values, `MapOp.equal` compares them by `Value.keyEq`. -/
+theorem Value.same_mapOf (a b : List (Value × Value)) (d d' : Option Value) :
+    (Value.mapOf a d).same (Value.mapOf b d') =
+      (a.length == b.length && a.all fun e => match Entries.find e.1 b with
+        | some w => e.2.same w
+        | none => false) := by
+  simp only [Value.mapOf, Value.same, ↓reduceIte, sameMaps, List.length_map,
+    sameEntries_map_entry, Value.entryAt_map_entry]
 
 /-- A comparison through the structural impls: `==` and `!=` by `Eq`, the
 others by `Ord.compare` (traits.operators). -/
