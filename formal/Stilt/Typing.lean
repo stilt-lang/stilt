@@ -206,12 +206,10 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       ExprsFit Γ fx es (List.replicate es.length τ) →
       HasType Γ fx (.list τ es) (.list τ)
   /-- A built-in operation's operands fit the types its signature gives them
-  (values.left-to-right). A function of maps or sets finds keys of key types of the
-  program (std.map-key-bounds). -/
+  (values.left-to-right); a function of maps or sets finds keys of key types (std.map-key-bounds). -/
   | op {Γ fx o es τs τ} :
       o.Sig τs τ →
-      ExprsFit Γ fx es τs →
-      o.KeysIn D τs τ →
+      ExprsFit Γ fx es τs → o.KeysIn D τs τ →
       HasType Γ fx (.op o es) τ
   /-- A view's operands fit `View.all`, `View.of` or `v.view` (views.making-view). -/
   | view {Γ fx es τs τ} :
@@ -395,8 +393,7 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       E ≠ Operation.resume.effect → D.effect? E = some eff →
       HasType Γ fx h (.record R) → D.record? R = some r →
       HandlerFits scope fx eff r.fields none →
-      HasType Γ { fx with row := fx.row.withEffect E } b τ →
-      (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
+      HasType Γ { fx with row := fx.row.withEffect E } b τ → (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType Γ fx (.withH E false h b) τ
   /-- A `with` of a handler that takes control has the handler's type, which
   its block's fits (handlers.resuming). The handler implements no operation that the
@@ -408,10 +405,9 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ { fx with row := fx.row.withEffect E } b σ → Fits σ τ → τ.Ground →
       (∀ f ∈ r.fields, f.1 ∈ eff.ops.map Prod.fst) →
       HasType Γ fx (.withH E true h b) τ
-  /-- `when a, b { block }`: each handle a `Shared<T>` of its name's `T`, the names
-  distinct, and the block typed with each name a `var` of its `T` (shared.when). Each
-  handle is a binding, a local or a parameter: any other expression, a name given twice
-  and a name of a type other than `Shared<T>` are E0433 (shared.when). -/
+  /-- `when a, b { block }`: each handle a binding of a `Shared<T>` of its name's `T`, the names
+  distinct, and the block typed with each name a `var` of its `T`; anything else is E0433
+  (shared.when). -/
   | held {Γ fx ns hs body σ} :
       (ns.map Prod.fst).Nodup → (∀ p ∈ ns, p.2.WellFormed scope) →
       ExprsFit Γ fx hs (ns.map fun p => .shared p.2) →
