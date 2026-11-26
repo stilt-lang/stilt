@@ -68,6 +68,12 @@ pub(crate) struct Context {
     /// The lowest address and the size of the stack, as the sanitizers track it.
     #[cfg(stilt_sanitizers)]
     bounds: (usize, usize),
+    /// While the context waits, the part of its stack that its frames hold, which
+    /// `LeakSanitizer` scans: `AddressSanitizer` knows only the running context's stack as the
+    /// thread's, so a program that ends while others wait, as one that panics in a handler's
+    /// body does, would otherwise report what their frames hold as leaks.
+    #[cfg(stilt_sanitizers)]
+    scanned: (usize, usize),
     /// The fiber that `ThreadSanitizer` runs the context's code on.
     #[cfg(stilt_tsan)]
     fiber: super::tsan::Fiber,
@@ -84,6 +90,8 @@ impl Context {
             sp,
             #[cfg(stilt_sanitizers)]
             bounds: (stack.0 + GUARD, SIZE),
+            #[cfg(stilt_sanitizers)]
+            scanned: (0, 0),
             #[cfg(stilt_tsan)]
             fiber: super::tsan::Fiber::new(),
             stack: Some(stack),
@@ -94,6 +102,8 @@ impl Context {
     /// shadow is cleared first: a context's entry never returns, so the redzones of its frames
     /// would stay poisoned, and a context that the stack is kept for would meet them.
     pub(crate) fn release(&mut self) {
+        #[cfg(stilt_sanitizers)]
+        self.unscan();
         if let Some(stack) = self.stack.take() {
             #[cfg(stilt_tsan)]
             self.fiber.release();
@@ -110,6 +120,40 @@ impl Context {
                     free.push(stack);
                 }
             });
+        }
+    }
+}
+
+#[cfg(stilt_sanitizers)]
+impl Context {
+    /// Has `LeakSanitizer` scan the frames of this context, which has just switched away, from
+    /// its stack pointer to the top of its stack.
+    fn scan(&mut self) {
+        let (bottom, size) = self.bounds;
+        if size > 0 && (bottom..bottom + size).contains(&self.sp) {
+            self.scanned = (self.sp, bottom + size - self.sp);
+            // SAFETY: registering a region has no preconditions; the sanitizer reads only its
+            // mapped pages.
+            unsafe {
+                sanitizer::__lsan_register_root_region(
+                    self.scanned.0 as *const libc::c_void,
+                    self.scanned.1,
+                );
+            }
+        }
+    }
+
+    /// Stops [`Context::scan`]'s, as the context runs again or goes.
+    fn unscan(&mut self) {
+        if self.scanned.1 > 0 {
+            // SAFETY: the region is the one `scan` registered.
+            unsafe {
+                sanitizer::__lsan_unregister_root_region(
+                    self.scanned.0 as *const libc::c_void,
+                    self.scanned.1,
+                );
+            }
+            self.scanned = (0, 0);
         }
     }
 }
@@ -137,7 +181,9 @@ pub(crate) unsafe fn switch(from: *mut Context, to: *mut Context, last: bool) {
             (*to).bounds.1,
         );
         #[cfg(stilt_sanitizers)]
-        PREVIOUS.with(|p| p.set(from));
+        (*to).unscan();
+        #[cfg(stilt_sanitizers)]
+        PREVIOUS.with(|p| p.set((from, last)));
         #[cfg(stilt_tsan)]
         super::tsan::Fiber::switch(&mut (*from).fiber, &(*to).fiber);
         let _ = last;
@@ -159,10 +205,16 @@ unsafe fn landed(fake: *mut libc::c_void) {
     // SAFETY: called once at the end of a switch, as the sanitizer requires.
     unsafe { sanitizer::__sanitizer_finish_switch_fiber(fake, &raw mut bottom, &raw mut size) };
     PREVIOUS.with(|p| {
-        let from = p.get();
+        let (from, last) = p.get();
         if !from.is_null() {
-            // SAFETY: the context that switched here is alive while its switch runs.
-            unsafe { (*from).bounds = (bottom as usize, size) };
+            // SAFETY: the context that switched here is alive while its switch runs, and waits
+            // unless its switch was its last.
+            unsafe {
+                (*from).bounds = (bottom as usize, size);
+                if !last {
+                    (*from).scan();
+                }
+            }
         }
     });
 }
@@ -179,7 +231,7 @@ pub(crate) fn started() {
 #[cfg(stilt_sanitizers)]
 thread_local! {
     /// The context being switched from, whose bounds the sanitizer gives once the switch lands.
-    static PREVIOUS: std::cell::Cell<*mut Context> = const { std::cell::Cell::new(std::ptr::null_mut()) };
+    static PREVIOUS: std::cell::Cell<(*mut Context, bool)> = const { std::cell::Cell::new((std::ptr::null_mut(), false)) };
 }
 
 #[cfg(stilt_sanitizers)]
@@ -196,6 +248,8 @@ mod sanitizer {
             size: *mut usize,
         );
         pub(super) fn __asan_unpoison_memory_region(start: *const libc::c_void, size: usize);
+        pub(super) fn __lsan_register_root_region(start: *const libc::c_void, size: usize);
+        pub(super) fn __lsan_unregister_root_region(start: *const libc::c_void, size: usize);
     }
 }
 
