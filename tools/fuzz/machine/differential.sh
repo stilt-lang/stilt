@@ -14,7 +14,10 @@ while true; do
     out=$FUZZ/work/programs logs=$FUZZ/work/logs
     rm -rf "$out" "$logs"
     "$gen" csmith --seed "$seed" --count 1000 --bundle 10 --out "$out" > /dev/null
-    if ! target/release/stilt-test --impl target/release/stilt --diff "$ref" --tests \
+    # 30 s on the processor for a bundle, as `just differential` gives: the reference interpreter
+    # takes a few seconds of the slowest bundles, more on this machine's two vCPUs, and the
+    # generated programs all end, so the limit only stops a bug that never does.
+    if ! target/release/stilt-test --impl target/release/stilt --diff "$ref" --tests --time-limit 30 \
         --cache "$FUZZ/work/interpreter-cache" --logs "$logs" "$out" > "$FUZZ/work/report" 2>&1; then
         f=$FINDINGS/differential-$seed
         mkdir -p "$f"
