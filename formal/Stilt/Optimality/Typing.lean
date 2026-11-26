@@ -74,11 +74,11 @@ theorem vars_hasType {D : Decls} {scope : RowScope} {fx : Effects} {τ σ : Ty} 
 
 theorem recTy_wellFormed (b : Nat) (scope : RowScope) : (recTy b).WellFormed scope :=
   let h := (Head.record (recName b)).ground_type
-  Ty.Closed.wellFormed h.1 h.2.1 h.2.2 scope
+  Ty.Closed.wellFormed h.1 h.2.1 h.2.2 (Head.viewsViewable_type _) scope
 
 theorem i64_wellFormed (scope : RowScope) : Ty.i64.WellFormed scope :=
   let h := (Head.int .i64).ground_type
-  Ty.Closed.wellFormed h.1 h.2.1 h.2.2 scope
+  Ty.Closed.wellFormed h.1 h.2.1 h.2.2 (Head.viewsViewable_type _) scope
 
 theorem concrete_recFields {F : List Name} {v : Name} :
     ∀ (b : Nat), ∀ f ∈ recFields F v b, f.2.Concrete
@@ -140,12 +140,18 @@ theorem shapes_wellFormed (scope : RowScope) :
   have hrows : ∀ ρ ∈ (Ty.fn (ss.map fun s => (Mode.inout, paramTy ss s)) .unit Row.pure).rows,
       ρ = Row.pure := fun ρ hρ => by
     simpa [Ty.rows, paramRows_shapes, Row.rows, Row.pure] using hρ
-  refine ⟨fun ρ hρ w hw => ?_, fun T hT => ?_, fun ρ hρ E hE => ?_⟩
+  have hv : ∀ ts : List Shape, paramTysViews (ts.map fun s => (Mode.inout, paramTy ss s)) = [] := by
+    intro ts
+    induction ts with
+    | nil => rfl
+    | cons t ts ih => simpa [paramTysViews, paramTy, recTy, Ty.views] using ih
+  refine ⟨fun ρ hρ w hw => ?_, fun T hT => ?_, fun ρ hρ E hE => ?_, fun υ hυ => ?_⟩
   · rw [hrows ρ hρ] at hw
     cases hw
   · simp [Ty.params, hp] at hT
   · rw [hrows ρ hρ] at hE
     cases hE
+  · simp [Ty.views, hv, Row.views, Row.pure] at hυ
 
 theorem decls_wellFormed : (decls ss a b extra).WellFormed where
   recordNames := nodup_recNames _

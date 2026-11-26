@@ -76,7 +76,7 @@ private theorem param_closed (T : Name) : (Ty.param T).Closed := fun _ h => noma
 by the bound `T: Size` alone (traits.unsatisfied-bounds). -/
 example : twice.WellTyped decls twice.scope := by
   have hT : (Ty.param "T").WellFormed twice.scope := by
-    refine ⟨fun _ h => (nomatch h), fun T hT => ?_, fun _ h => (nomatch h)⟩
+    refine ⟨fun _ h => (nomatch h), fun T hT => ?_, fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
     simp only [Ty.params, List.mem_singleton] at hT
     simp [hT, FnDecl.scope, twice]
   have hsat : Satisfies decls twice.scope (.param "T") "Size" :=

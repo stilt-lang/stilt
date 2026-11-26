@@ -81,6 +81,7 @@ an instance checked in `scope'`: ground types for all of them, each meeting its
 parameter's bounds there, in a scope that allows what the body's allows. -/
 structure TySubst.Fits (D : Decls) (scope scope' : RowScope) (s : TySubst) : Prop where
   ground : s.Ground
+  viewable : ∀ p ∈ s, p.2.ViewsViewable
   covers : ∀ p ∈ scope.types, ∃ σ, s.lookup p.name = some σ ∧ ∀ B ∈ p.bounds, Satisfies D scope' σ B
   vars : ∀ v ∈ scope.vars, v ∈ scope'.vars
   pairs : ∀ v E, scope.pairs v E → scope'.pairs v E
@@ -97,7 +98,7 @@ theorem TySubst.Fits.isSome (hs : s.Fits D scope scope') {p : TypeParam} (hp : p
 
 theorem TySubst.Fits.wellFormed (hs : s.Fits D scope scope') {τ : Ty} (h : τ.WellFormed scope) :
     (τ.substTys s).WellFormed scope' :=
-  h.substTys hs.ground (fun _ hp => hs.isSome hp) hs.vars
+  h.substTys hs.ground hs.viewable (fun _ hp => hs.isSome hp) hs.vars
 
 theorem TySubst.Fits.satisfies (hs : s.Fits D scope scope') {τ : Ty} {B : Name}
     (h : Satisfies D scope τ B) : Satisfies D scope' (τ.substTys s) B := by

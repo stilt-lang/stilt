@@ -278,10 +278,12 @@ theorem Ty.instantiableBy_nil (τ : Ty) : τ.InstantiableBy [] := by
   refine ⟨fun E hE F hF => ?_, fun _ _ _ h => nomatch h⟩
   cases h : ρ.raise <;> simp_all [Row.labels]
 
-/-- A closed type that names no type parameter is well formed in every scope. -/
+/-- A closed type that names no type parameter, and whose views are viewable, is well
+formed in every scope. -/
 theorem Ty.Closed.wellFormed {τ : Ty} (h : τ.Closed) (hp : τ.params = [])
-    (he : ∀ ρ ∈ τ.rows, ρ.ParamFree) (scope : RowScope) : τ.WellFormed scope := by
-  refine ⟨fun ρ hρ v hv => ?_, fun T hT => ?_, he⟩
+    (he : ∀ ρ ∈ τ.rows, ρ.ParamFree) (hv : τ.ViewsViewable) (scope : RowScope) :
+    τ.WellFormed scope := by
+  refine ⟨fun ρ hρ v hv => ?_, fun T hT => ?_, he, hv⟩
   · rw [h ρ hρ] at hv
     exact nomatch hv
   · rw [hp] at hT

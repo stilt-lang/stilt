@@ -221,7 +221,7 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     HasType.fnRef_substTys hD hs hd hlen hinst hres hwf hpass htys
   | _, _, _, _, .method ht hm hc hwf hsat, _ => HasType.method_substTys hD hs ht hm hc hwf hsat
   | _, _, _, _, .closure (ρ := ρ) hnd hpt hwf hb hfit, _ => by
-    have h := HasType.substTys hD hs hb (hwf.2.2 ρ (by simp [Ty.rows, Row.mem_rows_self]))
+    have h := HasType.substTys hD hs hb (hwf.2.2.1 ρ (by simp [Ty.rows, Row.mem_rows_self]))
     rw [Ctx.params_substTys, Ctx.freeze_substTys] at h
     exact HasType.closure_substTys hs hnd hpt hwf h hfit
   | _, _, _, _, .call hc ha hallow, hfx =>
@@ -391,10 +391,14 @@ meet their bounds anywhere. -/
 theorem TypeArgsFit.fits (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) {scope : RowScope}
     (hscope : scope.types = []) {types : List Ty} (h : TypeArgsFit D scope d.typeParams types) :
     (d.typeArgs types).Fits D d.scope d.scope.instantiated := by
-  refine ⟨fun p hp => ?_, fun p hp => ?_, fun _ h => h, fun _ _ h => h, fun _ _ h => h⟩
+  refine ⟨fun p hp => ?_, fun p hp => ?_, fun p hp => ?_, fun _ h => h, fun _ _ h => h,
+    fun _ _ h => h⟩
   · obtain ⟨-, hτ⟩ := List.of_mem_zip hp
     obtain ⟨_, _, hc, hw, _⟩ := Forall₂.exists_of_mem_right h hτ
     exact Ty.ground_of_wellFormed hc hw hscope
+  · obtain ⟨-, hτ⟩ := List.of_mem_zip hp
+    obtain ⟨_, _, _, hw, _⟩ := Forall₂.exists_of_mem_right h hτ
+    exact hw.2.2.2
   · obtain ⟨τ, hl, _, _, hb⟩ := Forall₂.lookup_zip h (hD.typeParams d hd) hp
     refine ⟨τ, hl, fun B hB => ?_⟩
     rcases hb B hB with ⟨q, hq, _⟩ | hi
@@ -413,7 +417,7 @@ theorem TypeArgsFit.substRows {scope : RowScope} {ps : List TypeParam} {τs : Li
 /-- A function's row names no type parameter. -/
 theorem Decls.WellFormed.rowParamFree (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) :
     d.row.ParamFree :=
-  (hD.signatures d hd).2.2 d.row (by simp [FnDecl.type, Ty.rows, Row.mem_rows_self])
+  (hD.signatures d hd).2.2.1 d.row (by simp [FnDecl.type, Ty.rows, Row.mem_rows_self])
 
 /-- A function's body, instantiated with type arguments that fit, checks
 against the instantiated signature in the scope of the instance. -/

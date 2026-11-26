@@ -290,6 +290,74 @@ theorem paramTysParams_substTys (s : TySubst) :
 
 end
 
+/-! ## Views of an instance -/
+
+theorem Ty.viewable_substTys {υ : Ty} (h : υ = .str ∨ ∃ U, υ = .list U) (s : TySubst) :
+    υ.substTys s = .str ∨ ∃ U, υ.substTys s = .list U := by
+  rcases h with rfl | ⟨U, rfl⟩
+  · exact .inl rfl
+  · exact .inr ⟨_, rfl⟩
+
+mutual
+
+/-- An instantiation by types whose views are viewable keeps a type's views viewable. -/
+theorem Ty.ViewsViewable.substTys (s : TySubst) (hs : ∀ p ∈ s, p.2.ViewsViewable) :
+    ∀ τ : Ty, τ.ViewsViewable → (τ.substTys s).ViewsViewable
+  | .int _, h | .float _, h | .bool, h | .str, h | .unit, h | .never, h => h
+  | .record _, h | .variant _, h => h
+  | .param T, h => by
+    simp only [Ty.substTys]
+    cases hl : s.lookup T with
+    | none => exact h
+    | some σ => exact hs _ (mem_of_lookup hl)
+  | .list τ, h => Ty.ViewsViewable.substTys s hs τ h
+  | .tuple τs, h => tysViews_substTys s hs τs h
+  | .map κ τ, h => by
+    intro υ hυ
+    simp only [Ty.substTys, Ty.views, List.mem_append] at hυ
+    rcases hυ with hυ | hυ
+    · exact Ty.ViewsViewable.substTys s hs κ (fun υ h' => h υ (by simp [Ty.views, h'])) υ hυ
+    · exact Ty.ViewsViewable.substTys s hs τ (fun υ h' => h υ (by simp [Ty.views, h'])) υ hυ
+  | .set τ, h => Ty.ViewsViewable.substTys s hs τ h
+  | .view τ, h => by
+    intro υ hυ
+    simp only [Ty.substTys, Ty.views, List.mem_cons] at hυ
+    rcases hυ with rfl | hυ
+    · exact Ty.viewable_substTys (h τ (by simp [Ty.views])) s
+    · exact Ty.ViewsViewable.substTys s hs τ (fun υ h' => h υ (by simp [Ty.views, h'])) υ hυ
+  | .shared τ, h => Ty.ViewsViewable.substTys s hs τ h
+  | .fn ps r ρ, h => by
+    intro υ hυ
+    simp only [Ty.substTys, Ty.views, List.mem_append] at hυ
+    rcases hυ with (hυ | hυ) | hυ
+    · exact paramTysViews_substTys s hs ps (fun υ h' => h υ (by simp [Ty.views, h'])) υ hυ
+    · exact Ty.ViewsViewable.substTys s hs r (fun υ h' => h υ (by simp [Ty.views, h'])) υ hυ
+    · exact h υ (by simp [Ty.views, hυ])
+
+theorem tysViews_substTys (s : TySubst) (hs : ∀ p ∈ s, p.2.ViewsViewable) :
+    ∀ τs : List Ty, (∀ υ ∈ tysViews τs, υ = .str ∨ ∃ U, υ = .list U) →
+      ∀ υ ∈ tysViews (substTyList s τs), υ = .str ∨ ∃ U, υ = .list U
+  | [], _ => fun _ h => nomatch h
+  | τ :: τs, h => by
+    intro υ hυ
+    simp only [substTyList, tysViews, List.mem_append] at hυ
+    rcases hυ with hυ | hυ
+    · exact Ty.ViewsViewable.substTys s hs τ (fun υ h' => h υ (by simp [tysViews, h'])) υ hυ
+    · exact tysViews_substTys s hs τs (fun υ h' => h υ (by simp [tysViews, h'])) υ hυ
+
+theorem paramTysViews_substTys (s : TySubst) (hs : ∀ p ∈ s, p.2.ViewsViewable) :
+    ∀ ps : List (Mode × Ty), (∀ υ ∈ paramTysViews ps, υ = .str ∨ ∃ U, υ = .list U) →
+      ∀ υ ∈ paramTysViews (substParamTys s ps), υ = .str ∨ ∃ U, υ = .list U
+  | [], _ => fun _ h => nomatch h
+  | (_, τ) :: ps, h => by
+    intro υ hυ
+    simp only [substParamTys, paramTysViews, List.mem_append] at hυ
+    rcases hυ with hυ | hυ
+    · exact Ty.ViewsViewable.substTys s hs τ (fun υ h' => h υ (by simp [paramTysViews, h'])) υ hυ
+    · exact paramTysViews_substTys s hs ps (fun υ h' => h υ (by simp [paramTysViews, h'])) υ hυ
+
+end
+
 /-! ## Instances of closed and well-formed types -/
 
 theorem Ty.Closed.substTys {τ : Ty} (h : τ.Closed) {s : TySubst} (hs : s.Ground) :
@@ -302,10 +370,10 @@ theorem Ty.Closed.substTys {τ : Ty} (h : τ.Closed) {s : TySubst} (hs : s.Groun
 /-- A type that a body writes, instantiated with ground types for all the
 type parameters in scope, is well formed in a scope with none. -/
 theorem Ty.WellFormed.substTys {τ : Ty} {scope scope' : RowScope} (h : τ.WellFormed scope)
-    {s : TySubst} (hs : s.Ground)
+    {s : TySubst} (hs : s.Ground) (hview : ∀ p ∈ s, p.2.ViewsViewable)
     (hcov : ∀ p ∈ scope.types, (s.lookup p.name).isSome)
     (hvars : ∀ v ∈ scope.vars, v ∈ scope'.vars) : (τ.substTys s).WellFormed scope' := by
-  refine ⟨fun ρ hρ v hv => ?_, fun T hT => ?_, fun ρ hρ => ?_⟩
+  refine ⟨fun ρ hρ v hv => ?_, fun T hT => ?_, fun ρ hρ => ?_, h.2.2.2.substTys s hview τ⟩
   · rcases τ.mem_rows_substTys s hρ with hρ | ⟨p, hp, hρ⟩
     · exact hvars v (h.1 ρ hρ v hv)
     · rw [(hs p hp).1 ρ hρ] at hv
@@ -316,13 +384,13 @@ theorem Ty.WellFormed.substTys {τ : Ty} {scope scope' : RowScope} (h : τ.WellF
     obtain ⟨σ, hl⟩ := Option.isSome_iff_exists.1 (hcov p hp)
     exact ⟨σ, hl, (hs _ (mem_of_lookup hl)).2.1⟩
   · rcases τ.mem_rows_substTys s hρ with hρ | ⟨p, hp, hρ⟩
-    · exact h.2.2 ρ hρ
+    · exact h.2.2.1 ρ hρ
     · exact (hs p hp).2.2 ρ hρ
 
 /-- A closed type well formed in a scope with no type parameters is ground. -/
 theorem Ty.ground_of_wellFormed {τ : Ty} {scope : RowScope} (h : τ.Closed)
     (hw : τ.WellFormed scope) (hnil : scope.types = []) : τ.Ground := by
-  refine ⟨h, ?_, hw.2.2⟩
+  refine ⟨h, ?_, hw.2.2.1⟩
   cases hp : τ.params with
   | nil => rfl
   | cons T _ =>
@@ -337,6 +405,9 @@ theorem Head.head?_type (h : Head) : h.type.head? = some h := by
   cases h <;> rfl
 
 theorem Head.closed_type (h : Head) : h.type.Closed := by
+  cases h <;> exact fun _ h => nomatch h
+
+theorem Head.viewsViewable_type (h : Head) : h.type.ViewsViewable := by
   cases h <;> exact fun _ h => nomatch h
 
 theorem Head.ground_type (h : Head) : h.type.Ground :=

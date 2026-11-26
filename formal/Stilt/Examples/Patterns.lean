@@ -155,7 +155,7 @@ example : HasType decls RowScope.closed [] ⟨Row.pure, false, false, .never, fa
     .i64 := by
   have hwf : Ty.i64.WellFormed RowScope.closed :=
     ⟨fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.params] at h,
-      fun _ h => by simp [Ty.rows] at h⟩
+      fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.views] at h⟩
   refine .match hwf (.variant rfl rfl (.cons (.int (by decide)) (.refl _) .nil))
     (ifLet_exhaustive _ _ _ _ _) ?_
   refine .cons (.variant rfl rfl (.cons .bind .nil)) rfl (by decide) (.var rfl) (.refl _) ?_

@@ -68,7 +68,7 @@ example : HasType ⟨[], [], [], [], [], [], []⟩ RowScope.closed [] ⟨Row.pur
     (copy (.view [ints [1]])) (.list .i64) := by
   have hwf : Ty.i64.WellFormed RowScope.closed :=
     ⟨fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.params] at h,
-      fun _ h => by simp [Ty.rows] at h⟩
+      fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.views] at h⟩
   refine .op .copy (.cons (.view (.viewAll rfl) (.cons ?_ (.refl _) .nil)) (.refl _) .nil)
   exact .list hwf (.cons (.int (by decide)) (.refl _) .nil)
 

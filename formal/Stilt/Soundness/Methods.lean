@@ -80,7 +80,8 @@ theorem method_ok (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
     subst hq
     exact h.ground_type
   have hδ : (d.typeArgs []).Fits D d.scope d.scope.instantiated :=
-    ⟨fun _ hq => by simp [FnDecl.typeArgs] at hq, fun q hq => by simp [FnDecl.scope, htp] at hq,
+    ⟨fun _ hq => by simp [FnDecl.typeArgs] at hq, fun _ hq => by simp [FnDecl.typeArgs] at hq,
+      fun q hq => by simp [FnDecl.scope, htp] at hq,
       fun _ h => h, fun _ _ h => h, fun _ _ h => h⟩
   have hnone : ∀ v E, d.pairs v E → False := fun v E ⟨ρ, hρ, hv, _⟩ => by
     rw [hclosed ρ (FnDecl.mem_rows_of_pairs hρ)] at hv

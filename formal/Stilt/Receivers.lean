@@ -218,7 +218,7 @@ private def receiverCtx (mode : Mode) : Ctx :=
 
 private theorem counter_wellFormed (scope : RowScope) : (Ty.record "Counter").WellFormed scope :=
   let h := (Head.record "Counter").ground_type
-  Ty.Closed.wellFormed h.1 h.2.1 h.2.2 scope
+  Ty.Closed.wellFormed h.1 h.2.1 h.2.2 (Head.viewsViewable_type _) scope
 
 /-- Modifying a receiver taken by `self` is rejected: `self.n = 0` doesn't
 type (modes.what-can-be-modified). -/

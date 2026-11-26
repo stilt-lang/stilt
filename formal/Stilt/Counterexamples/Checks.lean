@@ -10,13 +10,20 @@ typing knows of a function named as a value.
 
 namespace Stilt.Counterexamples
 
+theorem viewsViewable_of_check {τ : Ty} (h : τ.views.all Ty.viewable = true) :
+    τ.ViewsViewable := by
+  intro υ hυ
+  have := List.all_eq_true.1 h υ hυ
+  cases υ <;> simp_all [Ty.viewable]
+
 theorem wellFormed_of_check {τ : Ty} {s : RowScope}
-    (h : ((τ.rows.all fun ρ => ρ.vars.all (· ∈ s.vars)) && τ.concreteCheck) = true) :
+    (h : ((τ.rows.all fun ρ => ρ.vars.all (· ∈ s.vars)) && τ.concreteCheck &&
+      τ.views.all Ty.viewable) = true) :
     τ.WellFormed s := by
-  rw [Bool.and_eq_true] at h
-  have hc := Ty.concrete_of_check h.2
-  refine ⟨fun ρ hρ v hv => ?_, fun T hT => ?_, hc.2⟩
-  · simpa using List.all_eq_true.1 (List.all_eq_true.1 h.1 ρ hρ) v hv
+  simp only [Bool.and_eq_true] at h
+  have hc := Ty.concrete_of_check h.1.2
+  refine ⟨fun ρ hρ v hv => ?_, fun T hT => ?_, hc.2, viewsViewable_of_check h.2⟩
+  · simpa using List.all_eq_true.1 (List.all_eq_true.1 h.1.1 ρ hρ) v hv
   · rw [hc.1] at hT
     exact nomatch hT
 
@@ -45,14 +52,14 @@ theorem instantiable_of_check {τ : Ty} {s : RowSubst}
 whose rows name only its row variables. -/
 def signatureCheck (d : FnDecl) : Bool :=
   d.typeParams.isEmpty && (d.type.rows.all fun ρ => ρ.vars.all (· ∈ d.rowParams)) &&
-    d.type.concreteCheck
+    d.type.concreteCheck && d.type.views.all Ty.viewable
 
 private theorem signatures_of_check {D : Decls} (h : D.fns.all signatureCheck = true) :
     ∀ d ∈ D.fns, d.typeParams = [] ∧ d.type.WellFormed d.scope := by
   intro d hd
   have h := List.all_eq_true.1 h d hd
   simp only [signatureCheck, Bool.and_eq_true, List.isEmpty_iff] at h
-  exact ⟨h.1.1, wellFormed_of_check (by rw [Bool.and_eq_true]; exact ⟨h.1.2, h.2⟩)⟩
+  exact ⟨h.1.1.1, wellFormed_of_check (by simp only [Bool.and_eq_true]; exact ⟨⟨h.1.1.2, h.1.2⟩, h.2⟩)⟩
 
 private theorem vars_nil_of_lookup {ks : List Name} {rows : List Row} {v : Name} {ρ : Row}
     (h : (rows.all fun ρ => ρ.vars.isEmpty) = true) (hl : (ks.zip rows).lookup v = some ρ) :

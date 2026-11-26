@@ -161,15 +161,52 @@ end
 /-- A row whose error type names no type parameter. -/
 def Row.ParamFree (ρ : Row) : Prop := ∀ E, ρ.raise = some E → E.params = []
 
+mutual
+
+/-- The type that each `View<T>` in a type views, at every depth, the error types of
+its rows included. -/
+def Ty.views : Ty → List Ty
+  | .list τ => τ.views
+  | .tuple τs => tysViews τs
+  | .map κ τ => κ.views ++ τ.views
+  | .set τ => τ.views
+  | .view τ => τ :: τ.views
+  | .shared τ => τ.views
+  | .fn ps r ρ => paramTysViews ps ++ r.views ++ ρ.views
+  | _ => []
+
+/-- The types that the views in a list of types view. -/
+def tysViews : List Ty → List Ty
+  | [] => []
+  | τ :: τs => τ.views ++ tysViews τs
+
+/-- The types that the views in a list of parameter types view. -/
+def paramTysViews : List (Mode × Ty) → List Ty
+  | [] => []
+  | (_, τ) :: ps => τ.views ++ paramTysViews ps
+
+/-- The types that the views in a row's error type view. -/
+def Row.views : Row → List Ty
+  | ⟨_, some E, _, _, _⟩ => E.views
+  | ⟨_, none, _, _, _⟩ => []
+
+end
+
+/-- Every `View<T>` in a type views a viewable `T`: `str` or a `List<U>`; any other `T`
+is E0420 where the type is written (views.viewable-types). -/
+def Ty.ViewsViewable (τ : Ty) : Prop := ∀ υ ∈ τ.views, υ = .str ∨ ∃ U, υ = .list U
+
 /-- A type that a body may write: each of its row variables is one of the
 function's, written or implicit (effects.row-variables and effects.non-escaping-parameters), and each
 of its type parameters one of the function's (declarations.function-declarations). A row may hold
 variables beside any `raise` label; effects.catch-around-row-variables checks such a row only
 where a `catch` meets it. An error type names no type parameter: generic error
-types are outside the calculus. -/
+types are outside the calculus. Each of its views views a viewable type
+(views.viewable-types). -/
 def Ty.WellFormed (scope : RowScope) (τ : Ty) : Prop :=
   (∀ ρ ∈ τ.rows, ∀ v ∈ ρ.vars, v ∈ scope.vars) ∧
-    (∀ T ∈ τ.params, T ∈ scope.types.map TypeParam.name) ∧ ∀ ρ ∈ τ.rows, ρ.ParamFree
+    (∀ T ∈ τ.params, T ∈ scope.types.map TypeParam.name) ∧ (∀ ρ ∈ τ.rows, ρ.ParamFree) ∧
+      τ.ViewsViewable
 
 /-- An instantiation of row variables, as a call gives it (effects.inference). -/
 abbrev RowSubst := List (Name × Row)
