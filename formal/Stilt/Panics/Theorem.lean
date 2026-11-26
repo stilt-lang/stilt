@@ -7,13 +7,17 @@ import Stilt.InPlace.Agreement
 /-!
 # What `without panic` guarantees
 
-**Without panic** (effects.without-panic): a program whose every body and
-`main` hold no operation that adds the implicit effect `panic`, divisors that
-tests guard counted as proved (facts.divisors), never panics but with the kinds
-`overflow` and `deadlock`, which `without panic` doesn't rule out
-(effects.without-overflow and shared.when-on-value-already-held). It holds with every fuel, in copy-in, copy-out
-whatever its order of write-back, and, on a well-typed program that obeys the
-law of exclusivity, in place too (`inPlaceAgreement`).
+**Without panic** (effects.without-panic): code that holds no operation that adds the
+implicit effect `panic`, divisors that tests guard counted as proved (facts.divisors), and
+names only functions whose bodies are such code (`Decls.PanicCover`), never panics but with
+the kinds `overflow` and `deadlock`, which `without panic` doesn't rule out
+(effects.without-overflow and shared.when-on-value-already-held), and only with `deadlock`
+when it holds no operation that can overflow either. A call of a covered function, on
+panic-free arguments, ends so (`Decls.PanicCover.call`), and so does a run whose `main` is
+such code (`Program.runCopyWith_panicked`), and a program whose every body and `main` are
+(`Program.PanicFree`). It holds with every fuel, in copy-in, copy-out whatever its order of
+write-back, and, on a well-typed program that obeys the law of exclusivity, in place too
+(`inPlaceAgreement`).
 
 The proof goes by induction on the fuel, case by case on the expression, as
 `eval_agrees` does in `Stilt.InPlace.Agreement`: every value a run makes is

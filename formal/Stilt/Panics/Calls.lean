@@ -5,8 +5,9 @@ import Stilt.Panics.Runs
 
 A call of a panic-free function value, with panic-free arguments, ends as
 panic-free code may: entering it binds panic-free values, its body is
-panic-free, a closure's by the value and a declared function's by the
-program, and leaving it writes them back along fields.
+panic-free, a closure's by the value and a declared function's because the value
+names only functions that `lim` covers (`Decls.PanicCover`), and leaving it writes them
+back along fields.
 -/
 
 namespace Stilt

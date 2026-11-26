@@ -5,8 +5,10 @@ import Stilt.Soundness.Theorem
 /-!
 # What `without div` guarantees
 
-**Without div** (facts.without-div): a program free of `div`, whose functions
-have a ranking, halts in copy-in, copy-out, whatever its order of write-back
+**Without div** (facts.without-div): code free of `div` that names only functions
+of a ranked set, free of `div` too, halts in copy-in, copy-out, whatever its order of
+write-back: a call of a function of the set (`Decls.Ranked.call`), a run whose `main` is
+such code (`Program.runCopyWith_halts`) and a program free of `div` whole
 (`Program.DivFree.halts`), and in place when it is well typed and obeys the law
 of exclusivity. The proof goes by induction on the fuel that the text bounds,
 case by case on the expression: a part of an expression needs less than the
@@ -15,10 +17,10 @@ call's own covers, a `for` loop runs its body at its own fuel, turn after
 turn, and a `while` that counts takes a turn more of fuel for each turn it
 makes, of which its values allow finitely many (`Halts.whileCounts`).
 
-**Total** (facts.without-div): a well-typed program that is free of `panic`
+**Total** (facts.without-div): a well-typed program whose `main` is free of `panic`
 and `div` ends with `()`, with an error of the type its row allows, or with a
-panic of the kind `overflow` or `deadlock` (`Program.total`), as copy-in, copy-out runs it
-and, when it obeys the law of exclusivity, in place.
+panic of the kind `overflow` or `deadlock` (`Program.total_of`, `Program.total`), as
+copy-in, copy-out runs it.
 -/
 
 namespace Stilt

@@ -18,9 +18,12 @@ a `for` over a range from a positive literal, which is known positive
 `G` holds the variables that the tests around the code guard, the code after
 an `if` whose then-branch always jumps counting on the negation of its test, and code drops
 each of them that it writes, or that a binding hides, before the code after it.
-Naming a function adds nothing here: a program is panic-free when every body it
-declares is, which is code that `without panic` limits whole
-(effects.without-panic).
+Naming a function, to call it or as a value, adds `panic` unless it is one of the
+functions `lim` covers, which are without `panic` wherever they are named
+(effects.without-panic): `Decls.PanicCover` says that they are, and a program is
+panic-free when every function it declares is covered (`Program.PanicFree`). Where `lim`
+rules out `overflow` too, no operation that can overflow is allowed (`Op.overflowFree`), and
+no index computed by arithmetic (effects.without-overflow).
 -/
 
 namespace Stilt
@@ -150,7 +153,11 @@ only `deadlock`, which `without panic` doesn't rule out
 (shared.when-on-value-already-held); its names carry no fact. Naming a function, to call
 it or as a value, adds `panic` unless `lim` covers it: a function limited by
 `without panic` counts as one that can't panic wherever it is named
-(effects.without-panic). -/
+(effects.without-panic). A call through a function value adds nothing: a closure
+literal's body is checked where it is written, a named function where it is named
+(facts.calls-through-function-values). Where `lim` rules out `overflow`, an operation that
+can overflow is a site too, and so is an index that arithmetic computes
+(effects.without-overflow). -/
 def Expr.panicFreeIn : List Known → Expr → Bool
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
   | _, .fnRef f _ _ => lim.fn f

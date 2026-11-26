@@ -6,8 +6,10 @@ import Stilt.Cells
 /-!
 # Values without panics
 
-A value is panic-free when every closure it holds has a body without an
-operation that adds `panic`, so that calling it runs such a body. Places whose
+A value is panic-free under `lim` when every closure it holds has a body without an
+operation that adds `panic`, and every function it names is one that `lim` covers, so
+that calling it runs such a body, wherever the value was made
+(facts.calls-through-function-values). Places whose
 paths take only fields are read and written without a panic: only an index
 can be out of bounds (std.lists). So copy-in, copy-out binds, reads, writes,
 enters and leaves calls on such paths with no panic, and keeps every value of

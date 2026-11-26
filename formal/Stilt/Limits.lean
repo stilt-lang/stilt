@@ -20,6 +20,10 @@ What the limits promise, proved from the checks (`Program.PanicKeptBy.kept`,
 * a call of a function limited by `without panic`, on arguments whose closures and named
   functions are panic-free as well, wherever they were made, panics only with `overflow` or
   `deadlock`, and so does a run whose `main` is limited (effects.without-panic);
+* one limited by `without panic, overflow` panics only with `deadlock`
+  (effects.without-overflow). The calculus's values carry no type, so the check counts as
+  overflowing every operation that checks a range (`Op.overflowFree`), and checks
+  `without overflow` only beside `without panic`;
 * a call of a function limited by `without div` halts, from some fuel on, on any arguments,
   and so does a run whose `main` is limited (facts.without-div);
 * a run whose `main` is limited by both is total (`Program.total_of`).
@@ -34,8 +38,9 @@ functions of the set, and `main`'s body is such code when `limited` picks `main`
 With `overflows` false the set holds no operation that can overflow either
 (effects.without-overflow). A function value that limited code calls adds nothing, its
 closure literal's body counted where it is written and a named function where it is named
-(facts.calls-through-function-values). Of the facts, the model infers `panic`, `overflow`
-and `div`. -/
+(facts.calls-through-function-values). The greatest such set is the functions that the
+inference finds without the fact, solving a recursive group as a fixed point
+(facts.inference). Of the facts, the model infers `panic`, `overflow` and `div`. -/
 def Program.PanicKeptBy (p : Program) (limited : Limits → Bool) (overflows : Bool) : Prop :=
   ∃ lim : Limited, lim.overflows = overflows ∧ p.decls.PanicCover lim ∧
     (∀ d ∈ p.decls.fns, limited d.limits = true → lim.fn d.name = true) ∧
@@ -83,7 +88,8 @@ def Program.PanicsKeptBy (p : Program) (limited : Limits → Bool) (overflows : 
 set of functions a call of any of which, on any arguments and from any state, halts: from
 some fuel on, it ends the same way, not out of fuel and not as a performance (`Halts`). A
 run whose `main` is limited never runs out of fuel from some fuel on, as the reference
-interpreter runs it and in place. -/
+interpreter runs it and in place. With `Program.PanicsKeptBy` and type soundness, a run whose
+`main` is limited by `without panic, div` is total (`Program.total_of`). -/
 def Program.HaltsKept (p : Program) (input : String) : Prop :=
   (∃ lim : Limited, (∀ name d, p.decls.fn? name = some d → d.limits.div = true →
       lim.fn name = true) ∧

@@ -8,8 +8,9 @@ import Stilt.Panics.Reaches
 `Eval.PanicFree lim G P m`: run on a panic-free state, whose frame and whose world's cells
 hold panic-free values, and whose variables of `G` hold integers other than zero, `m`
 ends with a value that `P` holds of, a panic-free raise or jump, each in a panic-free
-state; with a panic of the kind `overflow` or `deadlock`, which `without panic` doesn't
-rule out (effects.without-overflow and shared.when-on-value-already-held); with a
+state; with a panic of the kind `deadlock`, which `without panic` doesn't rule out
+(shared.when-on-value-already-held), or `overflow` where `lim` allows it, which
+`without panic` alone doesn't rule out (effects.without-overflow); with a
 performance of a panic-free value, from a panic-free state, whose rest ends so again
 once resumed with a panic-free value in a world whose cells hold panic-free values;
 or out of fuel, or stuck. Each combinator of `Stilt.Semantics` keeps it in copy-in, copy-out,

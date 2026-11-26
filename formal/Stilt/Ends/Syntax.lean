@@ -9,8 +9,9 @@ every call made of a function that the program names, `f(…)`, or of a closure
 literal where it is written, `(|x| …)(…)`, never of a function value that
 anything else gives, and no performance, which calls the handler's clause
 (handlers.implicit-effects-and-capabilities); a `with` adds nothing, and neither does a
-`when` (shared.when-on-value-already-held). A program has no recursion when its functions have a
-**ranking**: a bound on the fuel each body needs, which is at least what the
+`when` (shared.when-on-value-already-held). Naming a function adds `div` unless it is one
+of the functions a limit covers (`Limited`). The functions it covers have no recursion
+when they have a **ranking**: a bound on the fuel each body needs, which is at least what the
 calls it makes need, so that no function calls itself, directly or through
 others (`Decls.Ranked`). Such code needs, to end, no more fuel than its text
 bounds (`Expr.needs`) and the turns of its counting loops: a `for` loop runs
@@ -38,7 +39,11 @@ performance is a site of `div`, as a call through a stored function value, the
 handler's clause, is; a `with` and a `when` add nothing of their own
 (handlers.implicit-effects-and-capabilities). Naming a function, to call it or as a
 value, adds `div` unless `lim` covers it: a function limited by `without div` counts as
-one without `div` wherever it is named (facts.without). -/
+one without `div` wherever it is named (facts.without). The sites are facts.div's, and a
+few more: every call through a function value is one, as through a stored one
+(facts.calls-through-function-values), a parameter not marked `escaping` included, and so is
+every call of a function of its own recursive group, self-calls that descend or shrink
+among them, since a ranking rules out recursion. -/
 def Expr.divFree : Expr → Bool
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue => true
   | .fnRef f _ _ => lim.fn f

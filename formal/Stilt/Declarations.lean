@@ -29,7 +29,8 @@ structure TypeParam where
 /-- The limits of a `without` clause that the calculus reads, `panic`, `overflow` and
 `div`, each a promise that the code it covers holds no site of the fact: those a function's
 own clause names, joined with those of its module's header, which cover the bodies of
-the module's functions (facts.without). -/
+the module's functions (facts.without). The other limits, `alloc`, `copy`, `locks`, the
+capabilities and `unsafe`, name facts that the calculus doesn't have. -/
 structure Limits where
   panic : Bool := false
   overflow : Bool := false
