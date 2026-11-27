@@ -7,8 +7,8 @@ A `while` ends, and adds no `div`, when it counts (facts.counting-loops): its
 condition compares a variable, the loop's **counter**, with a **bound**, by
 `<`, `<=`, `>` or `>=`, alone or as the first conjunct of an `&&` chain; the
 bound is made of literals, variables and lengths of lists, by `+`, `-` and `*`;
-the body steps the counter toward the bound by a positive literal, as a
-statement of its own block, with no `continue` before it; and neither the
+the body steps the counter toward the bound by a positive literal, `v = v + k`
+or `v += k`, as a statement of its own block, with no `continue` before it; and neither the
 body nor the condition writes the counter elsewhere or anything the bound
 reads.
 
@@ -157,12 +157,22 @@ def Expr.isStep (v : Name) (grow : Bool) : Expr → Bool
   | .assign ⟨x, p⟩ value => x == v && p.isEmpty && value.movesBy v grow
   | _ => false
 
+/-- Whether `e` steps `v` by the variable `t`: `v = v + t` or `v = v - t`. -/
+def Expr.isStepBy (v t : Name) (grow : Bool) : Expr → Bool
+  | .assign ⟨x, p⟩ (.op (.arith o _) [l, r]) =>
+    x == v && p.isEmpty && l.readVar? == some v && r.readVar? == some t &&
+      o == (if grow then .add else .sub)
+  | _ => false
+
 /-- Whether a block steps `v`: one of its statements is the step, no `continue`
-comes before it, and no other statement writes `v`. -/
+comes before it, and no other statement writes `v`. A step `v += k`, which the export
+writes as `let t = k; v = v + t`, binding its operand first, is one too. -/
 def Expr.steps (v : Name) (grow : Bool) : Expr → Bool
   | .seq a b =>
     (a.steps v grow && decide (v ∉ b.writes)) ||
       (a.contFree && decide (v ∉ a.writes) && b.steps v grow)
+  | .letIn t _ init body =>
+    t != v && (init.intLit?.any fun k => decide (0 < k)) && body.isStepBy v t grow
   | e => e.isStep v grow
 
 /-- Whether `while c { body }` counts, by one reading of its condition (facts.counting-loops):
@@ -171,9 +181,10 @@ alone or as the first conjunct of an `&&` chain, mirrored or not; the bound is m
 literals, variables and lengths of variables' lists by `+`, `-` and `*`, none of which the
 body or the condition writes; and the body steps the counter toward the bound as a statement
 of its own block, with no `continue` before it, and writes it nowhere else (`Expr.steps`).
-Narrower than the Reference: a step is by a positive literal, not by a name known positive,
-a bound holds no constant, and a length is of a variable that the body doesn't write at all,
-not of a place whose length it doesn't change. -/
+A constant is, in the calculus, the expression it is declared with, so a bound holds one made
+of literals by `+`, `-` and `*`. Narrower than the Reference: a step is by a positive literal,
+`v = v + k` or `v += k`, not by a name known positive, and a length is of a variable that the
+body doesn't write at all, not of a place whose length it doesn't change. -/
 def Expr.countsIn (c body : Expr) : Bool :=
   c.countings.any fun (v, cmp, b) => match cmp.counts with
     | some grow => body.steps v grow && decide (v ∉ c.writes) &&

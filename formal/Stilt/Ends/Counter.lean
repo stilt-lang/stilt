@@ -191,6 +191,82 @@ theorem eval_isStep {e : Expr} {v : Name} {grow : Bool} (he : e.isStep v grow = 
     · cases hm
   · cases he
 
+/-- `v = v ⊕ r`, where `r` gives `k` and leaves the state as it was, stores in `v` the
+integer that the arithmetic gives. -/
+theorem eval_assignStep {v : Name} {o : Arith} {kt : IntTy} {r : Expr} {k x : Int} {n : Nat}
+    {s s' : Copy.State} {u : Value} (hx : s.1.lookup v = some (.int x))
+    (hr : ∀ m b s₂, (eval D (Copy.memoryWith w) m r s).Reaches b s₂ → b = .int k ∧ s₂ = s)
+    (h : eval D (Copy.memoryWith w) n (.assign ⟨v, []⟩ (.op (.arith o kt) [.var v, r])) s =
+      .done u s') :
+    ∃ y, kt.arith o x k = .ok y ∧ s'.1 = assocSet s.1 v (.int y) := by
+  cases n with
+  | zero => cases h
+  | succ m =>
+    change (Eval.path (eval D (Copy.memoryWith w) m) [] >>= fun p =>
+      eval D (Copy.memoryWith w) m (.op (.arith o kt) [.var v, r]) >>= fun val =>
+      Eval.update (fun s => (Copy.memoryWith w).write s v p val) >>= fun _ => Pure.pure Value.unit) s = _ at h
+    obtain ⟨p, s₁, h₁, h₂⟩ := Eval.bind_done h
+    cases h₁
+    obtain ⟨val, s₂, h₃, h₄⟩ := Eval.bind_done h₂
+    obtain ⟨m', us, h₅, h₆⟩ := eval_op_reaches (.of_eq h₃) (fun _ h => by cases h)
+    obtain ⟨a, s₃, b, h₇, h₈, rfl⟩ := Eval.list_pair_reaches h₅
+    obtain ⟨rfl, hl⟩ := eval_var_reaches h₇
+    obtain ⟨rfl, rfl⟩ := hr m' b _ h₈
+    rw [hx] at hl
+    cases hl
+    obtain ⟨x', k', y, hx', hk', hy, rfl⟩ := arith_apply h₆
+    cases hx'; cases hk'
+    obtain ⟨_, s₄, h₉, h₁₀⟩ := Eval.bind_done h₄
+    cases h₁₀
+    unfold Eval.update at h₉
+    split at h₉
+    · rename_i s₅ hw
+      cases h₉
+      simp only [Eval.Keeps.memoryWith_write, Copy.write, hx] at hw
+      simp only [Value.set, Functor.map, Except.map, Except.ok.injEq] at hw
+      subst hw
+      exact ⟨y, hy, rfl⟩
+    · rename_i f _; cases f <;> cases h₉
+
+/-- The arithmetic of a step toward its bound gives the stepped counter. -/
+theorem arith_stepped {grow : Bool} {o : Arith} {kt : IntTy} {x k y : Int}
+    (ho : o = if grow then .add else .sub) (hy : kt.arith o x k = .ok y) : y = stepped grow x k := by
+  cases grow <;> simp only [Bool.false_eq_true, ↓reduceIte] at ho <;> subst ho <;>
+    simp only [IntTy.arith, IntTy.check] at hy <;> split at hy <;> cases hy <;> rfl
+
+/-- A step `v += k`, written `let t = k; v = v + t`, that ends has moved the counter by `k`. -/
+theorem eval_letStep {v t : Name} {τ : Ty} {k : Int} {o : Arith} {kt : IntTy} {grow : Bool}
+    (htv : t ≠ v) (ho : o = if grow then .add else .sub) {n : Nat} {s s' : Copy.State} {x : Int}
+    {u : Value} (hx : s.1.lookup v = some (.int x))
+    (h : eval D (Copy.memoryWith w) n
+      (.letIn t τ (.int k) (.assign ⟨v, []⟩ (.op (.arith o kt) [.var v, .var t]))) s = .done u s') :
+    s'.1.lookup v = some (.int (stepped grow x k)) := by
+  cases n with
+  | zero => cases h
+  | succ m =>
+    obtain ⟨a, s₁, h₁, h₂⟩ := Eval.bind_done h
+    obtain ⟨rfl, hs₁⟩ := eval_int_reaches (.of_eq h₁)
+    subst s₁
+    unfold Eval.withInit at h₂
+    have hs₀ : ((Copy.memoryWith w).bindInit s t (.int k) (.int k)).1 = (t, .int k) :: s.1 := rfl
+    cases hb : eval D (Copy.memoryWith w) m (.assign ⟨v, []⟩ (.op (.arith o kt) [.var v, .var t]))
+        ((Copy.memoryWith w).bindInit s t (.int k) (.int k)) <;>
+      rw [hb] at h₂ <;> simp only [Outcome.unbind, reduceCtorEq] at h₂
+    rename_i u' s''
+    obtain ⟨-, rfl⟩ := h₂
+    have hvt : (v == t) = false := by simpa using fun h => htv h.symm
+    obtain ⟨y, hy, hfr⟩ := eval_assignStep (x := x) (k := k) (by rw [hs₀]; simp [List.lookup, hvt, hx])
+      (fun m' b s₂ hr => by
+        obtain ⟨rfl, hl⟩ := eval_var_reaches hr
+        rw [hs₀] at hl
+        simp only [List.lookup, beq_self_eq_true] at hl
+        cases hl
+        exact ⟨rfl, rfl⟩) hb
+    have hset : assocSet ((t, Value.int k) :: s.1) v (.int y) = (t, .int k) :: assocSet s.1 v (.int y) := by
+      simp [assocSet, Ne.symm htv]
+    show (s''.1.tail).lookup v = _
+    rw [hfr, hs₀, hset, List.tail_cons, lookup_assocSet_self _ _ _ (by simp [hx]), arith_stepped ho hy]
+
 /-- A block that steps the counter and ends, or continues, has moved it by a
 positive amount. -/
 theorem eval_steps : ∀ {e : Expr} {v : Name} {grow : Bool}, e.steps v grow = true → ∀ {n : Nat}
@@ -232,6 +308,22 @@ theorem eval_steps : ∀ {e : Expr} {v : Name} {grow : Bool}, e.steps v grow = t
         · rename_i j s₁
           rcases h with ⟨_, h⟩ | h <;> cases h
           exact absurd hm ((eval_noCont D _ m a hca s).ne s')
+  · rename_i t τ init body
+    simp only [Bool.and_eq_true, bne_iff_ne, ne_eq, Option.any_eq_true, decide_eq_true_eq] at he
+    obtain ⟨⟨htv, k, hk, hk0⟩, hb⟩ := he
+    have hinit : init = .int k := by cases init <;> simp_all [Expr.intLit?]
+    subst hinit
+    unfold Expr.isStepBy at hb
+    split at hb
+    · rename_i y p o kt l r
+      simp only [Bool.and_eq_true, beq_iff_eq, List.isEmpty_iff] at hb
+      obtain ⟨⟨⟨⟨rfl, rfl⟩, hl⟩, hr⟩, ho⟩ := hb
+      rw [Expr.eq_of_readVar? hl, Expr.eq_of_readVar? hr] at h
+      rcases h with ⟨u, h⟩ | h
+      · exact ⟨k, hk0, eval_letStep htv ho hx h⟩
+      · exact absurd h ((eval_noCont D _ n _ (by simp [Expr.contFree, pathContFree, exprsContFree])
+          s).ne s')
+    · cases hb
   · rcases h with ⟨u, h⟩ | h
     · exact eval_isStep he hx h
     · have hc : e.contFree = true := by

@@ -110,6 +110,19 @@ theorem Expr.isStep_substTys (v : Name) (grow : Bool) (e : Expr) :
     | cons q ps => cases q <;> simp [Expr.substTys, substPathTys, Expr.isStep]
   all_goals rfl
 
+theorem Expr.isStepBy_substTys (v t : Name) (grow : Bool) (e : Expr) :
+    (e.substTys s).isStepBy v t grow = e.isStepBy v t grow := by
+  cases e
+  case assign tg value =>
+    obtain ⟨x, p⟩ := tg
+    cases value
+    case op o es =>
+      rcases es with _ | ⟨l, _ | ⟨r, _ | _⟩⟩ <;> cases o <;> rcases p with _ | ⟨_ | _, _⟩ <;>
+        simp [Expr.substTys, substExprTys, substPathTys, Op.substTys, Expr.isStepBy, Expr.readVar?_substTys]
+    case assign t _ => obtain ⟨_, _⟩ := t; simp [Expr.substTys, Expr.isStepBy]
+    all_goals simp [Expr.substTys, Expr.isStepBy]
+  all_goals rfl
+
 theorem Expr.steps_substTys (v : Name) (grow : Bool) : ∀ e : Expr,
     (e.substTys s).steps v grow = e.steps v grow
   | .seq a b => by
@@ -117,9 +130,11 @@ theorem Expr.steps_substTys (v : Name) (grow : Bool) : ∀ e : Expr,
       Expr.writes_substTys s, Expr.contFree_substTys]
   | .assign ⟨x, p⟩ value => by
     exact Expr.isStep_substTys s v grow (.assign ⟨x, p⟩ value)
+  | .letIn t _ init body => by
+    simp only [Expr.substTys, Expr.steps, Expr.intLit?_substTys, Expr.isStepBy_substTys]
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
+  | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. => rfl
 
 theorem Expr.countsIn_substTys (c body : Expr) :
@@ -224,6 +239,19 @@ theorem Expr.isStep_substRows (v : Name) (grow : Bool) (e : Expr) :
     | cons q ps => cases q <;> simp [Expr.substRows, substPathRows, Expr.isStep]
   all_goals rfl
 
+theorem Expr.isStepBy_substRows (v t : Name) (grow : Bool) (e : Expr) :
+    (e.substRows s).isStepBy v t grow = e.isStepBy v t grow := by
+  cases e
+  case assign tg value =>
+    obtain ⟨x, p⟩ := tg
+    cases value
+    case op o es =>
+      rcases es with _ | ⟨l, _ | ⟨r, _ | _⟩⟩ <;> cases o <;> rcases p with _ | ⟨_ | _, _⟩ <;>
+        simp [Expr.substRows, substExprRows, substPathRows, Expr.isStepBy, Expr.readVar?_substRows]
+    case assign t _ => obtain ⟨_, _⟩ := t; simp [Expr.substRows, Expr.isStepBy]
+    all_goals simp [Expr.substRows, Expr.isStepBy]
+  all_goals rfl
+
 theorem Expr.steps_substRows (v : Name) (grow : Bool) : ∀ e : Expr,
     (e.substRows s).steps v grow = e.steps v grow
   | .seq a b => by
@@ -231,9 +259,11 @@ theorem Expr.steps_substRows (v : Name) (grow : Bool) : ∀ e : Expr,
       Expr.writes_substRows s, Expr.contFree_substRows]
   | .assign ⟨x, p⟩ value => by
     exact Expr.isStep_substRows s v grow (.assign ⟨x, p⟩ value)
+  | .letIn t _ init body => by
+    simp only [Expr.substRows, Expr.steps, Expr.intLit?_substRows, Expr.isStepBy_substRows]
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
   | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .closure .. | .call ..
-  | .letIn .. | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
+  | .varIn .. | .if .. | .match .. | .for .. | .raise .. | .perform _ .. | .withH .. | .held .. | .try .. | .form .. | .tryCatch ..
   | .while .. | .loop .. | .return .. => rfl
 
 theorem Expr.countsIn_substRows (c body : Expr) :

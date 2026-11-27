@@ -14,7 +14,7 @@ of a list. It accepts self-calls that shrink (facts.shrinking-recursion), `count
 `else` branch of `n <= 0` and `go(i + 1, n)` under `i < n`, and rejects one under `n == 0`, one
 that steps away from its bound, and one that changes its bound. It accepts a `while` that
 counts toward its
-bound (facts.counting-loops), which needs a fuel more for each turn, and
+bound (facts.counting-loops), by `i = i + 1` or `i += 1`, which needs a fuel more for each turn, and
 rejects one whose step is missing, conditional, after a `continue`, zero or
 away from the bound, or whose body writes what the bound reads.
 -/
@@ -210,5 +210,17 @@ example : (counted 10 (lt (.var "i") (.var "n"))
 example : (counted 10 (lt (.var "i") (.var "n")) (step "i" .sub 1)).divFree = false := rfl
 example : (counted 10 (lt (.var "i") (.var "n")) (.seq (step "n" .add 1) (step "i" .add 1))).divFree = false :=
   rfl
+
+/-- `i += 1`, which the export writes `let t = 1; i = i + t`, steps the counter too, and
+`i += 0` doesn't. -/
+private def plusEq (k : Int) : Expr :=
+  .letIn "t" .i64 (.int k) (.assign ⟨"i", []⟩ (.op (.arith .add .i64) [.var "i", .var "t"]))
+
+example : (counted 10 (lt (.var "i") (.var "n"))
+    (.seq (.assign ⟨"s", []⟩ (add (.var "s") (.var "i"))) (plusEq 1))).divFree = true := rfl
+example : ((counted 10 (lt (.var "i") (.var "n"))
+    (.seq (.assign ⟨"s", []⟩ (add (.var "s") (.var "i"))) (plusEq 1))).runCopy 20).observe =
+    .raised (.int 45) := rfl
+example : (counted 10 (lt (.var "i") (.var "n")) (plusEq 0)).divFree = false := rfl
 
 end Stilt.Examples.Ends
