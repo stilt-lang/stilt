@@ -38,7 +38,7 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .record hR hlen _ hperm hf, _, hη, θ => record_ok hs hD.wf hη θ hR hlen hperm hf
   | _, _, _, _, .variant hT hlen _ hC hp, _, hη, θ => variant_ok hs hD.wf hη θ hT hlen hC hp
   | _, _, _, _, .list _ hes, _, hη, θ => list_ok hs hη θ hes
-  | _, _, _, _, .op ho hes _ _, _, hη, θ => op_ok hs hη θ ho hes
+  | _, _, _, _, .op ho hes _ _ _, _, hη, θ => op_ok hs hη θ ho hes
   | _, _, _, _, .view ho hes, _, hη, θ => view_ok hs hη θ ho hes
   | _, _, _, _, .field he hR _ hf, _, hη, θ => field_ok hs hη θ hD.wf he hR hf
   | _, _, _, _, .elem he hf, _, hη, θ => elem_ok hs hη θ he hf
@@ -109,7 +109,7 @@ theorem typeSoundness : TypeSoundness := by
   | done v _ => exact fun ⟨hv, _⟩ => (hv.fits (hfit.close _)).unit_inv
   | raised e _ =>
     intro ⟨⟨F, hF, he⟩, _⟩
-    rcases Row.mem_close.1 hF with ⟨E, hE, rfl⟩ | ⟨_, _, hF⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩
+    rcases Row.mem_close.1 hF with ⟨E, hE, rfl⟩ | ⟨_, _, hF⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨_, rfl⟩
     · exact ⟨E, hE, he⟩
     · exact nomatch hF
     all_goals exact absurd trivial he.not_label
@@ -126,11 +126,11 @@ theorem typeSoundness : TypeSoundness := by
     by_cases hr : op = Operation.resume
     · subst hr
       obtain ⟨_, _, hm, _⟩ := (performsOf_resume (D := p.decls)).1 hop
-      rcases Row.mem_close.1 hm with ⟨_, _, h⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩
+      rcases Row.mem_close.1 hm with ⟨_, _, h⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩ | ⟨_, h⟩
       · exact absurd (show (STy.resume _ _).IsLabel from trivial) (h ▸ Ty.close_not_label _ _)
       all_goals simp_all [Effects.body]
     · obtain ⟨hm, _⟩ := (performsOf_of_ne hr).1 hop
-      rcases Row.mem_close.1 hm with ⟨_, _, h⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩
+      rcases Row.mem_close.1 hm with ⟨_, _, h⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩ | ⟨_, h, _⟩ | ⟨_, h⟩
       · exact absurd (show (STy.effect _).IsLabel from trivial) (h ▸ Ty.close_not_label _ _)
       all_goals simp_all [Effects.body]
   | outOfFuel => exact fun _ => trivial

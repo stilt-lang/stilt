@@ -28,11 +28,12 @@ theorem Row.close_withEffect {η : REnv} {ρ : Row} {E : Name} {x : STy}
 
 theorem Row.close_dropResume {η : REnv} {ρ : Row} {x : STy} (hx : x ∈ ρ.close η)
     (h : ∀ a r, x ≠ .resume a r) : x ∈ ({ ρ with resume := none } : Row).close η := by
-  rcases Row.mem_close.1 hx with h₁ | h₁ | h₁ | ⟨p, _, rfl⟩
+  rcases Row.mem_close.1 hx with h₁ | h₁ | h₁ | ⟨p, _, rfl⟩ | h₁
   · exact Row.mem_close.2 (.inl h₁)
   · exact Row.mem_close.2 (.inr (.inl h₁))
   · exact Row.mem_close.2 (.inr (.inr (.inl h₁)))
   · exact absurd rfl (h p.1 p.2)
+  · exact Row.mem_close.2 (.inr (.inr (.inr (.inr h₁))))
 
 theorem Row.dropResume_eq {ρ : Row} (h : ρ.resume = none) : ({ ρ with resume := none } : Row) = ρ := by
   cases ρ
@@ -115,7 +116,7 @@ theorem HandlerFits.clause {scope : RowScope} {fx : Effects} (hD : D.WellFormed)
 theorem Row.resume_of_close {ρ : Row} {B R : Ty} {a r : Ty}
     (hres : ρ.resume = some (a, r)) (hm : STy.resume B R ∈ ρ.close (fun _ => [])) :
     B = a ∧ R = r := by
-  rcases Row.mem_close.1 hm with ⟨E, _, h⟩ | ⟨_, _, h⟩ | ⟨_, _, h⟩ | ⟨p, hp, h⟩
+  rcases Row.mem_close.1 hm with ⟨E, _, h⟩ | ⟨_, _, h⟩ | ⟨_, _, h⟩ | ⟨p, hp, h⟩ | ⟨_, h⟩
   · exact absurd (show (E.close fun _ => []).IsLabel from h ▸ trivial) (Ty.close_not_label _ E)
   · exact nomatch h
   · exact nomatch h
@@ -123,6 +124,7 @@ theorem Row.resume_of_close {ρ : Row} {B R : Ty} {a r : Ty}
     cases hp
     injection h with h₁ h₂
     exact ⟨h₁, h₂⟩
+  · exact nomatch h
 
 end
 
@@ -148,7 +150,7 @@ theorem resume_ok {e : Expr} {B R σ : Ty} (hr : fx.row.resume = some (B, R)) (h
       (eval D Copy.memory (n + 1) ((Expr.perform Operation.resume e).substRows θ)) :=
   Eval.Ok.bind (hs he hη θ) fun _ hv _ hγ =>
     ⟨⟨B.sem, R.sem, (performsOf_resume (D := D)).2
-        ⟨B, R, Row.mem_close.2 (.inr (.inr (.inr ⟨_, hr, rfl⟩))), rfl, rfl⟩,
+        ⟨B, R, Row.mem_close.2 (.inr (.inr (.inr (.inl ⟨_, hr, rfl⟩)))), rfl, rfl⟩,
       hB.1.close η ▸ hv.fits (hfit.close η), fun _ _ hw hx => ⟨(hR.1.close η).symm ▸ hw, hγ.1, hx⟩⟩, hγ⟩
 
 /-- A handler's clause for an operation of its effect, called on an argument of

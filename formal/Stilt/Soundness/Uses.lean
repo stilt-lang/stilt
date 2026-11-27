@@ -100,7 +100,8 @@ theorem REnv.Respects.pairs_compose {D : Decls} {scope : RowScope} {η : REnv}
       List.lookup_zip_isSome ((hD.signatures d hd).1 ρ hρt v hv) hlen
     rw [hl] at this
     exact nomatch this
-  · rcases Row.mem_close.1 hF with ⟨G, hG, rfl⟩ | ⟨r, hr, hF⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩
+  · rcases Row.mem_close.1 hF with ⟨G, hG, rfl⟩ | ⟨r, hr, hF⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ |
+      ⟨_, rfl⟩
     · have hGl : G ∈ ρ.labels (d.rowParams.zip rows) := by
         simp only [Row.labels, List.mem_append, List.mem_filterMap]
         exact .inr ⟨v, hv, by simp [hl, hG]⟩
@@ -109,6 +110,7 @@ theorem REnv.Respects.pairs_compose {D : Decls} {scope : RowScope} {η : REnv}
       obtain rfl := (hinst ρ hρt).1 G hGl _ hEl
       exact .of_eqv heqv
     · exact (hη.passOn r _ (hpass v E σ r ⟨ρ, hρ, hv, hE⟩ hl hr) F hF hlab).trans (.of_eqv heqv)
+    · exact absurd trivial hlab
     · exact absurd trivial hlab
     · exact absurd trivial hlab
 
@@ -126,10 +128,11 @@ theorem REnv.Respects.compose {D : Decls} {scope : RowScope} {η : REnv}
     rcases RowSubst.mem_compose.1 h with ⟨_, h⟩ | ⟨σ, hl, h⟩
     · exact hη.noResume v a r h
     · have hσ : σ.resume = none := hres σ (List.mem_of_lookup_zip hl)
-      rcases Row.mem_close.1 h with ⟨E, _, hE⟩ | ⟨u, _, hu⟩ | ⟨_, _, hE⟩ | ⟨p, hp, _⟩
+      rcases Row.mem_close.1 h with ⟨E, _, hE⟩ | ⟨u, _, hu⟩ | ⟨_, _, hE⟩ | ⟨p, hp, _⟩ | ⟨_, hE⟩
       · exact Ty.close_not_label η E (hE ▸ trivial)
       · exact hη.noResume u a r hu
       · exact nomatch hE
       · rw [hσ] at hp; exact nomatch hp
+      · exact nomatch hE
 
 end Stilt

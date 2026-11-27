@@ -5,6 +5,7 @@ import Stilt.Typing.Uses
 import Stilt.Typing.Context
 import Stilt.Typing.Else
 import Stilt.Syntax.Forms
+import Stilt.Typing.Io
 
 /-!
 # Typing
@@ -82,10 +83,13 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   /-- A built-in operation's operands fit the types its signature gives them
   (values.left-to-right); a function of maps or sets finds keys of key types (std.map-key-bounds),
   and the operands' types implement the prelude traits that the operation stands behind
-  (traits.required-traits). -/
+  (traits.required-traits). An operation that reads or writes the world's output or input is a
+  call of a native whose row holds `io`, so the row it sits in holds `io` too, or it is E0502
+  (effects.missing-effects and facts.io-and-capabilities). -/
   | op {Γ fx o es τs τ} :
       o.Sig τs τ →
       ExprsFit Γ fx es τs → o.KeysIn D τs τ → o.BoundsIn D scope τs →
+      (o.io = true → fx.row.io = true) →
       HasType Γ fx (.op o es) τ
   /-- A view's operands fit `View.all`, `View.of` or `v.view` (views.making-view). -/
   | view {Γ fx es τs τ} :

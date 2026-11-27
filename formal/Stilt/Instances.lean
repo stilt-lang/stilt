@@ -60,6 +60,12 @@ instantiated, the rest as it is. -/
 def Effects.substTys (s : TySubst) (fx : Effects) : Effects :=
   { fx with result := fx.result.substTys s }
 
+/-- Whether an operation reads or writes the world doesn't depend on the type it names. -/
+theorem Op.io_substTys (s : TySubst) (o : Op) : (o.substTys s).io = o.io := by
+  cases o <;> try rfl
+  rename_i k
+  cases k <;> rfl
+
 /-- Whether a call is allowed doesn't depend on a `return`'s result type. -/
 theorem CallAllowed.substTys_effects {sc : RowScope} {fx : Effects} {σ : Row}
     (h : CallAllowed sc fx σ) (s : TySubst) : CallAllowed sc (fx.substTys s) σ :=
@@ -235,9 +241,9 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
   | _, _, _, _, .variant hT hlen hwf hC hp, hfx =>
     HasType.variant_substTys hD hs hT hlen hwf hC (ExprsFit.substTys hD hs hp hfx)
   | _, _, _, _, .list hwf hes, hfx => HasType.list_substTys hs hwf (ExprsFit.substTys hD hs hes hfx)
-  | _, _, _, _, .op ho hes hk hb, hfx =>
+  | _, _, _, _, .op ho hes hk hb hio, hfx =>
     .op (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx) (hk.substTys ho s)
-      (hb.substTys hD hs ho)
+      (hb.substTys hD hs ho) fun h => hio (by rwa [Op.io_substTys] at h)
   | _, _, _, _, .view ho hes, hfx => .view (ho.substTys hs.ground) (ExprsFit.substTys hD hs hes hfx)
   | _, _, _, _, .field he hR hlen hf, hfx =>
     HasType.field_substTys hD (HasType.substTys hD hs he hfx) hR hlen hf

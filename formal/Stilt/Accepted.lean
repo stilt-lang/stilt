@@ -12,6 +12,7 @@ import Stilt.Limits
 import Stilt.Projections.Theorem
 import Stilt.Handling.Unseen
 import Stilt.Alloc.Theorem
+import Stilt.Quiet.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -73,7 +74,12 @@ rules of projections (projections.once-on-every-path).
 * a call of a function limited by `without alloc`, on arguments that allocate nothing when
   called, and a run whose `main` is limited, count no allocation: the counting evaluator runs them
   as the reference interpreter does, with the count where it started (`Program.AllocLimited.kept`,
-  facts.without-alloc). `without copy` is checked, and its promise left out.
+  facts.without-alloc). `without copy` is checked, and its promise left out;
+* a call of a function value whose type's row holds no `io`, on arguments of its parameter
+  types, from any typed state, leaves the world's output, standard error and input as they
+  were, and so does the rest of each of its performances, from the world it is resumed in; so
+  a run whose `main`'s row holds no `io` writes nothing and reads nothing (`call_keeps`,
+  `Program.WellTyped.quiet`, facts.io-and-capabilities).
 -/
 
 namespace Stilt
@@ -230,6 +236,21 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   allocate nothing when called, and a run whose `main` is limited, run in the counting evaluator
   as the reference interpreter runs them, with no allocation counted (`Program.AllocsKept`). -/
   allocs : p.AllocsKept fuel input
+  /-- facts.io-and-capabilities: a call of a function value whose type's row reads as no `io`,
+  on arguments of its parameter types, from any typed state, keeps the world's output, standard
+  error and input, and so does the rest of each performance it makes, resumed in a typed world
+  with a value of the type its operation gives, from that world (`call_keeps`). -/
+  quietCalls : ∀ (n : Nat) {Γ : Ctx} {η : REnv} {f : Value} {passed : List Passed}
+      {ps : List (Mode × Ty)} {result : Ty} {ρ : Row} {γ : Copy.State},
+      Value.Typed p.decls f ((Ty.fn ps result ρ).close η) → STy.io ∉ ρ.close η →
+      Passed.Typed p.decls Γ η passed ps → State.Typed p.decls γ Γ η →
+      (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f passed γ).KeepsIo p.decls
+        ⟨ρ.close η, fun _ => False, performsOf p.decls (ρ.close η)⟩ γ.2.io
+  /-- facts.io-and-capabilities: a run whose `main`'s row holds no `io` ends with nothing
+  written to its output or its standard error, and its whole input unread
+  (`Program.WellTyped.quiet`). -/
+  quiet : p.row.io = false →
+    ∀ w ∈ (p.runCopy fuel input).world, w.out = "" ∧ w.err = "" ∧ w.input = input
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -253,6 +274,9 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun _ control c v w => callAs_unseen p.decls _ control c v w,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
     Program.PanicKeptBy.kept h.overflowLimits h.wellTyped h.exclusive fuel input,
-    h.divLimits.kept h.wellTyped h.exclusive input, h.allocLimits.kept fuel input⟩
+    h.divLimits.kept h.wellTyped h.exclusive input, h.allocLimits.kept fuel input,
+    fun n _ _ _ _ _ _ _ _ hf hio hp hγ =>
+      call_keeps (h.wellTyped.typedDecls.quiet n) h.wellTyped.typedDecls hf hp hio _ hγ,
+    fun hio => h.wellTyped.quiet hio fuel input⟩
 
 end Stilt

@@ -63,6 +63,11 @@ theorem Row.mem_effects_substRows {E : Name} :
   rw [Row.substRows_eq]
   simp
 
+/-- An instantiated row holds `io` when the row does, or a row it gives a variable does. -/
+theorem Row.io_substRows :
+    (ρ.substRows s).io = (ρ.io || ρ.vars.any fun v => (s.lookup v).any (·.io)) := by
+  rw [Row.substRows_eq]
+
 theorem Row.resume_substRows : (ρ.substRows s).resume = ρ.resume := by
   rw [Row.substRows_eq]
 
@@ -79,7 +84,8 @@ theorem Row.close_substRows_le {s : RowSubst} {η : REnv} {ρ : Row}
     (hE : ∀ E, ρ.raise = some E → ((E.substRows s).close η).Eqv (E.close (s.compose η))) :
     Covers ((ρ.substRows s).close η) (ρ.close (s.compose η)) := by
   refine Covers.of_forall fun x hx => ?_
-  rcases Row.mem_close.1 hx with ⟨F, hF, rfl⟩ | ⟨w, hw, hx⟩ | ⟨E, hE, rfl⟩ | ⟨p, hp, rfl⟩
+  rcases Row.mem_close.1 hx with ⟨F, hF, rfl⟩ | ⟨w, hw, hx⟩ | ⟨E, hE, rfl⟩ | ⟨p, hp, rfl⟩ |
+    ⟨hio, rfl⟩
   · cases hr : ρ.raise with
     | some E =>
       rw [Row.substRows_eq, hr] at hF
@@ -112,7 +118,17 @@ theorem Row.close_substRows_le {s : RowSubst} {η : REnv} {ρ : Row}
         exact Has.of_mem (Row.mem_close.2 (.inr (.inl ⟨v, hv, RowSubst.mem_compose.2
           (.inr ⟨σ, hl, Row.mem_close.2 (.inr (.inr (.inl ⟨E, hE, rfl⟩)))⟩)⟩)))
   · rw [Row.resume_substRows] at hp
-    exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr ⟨p, hp, rfl⟩))))
+    exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr (.inl ⟨p, hp, rfl⟩)))))
+  · rw [Row.io_substRows] at hio
+    rcases Bool.or_eq_true_iff.1 hio with h | h
+    · exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr (.inr ⟨h, rfl⟩)))))
+    · obtain ⟨v, hv, hσ⟩ := List.any_eq_true.1 h
+      cases hl : s.lookup v with
+      | none => simp [hl] at hσ
+      | some σ =>
+        simp only [hl, Option.any_some] at hσ
+        exact Has.of_mem (Row.mem_close.2 (.inr (.inl ⟨v, hv, RowSubst.mem_compose.2
+          (.inr ⟨σ, hl, Row.mem_close.2 (.inr (.inr (.inr (.inr ⟨hσ, rfl⟩))))⟩)⟩)))
 
 /-- A row raises, under the composed environment, what its instantiation
 raises under the use's, when the use leaves it one `raise` label. -/
@@ -120,14 +136,16 @@ theorem Row.close_substRows_ge {s : RowSubst} {η : REnv} {ρ : Row} (hkeep : ρ
     (hE : ∀ E, ρ.raise = some E → ((E.substRows s).close η).Eqv (E.close (s.compose η))) :
     Covers (ρ.close (s.compose η)) ((ρ.substRows s).close η) := by
   refine Covers.of_forall fun x hx => ?_
-  rcases Row.mem_close.1 hx with ⟨E, hE', rfl⟩ | ⟨v, hv, hx⟩ | ⟨E, hE', rfl⟩ | ⟨p, hp, rfl⟩
+  rcases Row.mem_close.1 hx with ⟨E, hE', rfl⟩ | ⟨v, hv, hx⟩ | ⟨E, hE', rfl⟩ | ⟨p, hp, rfl⟩ |
+    ⟨hio, rfl⟩
   · refine Has.of_mem_eqv (Row.mem_close.2 (.inl ⟨E.substRows s, ?_, rfl⟩)) (hE E hE').symm
     rw [Row.substRows_eq, hE']
     rfl
   · rcases RowSubst.mem_compose.1 hx with ⟨hl, hx⟩ | ⟨σ, hl, hx⟩
     · exact Has.of_mem (Row.mem_close.2 (.inr (.inl ⟨v, Row.mem_vars_substRows.2
         ⟨v, hv, by simp [hl]⟩, hx⟩)))
-    · rcases Row.mem_close.1 hx with ⟨G, hG, rfl⟩ | ⟨w, hw, hx⟩ | ⟨E, hE, rfl⟩ | ⟨p, hp, rfl⟩
+    · rcases Row.mem_close.1 hx with ⟨G, hG, rfl⟩ | ⟨w, hw, hx⟩ | ⟨E, hE, rfl⟩ | ⟨p, hp, rfl⟩ |
+        ⟨hio, rfl⟩
       · have hGl : G ∈ ρ.labels s := by
           simp only [Row.labels, List.mem_append, List.mem_filterMap]
           exact .inr ⟨v, hv, by simp [hl, hG]⟩
@@ -139,10 +157,16 @@ theorem Row.close_substRows_ge {s : RowSubst} {η : REnv} {ρ : Row} (hkeep : ρ
       · exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inl ⟨E, Row.mem_effects_substRows.2
           (.inr ⟨v, hv, by simp [hl, hE]⟩), rfl⟩))))
       · exact absurd hp (by simp [hkeep.2 v hv σ hl])
+      · refine Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr (.inr ⟨?_, rfl⟩)))))
+        rw [Row.io_substRows, Bool.or_eq_true_iff, List.any_eq_true]
+        exact .inr ⟨v, hv, by simp [hl, hio]⟩
   · exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inl ⟨E, Row.mem_effects_substRows.2
       (.inl hE'), rfl⟩))))
-  · exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr ⟨p, by rw [Row.resume_substRows]; exact hp,
-      rfl⟩))))
+  · exact Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr (.inl ⟨p,
+      by rw [Row.resume_substRows]; exact hp, rfl⟩)))))
+  · refine Has.of_mem (Row.mem_close.2 (.inr (.inr (.inr (.inr ⟨?_, rfl⟩)))))
+    rw [Row.io_substRows, hio]
+    rfl
 
 mutual
 

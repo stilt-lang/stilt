@@ -14,10 +14,10 @@ variables' instantiations bring, and it may hold several.
 
 `STy` is a type with every row read that way. A row variable stands for the
 error types its instantiation can raise (`REnv`), and `Ty.close` reads a type
-under such an environment. The model checks no `io`, so a run-time row keeps
-only its error types, and beside them the labels of the effects it may perform
-and of the `resume` of a handler's body, which no value has: a row variable
-stands for the effects of its instantiation too. Rows are sets, so two run-time types are equivalent
+under such an environment. A run-time row keeps its error types, and beside
+them the labels of the effects it may perform, of the `resume` of a handler's
+body and of `io`, which no value has: a row variable stands for the effects and
+the `io` of its instantiation too. Rows are sets, so two run-time types are equivalent
 (`STy.Eqv`) when they differ only in the order and repetition of their rows'
 error types, and a type fits another (`STy.Fits`) through equivalences and
 rows that grow (effects.function-values).
@@ -53,10 +53,12 @@ inductive STy where
   /-- The label of the `resume` of a handler's body in a run-time row, with the
   closed types the row gives it (handlers.resuming). -/
   | resume (arg result : Ty)
+  /-- The label of `io` in a run-time row (effects.rows). -/
+  | io
 
-/-- The label of an effect or of a `resume`, which no value has. -/
+/-- The label of an effect, of a `resume` or of `io`, which no value has. -/
 def STy.IsLabel : STy → Prop
-  | .effect _ | .resume _ _ => True
+  | .effect _ | .resume _ _ | .io => True
   | _ => False
 
 /-- `i64` at run time. -/
@@ -70,6 +72,9 @@ abbrev REnv := Name → List STy
 /-- The labels of a row's effects and its `resume`. -/
 def Row.labelsOf (effects : List Name) (resume : Option (Ty × Ty)) : List STy :=
   effects.map STy.effect ++ resume.toList.map fun p => STy.resume p.1 p.2
+
+/-- The label of a row's `io`, if it holds it. -/
+def Row.ioLabel (io : Bool) : List STy := if io then [.io] else []
 
 mutual
 
@@ -104,10 +109,10 @@ def closeParams (η : REnv) : List (Mode × Ty) → List (Mode × STy)
   | (m, τ) :: ps => (m, τ.close η) :: closeParams η ps
 
 /-- The error types a row can raise, its own label's and those its variables
-stand for, and the labels of its effects and its `resume`. -/
+stand for, and the labels of its effects, its `resume` and its `io`. -/
 def Row.close (η : REnv) : Row → List STy
-  | ⟨_, some E, vs, es, r⟩ => E.close η :: (vs.flatMap η ++ Row.labelsOf es r)
-  | ⟨_, none, vs, es, r⟩ => vs.flatMap η ++ Row.labelsOf es r
+  | ⟨io, some E, vs, es, r⟩ => E.close η :: (vs.flatMap η ++ Row.labelsOf es r ++ Row.ioLabel io)
+  | ⟨io, none, vs, es, r⟩ => vs.flatMap η ++ Row.labelsOf es r ++ Row.ioLabel io
 
 end
 
@@ -138,6 +143,7 @@ inductive STy.Eqv : STy → STy → Prop
       STy.Eqv (.fn ps r R) (.fn ps' r' R')
   | effect (E : Name) : STy.Eqv (.effect E) (.effect E)
   | resume (a r : Ty) : STy.Eqv (.resume a r) (.resume a r)
+  | io : STy.Eqv .io .io
 
 /-- Types pairwise equivalent. -/
 inductive STysEqv : List STy → List STy → Prop
@@ -227,6 +233,7 @@ theorem STy.Eqv.refl : ∀ a : STy, a.Eqv a
     .fn (SParamsEqv.refl ps) (STy.Eqv.refl r) (Covers.refl_append R []) (Covers.refl_append R [])
   | .effect E => .effect E
   | .resume a r => .resume a r
+  | .io => .io
 
 theorem STysEqv.refl : ∀ as : List STy, STysEqv as as
   | [] => .nil
@@ -267,6 +274,7 @@ theorem STy.Eqv.symm : ∀ {a b : STy}, a.Eqv b → b.Eqv a
   | _, _, .fn hp hr hc hc' => .fn (SParamsEqv.symm hp) (STy.Eqv.symm hr) hc' hc
   | _, _, .effect E => .effect E
   | _, _, .resume a r => .resume a r
+  | _, _, .io => .io
 
 theorem STysEqv.symm : ∀ {as bs : List STy}, STysEqv as bs → STysEqv bs as
   | _, _, .nil => .nil

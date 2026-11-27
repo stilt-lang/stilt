@@ -153,11 +153,12 @@ theorem Effects.raises_body (η : REnv) (ρ : Row) (m : Bool) (result : Ty) :
 none of its variables stands for one. -/
 theorem Row.resume_not_mem_close {η : REnv} {scope : RowScope} (hη : η.Respects scope) {σ : Row}
     (hσ : σ.resume = none) (a r : Ty) : STy.resume a r ∉ σ.close η := fun h => by
-  rcases Row.mem_close.1 h with ⟨E, _, hE⟩ | ⟨v, _, hv⟩ | ⟨_, _, hE⟩ | ⟨p, hp, _⟩
+  rcases Row.mem_close.1 h with ⟨E, _, hE⟩ | ⟨v, _, hv⟩ | ⟨_, _, hE⟩ | ⟨p, hp, _⟩ | ⟨_, hE⟩
   · exact Ty.close_not_label η E (hE ▸ trivial)
   · exact hη.noResume v a r hv
   · exact nomatch hE
   · rw [hσ] at hp; exact nomatch hp
+  · exact nomatch hE
 
 /-- A function value of a type whose row holds no `resume` is no clause of a
 handler that takes control: the row its literal or its declaration gives holds
@@ -174,7 +175,7 @@ theorem Value.Typed.takesControl_eq_false {η : REnv} {scope : RowScope} (hη : 
     cases hp : ρ₀.resume with
     | none => rfl
     | some p =>
-      exact absurd (hff.labels _ (Row.mem_close.2 (.inr (.inr (.inr ⟨p, hp, rfl⟩)))) trivial)
+      exact absurd (hff.labels _ (Row.mem_close.2 (.inr (.inr (.inr (.inl ⟨p, hp, rfl⟩))))) trivial)
         (Row.resume_not_mem_close hη hσ p.1 p.2)
   | @function name _ _ _ d ηf hd _ _ hσ' =>
     have hσ'' : ((Ty.fn (substParamTys _ (d.params.map Param.sig)) (d.result.substTys _)
@@ -186,7 +187,7 @@ theorem Value.Typed.takesControl_eq_false {η : REnv} {scope : RowScope} (hη : 
     cases hp : d.row.resume with
     | none => rfl
     | some p =>
-      exact absurd (hff.labels _ (Row.mem_close.2 (.inr (.inr (.inr ⟨p, hp, rfl⟩)))) trivial)
+      exact absurd (hff.labels _ (Row.mem_close.2 (.inr (.inr (.inr (.inl ⟨p, hp, rfl⟩))))) trivial)
         (Row.resume_not_mem_close hη hσ p.1 p.2)
   | handle _ => rfl
 
@@ -251,7 +252,7 @@ theorem CallAllowed.raises {scope : RowScope} {fx : Effects} {σ : Row} {η : RE
     · obtain ⟨E, hE, hpair⟩ := hc.paired hcatch v hv
       exact ⟨_, by simp [hc.within.raise E hE], he.fits (hη.pairs v E hpair F hFv he.not_label)⟩
     · rename_i h
-      rcases h with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ <;> exact absurd trivial he.not_label
+      rcases h with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨_, rfl⟩ <;> exact absurd trivial he.not_label
 
 /-- A call's row holds no label that the row around it lacks (effects.missing-effects), so
 the call performs only what the code around it may. -/

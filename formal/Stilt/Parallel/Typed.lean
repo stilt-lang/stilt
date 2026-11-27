@@ -22,11 +22,11 @@ variable {D : Decls}
 /-- An empty row reads as no label at run time. -/
 theorem Row.pure_close (η : REnv) : Row.pure.close η = [] := rfl
 
-/-- A call of a function value whose type's row reads as no label at run time, on arguments
+/-- A call of a function value whose type's row reads as no label but `io` at run time, on arguments
 of its parameter types, from a frame of the code around it, never ends as a performance. -/
 theorem call_settled (hD : D.Typed) (n : Nat) {Γ : Ctx} {η : REnv} {f : Value}
     {passed : List Passed} {ps : List (Mode × Ty)} {result : Ty} {ρ : Row} {γ : Copy.State}
-    (hρ : ρ.close η = []) (hf : Value.Typed D f ((Ty.fn ps result ρ).close η))
+    (hρ : ∀ x ∈ ρ.close η, x = .io) (hf : Value.Typed D f ((Ty.fn ps result ρ).close η))
     (hp : Passed.Typed D Γ η passed ps) (hγ : State.Typed D γ Γ η) :
     (Eval.call D Copy.memory (eval D Copy.memory n) f passed γ).Settled := by
   have h := call_ok (hD.sound n) hD hf hp γ hγ
@@ -34,8 +34,11 @@ theorem call_settled (hD : D.Typed) (n : Nat) {Γ : Ctx} {η : REnv} {f : Value}
   cases o with
   | performed op v s k =>
     obtain ⟨⟨τ, ρ', hperf, -⟩, -⟩ := h
-    simp only [hρ, performsOf] at hperf
-    split at hperf <;> simp at hperf
+    simp only [performsOf] at hperf
+    split at hperf
+    · obtain ⟨_, _, hm, -⟩ := hperf
+      exact nomatch hρ _ hm
+    · exact nomatch hρ _ hperf.1
   | _ => trivial
 
 /-- tasks.continuations-stay-in-task: a task's function raises nothing and performs no
@@ -48,7 +51,8 @@ theorem continuations_stay (hD : D.Typed) (n : Nat) {Γ : Ctx} {η : REnv} {f : 
     (hf : Value.Typed D f ((Ty.fn [] result ⟨io, none, [], [], none⟩).close η))
     (hγ : State.Typed D γ Γ η) :
     (Eval.call D Copy.memory (eval D Copy.memory n) f [] γ).Settled :=
-  call_settled hD n rfl hf .nil hγ
+  call_settled hD n (fun x hx => by cases io <;> simp_all [Row.close, Row.labelsOf, Row.ioLabel]) hf
+    .nil hγ
 
 /-- par.sequential-meaning and par.panics: calls of function values whose
 types have empty rows, on arguments of their parameter types, run at the same
@@ -67,7 +71,7 @@ theorem parallel_eq_sequential (hD : D.Typed) (n : Nat) {Γ : Ctx} {η : REnv} {
   intro c hc' x' hx'
   obtain ⟨c, hmem, rfl⟩ := List.mem_map.1 hc'
   obtain ⟨ps, result, hf, hp⟩ := hc c hmem
-  refine ⟨Eval.call_at (w := .leftToRight) (γ, x'), call_settled hD n rfl hf hp (γ := (γ, x')) ⟨hγ, hx'⟩,
+  refine ⟨Eval.call_at (w := .leftToRight) (γ, x'), call_settled hD n (fun _ h => by simp [Row.pure_close] at h) hf hp (γ := (γ, x')) ⟨hγ, hx'⟩,
     fun v s' h => ?_⟩
   have hok := call_ok (hD.sound n) hD hf hp (γ, x') ⟨hγ, hx'⟩
   rw [h] at hok

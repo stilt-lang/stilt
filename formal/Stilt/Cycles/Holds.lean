@@ -81,7 +81,7 @@ mutual
 /-- Types that a run takes for the same are equal, or both hold a function type. -/
 theorem STy.Eqv.eq_or_fn : ∀ {a b : STy}, a.Eqv b → a = b ∨ a.HoldsFn D ∧ b.HoldsFn D
   | _, _, .int _ | _, _, .float _ | _, _, .bool | _, _, .str | _, _, .unit | _, _, .never
-  | _, _, .param _ | _, _, .effect _ | _, _, .resume _ _ =>
+  | _, _, .param _ | _, _, .effect _ | _, _, .resume _ _ | _, _, .io =>
     .inl rfl
   | _, _, .record _ h => (STysEqv.eq_or_fn h).imp (congrArg _)
       fun ⟨⟨a, ha, hfa⟩, ⟨b, hb, hfb⟩⟩ => ⟨hfa.of (.recordArg ha .refl), hfb.of (.recordArg hb .refl)⟩

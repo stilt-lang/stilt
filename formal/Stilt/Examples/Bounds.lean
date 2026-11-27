@@ -27,19 +27,19 @@ private def eq : Expr := .op (.structural .eq []) [.var "a", .var "b"]
 /-- `a == b` on `T: Eq` has a type. -/
 example (fx : Effects) : HasType decls (scopeWith ["Eq"]) (ctx (.param "T")) fx eq .bool :=
   .op .structural (.cons (.var rfl) (.refl _) (.cons (.var rfl) (.refl _) .nil))
-    (Op.keysIn_of_nil rfl) fun p hp => by
+    (Op.keysIn_of_nil rfl) (fun p hp => by
       simp only [Op.traitsNeeded, Cmp.trait, List.mem_singleton] at hp
       subst hp
       exact ⟨fun τ => τ = .param "T", rfl, by
         rintro _ rfl
-        exact ⟨⟨"T", ["Eq"], []⟩, List.mem_singleton_self _, rfl, List.mem_singleton_self _⟩⟩
+        exact ⟨⟨"T", ["Eq"], []⟩, List.mem_singleton_self _, rfl, List.mem_singleton_self _⟩⟩) (Op.noIo rfl)
 
 /-- An operand of `==` has the type of the variable it reads, or one with a larger row. -/
 private theorem eq_operand {s : RowScope} {σ : Ty} {fx : Effects} {τ : Ty}
     (h : HasType decls s (ctx σ) fx eq τ) :
     ∃ τ', Fits σ τ' ∧ decls.Implements s .eq τ' := by
   cases h with
-  | op ho hes _ hb =>
+  | op ho hes _ hb _ =>
     cases ho
     cases hes with
     | cons he hfit _ =>

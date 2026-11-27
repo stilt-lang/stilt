@@ -24,29 +24,32 @@ def RowSubst.compose (s : RowSubst) (η : REnv) : REnv :=
 
 theorem Row.close_eq (η : REnv) (ρ : Row) :
     ρ.close η = (ρ.raise.map (Ty.close η)).toList ++ ρ.vars.flatMap η ++
-      Row.labelsOf ρ.effects ρ.resume := by
+      Row.labelsOf ρ.effects ρ.resume ++ Row.ioLabel ρ.io := by
   obtain ⟨_, raise, _⟩ := ρ
   cases raise <;> simp [Row.close]
 
 /-- What a run-time row holds: its own error type, what its variables stand
-for, and the labels of its effects and its `resume`. -/
+for, and the labels of its effects, its `resume` and its `io`. -/
 theorem Row.mem_close {η : REnv} {ρ : Row} {x : STy} :
     x ∈ ρ.close η ↔ (∃ E, ρ.raise = some E ∧ x = E.close η) ∨ (∃ v ∈ ρ.vars, x ∈ η v) ∨
-      (∃ E ∈ ρ.effects, x = .effect E) ∨ ∃ p, ρ.resume = some p ∧ x = .resume p.1 p.2 := by
+      (∃ E ∈ ρ.effects, x = .effect E) ∨ (∃ p, ρ.resume = some p ∧ x = .resume p.1 p.2) ∨
+      (ρ.io = true ∧ x = .io) := by
   rw [Row.close_eq]
-  rcases ρ with ⟨_, raise, _, _, resume⟩
-  cases raise <;> cases resume <;> simp [Row.labelsOf, eq_comm]
+  rcases ρ with ⟨io, raise, _, _, resume⟩
+  cases raise <;> cases resume <;> cases io <;> simp [Row.labelsOf, Row.ioLabel, eq_comm]
 
 /-- A row that fits within another raises no error type the other lacks, and
 holds no label the other lacks. -/
 theorem Row.Within.close {a b : Row} (h : a.Within b) (η : REnv) :
     ∀ x ∈ a.close η, x ∈ b.close η := by
   intro x hx
-  rcases Row.mem_close.1 hx with ⟨E, hE, rfl⟩ | ⟨v, hv, hx⟩ | ⟨E, hE, rfl⟩ | ⟨p, hp, rfl⟩
+  rcases Row.mem_close.1 hx with ⟨E, hE, rfl⟩ | ⟨v, hv, hx⟩ | ⟨E, hE, rfl⟩ | ⟨p, hp, rfl⟩ |
+    ⟨hio, rfl⟩
   · exact Row.mem_close.2 (.inl ⟨E, h.raise E hE, rfl⟩)
   · exact Row.mem_close.2 (.inr (.inl ⟨v, h.vars v hv, hx⟩))
   · exact Row.mem_close.2 (.inr (.inr (.inl ⟨E, h.effects E hE, rfl⟩)))
-  · exact Row.mem_close.2 (.inr (.inr (.inr ⟨p, h.resume _ hp, rfl⟩)))
+  · exact Row.mem_close.2 (.inr (.inr (.inr (.inl ⟨p, h.resume _ hp, rfl⟩))))
+  · exact Row.mem_close.2 (.inr (.inr (.inr (.inr ⟨h.io hio, rfl⟩))))
 
 /-- A type read under an environment is no label. -/
 theorem Ty.close_not_label (η : REnv) : ∀ τ : Ty, ¬ (τ.close η).IsLabel
@@ -65,7 +68,8 @@ theorem Row.labels_withRaise {η : REnv} {ρ : Row} {E : Ty} :
 /-- A `catch` operand raises the caught type, and what the row's variables
 stand for. -/
 theorem Row.close_withRaise (η : REnv) (ρ : Row) (E : Ty) :
-    (ρ.withRaise E).close η = E.close η :: (ρ.vars.flatMap η ++ Row.labelsOf ρ.effects ρ.resume) :=
+    (ρ.withRaise E).close η =
+      E.close η :: (ρ.vars.flatMap η ++ Row.labelsOf ρ.effects ρ.resume ++ Row.ioLabel ρ.io) :=
   rfl
 
 /-- `Fits` gives a run-time type that fits. -/

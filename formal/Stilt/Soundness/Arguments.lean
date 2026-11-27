@@ -163,6 +163,7 @@ theorem STy.substParams_eqv {π π' : SParams} (h : π.Eqv π') :
   | .never => .never
   | .effect E => .effect E
   | .resume a r => .resume a r
+  | .io => .io
 
 theorem STys.substParams_eqv {π π' : SParams} (h : π.Eqv π') :
     ∀ as : List STy, STysEqv (STys.substParams π as) (STys.substParams π' as)
@@ -183,7 +184,7 @@ mutual
 
 /-- A declared type without type parameters reads as itself at no arguments. -/
 theorem STy.substParams_nil : ∀ a : STy, a.substParams [] = a
-  | .param _ | .int _ | .float _ | .bool | .str | .unit | .never | .effect _ | .resume _ _ => rfl
+  | .param _ | .int _ | .float _ | .bool | .str | .unit | .never | .effect _ | .resume _ _ | .io => rfl
   | .record R as => by rw [STy.substParams, STys.substParams_nil]
   | .variant T as => by rw [STy.substParams, STys.substParams_nil]
   | .list a => by rw [STy.substParams, STy.substParams_nil]
