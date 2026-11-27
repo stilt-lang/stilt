@@ -88,17 +88,35 @@ def qualify (type name : Name) : Name := type ++ "." ++ name
 def FnDecl.qualify (type : Name) (d : FnDecl) : FnDecl :=
   { d with name := Stilt.qualify type d.name }
 
-/-- `impl Type { fn … }`, an inherent `impl` block of a record or variant type
-(traits.impl-blocks). A function whose first parameter is `self` is a method, and
-`self` takes the mode `let` or `inout`; one without `self` is an associated
-function. Type parameters of a block are outside the calculus, so the
-block's type is named alone, and the block has no bounds. -/
+/-- A function of an `impl` block of `type` whose type parameters are `ps`, under its
+qualified name, with the block's type parameters before its own: a use gives the block's
+first, then the function's (traits.bounded-blocks). -/
+def FnDecl.within (ps : List TypeParam) (type : Name) (d : FnDecl) : FnDecl :=
+  { d with name := Stilt.qualify type d.name, typeParams := ps ++ d.typeParams }
+
+/-- A block without type parameters only qualifies its functions' names. -/
+@[simp] theorem FnDecl.within_nil (type : Name) (d : FnDecl) : d.within [] type = d.qualify type :=
+  rfl
+
+/-- `impl<A, …> Type<A, …> { fn … }`, an inherent `impl` block of a record or variant type
+(traits.impl-blocks). A function whose first parameter is `self` is a method, and `self`
+takes the mode `let` or `inout`; one without `self` is an associated function, called as
+`Type.f(…)` (traits.associated-functions). The block's type is `Type` at the block's type
+parameters, one for each of the type's, in its order: the elaborated form of a block that
+writes them in another order. The block may bound them, and its functions then exist only
+for the type arguments that meet the bounds, since each takes them as its first type
+parameters, which a use instantiates (traits.bounded-blocks). A constant of the block,
+`Type.NAME`, is its value, which the export writes where it is read, as it writes every
+constant. -/
 structure ImplDecl where
   type : Name
   fns : List FnDecl
+  /-- The block's type parameters, with their bounds. -/
+  typeParams : List TypeParam := []
 
-/-- The functions of an `impl` block, under their qualified names. -/
-def ImplDecl.members (i : ImplDecl) : List FnDecl := i.fns.map (FnDecl.qualify i.type)
+/-- The functions of an `impl` block, under their qualified names, with the block's type
+parameters. -/
+def ImplDecl.members (i : ImplDecl) : List FnDecl := i.fns.map (FnDecl.within i.typeParams i.type)
 
 /-- The head of a type that a trait impl is for: a numeric type, `bool`,
 `str`, `()`, or a record or variant type (traits.implementing-trait). -/
@@ -382,49 +400,51 @@ theorem Decls.mapFns_mapFns (f g : FnDecl → FnDecl) (D : Decls) :
     (D.mapFns f).mapFns g = D.mapFns (g ∘ f) := by
   simp [Decls.mapFns, Function.comp_def]
 
-/-- A change to functions that commutes with qualifying their names reaches
-every function, the methods under their qualified names included. -/
-theorem Decls.fns_mapFns {f : FnDecl → FnDecl} (hf : ∀ T d, f (d.qualify T) = (f d).qualify T)
+/-- A change to functions that commutes with qualifying their names and giving them a
+block's type parameters reaches every function, the methods under their qualified names
+included. -/
+theorem Decls.fns_mapFns {f : FnDecl → FnDecl}
+    (hf : ∀ ps T d, f (d.within ps T) = (f d).within ps T)
     (D : Decls) : (D.mapFns f).fns = D.fns.map f := by
   simp only [Decls.fns, Decls.mapFns, ImplDecl.members, TraitImpl.members, List.map_append,
     List.flatMap_map, List.map_flatMap, List.map_map]
   congr 1
   · congr 1
     refine congrArg (List.flatMap · D.impls) (funext fun i => ?_)
-    exact List.map_congr_left fun d _ => (hf i.type d).symm
+    exact List.map_congr_left fun d _ => (hf i.typeParams i.type d).symm
   · refine congrArg (List.flatMap · D.traitImpls) (funext fun i => ?_)
-    exact List.map_congr_left fun d _ => (hf _ d).symm
+    exact List.map_congr_left fun d _ => (hf [] _ d).symm
 
 /-- A change to functions that leaves every function of the program as it is
 leaves its declarations as they are. -/
 theorem Decls.mapFns_eq_self {f : FnDecl → FnDecl}
-    (hf : ∀ T d, f (d.qualify T) = (f d).qualify T) (hname : ∀ d, (f d).name = d.name)
+    (hf : ∀ ps T d, f (d.within ps T) = (f d).within ps T) (hname : ∀ d, (f d).name = d.name)
     {D : Decls} (h : ∀ d ∈ D.fns, f d = d) : D.mapFns f = D := by
   obtain ⟨records, variants, functions, impls, traits, traitImpls, effects, consts⟩ := D
-  have hq : ∀ T d, f (d.qualify T) = d.qualify T → f d = d := by
-    intro T d hq
+  have hq : ∀ ps T d, f (d.within ps T) = d.within ps T → f d = d := by
+    intro ps T d hq
     rw [hf] at hq
     have hn := hname d
     generalize f d = g at hq hn ⊢
     cases g
     cases d
-    simp_all [FnDecl.qualify]
+    simp_all [FnDecl.within]
   have hfun : functions.map f = functions :=
     (List.map_congr_left fun d hd => h d (List.mem_append_left _ (List.mem_append_left _ hd))).trans
       (List.map_id _)
   have himpl : (impls.map fun i => { i with fns := i.fns.map f }) = impls := by
     refine (List.map_congr_left fun i hi => ?_).trans (List.map_id _)
-    obtain ⟨T, fns⟩ := i
+    obtain ⟨T, fns, ps⟩ := i
     suffices fns.map f = fns by simp [this]
     refine (List.map_congr_left fun d hd => ?_).trans (List.map_id _)
-    exact hq T d (h (d.qualify T) (List.mem_append_left _ (List.mem_append_right _
-      (List.mem_flatMap.2 ⟨⟨T, fns⟩, hi, List.mem_map_of_mem hd⟩))))
+    exact hq ps T d (h (d.within ps T) (List.mem_append_left _ (List.mem_append_right _
+      (List.mem_flatMap.2 ⟨⟨T, fns, ps⟩, hi, List.mem_map_of_mem hd⟩))))
   have htrait : (traitImpls.map fun i => { i with fns := i.fns.map f }) = traitImpls := by
     refine (List.map_congr_left fun i hi => ?_).trans (List.map_id _)
     obtain ⟨Tr, H, fns⟩ := i
     suffices fns.map f = fns by simp [this]
     refine (List.map_congr_left fun d hd => ?_).trans (List.map_id _)
-    exact hq _ d (h _ (List.mem_append_right _ (List.mem_flatMap.2
+    exact hq [] _ d (h _ (List.mem_append_right _ (List.mem_flatMap.2
       ⟨⟨Tr, H, fns⟩, hi, List.mem_map_of_mem hd⟩)))
   simp [Decls.mapFns, hfun, himpl, htrait]
 

@@ -68,7 +68,7 @@ def decls (j : Json) : Except String Decls := do
     functions := ← get "functions" >>= list fnDecl
     impls := ← get "impls" >>= list (fun i => do
       let (t, fs) ← pair str (list fnDecl) i
-      pure ⟨t, fs⟩)
+      pure ⟨t, fs, []⟩)
     traits := ← get "traits" >>= list (fun t => do
       let (n, ms) ← pair str (list (pair str ty)) t
       pure ⟨n, ms⟩)

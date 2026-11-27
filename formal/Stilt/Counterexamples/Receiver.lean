@@ -25,7 +25,7 @@ def peek : FnDecl :=
     Row.pure, .seq (.assign ⟨"b", []⟩ (.int 1)) (.field (.var selfName) "b"), {}⟩
 
 /-- `impl A { fn f(inout self, inout b: i64) -> i64 { … } }` (traits.impl-blocks). -/
-def aImpl : ImplDecl := ⟨"A", [peek]⟩
+def aImpl : ImplDecl := ⟨"A", [peek], []⟩
 
 /-- `var a = A { b: 0 }; raise a.f(inout a.b)`, in a `main` whose row is
 `raise<i64>`. modes.overlapping-inout rejects the call. -/

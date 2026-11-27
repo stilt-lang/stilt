@@ -59,8 +59,9 @@ def FnDecl.markGated (d : FnDecl) : FnDecl :=
   let marked := d.body.markMoves (inoutLive d.params) false
   { d with body := marked.gate child keep (start d.params d.body) }
 
-theorem FnDecl.markGated_qualify (T : Name) (d : FnDecl) :
-    (d.qualify T).markGated child keep start = (d.markGated child keep start).qualify T := rfl
+theorem FnDecl.markGated_qualify (ps : List TypeParam) (T : Name) (d : FnDecl) :
+    (d.within ps T).markGated child keep start = (d.markGated child keep start).within ps T :=
+  rfl
 
 /-- The program with the last uses of each body marked where a context
 allows reuse. -/

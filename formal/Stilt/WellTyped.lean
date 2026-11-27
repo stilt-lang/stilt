@@ -120,16 +120,26 @@ def Decls.selfType? (D : Decls) (T : Name) : Option Ty :=
   if (D.record? T).isSome then some (.record T [])
   else if (D.variant? T).isSome then some (.variant T []) else none
 
+/-- `Self` in an `impl` block: the record or variant type that the block names, at the
+block's type parameters, one for each of the type's. A block with another number of them is
+E0302 (traits.impl-blocks). -/
+def Decls.blockType? (D : Decls) (i : ImplDecl) : Option Ty :=
+  let args := i.typeParams.map fun p => Ty.param p.name
+  match D.record? i.type, D.variant? i.type with
+  | some r, _ => if r.typeParams.length = args.length then some (.record i.type args) else none
+  | none, some v => if v.typeParams.length = args.length then some (.variant i.type args) else none
+  | none, none => none
+
 /-- Where `self` stands, as traits.impl-blocks and traits.methods puts it: an `impl` block is for a
-type of the program, a function at the top level takes no `self`, and a
-function of an `impl` block takes it, if at all, as its first parameter,
+type of the program, at the block's type parameters, a function at the top level takes no
+`self`, and a function of an `impl` block takes it, if at all, as its first parameter,
 whose type is the block's. -/
 structure Decls.Receivers (D : Decls) : Prop where
-  types : ∀ i ∈ D.impls, (D.selfType? i.type).isSome
+  types : ∀ i ∈ D.impls, (D.blockType? i).isSome
   functions : ∀ d ∈ D.functions, ∀ p ∈ d.params, p.name ≠ selfName
   later : ∀ i ∈ D.impls, ∀ d ∈ i.fns, ∀ p ∈ d.params.drop 1, p.name ≠ selfName
   first : ∀ i ∈ D.impls, ∀ d ∈ i.fns, ∀ p ∈ d.params.take 1,
-    p.name = selfName → D.selfType? i.type = some p.type
+    p.name = selfName → D.blockType? i = some p.type
 
 /-- Declarations without `impl` blocks, whose functions take no `self`. -/
 theorem Decls.receivers_of_nil {D : Decls} (himpls : D.impls = [])
@@ -251,6 +261,9 @@ structure Decls.WellFormed (D : Decls) : Prop where
   fnNames : (D.fns.map (·.name)).Nodup
   paramNames : ∀ d ∈ D.fns, (d.params.map Param.name).Nodup
   rowParams : ∀ d ∈ D.fns, d.rowParams.Nodup
+  /-- A function's type parameters have distinct names, those of a function of an `impl`
+  block with the block's before its own, so it declares no generic with the name of one of
+  the block's: E0208 (traits.inherent-names). -/
   typeParams : ∀ d ∈ D.fns, (d.typeParams.map TypeParam.name).Nodup
   signatures : ∀ d ∈ D.fns, d.type.WellFormed d.scope
   implicitRows : ∀ d ∈ D.fns, d.ImplicitRows

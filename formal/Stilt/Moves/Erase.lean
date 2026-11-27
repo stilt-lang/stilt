@@ -90,7 +90,8 @@ end
 /-- Erases the marks of a function's body. -/
 def FnDecl.erase (d : FnDecl) : FnDecl := { d with body := d.body.erase }
 
-theorem FnDecl.erase_qualify (T : Name) (d : FnDecl) : (d.qualify T).erase = d.erase.qualify T :=
+theorem FnDecl.erase_qualify (ps : List TypeParam) (T : Name) (d : FnDecl) :
+    (d.within ps T).erase = d.erase.within ps T :=
   rfl
 
 /-- Erases the marks of every body of the program. -/

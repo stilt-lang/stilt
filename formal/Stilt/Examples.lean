@@ -236,7 +236,7 @@ private def swapWith : FnDecl :=
       (.seq (.assign (this) (.var "other")) (.assign (place "other") (.var "t"))), {}⟩
 
 /-- `impl Counter { … }`. -/
-private def counterImpl : ImplDecl := ⟨"Counter", [bumped, add, get, reset, swapWith]⟩
+private def counterImpl : ImplDecl := ⟨"Counter", [bumped, add, get, reset, swapWith], []⟩
 
 /-- `Counter { n: k }`. -/
 private def counter (k : Int) : Expr := .record "Counter" [] [("n", .int k)]

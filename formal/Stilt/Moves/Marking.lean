@@ -117,8 +117,8 @@ parameters back. -/
 def FnDecl.markMoves (d : FnDecl) : FnDecl :=
   { d with body := d.body.markMoves (inoutLive d.params) false }
 
-theorem FnDecl.markMoves_qualify (T : Name) (d : FnDecl) :
-    (d.qualify T).markMoves = d.markMoves.qualify T := rfl
+theorem FnDecl.markMoves_qualify (ps : List TypeParam) (T : Name) (d : FnDecl) :
+    (d.within ps T).markMoves = d.markMoves.within ps T := rfl
 
 /-- Marks the last uses of every body of the program. -/
 def Program.markMoves (p : Program) : Program :=
