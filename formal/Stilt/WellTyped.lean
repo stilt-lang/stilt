@@ -149,12 +149,12 @@ theorem Decls.receivers_of_nil {D : Decls} (himpls : D.impls = [])
 /-- The scope of a trait's signatures: `Self` alone, and no row variable. -/
 def TraitDecl.scope : RowScope := ⟨[], fun _ _ => False, fun _ _ => False, [⟨selfParam, []⟩]⟩
 
-/-- A trait's functions are methods, which take `self` first, and their
-signatures name no row variable and no type parameter but `Self`
-(traits.declaring-trait). Generic methods, functions without `self`, defaults and a
-trait's own parameters are outside the calculus. -/
+/-- A trait's functions are methods, which take `self` first, of type `Self`, and functions
+without `self` (traits.functions-without-self), and their signatures name no row variable
+and no type parameter but `Self` (traits.declaring-trait). Generic methods, defaults,
+constants and a trait's own parameters are outside the calculus. -/
 structure TraitDecl.WellFormed (t : TraitDecl) : Prop where
-  receivers : ∀ mσ ∈ t.methods, ∃ m ps r ρ, mσ.2 = .fn ((m, .param selfParam) :: ps) r ρ
+  functions : ∀ mσ ∈ t.methods, ∃ ps r ρ, mσ.2 = .fn ps r ρ
   closed : ∀ mσ ∈ t.methods, mσ.2.Closed
   signatures : ∀ mσ ∈ t.methods, mσ.2.WellFormed TraitDecl.scope
 

@@ -384,7 +384,8 @@ inductive Expr where
   | fnRef (name : Name) (types : List Ty) (rows : List Row)
   /-- `Trait.m`, the method `m` of a trait at a type, as a function value whose
   first parameter is the receiver; a method call through a bound calls it
-  (traits.method-resolution and traits.qualified-calls). -/
+  (traits.method-resolution and traits.qualified-calls). A function of the trait without
+  `self` named on a type, `T.f`, is one too. -/
   | method (trait : Name) (name : Name) (type : Ty)
   /-- `|p, …| body`, with its whole type written out (expressions.closure-parameter-types). -/
   | closure (params : List Param) (result : Ty) (row : Row) (body : Expr)

@@ -129,7 +129,11 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   /-- `Trait.m` at a type that implements the trait, a type parameter through
   a bound included: a function value of the method's type with `Self` that
   type, whose first parameter is the receiver (traits.qualified-calls). A method call
-  through a bound calls it with the receiver first (traits.method-resolution). Of `Eq`,
+  through a bound calls it with the receiver first (traits.method-resolution). A function
+  of the trait without `self` is named on a type the same way, as `T.empty()` on a type
+  parameter bounded by the trait and `i64.empty()` on a type with an impl, and `T.empty` is
+  a function value (traits.functions-without-self); the calculus leaves out a trait's
+  constants and defaults. Of `Eq`,
   `Ord` and `Show`, it names the impls that the program writes, which `==`, `<` and an
   interpolation at their types call (`MethodAt`); their built-in and structural impls are
   the calculus's operations. -/

@@ -155,9 +155,10 @@ def Ty.head? : Ty → Option Head
 /-- `Self`, the type parameter of a trait's signatures (traits.declaring-trait). -/
 def selfParam : Name := "Self"
 
-/-- `trait Name { fn m(self, …) -> R; … }`: its methods, each with its type, a
-function type whose first parameter is the receiver and in which `Self` is the
-type parameter `Self` (traits.declaring-trait). -/
+/-- `trait Name { fn m(self, …) -> R; … }`: its functions, each with its type, a function
+type in which `Self` is the type parameter `Self`: its methods, whose first parameter is
+the receiver (traits.declaring-trait), and its functions without `self`
+(traits.functions-without-self). -/
 structure TraitDecl where
   name : Name
   methods : List (Name × Ty)
