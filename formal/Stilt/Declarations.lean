@@ -113,8 +113,7 @@ parameters, one for each of the type's, in its order: the elaborated form of a b
 writes them in another order. The block may bound them, and its functions then exist only
 for the type arguments that meet the bounds, since each takes them as its first type
 parameters, which a use instantiates (traits.bounded-blocks). A constant of the block,
-`Type.NAME`, is its value, which the export writes where it is read, as it writes every
-constant. -/
+`Type.NAME`, is a `ConstDecl` of the program under that qualified name. -/
 structure ImplDecl where
   type : Name
   fns : List FnDecl
