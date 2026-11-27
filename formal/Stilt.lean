@@ -3,6 +3,12 @@ import Stilt.Syntax
 import Stilt.Free
 import Stilt.Projections
 import Stilt.Projections.Check
+import Stilt.Projections.Exits
+import Stilt.Projections.Paths
+import Stilt.Projections.Runs
+import Stilt.Projections.Yield
+import Stilt.Projections.Once
+import Stilt.Projections.Theorem
 import Stilt.Declarations
 import Stilt.Rows.Types
 import Stilt.Rows

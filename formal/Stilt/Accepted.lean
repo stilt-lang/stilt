@@ -9,7 +9,7 @@ import Stilt.OneShot.Theorem
 import Stilt.Locks.Theorem
 import Stilt.HeldNames.Unmerge
 import Stilt.Limits
-import Stilt.Projections.Check
+import Stilt.Projections.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -23,7 +23,8 @@ the law of exclusivity (modes.law), the names of one `when` of one type as one b
 (shared.names-that-may-be-one-place), modifies no source of a view while the view
 lives (views.change-while-viewed) and keeps every view inside its sources' scopes
 (views.escaping), resumes a continuation at most once on each path
-(handlers.resume-at-most-once), and runs no `when` inside a `when` (shared.locks).
+(handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), and keeps the
+rules of projections (projections.once-on-every-path).
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -56,6 +57,9 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
 * a `when`'s block, from a frame whose function values are lock-free, takes no other cell,
   E0430 having rejected every site of `locks` in it, so a task never waits on a value while it
   holds one (`Program.Locks.block`, shared.locks and shared.when-order);
+* every path through the body of a projection runs one `yield` to its end or a `return`, and
+  at most one to a raise or a performance, so the caller's access runs once
+  (`Program.Projections.yields`, projections.once-on-every-path);
 * a call of a function limited by `without panic`, on panic-free arguments, panics only with
   `overflow` or `deadlock`, and only with `deadlock` when `without overflow` limits it too; a
   call of one limited by `without div`, on arguments whose values at its non-escaping
@@ -181,6 +185,16 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       (s : Copy.State), Frame.LockFree p.decls p.decls.locks s.1 →
       (eval p.decls (Copy.memoryWith w) n ((b.substTys ts).substRows rs) s).TakesNone p.decls
         p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
+  /-- projections.once-on-every-path: the body of every projection, run with any fuel from where
+  the list its function keeps the access's values in is empty, ends with one value kept, the
+  access's, on every path to its end or to a `return`, and with at most one on every path to a
+  raise or a performance, whose rest, resumed, again ends so; no path ends with a `break` or a
+  `continue` (`Program.Projections.yields`). So the caller's access runs once, and the value the
+  function ends with is there. -/
+  projections : ∀ rb ∈ p.projectionBodies, ∀ (n : Nat) (s : Copy.State),
+      s.1.lookup rb.1 = some (.list []) →
+      (eval p.decls Copy.memory n rb.2 s).Yielding rb.1 (s.1.map Prod.fst) (some (some 1))
+        (fun _ => True)
   /-- effects.without-panic: a call of a function limited by `without panic`, and a run whose
   `main` is, panics only with `overflow` or `deadlock` (`Program.PanicsKeptBy`). -/
   panics : p.PanicsKeptBy (·.panic) true fuel input
@@ -211,6 +225,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc,
     fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
     fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs,
+    fun rb hrb n s hs => h.projections.yields rb hrb n s hs,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
     Program.PanicKeptBy.kept h.overflowLimits h.wellTyped h.exclusive fuel input,
     h.divLimits.kept h.wellTyped h.exclusive input⟩
