@@ -33,12 +33,17 @@ writes it through an index, passes it whole to an in-place parameter, or hands i
 a last use, whether or not the storage reaches a write in place (`Expr.feedsInPlace`); and the
 assignments of a loop that give a list literal count as giving storage only on the turn that
 makes them.
+
+These are checks of acceptance alone: the model proves no run-time promise of them, that a write
+in place copies nothing or that an in-place parameter gets storage no other value shares, since
+its values share no storage.
 -/
 
 namespace Stilt
 
-/-- The bindings in scope, the newest first, each with its type and whether it holds its own
-storage (facts.own-storage). -/
+/-- The bindings in scope, the newest first, each with its type and whether it holds its own storage
+(facts.own-storage). A check of acceptance alone: the model proves no run-time promise of it, since
+its values share no storage. -/
 abbrev Own := List (Name × Ty × Bool)
 
 namespace Own
@@ -67,8 +72,9 @@ def disown (O : Own) : Own := O.map fun (y, τ, _) => (y, τ, false)
 `when`'s, whose types the walk doesn't need. -/
 def bindNone (xs : List Name) (O : Own) : Own := xs.map (fun x => (x, Ty.unit, false)) ++ O
 
-/-- Whether a value gives the binding it is assigned to storage of its own: a list literal, or
-a binding named whole at its last use that holds its own storage (facts.own-storage). -/
+/-- Whether a value gives the binding it is assigned to storage of its own: a list literal, or a binding
+named whole at its last use that holds its own storage (facts.own-storage). A check of acceptance
+alone: the model proves no run-time promise of it, since its values share no storage. -/
 def gives (O : Own) : Expr → Bool
   | .list _ _ => true
   | .move y => (O.owns y).isSome
@@ -76,16 +82,18 @@ def gives (O : Own) : Expr → Bool
 
 end Own
 
-/-- The bindings that an assignment of the whole in `e` may give storage that isn't their own:
-one that assigns anything but a list literal (facts.own-storage). -/
+/-- The bindings that an assignment of the whole in `e` may give storage that isn't their own: one that
+assigns anything but a list literal (facts.own-storage). A check of acceptance alone: the model
+proves no run-time promise of it, since its values share no storage. -/
 def Expr.staleWrites (e : Expr) : List Name :=
   e.gather (fun _ _ _ => ()) (fun _ e => match e with
     | .assign ⟨_, []⟩ (.list _ _) => []
     | .assign ⟨x, []⟩ _ => [x]
     | _ => []) ()
 
-/-- The function a call names, if it names one: a function, or a trait method whose impl is
-known where the call is written (facts.in-place-parameters and facts.inference). -/
+/-- The function a call names, if it names one: a function, or a trait method whose impl is known where
+the call is written (facts.in-place-parameters and facts.inference). A check of acceptance alone:
+the model proves no run-time promise of it, since its values share no storage. -/
 def Decls.calleeName? (D : Decls) : Expr → Option Name
   | .fnRef g _ _ => some g
   | .method t m τ => τ.head?.bind fun h => (D.traitImpl? t h).map fun _ => implName t h m
@@ -106,9 +114,10 @@ def passesTo (g p : Name) : Nat → List Arg → Bool
   | _, [] => false
   | k, a :: args => (IP g k && a.namesWhole p) || passesTo g p (k + 1) args
 
-/-- Whether the storage of `p` may reach a write in place in `e` (facts.in-place-parameters):
-`e` writes `p` through an index, passes it whole to an in-place parameter of a callee it names,
-or hands its storage on at a last use, to a binding that may write it in place. -/
+/-- Whether the storage of `p` may reach a write in place in `e` (facts.in-place-parameters): `e` writes
+`p` through an index, passes it whole to an in-place parameter of a callee it names, or hands its
+storage on at a last use, to a binding that may write it in place. A check of acceptance alone: the
+model proves no run-time promise of it, since its values share no storage. -/
 def Expr.feedsInPlace (p : Name) (e : Expr) : Bool :=
   (e.gather (fun _ _ _ => ()) (fun _ e => match e with
     | .move y => [y == p]
@@ -118,14 +127,14 @@ def Expr.feedsInPlace (p : Name) (e : Expr) : Bool :=
       | none => []
     | _ => []) ()).any id
 
-/-- The in-place parameters, `IP name k` for the parameter at position `k` of the function
-`name` (facts.in-place-parameters): a parameter of a function limited by `without alloc` whose
-storage may reach a write in place is in place, and a parameter of any other function, or of a
-native function, never is. The Reference solves recursive groups as a fixed point from no
-parameter in place; every set closed this way holds that one, and a call copies for a parameter
-only when the set holds it, so the least is the one that adds fewest sites, and a check that
-some closed set passes is a check that the least one does. The marks of last uses are those of
-`FnDecl.markMoves`. -/
+/-- The in-place parameters, `IP name k` for the parameter at position `k` of the function `name`
+(facts.in-place-parameters): a parameter of a function limited by `without alloc` whose storage may
+reach a write in place is in place, and a parameter of any other function, or of a native function,
+never is. The Reference solves recursive groups as a fixed point from no parameter in place; every
+set closed this way holds that one, and a call copies for a parameter only when the set holds it, so
+the least is the one that adds fewest sites, and a check that some closed set passes is a check that
+the least one does. The marks of last uses are those of `FnDecl.markMoves`. A check of acceptance
+alone: the model proves no run-time promise of it, since its values share no storage. -/
 def Decls.InPlaceParams : Prop :=
   (∀ name k, IP name k = true → ∃ d, D.fn? name = some d ∧ d.limits.alloc = true) ∧
   ∀ d ∈ D.fns, d.limits.alloc = true → ∀ k q, d.params[k]? = some q →
@@ -139,10 +148,11 @@ section
 -- `writes` says whether writes through an index are checked, as `without alloc` checks them.
 variable (D : Decls) (sh : List Name) (IP : Name → Nat → Bool) (writes : Bool)
 
-/-- Whether a write to a place is in place, or goes through no index (facts.writes-in-place): the
-place is `b[i]`, of a binding `b` of type `List<T>` that holds its own storage there, whose
-modifications aren't shared, or goes on from it through fields when `T` isn't a copy-on-write
-type and holds no type parameter (modes.copy-on-write-types). -/
+/-- Whether a write to a place is in place, or goes through no index (facts.writes-in-place): the place
+is `b[i]`, of a binding `b` of type `List<T>` that holds its own storage there, whose modifications
+aren't shared, or goes on from it through fields when `T` isn't a copy-on-write type and holds no
+type parameter (modes.copy-on-write-types). A check of acceptance alone: the model proves no
+run-time promise of it, since its values share no storage. -/
 def Own.inPlace (O : Own) (p : Place) : Bool :=
   p.indexFree ||
     (!sh.contains p.root && match O.owns p.root, p.path with
@@ -150,10 +160,11 @@ def Own.inPlace (O : Own) (p : Place) : Bool :=
         Place.indexFree ⟨p.root, rest⟩ && (rest.isEmpty || (!D.cow T && T.params.isEmpty))
       | _, _ => false)
 
-/-- Whether an argument passed to an in-place parameter is copied there (facts.copy-at-call):
-unless it is a list literal, or names whole at its last use a binding that holds its own
-storage, or is an `inout` argument naming whole such a binding whose modifications aren't
-shared. An `inout` argument through an index already allocates, and adds nothing here. -/
+/-- Whether an argument passed to an in-place parameter is copied there (facts.copy-at-call): unless it
+is a list literal, or names whole at its last use a binding that holds its own storage, or is an
+`inout` argument naming whole such a binding whose modifications aren't shared. An `inout` argument
+through an index already allocates, and adds nothing here. A check of acceptance alone: the model
+proves no run-time promise of it, since its values share no storage. -/
 def Own.copies (O : Own) : Arg → Bool
   | .value e => !O.gives e
   | .inout ⟨y, []⟩ => (O.owns y).isNone || sh.contains y
@@ -172,10 +183,11 @@ def Own.callCopies (O : Own) (f : Expr) (args : List Arg) : Bool :=
 
 mutual
 
-/-- The walk of `e` from the bindings `O`: the bindings after it, or `none` at a write through
-an index that isn't in place or an `inout` argument through an index, when `writes`, and at an
-argument copied for an in-place parameter (facts.own-storage, facts.writes-in-place and
-facts.copy-at-call). -/
+/-- The walk of `e` from the bindings `O`: the bindings after it, or `none` at a write through an index
+that isn't in place or an `inout` argument through an index, when `writes`, and at an argument
+copied for an in-place parameter (facts.own-storage, facts.writes-in-place and facts.copy-at-call).
+A check of acceptance alone: the model proves no run-time promise of it, since its values share no
+storage. -/
 def Expr.storesIn : Own → Expr → Option Own
   | O, .var _ | O, .move _ | O, .int _ | O, .bool _ | O, .unit | O, .break | O, .continue
   | O, .fnRef _ _ _ | O, .method _ _ _ => some O
@@ -291,8 +303,9 @@ end
 /-- The facts that the inference of modes.shared-writes reads, of declarations. -/
 def Decls.modeEnv (D : Decls) : ModeEnv := ⟨D, D.consumed, D.onceParams⟩
 
-/-- The bindings where a function's body starts: its parameters, each holding its own storage
-when the function is limited by `without alloc` (facts.own-storage). -/
+/-- The bindings where a function's body starts: its parameters, each holding its own storage when the
+function is limited by `without alloc` (facts.own-storage). A check of acceptance alone: the model
+proves no run-time promise of it, since its values share no storage. -/
 def FnDecl.ownAtStart (d : FnDecl) : Own := d.params.map fun q => (q.name, q.type, d.limits.alloc)
 
 /-- Whether the walk of a function's body, with its last uses marked, passes: when `writes`,

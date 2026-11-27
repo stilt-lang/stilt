@@ -27,21 +27,24 @@ def Expr.namesWithin (lim : Limited) (e : Expr) : Bool :=
     | .method t m _ => [lim.method t m]
     | _ => []) ()).all id
 
-/-- The functions that `lim` covers hold no site of `alloc` and name only functions it covers,
-and each impl's method `m` of a trait `t` is covered when `t.m` is: no operation of theirs makes
-a value that allocates (facts.allocation and facts.native-allocation), each of their writes
-through an index is in place (facts.writes-in-place) and each argument they pass to an in-place
-parameter needs no copy (facts.copy-at-call), the in-place parameters being those `IP` says. -/
+/-- The functions that `lim` covers hold no site of `alloc` and name only functions it covers, and each
+impl's method `m` of a trait `t` is covered when `t.m` is: no operation of theirs makes a value that
+allocates (facts.allocation and facts.native-allocation), each of their writes through an index is
+in place (facts.writes-in-place) and each argument they pass to an in-place parameter needs no copy
+(facts.copy-at-call), the in-place parameters being those `IP` says. The writes in place and the
+copies at calls are checks of acceptance alone, with no proved run-time promise; the sites that make
+a value have one (`Program.AllocsKept`). -/
 structure Decls.AllocCover (D : Decls) (lim : Limited) (IP : Name → Nat → Bool) : Prop where
   fns : ∀ d ∈ D.fns, lim.fn d.name = true →
     d.body.allocFreeIn D lim = true ∧ d.storesOk D IP true = true
   methods : ∀ t m h i, lim.method t m = true → D.traitImpl? t h = some i →
     lim.fn (implName t h m) = true
 
-/-- The functions that `lim` covers hold no site of `copy` and name only functions it covers:
-no modification of theirs is shared (modes.shared-writes), in their bodies or their closure
-literals', and no argument they pass to an in-place parameter needs a copy
-(facts.copy-at-call), the in-place parameters being those `IP` says (facts.copy). -/
+/-- The functions that `lim` covers hold no site of `copy` and name only functions it covers: no
+modification of theirs is shared (modes.shared-writes), in their bodies or their closure literals',
+and no argument they pass to an in-place parameter needs a copy (facts.copy-at-call), the in-place
+parameters being those `IP` says (facts.copy). A check of acceptance alone: the model proves no
+run-time promise of it, since its values share no storage. -/
 structure Decls.CopyCover (D : Decls) (lim : Limited) (IP : Name → Nat → Bool) : Prop where
   fns : ∀ d ∈ D.fns, lim.fn d.name = true →
     D.modeEnv.allShared d.params d.body = [] ∧ d.body.namesWithin lim = true ∧
@@ -50,12 +53,14 @@ structure Decls.CopyCover (D : Decls) (lim : Limited) (IP : Name → Nat → Boo
     lim.fn (implName t h m) = true
 
 /-- `without alloc`, kept as the Reference infers facts (facts.without-alloc, facts.without and
-facts.inference): some set of functions, holding every function limited by `without alloc`,
-holds no operation that adds `alloc`, its own or one that it inherits, and names only functions
-of the set, and so does `main`'s body when `main` is limited. Under the limit a function holds
-the storage of its parameters (facts.own-storage), so its writes through an index can be in
-place, and its callers copy what a shared argument needs (facts.copy-at-call). A function value
-that limited code calls adds nothing (facts.calls-through-function-values). -/
+facts.inference): some set of functions, holding every function limited by `without alloc`, holds no
+operation that adds `alloc`, its own or one that it inherits, and names only functions of the set,
+and so does `main`'s body when `main` is limited. Under the limit a function holds the storage of
+its parameters (facts.own-storage), so its writes through an index can be in place, and its callers
+copy what a shared argument needs (facts.copy-at-call). A function value that limited code calls
+adds nothing (facts.calls-through-function-values). Of these checks, the sites that make a value
+have a proved promise (`Program.AllocsKept`); the writes in place and the copies at calls are checks
+of acceptance alone, with no proved run-time promise. -/
 def Program.AllocLimited (p : Program) : Prop :=
   ∃ (lim : Limited) (IP : Name → Nat → Bool), p.decls.InPlaceParams IP ∧
     p.decls.AllocCover lim IP ∧
@@ -64,10 +69,11 @@ def Program.AllocLimited (p : Program) : Prop :=
       p.main.allocFreeIn p.decls lim = true ∧ p.main.mainStoresOk p.decls IP true = true)
 
 /-- `without copy`, kept as the Reference infers facts (facts.without-copy, facts.copy and
-facts.without): some set of functions, holding every function limited by `without copy`,
-holds no site of `copy`, its own or one that it inherits, and names only functions of the set,
-and so does `main`'s body when `main` is limited. A fresh value stays within the limit: a list
-literal, a string that interpolates, a `push` on a list that no copy shares. -/
+facts.without): some set of functions, holding every function limited by `without copy`, holds no
+site of `copy`, its own or one that it inherits, and names only functions of the set, and so does
+`main`'s body when `main` is limited. A fresh value stays within the limit: a list literal, a string
+that interpolates, a `push` on a list that no copy shares. A check of acceptance alone: `without
+copy` has no proved run-time promise, since the model's values share no storage. -/
 def Program.CopyLimited (p : Program) : Prop :=
   ∃ (lim : Limited) (IP : Name → Nat → Bool), p.decls.InPlaceParams IP ∧
     p.decls.CopyCover lim IP ∧
