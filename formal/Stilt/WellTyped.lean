@@ -194,6 +194,39 @@ structure Decls.EffectsDeclared (D : Decls) : Prop where
   operations : ∀ e ∈ D.effects, ∀ o ∈ e.ops, o.2.1.EffectsIn D ∧ o.2.2.EffectsIn D
   methods : ∀ t ∈ D.traits, ∀ m ∈ t.methods, m.2.EffectsIn D
 
+/-- The head of the record or variant type named `T`. -/
+def Decls.headOf? (D : Decls) (T : Name) : Option Head :=
+  if (D.record? T).isSome then some (.record T)
+  else if (D.variant? T).isSome then some (.variant T) else none
+
+/-- The record or variant type named `T` at its own type parameters, with them. -/
+def Decls.ownType? (D : Decls) (T : Name) : Option (Ty × List Name) :=
+  match D.record? T, D.variant? T with
+  | some r, _ => some (.record T (r.typeParams.map .param), r.typeParams)
+  | none, some v => some (.variant T (v.typeParams.map .param), v.typeParams)
+  | none, none => none
+
+/-- The names of the functions of the trait `Tr`: those its declaration declares, and for a
+trait of the prelude those that `std.prelude` declares. -/
+def Decls.traitFns (D : Decls) (Tr : Name) : List Name :=
+  ((D.trait? Tr).map fun t => t.methods.map Prod.fst).getD [] ++
+    ((PreludeTrait.ofName? Tr).map PreludeTrait.fns).getD []
+
+/-- The type named `T` implements the prelude trait `t` through its structural impl: a
+generic type when it would with every type parameter implementing `t` (traits.name-clashes). -/
+def Decls.StructurallyImplements (D : Decls) (T : Name) (t : PreludeTrait) : Prop :=
+  ∃ τ ps, D.ownType? T = some (τ, ps) ∧
+    D.Implements ⟨[], fun _ _ => False, fun _ _ => False, ps.map (⟨·, [t.name]⟩)⟩ t τ
+
+/-- No inherent function of a type has the name of a function of a trait that the type
+implements, through an impl that the program writes or through a structural impl: either is
+E0308 (traits.name-clashes). The calculus has no constants, so no constant of a trait
+clashes. -/
+def Decls.NoNameClashes (D : Decls) : Prop :=
+  ∀ i ∈ D.impls, ∀ d ∈ i.fns,
+    (∀ ti ∈ D.traitImpls, D.headOf? i.type = some ti.type → d.name ∉ D.traitFns ti.trait) ∧
+      ∀ t, D.StructurallyImplements i.type t → d.name ∉ t.fns
+
 /-- The conditions on declarations that declarations.function-declarations and declarations.unique-names states, as far as the calculus
 needs them: names are unique where declarations.unique-names says so, so a type's `impl` blocks
 define each name once (traits.inherent-names), only functions declare row variables
@@ -202,7 +235,7 @@ parameters, outside their rows (declarations.type-parameters), functions declare
 parameters (declarations.function-declarations), their non-escaping parameters have implicit ones (effects.non-escaping-parameters),
 only methods take `self` (traits.methods), each trait impl implements its
 trait and holds no other member (traits.impl-members), a trait has one impl per type
-(traits.coherence), and each effect declares operations, each once
+(traits.coherence), no inherent function hides a trait's (traits.name-clashes), and each effect declares operations, each once
 (handlers.declaring-effect). The value namespace's other half, variants of one name in
 two types, is outside the calculus, which names a variant by its type and its own name. -/
 structure Decls.WellFormed (D : Decls) : Prop where
@@ -246,6 +279,9 @@ structure Decls.WellFormed (D : Decls) : Prop where
   constNames : (D.consts.map (·.name)).Nodup
   constTypes : ∀ c ∈ D.consts, c.type.params = []
   consts : D.ConstsTyped
+  /-- No inherent function hides a function of a trait that its type implements (E0308,
+  traits.name-clashes). -/
+  nameClashes : D.NoNameClashes
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`

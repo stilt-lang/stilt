@@ -169,7 +169,9 @@ theorem declsWellFormed {D : Decls}
     (hrowParams : ∀ d ∈ D.fns, d.rowParams.Nodup)
     (hsigs : D.fns.all signatureCheck = true)
     (himplicit : D.fns.all implicitRowsCheck = true) (hreceivers : D.Receivers)
-    (hconsts : D.consts = [] := by rfl) :
+    (hconsts : D.consts = [] := by rfl)
+    (hclash : (D.impls.all fun i => i.fns.all fun d =>
+      !["eq", "compare", "show", "show_nested", "hash"].contains d.name) = true := by decide) :
     D.WellFormed := by
   obtain ⟨hv, ht, hti, he⟩ := hvariants
   have hf := fun r hr => List.all_eq_true.1 hfields r hr
@@ -186,6 +188,9 @@ theorem declsWellFormed {D : Decls}
     by simp [he], by simp [hti], by simp [hti],
     ⟨fun r hr f hfm => effectsIn_of_check (by simpa using ((hf r hr).2 f hfm).2), by simp [hv],
       signatureEffects_of_check hsigs, by simp [he], by simp [ht]⟩,
-    by simp [hconsts], by simp [hconsts], fun _ _ _ h => by simp [hconsts] at h⟩
+    by simp [hconsts], by simp [hconsts], fun _ _ _ h => by simp [hconsts] at h,
+    fun i hi d hd => ⟨by simp [hti], fun t _ hm => by
+      have := List.all_eq_true.1 (List.all_eq_true.1 hclash i hi) d hd
+      cases t <;> simp_all [PreludeTrait.fns]⟩⟩
 
 end Stilt.Counterexamples

@@ -186,6 +186,7 @@ theorem decls_wellFormed : (decls ss a b extra).WellFormed where
   effectOps := fun _ h => nomatch h
   coherent := .nil
   implMembers := fun _ h => nomatch h
+  nameClashes := fun _ h => nomatch h
   effectsDeclared := by
     refine ⟨fun r hr f hf ρ hρ => ?_, fun _ h => (nomatch h), fun d hd ρ hρ E hE => ?_,
       fun _ h => (nomatch h), fun _ h => (nomatch h)⟩

@@ -6,7 +6,9 @@ import Stilt.Ops
 
 `==` and `!=` stand behind `Eq`, the ordering operators and sorting behind `Ord`, and
 interpolation behind `Show` (traits.operators and traits.required-traits), and the
-calculus has them as the operations of the prelude's built-in and structural impls. So an
+calculus has them as the operations of the prelude's built-in and structural impls. `Hash`
+stands behind map keys with `Eq`, which `Stilt.Maps` checks as key types, and a bound of it is
+met through the same impls. So an
 operation applies only at a type that implements its trait: one with a built-in impl, one
 whose structural impl applies because every component implements the trait, or a type
 parameter whose bounds name it (traits.unsatisfied-bounds). Function types and `Shared<T>`
@@ -15,11 +17,13 @@ implement none, and maps and sets have no `Ord`.
 
 namespace Stilt
 
-/-- The prelude traits that operations of the calculus stand behind. -/
+/-- The prelude traits that operations of the calculus stand behind, and `Hash`, which
+stands behind map keys. -/
 inductive PreludeTrait where
   | eq
   | ord
   | «show»
+  | hash
   deriving DecidableEq, Repr
 
 /-- A prelude trait's name. -/
@@ -27,16 +31,32 @@ def PreludeTrait.name : PreludeTrait → Name
   | .eq => "Eq"
   | .ord => "Ord"
   | .show => "Show"
+  | .hash => "Hash"
 
 /-- The prelude trait that a name names, if it names one. -/
 def PreludeTrait.ofName? : Name → Option PreludeTrait
   | "Eq" => some .eq
   | "Ord" => some .ord
   | "Show" => some .show
+  | "Hash" => some .hash
   | _ => none
 
 theorem PreludeTrait.ofName?_name : ∀ t : PreludeTrait, ofName? t.name = some t
-  | .eq | .ord | .show => rfl
+  | .eq | .ord | .show | .hash => rfl
+
+/-- The names of a prelude trait's functions, as `std.prelude` declares them. -/
+def PreludeTrait.fns : PreludeTrait → List Name
+  | .eq => ["eq"]
+  | .ord => ["compare"]
+  | .show => ["show", "show_nested"]
+  | .hash => ["hash"]
+
+/-- Whether a type whose head is `h` has the structural impl of `t`: the program writes no
+impl of `t` for it, which would replace the structural one (traits.structural-impls), and for
+`Hash`, no impl of `Eq` either, since a type whose `Eq` the program writes gets no structural
+`Hash` (traits.hash-follows-written-eq). -/
+def Decls.structuralAt (D : Decls) (t : PreludeTrait) (h : Head) : Bool :=
+  (D.traitImpl? t.name h).isNone && (t != .hash || (D.traitImpl? "Eq" h).isNone)
 
 /-- The trait a comparison stands behind: `Eq` for `==` and `!=`, `Ord` for the others
 (traits.operators). -/
@@ -46,35 +66,38 @@ def Cmp.trait : Cmp → PreludeTrait
 
 /-- What implementing `t` asks of a type at its outermost type, given the types `S` its
 components must be. The integer and float types, `bool`, `str`, `()` and `Never` have
-built-in impls (traits.built-in-impls); tuples, lists, records and variant types have
-structural ones when every component implements `t`, a record's fields and a variant's
-payloads at the type's arguments, unless the program writes an impl of `t` for the type,
-which replaces the structural one (traits.structural-impls). A map has `Eq` when its key
+built-in impls, but for `Hash` of the float types (traits.built-in-impls and traits.floats);
+tuples, lists, records and variant types have structural ones when every component
+implements `t`, a record's fields and a variant's payloads at the type's arguments, unless
+the program writes an impl of `t` for the type, which replaces the structural one, or for
+`Hash` writes one of `Eq` (`Decls.structuralAt`, traits.structural-impls). A map has `Eq` when its key
 type implements `Eq` and `Hash` and its value type `Eq`, and `Show` when both implement
 `Show`; a set has `Eq` when its element type implements `Eq` and `Hash`, and `Show` when
-it implements `Show`; neither has `Ord` (traits.map-equality and std.set-impls). A type
+it implements `Show`; neither has `Ord` (traits.map-equality and std.set-impls), nor, in
+the calculus, `Hash`. A type
 parameter implements what its bounds name, which is all a body knows of it
 (traits.unsatisfied-bounds). Function types implement none (traits.built-in-impls), nor
 does `Shared<T>` (shared.std-sync). -/
 def Decls.ImplStep (D : Decls) (scope : RowScope) (t : PreludeTrait) (S : Ty → Prop) :
     Ty → Prop
-  | .int _ | .float _ | .bool | .str | .unit | .never => True
+  | .int _ | .bool | .str | .unit | .never => True
+  | .float _ => t ≠ .hash
   | .tuple τs => ∀ τ ∈ τs, S τ
   | .list τ => S τ
-  | .record R args => (D.traitImpl? t.name (.record R)).isNone ∧
+  | .record R args => D.structuralAt t (.record R) = true ∧
       ∃ r, D.record? R = some r ∧ args.length = r.typeParams.length ∧
         ∀ f ∈ r.fieldsAt args, S f.2
-  | .variant T args => (D.traitImpl? t.name (.variant T)).isNone ∧
+  | .variant T args => D.structuralAt t (.variant T) = true ∧
       ∃ v, D.variant? T = some v ∧ args.length = v.typeParams.length ∧
         ∀ c ∈ v.ctorsAt args, ∀ τ ∈ c.2, S τ
   | .map κ υ => match t with
     | .eq => κ.Key ∧ D.Key κ ∧ S υ
     | .show => S κ ∧ S υ
-    | .ord => False
+    | .ord | .hash => False
   | .set κ => match t with
     | .eq => κ.Key ∧ D.Key κ
     | .show => S κ
-    | .ord => False
+    | .ord | .hash => False
   | .param p => ∃ q ∈ scope.types, q.name = p ∧ t.name ∈ q.bounds
   | .fn .. | .view _ | .shared _ => False
 
@@ -120,11 +143,13 @@ theorem Decls.ImplStep.mono {S S' : Ty → Prop} (hS : ∀ σ, S σ → S' σ) :
     · exact ⟨h.1, h.2.1, hS _ h.2.2⟩
     · exact h
     · exact ⟨hS _ h.1, hS _ h.2⟩
+    · exact h
   | .set _, h => by
     cases t
     · exact h
     · exact h
     · exact hS _ h
+    · exact h
   | .param _, h => h
 
 /-- What a body knows of its type parameters, kept in a scope that has them all. -/

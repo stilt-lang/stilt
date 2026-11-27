@@ -108,7 +108,8 @@ theorem Decls.ImplStep.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope')
     {t : PreludeTrait} {S S' : Ty → Prop} (hS : ∀ σ, S σ → S' (σ.substTys s))
     (hI : ∀ σ, D.Implements scope' t σ → S' σ) :
     ∀ {σ : Ty}, D.ImplStep scope t S σ → D.ImplStep scope' t S' (σ.substTys s)
-  | .int _, _ | .float _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => trivial
+  | .int _, _ | .bool, _ | .str, _ | .unit, _ | .never, _ => trivial
+  | .float _, h => h
   | .tuple τs, h => by
     show ∀ τ ∈ substTyList s τs, S' τ
     rw [substTyList_eq_map]
@@ -139,12 +140,14 @@ theorem Decls.ImplStep.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope')
     | eq => rw [h.1.substTys s]; exact ⟨h.1, h.2.1, hS υ h.2.2⟩
     | ord => exact h.elim
     | «show» => exact ⟨hS κ h.1, hS υ h.2⟩
+    | hash => exact h.elim
   | .set κ, h => by
     show D.ImplStep scope' t S' (.set (κ.substTys s))
     cases t with
     | eq => rw [h.1.substTys s]; exact h
     | ord => exact h.elim
     | «show» => exact hS κ h
+    | hash => exact h.elim
   | .param _, ⟨q, hq, hp, hB⟩ => by
     subst hp
     obtain ⟨σ, hl, hσ⟩ := hs.covers q hq

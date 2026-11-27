@@ -92,6 +92,6 @@ example (s : RowScope) : decls.Implements s .eq (.list (.map .str (.float .f64))
       rintro _ (rfl | rfl | rfl)
       · exact .inr (.inl rfl)
       · exact ⟨.str, ⟨fun τ => τ = .str, rfl, by rintro _ rfl; trivial⟩, .inr (.inr rfl)⟩
-      · trivial⟩
+      · exact nofun⟩
 
 end Stilt.Examples.Bounds
