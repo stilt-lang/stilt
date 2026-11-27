@@ -12,7 +12,6 @@ conformance/effects/panic_expect_err.lt
 conformance/effects/panic_hole.lt
 conformance/effects/passed_to_paired_parameter_paired.lt
 conformance/encoding/hashes.lt
-conformance/expressions/if_let_always_matches.lt
 conformance/expressions/key_path_annotated.lt
 conformance/foreign/c_trusted.lt
 conformance/foreign/granted
@@ -47,7 +46,6 @@ conformance/parameters/shared_names.lt
 conformance/parameters/trait_functions.lt
 conformance/parameters/where_clauses.lt
 conformance/patterns/broken_module_in_pattern.lt
-conformance/patterns/guard_over_two_or_patterns.lt
 conformance/patterns/shadowed_prelude_name_in_pattern.lt
 conformance/polymorphism/arguments.lt
 conformance/polymorphism/fields.lt
