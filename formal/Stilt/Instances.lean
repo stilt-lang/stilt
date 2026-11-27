@@ -88,11 +88,15 @@ theorem HasType.fnRef_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') 
 theorem HasType.method_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {Γ : Ctx}
     {fx : Effects} {Tr m : Name} {t : TraitDecl} {σ τ : Ty} (ht : D.trait? Tr = some t)
     (hm : t.methods.lookup m = some σ) (hc : τ.Closed) (hwf : τ.WellFormed scope)
-    (hsat : Satisfies D scope τ Tr) (hp : PreludeTrait.ofName? Tr = none) :
+    (hf : MethodAt D scope τ Tr) :
     HasType D scope' (Γ.substTys s) fx ((Expr.method Tr m τ).substTys s)
       ((σ.substTys [(selfParam, τ)]).substTys s) := by
   rw [methodType_substTys hD ht hm s]
-  exact .method ht hm (hc.substTys hs.ground) (hs.wellFormed hwf) (hs.satisfies hD hsat) hp
+  refine .method ht hm (hc.substTys hs.ground) (hs.wellFormed hwf) ?_
+  rcases hf with ⟨hp, hsat⟩ | ⟨h, hh, hi⟩
+  · exact .inl ⟨hp, hs.satisfies hD hsat⟩
+  · rw [Ty.eq_of_head? hh, Head.substTys_type]
+    exact .inr ⟨h, by rw [← Ty.eq_of_head? hh]; exact hh, hi⟩
 
 /-- A closure literal, instantiated, from its instantiated body. -/
 theorem HasType.closure_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : Effects}
@@ -240,7 +244,7 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     .index (HasType.substTys hD hs he hfx) (HasType.substTys hD hs hi hfx) (hfit.substTys s)
   | _, _, _, _, .fnRef hd hlen hinst hres hwf hpass htys, _ =>
     HasType.fnRef_substTys hD hs hd hlen hinst hres hwf hpass htys
-  | _, _, _, _, .method ht hm hc hwf hsat hp, _ => HasType.method_substTys hD hs ht hm hc hwf hsat hp
+  | _, _, _, _, .method ht hm hc hwf hf, _ => HasType.method_substTys hD hs ht hm hc hwf hf
   | _, _, _, _, .closure (ρ := ρ) hnd hpt hwf hb hfit, _ => by
     have h := HasType.substTys hD hs hb (hwf.2.2.1 ρ (by simp [Ty.rows, Row.mem_rows_self]))
     rw [Ctx.params_substTys, Ctx.freeze_substTys] at h

@@ -129,13 +129,14 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   /-- `Trait.m` at a type that implements the trait, a type parameter through
   a bound included: a function value of the method's type with `Self` that
   type, whose first parameter is the receiver (traits.qualified-calls). A method call
-  through a bound calls it with the receiver first (traits.method-resolution). The trait is
-  none of `Eq`, `Ord` and `Show`, whose impls the calculus has as operations. -/
+  through a bound calls it with the receiver first (traits.method-resolution). Of `Eq`,
+  `Ord` and `Show`, it names the impls that the program writes, which `==`, `<` and an
+  interpolation at their types call (`MethodAt`); their built-in and structural impls are
+  the calculus's operations. -/
   | method {Γ fx Tr t m σ τ} :
       D.trait? Tr = some t →
       t.methods.lookup m = some σ →
-      τ.Closed → τ.WellFormed scope → Satisfies D scope τ Tr →
-      PreludeTrait.ofName? Tr = none →
+      τ.Closed → τ.WellFormed scope → MethodAt D scope τ Tr →
       HasType Γ fx (.method Tr m τ) (σ.substTys [(selfParam, τ)])
   /-- A closure's body sees copies of the variables in scope, which it can't
   modify (expressions.capture), and its effects fit the closure's own row, not the

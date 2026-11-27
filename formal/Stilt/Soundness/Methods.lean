@@ -3,11 +3,11 @@ import Stilt.Soundness.Uses
 /-!
 # Trait methods
 
-`Trait.m` at a type with an impl of the trait is the function of that impl,
-whose signature is the method's with `Self` the type (traits.impl-signatures). In
-an instance, every type is ground, so a bound that typing allowed is met by an
-impl (traits.unsatisfied-bounds), and the evaluator finds the function by the
-type's head (traits.qualified-calls).
+`Trait.m` at a type with an impl of the trait, an impl of `Eq`, `Ord` or `Show` that the
+program writes among them, is the function of that impl, whose signature is the method's with
+`Self` the type (traits.impl-signatures). In an instance, every type is ground, so a bound
+that typing allowed is met by an impl (traits.unsatisfied-bounds), and the evaluator finds the
+function by the type's head (traits.qualified-calls).
 -/
 
 namespace Stilt
@@ -65,15 +65,17 @@ include hη
 type at that type. -/
 theorem method_ok (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
     (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ) (hc : τ.Closed)
-    (hsat : Satisfies D scope τ Tr) (hp : PreludeTrait.ofName? Tr = none) :
+    (hf : MethodAt D scope τ Tr) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((σ.substTys [(selfParam, τ)]).close η))
       (eval D Copy.memory (n + 1) ((Expr.method Tr m τ).substRows θ)) := by
-  rcases hsat with ⟨p, hp, _⟩ | ⟨-, h, hh, hi⟩ | ⟨_, ht', _⟩
-  · rw [hη.types] at hp
-    exact nomatch hp
-  rotate_left
-  · rw [hp] at ht'
-    exact nomatch ht'
+  obtain ⟨h, hh, hi⟩ : ∃ h, τ.head? = some h ∧ (D.traitImpl? Tr h).isSome := by
+    rcases hf with ⟨hp, ⟨p, hp', _⟩ | ⟨-, hi⟩ | ⟨_, ht', _⟩⟩ | hi
+    · rw [hη.types] at hp'
+      exact nomatch hp'
+    · exact hi
+    · rw [hp] at ht'
+      exact nomatch ht'
+    · exact hi
   obtain ⟨i, hi⟩ := Option.isSome_iff_exists.1 hi
   obtain ⟨d, hd, htp, hrp, hty⟩ := hD.implFn ht hm hi
   obtain rfl := Ty.eq_of_head? hh

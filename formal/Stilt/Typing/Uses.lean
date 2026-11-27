@@ -37,12 +37,25 @@ knows: a type parameter through its bounds, which are all the body knows of it; 
 with a head through the program's impl of `B` for that head (traits.unsatisfied-bounds and
 traits.implementing-trait); and for `Eq`, `Ord` and `Show`, a type that implements them
 through the built-in and structural impls, which the calculus's operations compute
-(traits.built-in-impls and traits.structural-impls). The model leaves out the impls of
-`Eq`, `Ord` and `Show` that a program writes. -/
+(traits.built-in-impls and traits.structural-impls). A bound of `Eq`, `Ord` or `Show` is
+met only through those: an impl of one of them that the program writes is reached through
+`Trait.m` (`MethodAt`), and no type parameter stands for its type. -/
 def Satisfies (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) : Prop :=
   (∃ p ∈ scope.types, τ = .param p.name ∧ B ∈ p.bounds) ∨
     (PreludeTrait.ofName? B = none ∧ ∃ h, τ.head? = some h ∧ (D.traitImpl? B h).isSome) ∨
     ∃ t, PreludeTrait.ofName? B = some t ∧ D.Implements scope t τ
+
+/-- `Trait.m` at `τ` names a method that the evaluator finds (traits.qualified-calls): the
+method of a trait other than `Eq`, `Ord` and `Show` at a type that meets the trait as a
+bound does, a type parameter through its bounds included, or the method of the impl that the
+program writes for `τ`'s head, an impl of `Eq`, `Ord` or `Show` among them, which replaces the
+structural one (traits.structural-impls). So `a == b` at a type whose `Eq` the program writes
+is `Eq.eq(a, b)`, a call of the impl's method, and `a < b` tests the `Ordering` that
+`Ord.compare(a, b)` gives (traits.operators). The built-in and structural impls of `Eq`, `Ord`
+and `Show` are the calculus's operations, which no `Trait.m` names. -/
+def MethodAt (D : Decls) (scope : RowScope) (τ : Ty) (Tr : Name) : Prop :=
+  (PreludeTrait.ofName? Tr = none ∧ Satisfies D scope τ Tr) ∨
+    ∃ h, τ.head? = some h ∧ (D.traitImpl? Tr h).isSome
 
 /-- The type arguments of a use of a function, one for each of its type
 parameters: closed, well formed where the use is, and meeting the parameter's

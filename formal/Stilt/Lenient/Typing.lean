@@ -122,8 +122,7 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
   | method {N Γ fx Tr t m σ τ} :
       D.trait? Tr = some t →
       t.methods.lookup m = some σ →
-      τ.Closed → τ.WellFormed scope → Satisfies D scope τ Tr →
-      PreludeTrait.ofName? Tr = none →
+      τ.Closed → τ.WellFormed scope → MethodAt D scope τ Tr →
       HasType N Γ fx (.method Tr m τ) (σ.substTys [(selfParam, τ)])
   /-- A closure's parameters hide the parameters of `N` with their names. -/
   | closure {N Γ fx ps result ρ body σ} :

@@ -84,7 +84,7 @@ example : twice.WellTyped decls twice.scope := by
   have hm : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (.method "Size" "size" (.param "T")) (.fn [(.let, .param "T")] .i64 Row.pure) :=
     .method (t := size) (m := "size") (σ := .fn [(.let, .param selfParam)] .i64 Row.pure) rfl rfl
-      (param_closed _) hT hsat rfl
+      (param_closed _) hT (.inl ⟨rfl, hsat⟩)
   have hcall : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (sizeOf (.param "T") (.var "v")) .i64 :=
     .call hm (.value (by decide) (.var rfl) (.refl _) .nil)

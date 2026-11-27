@@ -423,9 +423,12 @@ theorem Ty.Key.substTys {κ : Ty} (h : κ.Key) (s : TySubst) : κ.substTys s = �
 parts must be: an integer type, `bool`, `str` or `()`, whose `Eq` and `Hash` are built
 in (traits.built-in-impls); a tuple or a list of parts; or a record or variant type for
 which the program writes no `Eq` or `Hash`, at key types, whose structural impls are those
-of its fields or payloads at its arguments (traits.structural-impls). A float is none, since floats don't implement
-`Hash` (std.map-key-bounds), and neither is a function type, which implements no trait
-(traits.built-in-impls). -/
+of its fields or payloads at its arguments (traits.structural-impls). A type whose `Eq` the
+program writes gets no structural `Hash`, so it is no key type (traits.hash-follows-written-eq).
+The model states less than that paragraph: a type whose `Eq` and `Hash` the program both
+writes is no key type either, since finding its keys would call those impls. A float is
+none, since floats don't implement `Hash` (std.map-key-bounds), and neither is a function
+type, which implements no trait (traits.built-in-impls). -/
 def Decls.KeyStep (D : Decls) (S : Ty → Prop) : Ty → Prop
   | .int _ | .bool | .str | .unit => True
   | .tuple κs => ∀ κ ∈ κs, S κ

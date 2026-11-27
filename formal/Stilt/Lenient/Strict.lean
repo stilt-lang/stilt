@@ -77,7 +77,7 @@ theorem Lenient.HasType.strict :
     have h := both hne
     .index (Lenient.HasType.strict he h.1) (Lenient.HasType.strict hi h.2) (strictFits hfit h.2)
   | _, _, _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys, _ => .fnRef hf hlen hinst hres hwf hpass htys
-  | _, _, _, _, _, _, .method ht hm hc hwf hsat hp, _ => .method ht hm hc hwf hsat hp
+  | _, _, _, _, _, _, .method ht hm hc hwf hf, _ => .method ht hm hc hwf hf
   | _, _, _, _, _, _, .closure hnd hpt hwf hb hfit, hne =>
     have h := (both hne).2
     .closure hnd hpt hwf (Lenient.HasType.strict hb h) (strictFits hfit h)
@@ -237,7 +237,7 @@ theorem HasType.lenient :
   | _, _, _, _, _, .elem he hf => .elem (HasType.lenient he) hf
   | _, _, _, _, _, .index he hi hfit => .index (HasType.lenient he) (HasType.lenient hi) (.inl hfit)
   | _, _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
-  | _, _, _, _, _, .method ht hm hc hwf hsat hp => .method ht hm hc hwf hsat hp
+  | _, _, _, _, _, .method ht hm hc hwf hf => .method ht hm hc hwf hf
   | _, _, _, _, _, .closure hnd hpt hwf hb hfit =>
     .closure hnd hpt hwf (HasType.lenient hb) (.inl hfit)
   | _, _, _, _, _, .call hc ha hall => .call (HasType.lenient hc) (ArgsFit.lenient ha) hall

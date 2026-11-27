@@ -167,7 +167,7 @@ theorem HasType.strengthen :
   | _, _, _, _, .index he hi hfit, _, h =>
     .index (HasType.strengthen he (part h)) (HasType.strengthen hi (part h)) hfit
   | _, _, _, _, .fnRef hf hl hi hr hwf hp ht, _, _ => .fnRef hf hl hi hr hwf hp ht
-  | _, _, _, _, .method ht hm hc hwf hsat hp, _, _ => .method ht hm hc hwf hsat hp
+  | _, _, _, _, .method ht hm hc hwf hf, _, _ => .method ht hm hc hwf hf
   | _, _, _, _, .closure hnd hpt hwf hb hfit, _, h =>
     .closure hnd hpt hwf (HasType.strengthen hb (closure_agree h)) hfit
   | _, _, _, _, .call hf has hcall, _, h =>
