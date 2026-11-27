@@ -162,12 +162,8 @@ and call cx (e : Tast.expr) callee targs args =
   | Member (owner, name) when gives_option owner name e.ty ->
       option_call cx e owner name
         (List.map (fun (a : Tast.arg) -> expr cx a.value) args)
-  | Member ({ home = "std.lazy"; name = "Lazy" }, name) -> (
-      (* polymorphism.lazy-values: [new(f)] is [f], and [l.get()] calls it. *)
-      match (name, args) with
-      | "new", [ f ] -> expr cx f.value
-      | "get", [ l ] -> call_value cx l.value [] e.ty
-      | _ -> outside "the function std.lazy.Lazy.%s" name)
+  | Member ({ home = "std.lazy"; name = "Lazy" }, name) ->
+      Model_shared.lazy_call (shared cx) cx e name args
   | Member ({ home = "std.prelude"; name = "Set" }, name)
     when List.mem name Model_lists.set_natives ->
       Model_lists.set_call (callbacks cx) name args

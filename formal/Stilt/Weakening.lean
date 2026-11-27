@@ -81,6 +81,7 @@ theorem HasType.weaken (Δ : Ctx) :
     .orElse ho (HasType.weaken Δ h₁) (HasType.weaken Δ h₂) hf (HasType.weaken Δ hm)
   | _, _, _, _, .form hk hm => .form hk (HasType.weaken Δ hm)
   | _, _, _, _, .shaped hk hm => .shaped hk (HasType.weaken Δ hm)
+  | _, _, _, _, .task hk hm => .task hk (HasType.weaken Δ hm)
   | _, _, _, _, .assign hp he hfit => .assign (PlaceFits.weaken Δ hp) (HasType.weaken Δ he) hfit
   | _, _, _, _, .seq ha hfit hb => .seq (HasType.weaken Δ ha) hfit (HasType.weaken Δ hb)
   | _, _, _, _, .if hwf hc hfc ha hfa hb hfb =>
@@ -235,6 +236,7 @@ theorem HasType.of_le (hs : s.Le s') :
     .orElse ho (HasType.of_le hs h₁) (HasType.of_le hs h₂) hf (HasType.of_le hs hm)
   | _, _, _, _, .form hk hm => .form hk (HasType.of_le hs hm)
   | _, _, _, _, .shaped hk hm => .shaped hk (HasType.of_le hs hm)
+  | _, _, _, _, .task hk hm => .task hk (HasType.of_le hs hm)
   | _, _, _, _, .assign hp he hfit => .assign (PlaceFits.of_le hs hp) (HasType.of_le hs he) hfit
   | _, _, _, _, .seq ha hfit hb => .seq (HasType.of_le hs ha) hfit (HasType.of_le hs hb)
   | _, _, _, _, .if hwf hc hfc ha hfa hb hfb =>

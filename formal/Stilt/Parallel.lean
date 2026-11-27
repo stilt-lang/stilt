@@ -17,6 +17,13 @@ it as the one before it left it.
 `Stilt.Parallel.Typed` adds that a call of a function value whose type has an
 empty row, on arguments of its parameter types, never ends as a raise or a
 performance, so the two runs agree for every such call.
+
+A task runs beside the code that started it in the same way (`Eval.aside`): from the frames
+where it starts, the code after its `spawn` going on from its own, and the two agree with the
+sequential run under the same conditions (`Eval.aside_eq_bind`). The order of the world's effects
+in that run is the sequential run's, as tasks.same-output-under-every-handler gives it; the calculus
+reaches no files, network, clock, environment or randomness, whose order among tasks
+tasks.unordered-io leaves out of a program's meaning.
 -/
 
 namespace Stilt
@@ -87,6 +94,39 @@ theorem inParallel_eq_sequentially (fr : σ) (W : World → Prop) :
     | performed op v s' k => rw [hc] at hset; exact hset.elim
     | outOfFuel => rfl
     | stuck => rfl
+
+/-- A task run beside the code that started it, as `task.threads()` runs it
+(tasks.same-output-under-every-handler): the task runs from the frames where it starts, on a
+thread that copies what it captures, and the code after its `spawn`, `rest`, goes on from its own
+frames, not the task's. The world they share holds what the task writes before what `rest`
+writes, and the task's reads before `rest`'s: the order of output, of reads and of the blocks of
+`when` that the paragraph and shared.when-order give, which is the sequential run's. A task that
+ends without a value, by a panic or, in a scope, a raise, ends the run there, and `rest` never
+runs: nothing after that point appears, and every task after it is cancelled
+(tasks.scope-failure). -/
+def aside (task : Eval (σ × World) Value) (rest : Value → Eval (σ × World) α) :
+    Eval (σ × World) α :=
+  fun s => (task s).bind fun v s₁ => rest v (s.1, s₁.2)
+
+/-- A task that leaves the frames where it starts as they were, and doesn't end as a
+performance, run beside the code after its `spawn`, ends as the sequential run does, where that
+code runs once the task has ended. -/
+theorem aside_eq_bind {task : Eval (σ × World) Value} {rest : Value → Eval (σ × World) α}
+    {s : σ × World} (hat : (task s).At s) (hset : (task s).Settled) :
+    aside task rest s = Eval.bind task rest s := by
+  unfold aside Eval.bind
+  cases h : task s with
+  | done v s₁ =>
+    rw [h] at hat
+    obtain ⟨fr, w⟩ := s₁
+    cases (show fr = s.1 from hat)
+    rfl
+  | performed op v s₁ k => rw [h] at hset; exact hset.elim
+  | raised e s₁ => rfl
+  | jumped j s₁ => rfl
+  | panicked k s₁ => rfl
+  | outOfFuel => rfl
+  | stuck => rfl
 
 end Eval
 

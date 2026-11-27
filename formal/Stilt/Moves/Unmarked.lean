@@ -125,6 +125,7 @@ theorem HasType.erase_eq : ∀ {Γ fx e τ}, HasType D s Γ fx e τ → e.erase 
   | _, _, _, _, .match _ h₁ _ h₂ => by simp [Expr.erase, HasType.erase_eq h₁, ArmsFit.erase_eq h₂]
   | _, _, _, _, .letElse _ _ h | _, _, _, _, .orElse _ _ _ _ h => congrArg (Expr.form _) (HasType.erase_eq h)
   | _, _, _, _, .form _ h | _, _, _, _, .shaped _ h => congrArg (Expr.form _) (HasType.erase_eq h)
+  | _, _, _, _, .task _ h => congrArg (Expr.form _) (HasType.erase_eq h)
 
 theorem ExprsFit.erase_eq : ∀ {Γ fx es τs}, ExprsFit D s Γ fx es τs → eraseExprs es = es
   | _, _, _, _, .nil => rfl

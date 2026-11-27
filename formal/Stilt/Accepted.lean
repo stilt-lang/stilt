@@ -16,6 +16,8 @@ import Stilt.Alloc.Theorem
 import Stilt.Quiet.Theorem
 import Stilt.Writable
 import Stilt.Modes.Demands
+import Stilt.Tasks.Scopes
+import Stilt.Tasks.Lazy
 
 /-!
 # Accepted programs and their soundness
@@ -31,8 +33,9 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
 (views.escaping), reaches nothing that a writable binding writes while it writes it
 (projections.reaching-written-source), resumes a continuation at most once on each path
 (handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), keeps the
-rules of projections (projections.once-on-every-path), and puts no `fixed` value in a
-`Shared<T>` (modes.demands).
+rules of projections (projections.once-on-every-path), puts no `fixed` value in a
+`Shared<T>` (modes.demands), lets no scope escape (tasks.scope-that-escapes) and gives
+`Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing).
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -58,6 +61,10 @@ rules of projections (projections.once-on-every-path), and puts no `fixed` value
   its name has when its block ends (`eval_keepsHeld`, `release_puts_back`, shared.when);
 * a call of a task's function never ends as a performance, so no continuation leaves its
   task (`continuations_stay`, tasks.continuations-stay-in-task);
+* a task's function run beside the code after its `spawn`, as `task.threads()` runs it, from
+  the frames where it starts, ends as the sequential run does, a panic or a scope's raise in it
+  ending the run there (`task_aside`, tasks.same-output-under-every-handler and
+  tasks.scope-failure);
 * calls of closures with empty rows run at the same time end as they do run one after
   another, with their values in order or as the first that gives none
   (`parallel_eq_sequential`, par.sequential-meaning and par.panics);
@@ -67,6 +74,9 @@ rules of projections (projections.once-on-every-path), and puts no `fixed` value
 * a `when`'s block, from a frame whose function values are lock-free, takes no other cell,
   E0430 having rejected every site of `locks` in it, so a task never waits on a value while it
   holds one (`Program.Locks.block`, shared.locks and shared.when-order);
+* the call of a function given to `Lazy.new`, from a frame whose function values are lock-free,
+  takes no cell, E0435 having rejected every site of `locks` in it (`Program.LazyLocks.call`,
+  polymorphism.lazy-waits-for-nothing);
 * every path through the body of a projection runs one `yield` to its end or a `return`, and
   at most one to a raise or a performance, so the caller's access runs once
   (`Program.Projections.yields`, projections.once-on-every-path);
@@ -147,6 +157,12 @@ structure Program.Accepted (p : Program) : Prop where
   /-- Each form is what the written body's own types make it: a field read through an `Option`
   adds a level only at a field whose type is no `Option` (types.option-field-known). -/
   formsKnown : p.FormsKnown
+  /-- No scope escapes: a binding of a scope's type is used only as the receiver of `spawn` or
+  given to a parameter of a scope's type (tasks.scope-that-escapes, E0434). -/
+  scopes : p.ScopesKept
+  /-- No function given to `Lazy.new` holds a site of `locks`
+  (polymorphism.lazy-waits-for-nothing, E0435). -/
+  lazyLocks : p.LazyLocks
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
@@ -199,6 +215,16 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       {γ : Copy.State}, Value.Typed p.decls f ((Ty.fn [] result ⟨io, none, [], [], none⟩).close η) →
       State.Typed p.decls γ Γ η →
       (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f [] γ).Settled
+  /-- tasks.same-output-under-every-handler and tasks.scope-failure: a task's function, of a type
+  whose row is a task's, called with no arguments from any typed state, run beside the code after
+  its `spawn` as `task.threads()` runs it, from the frames where it starts, the world in the order
+  the sequential run gives, ends as the sequential run does, whatever that code is
+  (`task_aside`). -/
+  threads : ∀ (n : Nat) {Γ : Ctx} {η : REnv} {f : Value} {result : Ty} {ρ : Row}
+      {γ : Copy.State}, ρ.OfTask → Value.Typed p.decls f ((Ty.fn [] result ρ).close η) →
+      State.Typed p.decls γ Γ η → ∀ rest : Value → Eval Copy.State Value,
+      Eval.aside (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f []) rest γ =
+        Eval.bind (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f []) rest γ
   /-- par.sequential-meaning and par.panics: calls of function values whose types have empty
   rows, on arguments of their parameter types, run at the same time from one typed frame,
   end as they do run one after another, from the first to the last, in every typed world
@@ -231,6 +257,14 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       (s : Copy.State), Frame.LockFree p.decls p.decls.locks s.1 →
       (eval p.decls (Copy.memoryWith w) n ((b.substTys ts).substRows rs) s).TakesNone p.decls
         p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
+  /-- polymorphism.lazy-waits-for-nothing: whatever the order of write-back, the call of every
+  function given to `Lazy.new`, as written or instantiated, from a frame whose function values
+  are lock-free, holds no cell in any state it reaches that its world didn't, and neither does
+  the rest of a performance (`Program.LazyLocks.call`). -/
+  lazy : ∀ (w : WriteBack) (n : Nat), ∀ f ∈ p.lazyFns, ∀ (τ : Ty) (ts : TySubst) (rs : RowSubst)
+      (s : Copy.State), Frame.LockFree p.decls p.decls.locks s.1 →
+      (eval p.decls (Copy.memoryWith w) n (((Expr.call f [] τ).substTys ts).substRows rs) s).TakesNone
+        p.decls p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
   /-- projections.once-on-every-path: the body of every projection, run with any fuel from where
   the list its function keeps the access's values in is empty, ends with one value kept, the
   access's, on every path to its end or to a `return`, and with at most one on every path to a
@@ -298,9 +332,11 @@ theorem soundness : Soundness := fun p fuel input h =>
     modesAgreement p fuel input h.wellTyped h.exclusive, h.wellTyped.cycles fuel input,
     p.keepsHeld,
     fun n _ _ _ _ _ _ hf hγ => continuations_stay h.wellTyped.typedDecls n hf hγ,
+    fun n _ _ _ _ _ _ hρ hf hγ rest => task_aside h.wellTyped.typedDecls n hρ hf hγ rest,
     fun n _ _ _ hγ _ hx calls hc => parallel_eq_sequential h.wellTyped.typedDecls n hγ hx calls hc,
     fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
     fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs,
+    fun w n _ hf τ ts rs _ hs => h.lazyLocks.call w n hf τ ts rs hs,
     fun rb hrb n s hs => h.projections.yields rb hrb n s hs,
     fun _ control c v w => callAs_unseen p.decls _ control c v w,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,

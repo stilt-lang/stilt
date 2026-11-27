@@ -82,26 +82,69 @@ let when_ (cb : callbacks) cx (e : Tast.expr) pairs (b : Tast.block) =
   in
   List.fold_right bind names (split [] [] (List.map fst names))
 
-(* tasks.implicit-effects-and-capabilities: a call of [spawn] is a call through a stored
-   function value, so the calculus calls [f] through a binding that holds it, which is a
-   site of [div] as the Reference makes the call one; a closure literal's body is still
-   checked where it is written. *)
-let spawned cx (e : Tast.expr) (f : Tast.expr) f_e =
-  let g = temp "spawned" e.loc in
-  tag "letIn" [ Str g; ty cx f.ty; f_e; call_with cx (var_e g) f.ty [] ]
+(* The result type and the row of a task's function, as the calculus writes them. *)
+let task_fn cx (f : Tast.expr) =
+  match norm f.ty with
+  | Types.Fn ([], r, rw) -> (ty cx r, row cx rw)
+  | _ -> outside "a task's function of a type the model lacks"
 
-(* tasks.sequential-run and tasks.scope-failure: [spawn(f)] runs [f] to its end and a
-   task's handle is its value, so [t.await()] is [t]; a scope is [()], and [s.spawn(f)]
-   runs [f], whose raise leaves as any raise. [Shared.new] makes a handle
-   (shared.std-sync). *)
+(* Declares the record of the library that a type of a form of tasks or lazy values is,
+   which the calculus's form names though the program may write no binder of it. *)
+let declares cx t = ignore (ty cx t)
+
+(* The type argument of a [Task<T>], a [Scope<E>] or a [Lazy<T>]. *)
+let arg_of t =
+  match norm t with
+  | Types.Con (_, [ a ]) -> a
+  | _ -> outside "a task, scope or lazy value of a type the model lacks"
+
+(* tasks.sequential-run: [spawn(f)], the form that binds [f] and runs it to its end, its
+   value the task's handle (formal/Stilt/Typing/Tasks.lean).
+   tasks.implicit-effects-and-capabilities: the call is one through the binding that holds
+   [f], a site of [div] as the Reference makes the call one; a closure literal's body is
+   still checked where it is written. *)
+let spawned cx (e : Tast.expr) (f : Tast.expr) f_e =
+  declares cx e.ty;
+  let r, rw = task_fn cx f in
+  tag "spawn" [ Str (temp "spawned" e.loc); rw; f_e; r ]
+
+(* tasks.sequential-run and tasks.scope-failure: [t.await()] reads the value the task's
+   handle holds; [s.spawn(f)] runs [f] as [spawn(f)] does, and its raise leaves as any
+   raise. [Shared.new] makes a handle (shared.std-sync). *)
 let member_call (cb : callbacks) cx (e : Tast.expr) (owner : Hir.item) name
     (args : Tast.arg list) =
   match (owner.home, owner.name, name, args) with
   | "std.sync", "Shared", "new", [ v ] -> shared_new cx e (cb.expr v.value)
-  | "std.task", "Task", "await", [ t ] -> cb.expr t.value
+  | "std.task", "Task", "await", [ t ] ->
+      declares cx t.value.ty;
+      tag "await" [ Str (temp "awaited" e.loc); ty cx e.ty; cb.expr t.value ]
   | "std.task", "Scope", "spawn", [ s; f ] ->
-      tag "seq" [ cb.expr s.value; spawned cx e f.value (cb.expr f.value) ]
+      declares cx e.ty;
+      declares cx s.value.ty;
+      let r, rw = task_fn cx f.value in
+      let err = ty cx (arg_of s.value.ty) in
+      tag "scopeSpawn"
+        [
+          Str (temp "receiver" e.loc);
+          err;
+          cb.expr s.value;
+          Str (temp "spawned" e.loc);
+          rw;
+          cb.expr f.value;
+          r;
+        ]
   | _ -> outside "the function %s.%s" (item_name owner) name
+
+(* polymorphism.lazy-values: [Lazy.new(f)] keeps [f], and [l.get()] calls it. *)
+let lazy_call (cb : callbacks) cx (e : Tast.expr) name (args : Tast.arg list) =
+  match (name, args) with
+  | "new", [ f ] ->
+      declares cx e.ty;
+      tag "lazyNew" [ ty cx (arg_of e.ty); cb.expr f.value ]
+  | "get", [ l ] ->
+      declares cx l.value.ty;
+      tag "lazyGet" [ Str (temp "lazy" e.loc); ty cx e.ty; cb.expr l.value ]
+  | _ -> outside "the function std.lazy.Lazy.%s" name
 
 (* Whether a type's functions are of std.sync or std.task. *)
 let owns (owner : Hir.item) = owner.home = "std.sync" || owner.home = "std.task"
@@ -287,8 +330,13 @@ let std_call (cb : callbacks) cx (e : Tast.expr) (i : Hir.item)
   match (i.home, i.name, args) with
   | "std.task", "spawn", [ f ] -> spawned cx e f.value (v f)
   | "std.task", ("threads" | "sequential"), [] -> unit_e
-  | "std.task", "scope", [ f ] ->
-      call_with cx (v f) f.value.ty [ tag "value" [ unit_e ] ]
+  | "std.task", "scope", [ f ] -> (
+      (* tasks.scopes: [f] called with a new scope. *)
+      match norm f.value.ty with
+      | Types.Fn ([ (_, s) ], _, _) ->
+          declares cx s;
+          tag "scope" [ ty cx (arg_of s); v f; ty cx e.ty ]
+      | _ -> outside "a scope's function of a type the model lacks")
   | "std.par", "map", [ xs; f ] -> par_map cx e xs.value f.value (v xs) (v f)
   | "std.par", "each", [ xs; f ] -> par_each cb cx e xs.value f.value
   | "std.par", "both", [ f; g ] -> par_both cx e f.value g.value (v f) (v g)

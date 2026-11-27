@@ -413,6 +413,7 @@ import Stilt.Locks.Runs
 import Stilt.Locks.Calls
 import Stilt.Locks.Theorem
 import Stilt.Examples.Locks
+import Stilt.Examples.Tasks
 import Stilt.Quiet.Outcome
 import Stilt.Quiet.Steps
 import Stilt.Quiet.Calls

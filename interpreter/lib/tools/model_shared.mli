@@ -1,8 +1,8 @@
 (** Shared values, tasks, scopes and the parallel calls of std.par as the Lean
     model's calculus writes them, in the program's sequential run
     (tasks.sequential-run): a shared value is a cell of the world, a handle
-    names it, a [when] holds the cells it names, and tasks, scopes and [std.par]
-    are calls. *)
+    names it, a [when] holds the cells it names, tasks, scopes and lazy values
+    are forms of the calculus, and [std.par] calls. *)
 
 type callbacks = {
   expr : Tast.expr -> Model_json.t;
@@ -28,6 +28,15 @@ val member_call :
   Tast.arg list ->
   Model_json.t
 (** A call of [Shared.new], [Task.await] or [Scope.spawn]. *)
+
+val lazy_call :
+  callbacks ->
+  Model_types.cx ->
+  Tast.expr ->
+  string ->
+  Tast.arg list ->
+  Model_json.t
+(** A call of [Lazy.new] or [Lazy.get] (polymorphism.lazy-values). *)
 
 val owns : Hir.item -> bool
 (** Whether a type's functions are of std.sync or std.task. *)

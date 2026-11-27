@@ -95,6 +95,7 @@ theorem Lenient.HasType.strict :
       (Lenient.HasType.strict (allowed := false) hm hne)
   | _, _, _, _, _, _, .form hk hm, hne => .form hk (Lenient.HasType.strict (allowed := false) hm hne)
   | _, _, _, _, _, _, .shaped hk hm, hne => .shaped hk (Lenient.HasType.strict (allowed := false) hm hne)
+  | _, _, _, _, _, _, .task hk hm, hne => .task hk (Lenient.HasType.strict (allowed := false) hm hne)
   | _, _, _, _, _, _, .letIn hwf hi hfit hb, hne =>
     have h := both hne
     .letIn hwf (Lenient.HasType.strict hi h.1) (strictFits hfit h.1)
@@ -254,6 +255,7 @@ theorem HasType.lenient :
     .orElse ho (HasType.lenient h₁) (HasType.lenient h₂) (.inl hf) (HasType.lenient hm)
   | _, _, _, _, _, .form hk hm => .form hk (HasType.lenient hm)
   | _, _, _, _, _, .shaped hk hm => .shaped hk (HasType.lenient hm)
+  | _, _, _, _, _, .task hk hm => .task hk (HasType.lenient hm)
   | _, _, _, _, _, .assign hp he hfit =>
     .assign (PlaceFits.lenient hp) (HasType.lenient he) (.inl hfit)
   | _, _, _, _, _, .seq ha hfit hb => .seq (HasType.lenient ha) (.inl hfit) (HasType.lenient hb)

@@ -7,6 +7,7 @@ import Stilt.Typing.Else
 import Stilt.Typing.Shapes
 import Stilt.Syntax.Forms
 import Stilt.Typing.Io
+import Stilt.Typing.Tasks
 
 /-!
 # Typing
@@ -336,6 +337,9 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   of the value inside the `Option` of `e`, evaluated once (types.fields-through-option), at
   `Option<U>` (types.option-field-types). -/
   | shaped {Γ fx k m τ} : k.Shaped m → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
+  /-- A form of tasks, scopes or lazy values is typed as the code it means in the sequential
+  run, which its own rules shape (`TaskForm`, tasks.sequential-run). -/
+  | task {Γ fx k m τ} : TaskForm D k m τ → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
 
 /-- Each expression fits the type at its position. -/
 inductive ExprsFit : Ctx → Effects → List Expr → List Ty → Prop

@@ -1,6 +1,7 @@
 import Stilt.Numbers
 import Stilt.Declarations
 import Stilt.Typing.Else
+import Stilt.Typing.Tasks
 import Stilt.Projections
 import Stilt.Writable
 import Lean.Data.Json
@@ -427,6 +428,20 @@ partial def expr (j : Json) : Except String Expr := do
   -- part runs from `start` up to `end` of its source (`Expr.throughOf`).
   | "through" =>
     return .throughOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= str) (← f 3 >>= expr)
+  -- The forms of tasks, scopes and lazy values (`Stilt.Typing.Tasks`): `["spawn", g, row, f,
+  -- type]`, `["await", h, type, t]`, `["scope", error, f, type]`, `["scopeSpawn", r, error, s, g,
+  -- row, f, type]`, `["asyncWith", h, block]`, `["lazyNew", type, f]` and `["lazyGet", h, type,
+  -- l]`, where `type` is the value's type, that of a task's function's result or a lazy value's.
+  | "spawn" =>
+    return .spawnOf taskName (← f 0 >>= str) (← f 1 >>= row) (← f 2 >>= expr) (← f 3 >>= ty)
+  | "await" => return .awaitOf taskName (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)
+  | "scope" => return .scopeOf scopeName (← f 0 >>= ty) (← f 1 >>= expr) (← f 2 >>= ty)
+  | "scopeSpawn" =>
+    return .scopeSpawnOf scopeName (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr) taskName
+      (← f 3 >>= str) (← f 4 >>= row) (← f 5 >>= expr) (← f 6 >>= ty)
+  | "asyncWith" => return .asyncWith (← f 0 >>= expr) (← f 1 >>= expr)
+  | "lazyNew" => return .lazyNewOf lazyName (← f 0 >>= ty) (← f 1 >>= expr)
+  | "lazyGet" => return .lazyGetOf lazyName (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)
   | _ => throw s!"no expression is named {tag}"
 
 partial def arg (j : Json) : Except String Arg := do

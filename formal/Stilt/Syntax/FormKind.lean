@@ -2,9 +2,9 @@
 # The forms of the calculus
 
 The forms of the Reference that the calculus keeps with the code they mean (`Expr.form`): those
-whose typing has rules of its own, those of projections (`Stilt.Projections`) and those of
-writable views (`Stilt.Writable`), and those whose meaning has a shape of its own
-(`Form.Shaped`).
+whose typing has rules of its own, those of projections (`Stilt.Projections`), those of
+writable views (`Stilt.Writable`) and those of tasks, scopes and lazy values
+(`Stilt.Typing.Tasks`), and those whose meaning has a shape of its own (`Form.Shaped`).
 -/
 
 namespace Stilt
@@ -40,6 +40,20 @@ inductive Form where
   /-- `place op= e` (`Expr.Compound`), an integer literal at a float type, and `e.f` through an
   `Option` (`Form.Shaped`). -/
   | compound | intFloat | optionField
+  /-- `task.spawn(f)`, which runs the task's function to its end (`Expr.spawnOf`). -/
+  | spawn
+  /-- `t.await()`, the value the task ended with (`Expr.awaitOf`). -/
+  | await
+  /-- `task.scope(f)`, `f` called with a new scope (`Expr.scopeOf`). -/
+  | scope
+  /-- `s.spawn(f)`, a task of a scope, which may raise (`Expr.scopeSpawnOf`). -/
+  | scopeSpawn
+  /-- A `with` of a handler of `async`, its block's run (`Expr.asyncWith`). -/
+  | async
+  /-- `Lazy.new(f)`, the lazy value that keeps `f` (`Expr.lazyNewOf`). -/
+  | lazyNew
+  /-- `l.get()`, the value of the function a lazy value keeps (`Expr.lazyGetOf`). -/
+  | lazyGet
   deriving DecidableEq, Repr
 
 end Stilt

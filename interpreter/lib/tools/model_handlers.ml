@@ -118,7 +118,7 @@ let form cb cx (e : Tast.expr) =
   | With (h, eff, _, b) when eff = async_item ->
       (* tasks.with-waits: the tasks under it have ended once its block has, in the
          sequential run, where each runs to its end when it starts. *)
-      tag "seq" [ cb.expr h; cb.block b ]
+      tag "asyncWith" [ cb.expr h; cb.block b ]
   | Handler h -> handler cb cx e h
   | With (h, eff, targs, b) -> with_ cb cx h eff targs b
   | Resume v -> resume cb v

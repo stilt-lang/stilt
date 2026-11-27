@@ -250,6 +250,7 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
         (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩])) τ
   | form {N Γ fx k m τ} : k.meant = true → HasType N Γ fx m τ → HasType N Γ fx (.form k m) τ
   | shaped {N Γ fx k m τ} : k.Shaped m → HasType N Γ fx m τ → HasType N Γ fx (.form k m) τ
+  | task {N Γ fx k m τ} : TaskForm D k m τ → HasType N Γ fx m τ → HasType N Γ fx (.form k m) τ
 
 /-- Each expression is checked against the type at its position. -/
 inductive ExprsFit : List Name → Ctx → Effects → List Expr → List Ty → Prop

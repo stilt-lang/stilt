@@ -202,6 +202,9 @@ let writes cx (m : Ast.mode) (v : Hir.var) t =
         { src = n; start = n ^ "/start"; stop = n ^ "/end"; part = u }
   | _ -> ()
 
+let param = tag "param" [ Str "T" ]
+let pure = Arr [ Bool false; Null; Arr [] ]
+
 let rec ty cx (t : Types.ty) =
   match norm t with
   | Con ({ home = "std.prelude"; name }, [])
@@ -228,23 +231,14 @@ let rec ty cx (t : Types.ty) =
   | Con ({ home = "std.prelude"; name = "Set" }, _) ->
       outside
         "a set whose elements the calculus may not compare as the program does"
-  (* polymorphism.lazy-unobservable: no program can tell when a lazy value's function
-     runs, or how often, and its row is empty, so a [Lazy<T>] is its [fn() -> T]. *)
-  | Con ({ home = "std.lazy"; name = "Lazy" }, [ t ]) ->
-      (* polymorphism.lazy-waits-for-nothing: a [when] that runs while a lazy value is
-         computed panics, which a call of its function doesn't show. *)
-      cx.lazy_met <- true;
-      ty cx (Fn ([], t, Types.empty_row))
+  | Con (({ home = "std.lazy" | "std.task"; _ } as i), [ t ]) -> library cx i t
   | Tuple [] -> Str "unit"
   | Tuple ts -> tag "tuple" [ Arr (List.map (ty cx) ts) ]
   | Fn (ps, r, rw) -> fn_ty cx ps r rw
-  (* shared.std-sync: a handle names a cell of the world; tasks.sequential-run: a task's
-     handle is the value it ended with, and a scope and the handlers of [async] hold
-     nothing a run reads. *)
+  (* shared.std-sync: a handle names a cell of the world; tasks.sequential-run: the
+     handlers of [async] hold nothing a run reads. *)
   | Con ({ home = "std.sync"; name = "Shared" }, [ t ]) ->
       tag "shared" [ ty cx t ]
-  | Con ({ home = "std.task"; name = "Task" }, [ t ]) -> ty cx t
-  | Con ({ home = "std.task"; name = "Scope" }, [ _ ]) -> Str "unit"
   | Handler h when h.eff = async_item -> Str "unit"
   | Record fields -> tag "record" [ Str (anonymous cx fields) ]
   | Handler h -> tag "record" [ Str (handler_record cx h) ]
@@ -262,6 +256,30 @@ let rec ty cx (t : Types.ty) =
   (* A type parameter of a generic type, in its declaration. *)
   | Param v -> tag "param" [ Str v.name ]
   | _ -> outside "a type the model lacks"
+
+(* A record of the library that the calculus declares of its own, with one type parameter,
+   [T], at the argument [t] (formal/Stilt/Typing/Tasks.lean). tasks.sequential-run: a task's
+   handle holds the value it ended with, and a scope holds nothing.
+   polymorphism.lazy-unobservable: no program can tell when a lazy value's function runs, or
+   how often, and its row is empty, so a [Lazy<T>] is the record of its [fn() -> T];
+   polymorphism.lazy-waits-for-nothing: a [when] that runs while a lazy value is computed
+   panics, which a call of its function doesn't show. *)
+and library cx (i : Hir.item) t =
+  let fields =
+    match i.name with
+    | "Task" -> [ ("value", param) ]
+    | "Scope" -> []
+    | "Lazy" ->
+        cx.lazy_met <- true;
+        [ ("get", tag "fn" [ Arr []; param; pure ]) ]
+    | _ -> outside "the type %s" (item_name i)
+  in
+  let name = item_name i in
+  (if not (List.mem_assoc name cx.handlers) then
+     let fields = Arr (List.map (fun (f, t) -> Arr [ Str f; t ]) fields) in
+     cx.handlers <-
+       (name, Arr [ Str name; fields; Arr [ Str "T" ] ]) :: cx.handlers);
+  tag "record" [ Str name; Arr [ ty cx t ] ]
 
 (* A function type. *)
 and fn_ty cx ps r rw =
