@@ -14,9 +14,10 @@ statements of the body's blocks, the branches of an `if` and the arms of a `matc
 ends its paths. Any other code runs no `yield` (`Expr.keeps`): one inside a loop, a guard, the
 operand of a `catch`, a closure literal, an operand or an argument breaks the rule, as do a
 second `yield` on a path and a path to the end or to a `return` that has run none. The check is
-syntactic, as the Reference's is, and reads less than the Reference in one way, which rejects
+syntactic, as the Reference's is, and reads less than the Reference in two ways, each rejecting
 more: a branch ends its paths only when it ends them by its form, not by its type `Never`
-alone, as a call of a function whose result is `Never` does.
+alone, as a call of a function whose result is `Never` does; and a `yield` inside an operand, an
+argument, or the block of a `when` or a `with`, which the Reference follows, is rejected too.
 
 `Expr.namesProjectionsOnlyByCall` is projections.not-a-value, and `Program.Projections` the
 checks of a whole program.
@@ -145,13 +146,26 @@ def Op.isPanic : Op → Bool
   | .panic _ => true
   | _ => false
 
-/-- Whether `e` is the value a projection's `return` gives, the first of those `res` keeps. -/
+/-- Whether `e` is the value a projection's `return` gives, the first of those `res` keeps: the
+body has type `()`, and a `return` in it takes no value (projections.yield). -/
 def Expr.isYielded (res : Name) : Expr → Bool
   | .form .yielded (.index (.var x) (.int 0)) => x == res
   | _ => false
 
 /-- The operand of `yield p`, the call of the access, when `e` is what the `yield` means: the
-access's value added to `res`. -/
+access's value added to `res`. The access, the caller's, takes the place `p`, rooted in a `var`
+binding or an `inout` parameter of the body, and the places it threads, all `inout`, whose
+indexes are evaluated when the statement runs (projections.yield). So the projection's call runs
+its body to the `yield`, the access happens on the yielded place, and the body resumes after it
+and runs to its end, when the call writes its `inout` arguments back
+(projections.when-projection-runs). The access is a call in the body: one that raises leaves the
+body as a raise leaves any call, the statements after the `yield` not run and no `catch` of the
+body's seeing the error, and the projection's `inout` arguments are written back holding what
+was written before the `yield` and through the place (projections.raising-during-access). So
+does a performance in the access whose handler ends it: the statements after the `yield` are in
+the performance's rest, which the handler never resumes, and the place it yielded holds what
+the access wrote before the performance, written back as the performance left each call
+(handlers.ended-projections, `Outcome.leaveCall`). -/
 def Expr.yieldOperand? (res : Name) : Expr → Option Expr
   | .assign ⟨x, []⟩ (.op (.list .push) [.var y, .try a]) => if x == res && y == res then some a else none
   | _ => none
@@ -207,7 +221,10 @@ def armsOnce (res k : Name) (caught : Bool) (n : Nat) : List Arm → Yields
 end
 
 /-- What a function's body is when it is a projection's: the name of the list of kept values,
-their type and the body the projection was declared with. -/
+their type and the body the projection was declared with. A projection, a declared function or
+method whose result is written `inout T`, is a function of its own for each type of its
+caller's access, whose last parameter takes the access, and whose body is this form; no closure
+literal is one (projections.declaring-projection). -/
 def Expr.projection? : Expr → Option (Name × Ty × Expr)
   | .form .projection (.varIn res (.list R) (.list _ []) (.seq b (.index (.var res') (.int 0)))) =>
     if res == res' then some (res, R, b) else none
@@ -232,7 +249,11 @@ def FnDecl.projectionChecked (d : FnDecl) : Bool :=
 mutual
 
 /-- Whether `e` names a projection, one that `isProjection` holds, only as the callee of a call
-where a place is (projections.not-a-value, E0426): a projection isn't a value. -/
+where a place is (projections.not-a-value, E0426): a projection isn't a value. A call where a
+place is is the call with the projection's arguments, evaluated first, in their turn, and then
+the access, a closure literal that takes the yielded place `inout` and does with it what the
+caller does with the place the call is: assigns to it, passes it `inout`, or reads it, which
+copies the yielded place's value out (projections.call-is-place). -/
 def Expr.namesProjectionsOnlyByCall (isProjection : Name → Bool) : Expr → Bool
   | .fnRef f _ _ => !isProjection f
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .method .. => true

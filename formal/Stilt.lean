@@ -1,5 +1,6 @@
 import Stilt.Syntax.Types
 import Stilt.Syntax
+import Stilt.Syntax.Forms
 import Stilt.Free
 import Stilt.Projections
 import Stilt.Projections.Check

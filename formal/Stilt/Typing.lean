@@ -4,6 +4,7 @@ import Stilt.Patterns
 import Stilt.Typing.Uses
 import Stilt.Typing.Context
 import Stilt.Typing.Else
+import Stilt.Syntax.Forms
 
 /-!
 # Typing

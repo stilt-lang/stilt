@@ -1,4 +1,5 @@
 import Stilt.Free
+import Stilt.Syntax.Forms
 
 /-!
 # Projections
