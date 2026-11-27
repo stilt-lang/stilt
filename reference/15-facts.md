@@ -468,12 +468,12 @@ A `break` may come anywhere. Every other `while`, and every `loop`, adds `div` (
 Tests: [promises/termination_rejected.lt](../conformance/promises/termination_rejected.lt), [verification/counting_loops.lt](../conformance/verification/counting_loops.lt), [verification/counting_loops_held_rejected.lt](../conformance/verification/counting_loops_held_rejected.lt), [verification/counting_loops_rejected.lt](../conformance/verification/counting_loops_rejected.lt), [verification/guards_in_conditions.lt](../conformance/verification/guards_in_conditions.lt).
 
 <a id="facts.shrinking-recursion"></a>
-A function's self-calls **shrink** when, for one `let` parameter `p` of an integer type, every self-call in its body passes one of these at `p`'s position:
+A function's self-calls **shrink** when, for one `let` parameter `p` of an integer type, every self-call in its body passes the same one of these at `p`'s position:
 
 - `p - s`, under a test that gives `p > b` or `p >= b`, or the mirror of one;
 - `p + s`, under a test that gives `p < b` or `p <= b`, or the mirror of one.
 
-Here `s` is known positive. `b` is a literal, a literal constant, or another `let` parameter that every self-call passes unchanged at its own position. The test guards the call as [facts.guarding-tests](#facts.guarding-tests) says. So `if n <= 0 { 0 } else { count(n - 1) }` shrinks, and `if n == 0 { 0 } else { count(n - 1) }` doesn't. A function whose self-calls all shrink, or all descend ([facts.descending-self-calls](#facts.descending-self-calls)), adds no `div` at them. A function whose self-calls mix the two adds `div`, and so does mutual recursion.
+Here `s` is known positive. `b` is a literal, a literal constant, or another `let` parameter that every self-call passes unchanged at its own position. The test guards the call as [facts.guarding-tests](#facts.guarding-tests) says. So `if n <= 0 { 0 } else { count(n - 1) }` shrinks, and `if n == 0 { 0 } else { count(n - 1) }` doesn't, and neither does `if p > 5 { f(p - 1) } else if p < 10 { f(p + 1) } else { 0 }`, whose self-calls step both ways. A function whose self-calls all shrink, or all descend ([facts.descending-self-calls](#facts.descending-self-calls)), adds no `div` at them. A function whose self-calls mix the two adds `div`, and so does mutual recursion.
 
 Tests: [promises/termination_rejected.lt](../conformance/promises/termination_rejected.lt), [verification/recursion.lt](../conformance/verification/recursion.lt), [verification/recursion_rejected.lt](../conformance/verification/recursion_rejected.lt).
 

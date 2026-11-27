@@ -32,6 +32,11 @@ fn apart(a: i64, b: i64) -> i64 without div {
   }
 }
 
+// The self-calls step both ways, each under its own test: `both(6)` never ends.
+fn both(p: i64) -> i64 without div {
+  if p > 5 { both(p - 1) } else if p < 10 { both(p + 1) } else { 0 } //~ ERROR E0204
+}
+
 type Tree = | Leaf | Node(Tree, i64, Tree)
 
 // One self-call descends structurally, and the other shrinks `n`.
