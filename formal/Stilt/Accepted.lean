@@ -11,6 +11,7 @@ import Stilt.HeldNames.Unmerge
 import Stilt.Limits
 import Stilt.Projections.Theorem
 import Stilt.Handling.Unseen
+import Stilt.Alloc.Limits
 
 /-!
 # Accepted programs and their soundness
@@ -107,6 +108,10 @@ structure Program.Accepted (p : Program) : Prop where
   raises nothing of its own (projections.cannot-raise, E0427); and a projection named only as
   the callee of a call where a place is (projections.not-a-value, E0426). -/
   projections : p.Projections
+  /-- Each function and `main` limited by `without alloc` keeps the limit (E0204). -/
+  allocLimits : p.AllocLimited
+  /-- Each function and `main` limited by `without copy` keeps the limit (E0204). -/
+  copyLimits : p.CopyLimited
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where

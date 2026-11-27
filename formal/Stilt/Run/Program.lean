@@ -26,12 +26,15 @@ def typeParam : Decoder TypeParam
   | .arr #[n, bs] => return ⟨← str n, ← list str bs, []⟩
   | j => throw s!"a type parameter, not {j.compress}"
 
-/-- Limits: an array of their names, `"panic"`, `"overflow"` and `"div"` (facts.without). -/
+/-- Limits: an array of their names, `"panic"`, `"overflow"`, `"div"`, `"alloc"` and `"copy"`
+(facts.without). -/
 def limits (j : Json) : Except String Limits := do
   (← list str j).foldlM (init := {}) fun l n => match n with
     | "panic" => pure { l with panic := true }
     | "overflow" => pure { l with overflow := true }
     | "div" => pure { l with div := true }
+    | "alloc" => pure { l with alloc := true }
+    | "copy" => pure { l with copy := true }
     | _ => throw s!"a limit, not {n}"
 
 /-- A function: `[name, typeParams, rowParams, params, result, row, body]`, and after

@@ -346,6 +346,9 @@ import Stilt.Ends.Body
 import Stilt.Ends.Start
 import Stilt.Ends.Theorem
 import Stilt.Limits
+import Stilt.Alloc.Sites
+import Stilt.Alloc.Storage
+import Stilt.Alloc.Limits
 import Stilt.Counterexamples.Ends
 import Stilt.Guards.Syntax
 import Stilt.Guards.Match
