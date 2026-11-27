@@ -3,8 +3,16 @@ open Model_types
 let target_name = function
   | Function i -> item_name i
   | Member (owner, name) -> item_name owner ^ "." ^ name
-  | Impl (trait, owner, name) ->
+  | Impl (trait, owner, name) | Default (trait, owner, name) ->
       item_name trait ^ " for " ^ item_name owner ^ "." ^ name
+
+(* The trait method that a default is the body of. *)
+let trait_method cx trait name =
+  Option.bind (Env.trait_info cx.env trait) (fun (info : Env.trait_info) ->
+      List.find_opt
+        (fun (m : Env.trait_method) -> m.method_name = name && m.has_default)
+        info.methods
+      |> Option.map (fun m -> (info, m)))
 
 let signature cx target =
   let found =
@@ -24,6 +32,10 @@ let signature cx target =
             List.find_opt (fun (m : Env.member) -> m.name = name) impl.members
             |> Option.map (fun (m : Env.member) -> m.signature)
         | None -> None)
+    | Default (trait, _, name) ->
+        Option.map
+          (fun (_, (m : Env.trait_method)) -> m.method_sig)
+          (trait_method cx trait name)
   in
   match found with
   | Some s -> s
@@ -39,6 +51,8 @@ let code cx target =
     | Member (owner, name) -> List.assoc_opt (owner, name) cx.program.members
     | Impl (trait, owner, name) ->
         List.assoc_opt (trait, owner, name) cx.program.impl_methods
+    | Default (trait, _, name) ->
+        List.assoc_opt (trait, name) cx.program.default_methods
   in
   match found with Some ({ body = Code b; _ } as d) -> Some (d, b) | _ -> None
 
@@ -130,6 +144,19 @@ let impl_args cx target targs args (s : Env.fn_sig) =
       | _ -> [])
   | _ -> []
 
+(* What a default's [Self] is: the type of its receiver, the type whose impl leaves the
+   method out (traits.impl-members). *)
+let self_of cx target args =
+  match target with
+  | Default (trait, _, name) -> (
+      match (trait_method cx trait name, args) with
+      | Some (info, _), _ when info.params <> [] ->
+          outside "the default of a trait with parameters"
+      | Some (info, { member_kind = Method _; _ }), self :: _ ->
+          [ (info.self_param, self) ]
+      | _ -> outside "the default of a function without self")
+  | _ -> []
+
 let instance cx target targs args =
   let s = signature cx target in
   let targs = impl_args cx target targs args s @ targs in
@@ -137,7 +164,10 @@ let instance cx target targs args =
     outside "a generic call of %s" (target_name target);
   if List.exists (fun t -> depth t > deepest_instance) targs then
     outside "a function called at ever deeper types";
-  let types_of = List.map2 (fun (v, _) t -> (v, t)) s.type_params targs in
+  let self = self_of cx target args in
+  let types_of =
+    self @ List.map2 (fun (v, _) t -> (v, t)) s.type_params targs
+  in
   let declared = List.map snd s.params in
   let rows_of =
     if List.length declared = List.length args then
@@ -147,9 +177,9 @@ let instance cx target targs args =
   if not (List.for_all (fun v -> List.mem_assoc v rows_of) s.row_params) then
     outside "a row parameter of %s that no argument gives" (target_name target);
   let fkey =
-    match (targs, rows_of) with
+    match (List.map snd self @ targs, rows_of) with
     | [], [] -> target_name target
-    | _ ->
+    | targs, _ ->
         let types = List.map (type_arg cx) targs in
         let rows =
           List.map (fun (_, r) -> Model_json.to_string (row cx r)) rows_of

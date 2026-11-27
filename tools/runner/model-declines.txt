@@ -149,7 +149,6 @@ conformance/threads/scope_await.lt
 conformance/threads/scope_when.lt
 conformance/time/date_times.lt
 conformance/time/instants.lt
-conformance/traits/default_methods.lt
 conformance/traits/operators_use_impls.lt
 conformance/traits/structural_calls.lt
 conformance/traits/structural_hash_reaches_component.lt

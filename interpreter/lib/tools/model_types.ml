@@ -15,6 +15,7 @@ type target =
   | Function of Hir.item
   | Member of Hir.item * string
   | Impl of Hir.item * Hir.item * string
+  | Default of Hir.item * Hir.item * string
 
 type fn_instance = {
   fkey : string;

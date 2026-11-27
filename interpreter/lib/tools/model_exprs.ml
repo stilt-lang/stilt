@@ -243,6 +243,13 @@ and trait_call cx (e : Tast.expr) (t : Hir.item) name self targs args =
     when declared_record owner
          && Model_fns.code cx (Impl (t, owner, name)) <> None ->
       code_call cx e (Impl (t, owner, name)) targs args
+  | Con (owner, _)
+    when declared_record owner
+         && Env.trait_impl cx.env ~trait:t owner <> None
+         && Model_fns.code cx (Default (t, owner, name)) <> None ->
+      (* traits.impl-members: an impl that leaves out a method with a default has the
+         default, its [Self] the impl's type. *)
+      code_call cx e (Default (t, owner, name)) targs args
   | _ ->
       let values = List.map (fun (a : Tast.arg) -> expr cx a.value) args in
       Model_traits.structural_call cx e t name self values

@@ -23,8 +23,11 @@ type target =
   | Function of Hir.item
   | Member of Hir.item * string
   | Impl of Hir.item * Hir.item * string
-      (** A function, a function of a type's inherent impls, or a method of the
-          impl of a trait for a type constructor that the program writes. *)
+  | Default of Hir.item * Hir.item * string
+      (** A function, a function of a type's inherent impls, a method of the
+          impl of a trait for a type constructor that the program writes, or the
+          default of a trait's method, for a type constructor whose impl leaves
+          the method out (traits.impl-members). *)
 
 type fn_instance = {
   fkey : string;  (** Its name in the calculus. *)
