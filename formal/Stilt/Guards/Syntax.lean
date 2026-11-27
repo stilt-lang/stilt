@@ -1,10 +1,11 @@
 /-!
 # The calculus of guards and list patterns
 
-The patterns that the core calculus leaves out, and the guards of arms
-(patterns.pattern-forms and patterns.guards): constants, the three forms of
-list patterns, `[p₁, …, pₙ]`, `[p₁, …, pₙ, ..]` and `[p₁, …, pₙ, ..rest]`, and
-an arm `p if c`, whose guard is tried with each way its pattern matches. Its
+The patterns that the core calculus leaves out, the three forms of list
+patterns, `[p₁, …, pₙ]`, `[p₁, …, pₙ, ..]` and `[p₁, …, pₙ, ..rest]`, with
+constants and the guards of arms, which the core calculus has too
+(patterns.pattern-forms and patterns.guards): an arm `p if c`, whose guard is
+tried with each way its pattern matches. Its
 values are integers, Booleans, `()`, tuples, lists and `Option`; its expressions,
 which guards and arm bodies are, read variables, add and compare integers, and
 print, so that a run shows each time a guard runs (a guard may run more than

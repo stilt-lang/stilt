@@ -69,10 +69,16 @@ def gatherPath (visit : κ → Expr → List β) (k : κ) : List Projection → 
   | .field _ :: path => gatherPath visit k path
   | .index i :: path => i.gather visit k ++ gatherPath visit k path
 
-/-- What `visit` finds in the arms of a `match`. -/
+/-- What `visit` finds in the arms of a `match`. An arm's guard takes its body's context. -/
 def gatherArms (visit : κ → Expr → List β) (kf : Nat → κ) (n : Nat) : List Arm → List β
   | [] => []
-  | ⟨_, _, body⟩ :: arms => body.gather visit (kf n) ++ gatherArms visit kf (n + 1) arms
+  | ⟨_, _, guard, body⟩ :: arms =>
+    gatherGuard visit (kf n) guard ++ body.gather visit (kf n) ++ gatherArms visit kf (n + 1) arms
+
+/-- What `visit` finds in an arm's guard. -/
+def gatherGuard (visit : κ → Expr → List β) (k : κ) : Option Expr → List β
+  | none => []
+  | some g => g.gather visit k
 
 end
 
@@ -142,10 +148,16 @@ def gatePath (k : κ) : List Projection → List Projection
   | .field f :: path => .field f :: gatePath k path
   | .index i :: path => .index (i.gate k) :: gatePath k path
 
-/-- The arms of a `match`, gated. -/
+/-- The arms of a `match`, gated, each guard in its body's context. -/
 def gateArms (kf : Nat → κ) (n : Nat) : List Arm → List Arm
   | [] => []
-  | ⟨C, binders, body⟩ :: arms => ⟨C, binders, body.gate (kf n)⟩ :: gateArms kf (n + 1) arms
+  | ⟨C, binders, guard, body⟩ :: arms =>
+    ⟨C, binders, gateGuard (kf n) guard, body.gate (kf n)⟩ :: gateArms kf (n + 1) arms
+
+/-- An arm's guard, gated. -/
+def gateGuard (k : κ) : Option Expr → Option Expr
+  | none => none
+  | some g => some (g.gate k)
 
 end
 
@@ -259,9 +271,17 @@ theorem gatherArms_all (hv : ∀ k e, ∀ b ∈ visit k e, P b) :
     ∀ (arms : List Arm) (kf : Nat → κ) (n : Nat),
     ∀ b ∈ gatherArms child visit kf n arms, P b
   | [], _, _, _, h => nomatch h
-  | ⟨_, _, body⟩ :: arms, kf, n, b, h => by
+  | ⟨_, _, guard, body⟩ :: arms, kf, n, b, h => by
     simp only [gatherArms, List.mem_append] at h
-    exact h.elim (Expr.gather_all hv body _ b) (gatherArms_all hv arms kf _ b)
+    rcases h with (h | h) | h
+    · exact gatherGuard_all hv guard _ b h
+    · exact Expr.gather_all hv body _ b h
+    · exact gatherArms_all hv arms kf _ b h
+
+theorem gatherGuard_all (hv : ∀ k e, ∀ b ∈ visit k e, P b) :
+    ∀ (guard : Option Expr) (k : κ), ∀ b ∈ gatherGuard child visit k guard, P b
+  | none, _, _, h => nomatch h
+  | some g, k, b, h => Expr.gather_all hv g k b h
 
 end
 
@@ -343,8 +363,14 @@ theorem gatherPath_map : ∀ (p : List Projection) (k : κ),
 theorem gatherArms_map : ∀ (arms : List Arm) (kf : Nat → κ) (n : Nat),
     gatherArms child visit kf n arms = gatherArms child' visit' (f ∘ kf) n arms
   | [], _, _ => rfl
-  | ⟨_, _, body⟩ :: arms, kf, n => by
-    simp only [gatherArms, Expr.gather_map body, gatherArms_map arms kf, Function.comp_apply]
+  | ⟨_, _, guard, body⟩ :: arms, kf, n => by
+    simp only [gatherArms, gatherGuard_map guard, Expr.gather_map body, gatherArms_map arms kf,
+      Function.comp_apply]
+
+theorem gatherGuard_map : ∀ (guard : Option Expr) (k : κ),
+    gatherGuard child visit k guard = gatherGuard child' visit' (f k) guard
+  | none, _ => rfl
+  | some g, k => by simp only [gatherGuard, Expr.gather_map g k]
 
 end
 

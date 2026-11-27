@@ -49,7 +49,7 @@ private def fns : List FnDecl := [
 private def decls : Decls :=
   ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 controlRow)], []⟩,
       ⟨"ToDefault", [("fail", .fn [(.let, .i64)] .i64 controlRow)], []⟩],
-    [], fns, [], [], [], [⟨"Ask", [("ask", .unit, .i64)]⟩, ⟨"Fail", [("fail", .i64, .i64)]⟩]⟩
+    [], fns, [], [], [], [⟨"Ask", [("ask", .unit, .i64)]⟩, ⟨"Fail", [("fail", .i64, .i64)]⟩], []⟩
 
 /-- `f(inout n)`. -/
 private def callInout (f : Name) : Expr := .call (.fnRef f [] []) [.inout ⟨"n", []⟩] .unit

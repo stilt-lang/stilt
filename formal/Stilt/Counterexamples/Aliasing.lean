@@ -21,7 +21,7 @@ def alias : FnDecl :=
 /-- `var a = 0; raise alias(inout a, inout a)`, in a `main` whose row is
 `raise<i64>`. modes.overlapping-inout rejects the call. -/
 def aliased : Program :=
-  ⟨⟨[], [], [alias], [], [], [], []⟩,
+  ⟨⟨[], [], [alias], [], [], [], [], []⟩,
     .varIn "a" .i64 (.int 0)
       (.raise (.call (.fnRef "alias" [] []) [.inout ⟨"a", []⟩, .inout ⟨"a", []⟩] .i64)),
     ⟨false, some .i64, [], [], none⟩, {}⟩

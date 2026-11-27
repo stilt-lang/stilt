@@ -121,8 +121,14 @@ def pathExclusive (reading : List Shape) : List Projection → Bool
 the variable of the same name. -/
 def armsExclusive (reading : List Shape) : List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms =>
-    body.exclusive (binders.foldl hide reading) && armsExclusive reading arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    guardExclusive (binders.foldl hide reading) guard &&
+      body.exclusive (binders.foldl hide reading) && armsExclusive reading arms
+
+/-- Whether an arm's guard obeys the law. -/
+def guardExclusive (reading : List Shape) : Option Expr → Bool
+  | none => true
+  | some g => g.exclusive reading
 
 end
 

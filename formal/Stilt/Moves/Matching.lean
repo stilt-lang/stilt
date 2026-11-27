@@ -57,6 +57,9 @@ theorem Pattern.matchOn_erase : ∀ (p : Pattern) (v : Value),
   | .list ps r, v => by
     cases v <;> simp only [Pattern.matchOn, Value.erase, Option.map_none]
     exact matchOnList_erase ps r _
+  | .const _ p, v => by
+    simp only [Pattern.matchOn, Pattern.matchOn_erase p v]
+    cases p.matchOn v <;> rfl
 
 theorem matchOnList_erase : ∀ (ps : List Pattern) (r : ListRest) (vs : List Value),
     matchOnList ps r (eraseValues vs) = (matchOnList ps r vs).map eraseValues
@@ -88,20 +91,19 @@ theorem matchOnFields_erase : ∀ (fps : List (Name × Pattern)) (fields : List 
 end
 
 theorem eraseArms_eq_map : ∀ arms : List Arm,
-    eraseArms arms = arms.map fun a => ⟨a.pattern, a.binders, a.body.erase⟩
+    eraseArms arms = arms.map fun a => ⟨a.pattern, a.binders, eraseGuard a.guard, a.body.erase⟩
   | [] => rfl
-  | ⟨_, _, _⟩ :: arms => by simp [eraseArms, eraseArms_eq_map arms]
+  | ⟨_, _, _, _⟩ :: arms => by simp [eraseArms, eraseArms_eq_map arms]
 
-/-- A `match` over erased arms selects, on an erased value, the erasure of the
-arm it selects on the value, with the erased parts. -/
-theorem selectArm_erase : ∀ (arms : List Arm) (v : Value),
-    selectArm (eraseArms arms) v.erase = (selectArm arms v).map fun (a, us) =>
-      (⟨a.pattern, a.binders, a.body.erase⟩, eraseValues us)
-  | [], _ => rfl
-  | ⟨p, bs, b⟩ :: arms, v => by
-    simp only [eraseArms, selectArm, Pattern.matchOn_erase p v]
-    cases p.matchOn v with
-    | some us => rfl
-    | none => exact selectArm_erase arms v
+/-- The ways a pattern matches an erased value are the erasures of the ways it matches the
+value. -/
+theorem Pattern.ways_erase (p : Pattern) (v : Value) :
+    p.ways v.erase = (p.ways v).map eraseValues := by
+  simp only [Pattern.ways]
+  induction p.alternatives with
+  | nil => rfl
+  | cons q qs ih =>
+    simp only [List.filterMap_cons, Pattern.matchOn_erase q v]
+    cases q.matchOn v <;> simp [ih]
 
 end Stilt

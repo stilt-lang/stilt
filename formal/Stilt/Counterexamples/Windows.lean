@@ -31,7 +31,7 @@ private def ints (ns : List Int) : Expr := .list .i64 (ns.map .int)
 /-- `var xs = [1, 2, 3]; let v = View.of(xs, 0, 3); xs[0] = 9; raise v.copy()[0]`, in a `main`
 whose row is `raise<i64>`. views.change-while-viewed rejects the assignment. -/
 def viewChanged : Program :=
-  ⟨⟨[], [], [], [], [], [], []⟩,
+  ⟨⟨[], [], [], [], [], [], [], []⟩,
     .varIn "xs" listTy (ints [1, 2, 3])
       (.letIn "v" (.view listTy) (.view [.var "xs", .int 0, .int 3])
         (.seq (.assign ⟨"xs", [.index (.int 0)]⟩ (.int 9))
@@ -99,7 +99,7 @@ def escaping : FnDecl :=
 /-- `raise f().copy()`, in a `main` whose row is `raise<List<i64>>`. views.escaping rejects
 `f`'s result, which views its local `ys`. -/
 def viewEscaped : Program :=
-  ⟨⟨[], [], [escaping], [], [], [], []⟩,
+  ⟨⟨[], [], [escaping], [], [], [], [], []⟩,
     .raise (.op .copy [.call (.fnRef "f" [] []) [] (.view listTy)]),
     ⟨false, some listTy, [], [], none⟩, {}⟩
 

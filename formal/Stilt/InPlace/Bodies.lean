@@ -75,7 +75,13 @@ def pathDistinctParams : List Projection → Bool
 /-- Every arm of a `match` has `distinctParams`. -/
 def armsDistinctParams : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.distinctParams && armsDistinctParams arms
+  | ⟨_, _, guard, body⟩ :: arms =>
+    guardDistinctParams guard && body.distinctParams && armsDistinctParams arms
+
+/-- An arm's guard has `distinctParams`. -/
+def guardDistinctParams : Option Expr → Bool
+  | none => true
+  | some g => g.distinctParams
 
 end
 
@@ -180,8 +186,14 @@ theorem PathFits.distinctParams :
 theorem ArmsFit.distinctParams :
     ∀ {Γ fx arms σ τ}, ArmsFit D s Γ fx arms σ τ → armsDistinctParams arms = true
   | _, _, _, _, _, .nil => rfl
-  | _, _, ⟨_, _, _⟩ :: _, _, _, .cons _ _ _ hb _ harms => by
-    simp [armsDistinctParams, HasType.distinctParams hb, ArmsFit.distinctParams harms]
+  | _, _, ⟨_, _, _, _⟩ :: _, _, _, .cons _ _ _ hg hb _ harms => by
+    simp [armsDistinctParams, GuardFits.distinctParams hg, HasType.distinctParams hb,
+      ArmsFit.distinctParams harms]
+
+theorem GuardFits.distinctParams :
+    ∀ {Γ fx g}, GuardFits D s Γ fx g → guardDistinctParams g = true
+  | _, _, _, .none => rfl
+  | _, _, _, .some hg _ => HasType.distinctParams hg
 
 end
 
@@ -346,9 +358,14 @@ theorem armsExclusive_substRows :
     ∀ (arms : List Arm) (r : List Shape),
       armsExclusive r (substArmRows s arms) = armsExclusive r arms
   | [], _ => rfl
-  | ⟨_, binders, body⟩ :: arms, r => by
-    simp [substArmRows, armsExclusive, Expr.exclusive_substRows body (binders.foldl hide r),
-      armsExclusive_substRows arms r]
+  | ⟨_, binders, g, body⟩ :: arms, r => by
+    simp [substArmRows, armsExclusive, guardExclusive_substRows g (binders.foldl hide r),
+      Expr.exclusive_substRows body (binders.foldl hide r), armsExclusive_substRows arms r]
+
+theorem guardExclusive_substRows :
+    ∀ (g : Option Expr) (r : List Shape), guardExclusive r (substGuardRows s g) = guardExclusive r g
+  | none, _ => rfl
+  | some g, r => by simp [substGuardRows, guardExclusive, Expr.exclusive_substRows g r]
 
 end
 
@@ -447,9 +464,14 @@ theorem pathDistinctParams_substRows :
 theorem armsDistinctParams_substRows :
     ∀ arms : List Arm, armsDistinctParams (substArmRows s arms) = armsDistinctParams arms
   | [] => rfl
-  | ⟨_, _, body⟩ :: arms => by
-    simp [substArmRows, armsDistinctParams, Expr.distinctParams_substRows body,
-      armsDistinctParams_substRows arms]
+  | ⟨_, _, g, body⟩ :: arms => by
+    simp [substArmRows, armsDistinctParams, guardDistinctParams_substRows g,
+      Expr.distinctParams_substRows body, armsDistinctParams_substRows arms]
+
+theorem guardDistinctParams_substRows :
+    ∀ g : Option Expr, guardDistinctParams (substGuardRows s g) = guardDistinctParams g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardDistinctParams, Expr.distinctParams_substRows g]
 
 end
 

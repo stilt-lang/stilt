@@ -156,6 +156,22 @@ def TraitImpl.Implements (D : Decls) (i : TraitImpl) : Prop :=
     ∃ d ∈ i.fns, d.name = m ∧ d.typeParams = [] ∧ d.rowParams = [] ∧
       d.type = σ.substTys [(selfParam, i.type.type)]
 
+/-- The constants declared before a constant, as the bindings its value reads: each of its
+type, and immutable. -/
+def constCtx (cs : List ConstDecl) : Ctx := cs.reverse.map fun c => (c.name, ⟨c.type, false⟩)
+
+/-- Each constant's value is a constant expression (declarations.constant-expressions) of
+the type it declares (declarations.constant-declarations), checked with only the constants
+declared before it in scope. So no constant names itself or a later one, and constants
+never name one another in a cycle (declarations.constant-cycles): the program lists its
+constants in an order of their uses, which only constants without a cycle have. A
+constant expression performs nothing, and is no function's body. -/
+def Decls.ConstsTyped (D : Decls) : Prop :=
+  ∀ pre c post, D.consts = pre ++ c :: post →
+    c.value.IsConstant ∧ c.type.WellFormed .closed ∧
+      ∃ σ, HasType D .closed (constCtx pre) (Effects.body Row.pure .never) c.value σ ∧
+        Fits σ c.type
+
 /-- The names of the type namespace: those of the records, the variant types, the traits
 and the effects (declarations.namespaces). -/
 def Decls.typeNames (D : Decls) : List Name :=
@@ -223,6 +239,13 @@ structure Decls.WellFormed (D : Decls) : Prop where
   /-- The rows of declared types name only declared effects (E0211,
   handlers.effects-in-rows). -/
   effectsDeclared : D.EffectsDeclared
+  /-- Each constant is declared once, under its name or its `Type.NAME`
+  (declarations.unique-names), and its type names no type parameter: those of an inherent
+  block with type parameters aren't in scope there, which is E0211
+  (declarations.impl-constants). -/
+  constNames : (D.consts.map (·.name)).Nodup
+  constTypes : ∀ c ∈ D.consts, c.type.params = []
+  consts : D.ConstsTyped
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`

@@ -231,10 +231,17 @@ def pathMentions : List Projection → Live
   | .field _ :: path => pathMentions path
   | .index i :: path => i.mentions.union (pathMentions path)
 
-/-- The variables the arms of a `match` mention, which their binders hide. -/
+/-- The variables the arms of a `match` mention, in their guards and bodies, which their
+binders hide. -/
 def armsMentions : List Arm → Live
   | [] => .empty
-  | ⟨_, binders, body⟩ :: arms => (body.mentions.eraseAll binders).union (armsMentions arms)
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    ((guardMentions guard).union body.mentions).eraseAll binders |>.union (armsMentions arms)
+
+/-- The variables an arm's guard mentions. -/
+def guardMentions : Option Expr → Live
+  | none => .empty
+  | some g => g.mentions
 
 end
 
@@ -318,10 +325,21 @@ def pathMovesOk (after : Live) : List Projection → Bool
   | .index i :: path => i.movesOk (after.union (pathMentions path)) && pathMovesOk after path
 
 /-- Whether the marks of the arms of a `match` are last uses, each arm's body
-followed by what follows the `match` but its binders. -/
+followed by what follows the `match` but its binders, and its guard by its body and, as the
+next arms run when the guard is false (patterns.guards), by those arms and what follows the
+`match`, but its binders, and by itself: a guard runs again with the next way an
+or-pattern matches, so it moves none of what it reads. -/
 def armsMovesOk (after : Live) : List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms => body.movesOk (after.eraseAll binders) && armsMovesOk after arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    guardMovesOk ((((after.union (armsMentions arms)).eraseAll binders).union body.mentions).union
+        (guardMentions guard)) guard &&
+      body.movesOk (after.eraseAll binders) && armsMovesOk after arms
+
+/-- Whether the marks of an arm's guard are last uses. -/
+def guardMovesOk (after : Live) : Option Expr → Bool
+  | none => true
+  | some g => g.movesOk after
 
 end
 
@@ -331,7 +349,8 @@ end
 macro "mentions_case" : tactic => `(tactic| (
   apply Bool.eq_iff_iff.2
   simp only [Expr.free, Expr.mentions, exprsFree, fieldsFree, argsFree, pathFree, armsFree,
-    exprsMentions, fieldsMentions, argsMentions, pathMentions, armsMentions, Live.mem_union,
+    guardFree, exprsMentions, fieldsMentions, argsMentions, pathMentions, armsMentions,
+    guardMentions, Live.mem_union,
     Live.mem_one, Live.mem_ofList, Live.mem_empty, Live.mem_erase_eq, Live.mem_eraseAll_eq,
     Bool.or_eq_true, Bool.and_eq_true, beq_iff_eq, bne_iff_ne, ne_eq, Bool.not_eq_true',
     Bool.eq_false_iff, List.contains_iff_mem, List.any_eq_true, List.mem_map] at *
@@ -391,8 +410,13 @@ theorem pathMem_mentions (x : Name) : ∀ p : List Projection, (pathMentions p).
 
 theorem armsMem_mentions (x : Name) : ∀ arms : List Arm, (armsMentions arms).mem x = armsFree x arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
+  | ⟨_, _, g, b⟩ :: arms => by
+    have := guardMem_mentions x g
     have := Expr.mem_mentions x b; have := armsMem_mentions x arms; mentions_case
+
+theorem guardMem_mentions (x : Name) : ∀ g : Option Expr, (guardMentions g).mem x = guardFree x g
+  | none => rfl
+  | some g => by have := Expr.mem_mentions x g; mentions_case
 
 end
 

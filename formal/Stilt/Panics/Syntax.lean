@@ -224,8 +224,17 @@ def argsPanicFree : List Known → List Arg → Bool
 about their names. -/
 def armsPanicFree : List Known → List Arm → Bool
   | _, [] => true
-  | G, ⟨_, binders, body⟩ :: arms =>
-    body.panicFreeIn (withoutNames G binders) && armsPanicFree G arms
+  | G, ⟨_, binders, guard, body⟩ :: arms =>
+    guardPanicFree (withoutNames (withoutNames G (guardWrites guard)) binders) guard &&
+      body.panicFreeIn (withoutNames (withoutNames G (guardWrites guard)) binders) &&
+      armsPanicFree (withoutNames G (guardWrites guard)) arms
+
+/-- Whether an arm's guard adds no `panic`. A guard may run once for each way its pattern
+matches, and the arm's body and the next arms run after it, so none of them knows what it
+writes. -/
+def guardPanicFree : List Known → Option Expr → Bool
+  | _, none => true
+  | G, some g => g.panicFreeIn G
 
 end
 

@@ -55,7 +55,7 @@ def keepRaisingBool : Expr :=
 /-- `let h: fn() = try keep(|| raise true) catch _ => || (); h()`, in a `main`
 whose row is pure. -/
 def escaped : Program :=
-  ⟨⟨[], [], [keep], [], [], [], []⟩,
+  ⟨⟨[], [], [keep], [], [], [], [], []⟩,
     .letIn "h" (.fn [] .unit Row.pure) keepRaisingBool (.call (.var "h") [] .unit),
     Row.pure, {}⟩
 

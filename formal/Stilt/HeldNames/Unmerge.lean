@@ -129,12 +129,20 @@ theorem armsExclusive_unmerge (h : Merges P f m) :
     armsExclusive (r.map (Shape.rename m)) (renameArms m arms) = true →
     armsExclusive (r.map (Shape.rename f)) (renameArms f arms) = true
   | [], _, _, _ => rfl
-  | ⟨_, binders, b⟩ :: arms, r, hb, he => by
+  | ⟨_, binders, g, b⟩ :: arms, r, hb, he => by
     simp only [armsBindsNone, renameArms, armsExclusive, Bool.and_eq_true, List.all_eq_true,
       Bool.not_eq_true'] at hb he ⊢
-    rw [foldl_hide_rename h.m_off h.m_in _ _ hb.1.1] at he
-    rw [foldl_hide_rename h.f_off h.f_in _ _ hb.1.1]
-    exact ⟨Expr.exclusive_unmerge h b _ hb.1.2 he.1, armsExclusive_unmerge h arms r hb.2 he.2⟩
+    rw [foldl_hide_rename h.m_off h.m_in _ _ hb.1.1.1] at he
+    rw [foldl_hide_rename h.f_off h.f_in _ _ hb.1.1.1]
+    exact ⟨⟨guardExclusive_unmerge h g _ hb.1.1.2 he.1.1, Expr.exclusive_unmerge h b _ hb.1.2 he.1.2⟩,
+      armsExclusive_unmerge h arms r hb.2 he.2⟩
+
+theorem guardExclusive_unmerge (h : Merges P f m) :
+    ∀ (g : Option Expr) (r : List Shape), guardBindsNone P g = true →
+    guardExclusive (r.map (Shape.rename m)) (renameGuard m g) = true →
+    guardExclusive (r.map (Shape.rename f)) (renameGuard f g) = true
+  | none, _, _, _ => rfl
+  | some g, r, hb, he => Expr.exclusive_unmerge h g r hb he
 
 end
 

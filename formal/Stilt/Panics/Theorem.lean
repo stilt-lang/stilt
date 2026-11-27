@@ -198,7 +198,7 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
     case seq a b =>
       exact bindAfterLen (ih G a he.1) (keep a) (fun s _ _ h => after_holds w n a s h) fun _ _ => ih _ b he.2
     case «if» c τ a b => exact cond w n ih he.1.1 (ih _ a he.1.2) (ih _ b he.2)
-    case «match» e τ arms => exact bind (ih G e he.1) (keep e) fun _ hv => select w ih he.2 hv
+    case «match» e τ arms => exact bind (ih G e he.1) (keep e) fun _ hv => select w ih hk he.2 hv
     case «for» x τ e body =>
       exact loop w ih hk x (e.rangeFacts G x body) e.rangeAfter he.1 he.2
         (fun _ _ _ h vs hv => range_after n e h vs hv)

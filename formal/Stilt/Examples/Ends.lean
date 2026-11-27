@@ -33,7 +33,7 @@ private def call (f : Name) (e : Expr) (result : Ty :=
 /-- `fn double(n: i64) -> i64 { n + n }` and `fn quad(n: i64) -> i64 { double(double(n)) }`. -/
 private def decls : Decls :=
   ⟨[], [], [fn "double" (add (.var "n") (.var "n")), fn "quad" (call "double" (call "double" (.var "n")))],
-    [], [], [], []⟩
+    [], [], [], [], []⟩
 
 /-- `var s = 0; for x in [1, 2, 3] { s = s + quad(x) }; raise s`. -/
 private def summed : Program :=
@@ -49,7 +49,7 @@ example : (summed.runCopy 9).observe = .outOfFuel := rfl
 
 /-- `fn f(n: i64) -> i64 { f(n) }`. -/
 private def forever : Program :=
-  ⟨⟨[], [], [fn "f" (call "f" (.var "n"))], [], [], [], []⟩, call "f" (.int 0), ⟨false, some .i64, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [fn "f" (call "f" (.var "n"))], [], [], [], [], []⟩, call "f" (.int 0), ⟨false, some .i64, [], [], none⟩, {}⟩
 
 example : forever.divFree = false := rfl
 example : (forever.runCopy 12).observe = .outOfFuel := rfl
@@ -72,11 +72,11 @@ private def treeFn (name : Name) (body : Expr) : FnDecl :=
 
 /-- `match t { Leaf => 0, Node(l, v, r) => onNode }`. -/
 private def onTree (onNode : Expr) : Expr :=
-  .match (.var "t") .i64 [⟨.variant "Tree" "Leaf" [], [], .int 0⟩,
-    ⟨.variant "Tree" "Node" [.bind "l", .bind "v", .bind "r"], ["l", "v", "r"], onNode⟩]
+  .match (.var "t") .i64 [⟨.variant "Tree" "Leaf" [], [], none, .int 0⟩,
+    ⟨.variant "Tree" "Node" [.bind "l", .bind "v", .bind "r"], ["l", "v", "r"], none, onNode⟩]
 
 private def treeProgram (body : Expr) (arg : Expr) : Program :=
-  ⟨⟨[], [tree], [treeFn "sum" body], [], [], [], []⟩, .raise (call "sum" arg),
+  ⟨⟨[], [tree], [treeFn "sum" body], [], [], [], [], []⟩, .raise (call "sum" arg),
     ⟨false, some .i64, [], [], none⟩, {}⟩
 
 /-- `Node(Node(Leaf, 1, Leaf), 2, Node(Leaf, 3, Leaf))`. -/
@@ -108,9 +108,9 @@ private def cell : RecordDecl := ⟨"Cell", [("head", .i64), ("rest", .variant "
 private def wrapped : Decls :=
   ⟨[cell], [⟨"List", [("Nil", []), ("Cons", [.record "Cell" []])], []⟩],
     [⟨"len", [], [], [⟨.let, "xs", .variant "List" [], none⟩], .i64, Row.pure,
-      .match (.var "xs") .i64 [⟨.variant "List" "Nil" [], [], .int 0⟩,
-        ⟨.variant "List" "Cons" [.bind "c"], ["c"], add (.int 1) (call "len" (.field (.var "c") "rest"))⟩],
-      {}⟩], [], [], [], []⟩
+      .match (.var "xs") .i64 [⟨.variant "List" "Nil" [], [], none, .int 0⟩,
+        ⟨.variant "List" "Cons" [.bind "c"], ["c"], none, add (.int 1) (call "len" (.field (.var "c") "rest"))⟩],
+      {}⟩], [], [], [], [], []⟩
 
 example : Decls.rankedBy wrapped wrapped.rank wrapped.desc = true := rfl
 
@@ -126,7 +126,7 @@ private def sub (a b : Expr) : Expr := .op (.arith .sub .i64) [a, b]
 
 /-- `fn count(n: i64) -> i64 { if test { 0 } else { count(step) } }`, and `count(5)`. -/
 private def counting (test step : Expr) : Program :=
-  ⟨⟨[], [], [fn "count" (.if test .i64 (.int 0) (call "count" step))], [], [], [], []⟩,
+  ⟨⟨[], [], [fn "count" (.if test .i64 (.int 0) (call "count" step))], [], [], [], [], []⟩,
     .raise (call "count" (.int 5)), ⟨false, some .i64, [], [], none⟩, {}⟩
 
 /-- `if n <= 0 { 0 } else { count(n - 1) }` shrinks: the `else` branch of `n <= 0` gives
@@ -145,7 +145,7 @@ private def going (next : Expr) : Program :=
   ⟨⟨[], [], [⟨"go", [], [], [⟨.let, "i", .i64, none⟩, ⟨.let, "n", .i64, none⟩], .i64, Row.pure,
       .if (cmp .lt (.var "i") (.var "n")) .i64
         (.call (.fnRef "go" [] []) [.value (add (.var "i") (.int 1)), .value next] .i64) (.var "i"),
-      {}⟩], [], [], [], []⟩,
+      {}⟩], [], [], [], [], []⟩,
     .raise (.call (.fnRef "go" [] []) [.value (.int 0), .value (.int 3)] .i64),
     ⟨false, some .i64, [], [], none⟩, {}⟩
 
@@ -160,7 +160,7 @@ private def step (x : Name) (o : Arith) (k : Int) : Expr := .assign ⟨x, []⟩ 
 with `n = 10` it ends at fuel 18 and not 17, and with `n = 20` it needs more, as each
 turn costs a fuel. -/
 private def counted (n : Int) (cond : Expr) (body : Expr) : Program :=
-  ⟨⟨[], [], [], [], [], [], []⟩, .letIn "n" .i64 (.int n) (.varIn "i" .i64 (.int 0) (.varIn "s" .i64 (.int 0)
+  ⟨⟨[], [], [], [], [], [], [], []⟩, .letIn "n" .i64 (.int n) (.varIn "i" .i64 (.int 0) (.varIn "s" .i64 (.int 0)
     (.seq (.while cond body) (.raise (.var "s"))))), ⟨false, some .i64, [], [], none⟩, {}⟩
 
 private def loopBody : Expr := .seq (.assign ⟨"s", []⟩ (add (.var "s") (.var "i"))) (step "i" .add 1)

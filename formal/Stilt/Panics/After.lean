@@ -1,4 +1,5 @@
 import Stilt.Panics.Conds
+import Stilt.Selection
 
 /-!
 # The code after an `if` that jumps
@@ -52,17 +53,16 @@ theorem eval_not_reaches {σ : Type} {D : Decls} {M : Memory σ} :
     case «match» e τ arms =>
       obtain ⟨u, s'', _, h₂⟩ := Eval.bind_reaches (m := eval D M n e)
         (f := fun u => Eval.select M (eval D M n) arms u) h
-      unfold Eval.select at h₂
-      cases hsel : selectArm arms u with
-      | none => rw [hsel] at h₂; exact nomatch h₂
-      | some au =>
-        obtain ⟨arm, us⟩ := au
-        rw [hsel] at h₂
-        dsimp only at h₂
-        split at h₂
-        · exact withVars_not_reaches (fun s₁ v₁ s₁' => eval_not_reaches n arm.body
-            (armsAlwaysJump_mem he (selectArm_mem hsel).1) s₁ v₁ s₁') _ s'' v s' h₂
-        · exact nomatch h₂
+      refine Eval.select_of (fun m => ∀ s v s', ¬ (m s).Reaches v s')
+        (.inl fun _ _ _ h => nomatch h) (.inl fun _ _ _ h => nomatch h)
+        (fun arm ha _ _ _ _ => withVars_not_reaches (fun s₁ v₁ s₁' => eval_not_reaches n arm.body
+          (armsAlwaysJump_mem he ha) s₁ v₁ s₁') _)
+        (fun arm ha _ _ _ _ _ m hm s₁ v₁ s₁' h₃ => ?_) s'' v s' h₂
+      obtain ⟨b, s₂, _, h₄⟩ := Eval.bind_reaches h₃
+      cases b
+      · exact hm _ _ _ h₄
+      · exact withVars_not_reaches (fun s₃ v₃ s₃' => eval_not_reaches n arm.body
+          (armsAlwaysJump_mem he ha) s₃ v₃ s₃') _ _ _ _ h₄
     case «if» c τ a b =>
       simp only [Bool.and_eq_true] at he
       obtain ⟨g, s'', _, h₂⟩ := Eval.bind_reaches (m := Eval.bind (eval D M n c) Eval.asBool)

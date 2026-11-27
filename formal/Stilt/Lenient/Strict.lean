@@ -48,11 +48,11 @@ private theorem strictFits {N : List Name} {e : Expr} {σ τ : Ty} (h : LenientF
 branch do. -/
 private theorem noEscape_else {N : List Name} {k : Form} {e : Expr} {τ : Ty} {a : Arm}
     {x : Expr} {allowed : Bool}
-    (h : (Expr.form k (.match e τ [a, ⟨.wild, [], x⟩])).noEscape D N allowed = true) :
+    (h : (Expr.form k (.match e τ [a, ⟨.wild, [], none, x⟩])).noEscape D N allowed = true) :
     e.noEscape D N false = true ∧ x.noEscape D N false = true := by
   obtain ⟨_, _, _⟩ := a
   simp only [Expr.noEscape, armsNoEscape, Bool.and_eq_true] at h
-  exact ⟨h.1, by simpa using h.2.2.1⟩
+  exact ⟨h.1, by simpa using h.2.2.1.2⟩
 
 mutual
 
@@ -203,10 +203,18 @@ theorem Lenient.ArmsFit.strict :
     ∀ {N Γ fx arms σ τ}, Lenient.ArmsFit D scope vs N Γ fx arms σ τ →
       armsNoEscape D N arms = true → Stilt.ArmsFit D scope Γ fx arms σ τ
   | _, _, _, _, _, _, .nil, _ => .nil
-  | _, _, _, ⟨_, _, _⟩ :: _, _, _, .cons hc hlen hnd hb hfit harms, hne =>
+  | _, _, _, ⟨_, _, _, _⟩ :: _, _, _, .cons hc hlen hnd hg hb hfit harms, hne =>
     have h := both hne
-    .cons hc hlen hnd (Lenient.HasType.strict hb h.1) (strictFits hfit h.1)
-      (Lenient.ArmsFit.strict harms h.2)
+    have h' := both h.1
+    .cons hc hlen hnd (Lenient.GuardFits.strict hg h'.1) (Lenient.HasType.strict hb h'.2)
+      (strictFits hfit h'.2) (Lenient.ArmsFit.strict harms h.2)
+
+theorem Lenient.GuardFits.strict :
+    ∀ {N Γ fx g}, Lenient.GuardFits D scope vs N Γ fx g →
+      guardNoEscape D N g = true → Stilt.GuardFits D scope Γ fx g
+  | _, _, _, _, .none, _ => .none
+  | _, _, _, _, .some hg hfit, hne =>
+    .some (Lenient.HasType.strict hg hne) (strictFits hfit hne)
 
 end
 
@@ -312,8 +320,14 @@ theorem ArmsFit.lenient :
     ∀ {N Γ fx arms σ τ}, ArmsFit D scope Γ fx arms σ τ →
       Lenient.ArmsFit D scope vs N Γ fx arms σ τ
   | _, _, _, _, _, _, .nil => .nil
-  | _, _, _, _, _, _, .cons hc hlen hnd hb hfit harms =>
-    .cons hc hlen hnd (HasType.lenient hb) (.inl hfit) (ArmsFit.lenient harms)
+  | _, _, _, _, _, _, .cons hc hlen hnd hg hb hfit harms =>
+    .cons hc hlen hnd (GuardFits.lenient hg) (HasType.lenient hb) (.inl hfit)
+      (ArmsFit.lenient harms)
+
+theorem GuardFits.lenient :
+    ∀ {N Γ fx g}, GuardFits D scope Γ fx g → Lenient.GuardFits D scope vs N Γ fx g
+  | _, _, _, _, .none => .none
+  | _, _, _, _, .some hg hfit => .some (HasType.lenient hg) (.inl hfit)
 
 end
 

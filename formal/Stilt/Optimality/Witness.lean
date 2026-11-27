@@ -109,7 +109,7 @@ def main : Expr := vars (rootTy ss) (rootLit ss) (ss.map Shape.root) (theCall ss
 
 /-- The witness's declarations: its record types and its function (declarations.records and declarations.function-declarations). -/
 def decls (a b : Nat) (extra : List Name) : Decls :=
-  ⟨recDecls (fieldNames ss) (leafName ss) (depth ss), [], [callee ss a b extra], [], [], [], []⟩
+  ⟨recDecls (fieldNames ss) (leafName ss) (depth ss), [], [callee ss a b extra], [], [], [], [], []⟩
 
 /-- The witness: `main` returns the call's result, `()`, and its row is pure. -/
 def witness (a b : Nat) (extra : List Name) : Program :=

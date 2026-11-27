@@ -13,7 +13,7 @@ and its values have `Eq` (traits.structural-impls and traits.map-equality).
 
 namespace Stilt.Examples.Bounds
 
-private def decls : Decls := ⟨[], [], [], [], [], [], []⟩
+private def decls : Decls := ⟨[], [], [], [], [], [], [], []⟩
 
 /-- The scope of `fn f<T: …>`, with the bounds of `T`. -/
 private def scopeWith (bounds : List Name) : RowScope :=

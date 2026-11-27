@@ -200,12 +200,19 @@ def pathDivFree : Roles → List Projection → Bool
   | R, .field _ :: path => pathDivFree R path
   | R, .index i :: path => i.divFree R && pathDivFree R path
 
-/-- Whether each arm's body holds no site of `div`, its binders with the role `Arm.role`
-gives them, of a scrutinee of role `r`. -/
+/-- Whether each arm's guard and body hold no site of `div`, its binders with the role
+`Arm.role` gives them, of a scrutinee of role `r`: the guard is code of the arm, run with the
+same binders (patterns.guards). -/
 def armsDivFree : Roles → Role → List Arm → Bool
   | _, _, [] => true
-  | R, r, ⟨p, xs, body⟩ :: arms =>
-    body.divFree (R.bindAll xs (Arm.role r ⟨p, xs, body⟩)) && armsDivFree R r arms
+  | R, r, ⟨p, xs, guard, body⟩ :: arms =>
+    guardDivFree (R.bindAll xs (Arm.role r ⟨p, xs, guard, body⟩)) guard &&
+      body.divFree (R.bindAll xs (Arm.role r ⟨p, xs, guard, body⟩)) && armsDivFree R r arms
+
+/-- Whether an arm's guard, if it has one, holds no site of `div`. -/
+def guardDivFree : Roles → Option Expr → Bool
+  | _, none => true
+  | R, some g => g.divFree R
 
 end
 
@@ -267,7 +274,11 @@ def pathDepth : List Projection → Nat
 
 def armsDepth : List Arm → Nat
   | [] => 0
-  | ⟨_, _, body⟩ :: arms => max body.depth (armsDepth arms)
+  | ⟨_, _, guard, body⟩ :: arms => max (guardDepth guard) (max body.depth (armsDepth arms))
+
+def guardDepth : Option Expr → Nat
+  | none => 0
+  | some g => g.depth
 
 end
 

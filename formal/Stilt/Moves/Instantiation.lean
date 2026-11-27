@@ -82,8 +82,14 @@ theorem pathMentions_substRows :
 theorem armsMentions_substRows :
     ∀ arms : List Arm, armsMentions (substArmRows s arms) = armsMentions arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmRows, armsMentions, Expr.mentions_substRows b, armsMentions_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsMentions, guardMentions_substRows g, Expr.mentions_substRows b,
+      armsMentions_substRows arms]
+
+theorem guardMentions_substRows :
+    ∀ g : Option Expr, guardMentions (substGuardRows s g) = guardMentions g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardMentions, Expr.mentions_substRows g]
 
 end
 
@@ -158,8 +164,14 @@ theorem pathMovesOk_substRows : ∀ (p : List Projection) (L : Live),
 theorem armsMovesOk_substRows : ∀ (arms : List Arm) (L : Live),
     armsMovesOk L (substArmRows s arms) = armsMovesOk L arms
   | [], _ => rfl
-  | ⟨_, _, b⟩ :: arms, L => by
-    simp [substArmRows, armsMovesOk, Expr.movesOk_substRows b, armsMovesOk_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms, L => by
+    simp [substArmRows, armsMovesOk, armsMentions_substRows, Expr.mentions_substRows,
+      guardMentions_substRows, guardMovesOk_substRows g, Expr.movesOk_substRows b, armsMovesOk_substRows arms]
+
+theorem guardMovesOk_substRows : ∀ (g : Option Expr) (L : Live),
+    guardMovesOk L (substGuardRows s g) = guardMovesOk L g
+  | none, _ => rfl
+  | some g, L => by simp [substGuardRows, guardMovesOk, Expr.movesOk_substRows g]
 
 end
 
@@ -235,8 +247,14 @@ theorem pathMentions_substTys :
 theorem armsMentions_substTys :
     ∀ arms : List Arm, armsMentions (substArmTys s arms) = armsMentions arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmTys, armsMentions, Expr.mentions_substTys b, armsMentions_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsMentions, guardMentions_substTys g, Expr.mentions_substTys b,
+      armsMentions_substTys arms]
+
+theorem guardMentions_substTys :
+    ∀ g : Option Expr, guardMentions (substGuardTys s g) = guardMentions g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardMentions, Expr.mentions_substTys g]
 
 end
 
@@ -311,8 +329,14 @@ theorem pathMovesOk_substTys : ∀ (p : List Projection) (L : Live),
 theorem armsMovesOk_substTys : ∀ (arms : List Arm) (L : Live),
     armsMovesOk L (substArmTys s arms) = armsMovesOk L arms
   | [], _ => rfl
-  | ⟨_, _, b⟩ :: arms, L => by
-    simp [substArmTys, armsMovesOk, Expr.movesOk_substTys b, armsMovesOk_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms, L => by
+    simp [substArmTys, armsMovesOk, armsMentions_substTys, Expr.mentions_substTys,
+      guardMentions_substTys, guardMovesOk_substTys g, Expr.movesOk_substTys b, armsMovesOk_substTys arms]
+
+theorem guardMovesOk_substTys : ∀ (g : Option Expr) (L : Live),
+    guardMovesOk L (substGuardTys s g) = guardMovesOk L g
+  | none, _ => rfl
+  | some g, L => by simp [substGuardTys, guardMovesOk, Expr.movesOk_substTys g]
 
 end
 

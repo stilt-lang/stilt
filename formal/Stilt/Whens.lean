@@ -53,7 +53,11 @@ def pathWhens : List Projection → List When
 
 def armsWhens : List Arm → List When
   | [] => []
-  | ⟨_, _, body⟩ :: arms => body.whens ++ armsWhens arms
+  | ⟨_, _, guard, body⟩ :: arms => guardWhens guard ++ body.whens ++ armsWhens arms
+
+def guardWhens : Option Expr → List When
+  | none => []
+  | some g => g.whens
 
 end
 

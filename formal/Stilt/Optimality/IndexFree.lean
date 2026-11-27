@@ -70,7 +70,12 @@ def argsIndexFree : List Arg → Bool
 /-- Whether no place in the arms of a `match` holds an index. -/
 def armsIndexFree : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.indexFree && armsIndexFree arms
+  | ⟨_, _, guard, body⟩ :: arms => guardIndexFree guard && body.indexFree && armsIndexFree arms
+
+/-- Whether no place in an arm's guard holds an index. -/
+def guardIndexFree : Option Expr → Bool
+  | none => true
+  | some g => g.indexFree
 
 end
 

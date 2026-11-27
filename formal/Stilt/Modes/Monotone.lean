@@ -174,10 +174,16 @@ theorem armsLeave_mono :
     ParamSet.Le L.consumed C' → OutLe o o' → armsLeave L o arms = true →
       armsLeave (L.with C') o' arms = true
   | [], _, _, _, _, _, _, h => by simp [armsLeave] at h
-  | ⟨_, bs, b⟩ :: arms, L, C', o, o', hC, ho, h => by
+  | ⟨_, bs, g, b⟩ :: arms, L, C', o, o', hC, ho, h => by
     simp only [armsLeave, Bool.or_eq_true, Bool.and_eq_true] at h ⊢
-    exact h.imp (And.imp_right (Expr.leaves_mono b (L.hide bs) C' o o' hC ho))
+    exact h.imp (And.imp_right (Or.imp (guardLeave_mono g (L.hide bs) C' hC)
+        (Expr.leaves_mono b (L.hide bs) C' o o' hC ho)))
       (armsLeave_mono arms L C' o o' hC ho)
+
+theorem guardLeave_mono : ∀ (g : Option Expr) (L : Leaving) (C' : Consumed),
+    ParamSet.Le L.consumed C' → guardLeave L g = true → guardLeave (L.with C') g = true
+  | none, _, _, _, h => h
+  | some g, L, C', hC, h => Expr.leaves_mono g L C' none none hC (OutLe.refl _) h
 
 end
 
@@ -285,9 +291,15 @@ theorem pathUse_below :
 theorem armsUse_below : ∀ (arms : List Arm) (O O' : OnceParams) (f : Name), ParamSet.Le O O' →
     (armsUse O' f arms).Below (armsUse O f arms)
   | [], _, _, _, _ => Use.Below.refl _
-  | ⟨_, _, b⟩ :: arms, O, O', f, h =>
-    (Use.Below.cond _ (Use.Below.refl _) (Expr.use_below b O O' f h)).add
+  | ⟨_, _, g, b⟩ :: arms, O, O', f, h =>
+    (Use.Below.cond _ (Use.Below.refl _)
+      ((guardUse_below g O O' f h).add (Expr.use_below b O O' f h))).add
       (armsUse_below arms O O' f h)
+
+theorem guardUse_below : ∀ (g : Option Expr) (O O' : OnceParams) (f : Name), ParamSet.Le O O' →
+    (guardUse O' f g).Below (guardUse O f g)
+  | none, _, _, _, _ => Use.Below.refl _
+  | some g, O, O', f, h => (Expr.use_below g O O' f h).again
 
 end
 

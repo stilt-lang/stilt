@@ -57,7 +57,7 @@ private def swap : FnDecl :=
     .letIn "x" .i64 (.var "a") (.seq (.assign ⟨"a", []⟩ (.var "b")) (.assign ⟨"b", []⟩ (.var "x"))), {}⟩
 
 private def decls : Decls := ⟨[], [], [atFor "at" Row.pure, atFor "atRaising" raising, atThreading, swap],
-  [], [], [], []⟩
+  [], [], [], [], []⟩
 
 private def program (main : Expr) : Program := ⟨decls, main, raising, {}⟩
 

@@ -57,7 +57,7 @@ private def D : Decls :=
      decl "ping" [param "f" thunk, param "n" .i64]
        (.if (.bool true) .i64 (.call (v "f") [] .i64) (call "pong" [v "f", v "n"])) .i64,
      decl "pong" [param "f" thunk, param "n" .i64]
-       (.if (.bool true) .i64 (.call (v "f") [] .i64) (call "ping" [v "f", v "n"])) .i64], [], [], [], []⟩
+       (.if (.bool true) .i64 (.call (v "f") [] .i64) (call "ping" [v "f", v "n"])) .i64], [], [], [], [], []⟩
 
 private def M : ModeEnv := ⟨D, D.consumed, D.onceParams⟩
 
@@ -330,16 +330,16 @@ example : zUniqueness (.letIn "xs" (.list lst) (.list lst [v "a"])
 /-- `through_a_pattern`, and `through_if_let` on a tuple: a binder holds the
 copy at the place of the value it matches; one beside it holds none. -/
 example : zUniqueness (.letIn "p" (.record "Pair" []) (pair (v "a") (ints []))
-    (.match (v "p") .i64 [⟨.record "Pair" [("left", .bind "left"), ("right", .wild)], ["left"],
+    (.match (v "p") .i64 [⟨.record "Pair" [("left", .bind "left"), ("right", .wild)], ["left"], none,
       .varIn "z" lst (v "left") (writeZ (call "len" [v "a"]))⟩])) = some .shared := by decide
 
 example : zUniqueness (.letIn "p" (.tuple [.list lst, .i64])
-    (.op .tuple [.list lst [v "a"], .int 1]) (.match (v "p") .i64 [⟨.tuple [.list [.bind "l"] .exact, .wild], ["l"],
-      .varIn "z" lst (v "l") (writeZ (call "len" [v "a"]))⟩, ⟨.wild, [], .int 0⟩])) =
+    (.op .tuple [.list lst [v "a"], .int 1]) (.match (v "p") .i64 [⟨.tuple [.list [.bind "l"] .exact, .wild], ["l"], none,
+      .varIn "z" lst (v "l") (writeZ (call "len" [v "a"]))⟩, ⟨.wild, [], none, .int 0⟩])) =
     some .shared := by decide
 
 example : zUniqueness (.letIn "p" (.record "Pair" []) (pair (v "a") (ints []))
-    (.match (v "p") .i64 [⟨.record "Pair" [("left", .wild), ("right", .bind "right")], ["right"],
+    (.match (v "p") .i64 [⟨.record "Pair" [("left", .wild), ("right", .bind "right")], ["right"], none,
       .varIn "z" lst (v "right") (writeZ (call "len" [v "a"]))⟩])) = some .unique := by decide
 
 /-- `through_a_loop`, `through_an_assignment` and `after_a_loop`: a copy comes

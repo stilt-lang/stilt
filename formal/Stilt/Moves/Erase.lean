@@ -78,7 +78,12 @@ def erasePath : List Projection → List Projection
 /-- Erases the marks of the arms of a `match`. -/
 def eraseArms : List Arm → List Arm
   | [] => []
-  | ⟨C, binders, body⟩ :: arms => ⟨C, binders, body.erase⟩ :: eraseArms arms
+  | ⟨C, binders, guard, body⟩ :: arms => ⟨C, binders, eraseGuard guard, body.erase⟩ :: eraseArms arms
+
+/-- Erases the marks of an arm's guard. -/
+def eraseGuard : Option Expr → Option Expr
+  | none => none
+  | some g => some g.erase
 
 end
 
@@ -152,8 +157,12 @@ theorem erasePath_mark : ∀ (p : List Projection) (L : Live), erasePath (markPa
 
 theorem eraseArms_mark : ∀ (arms : List Arm) (L : Live), eraseArms (markArms L arms) = eraseArms arms
   | [], _ => rfl
-  | ⟨_, _, b⟩ :: arms, L => by
-    simp [markArms, eraseArms, Expr.erase_markMoves b, eraseArms_mark arms L]
+  | ⟨_, _, g, b⟩ :: arms, L => by
+    simp [markArms, eraseArms, eraseGuard_mark g, Expr.erase_markMoves b, eraseArms_mark arms L]
+
+theorem eraseGuard_mark : ∀ (g : Option Expr) (L : Live), eraseGuard (markGuard L g) = eraseGuard g
+  | none, _ => rfl
+  | some g, L => by simp [markGuard, eraseGuard, Expr.erase_markMoves g]
 
 end
 
@@ -262,9 +271,14 @@ theorem pathExclusive_erase : ∀ (p : List Projection) (r : List Shape),
 theorem armsExclusive_erase : ∀ (arms : List Arm) (r : List Shape),
     armsExclusive r (eraseArms arms) = armsExclusive r arms
   | [], _ => rfl
-  | ⟨_, bs, b⟩ :: arms, r => by
-    simp [eraseArms, armsExclusive, Expr.exclusive_erase b (bs.foldl hide r),
-      armsExclusive_erase arms r]
+  | ⟨_, bs, g, b⟩ :: arms, r => by
+    simp [eraseArms, armsExclusive, guardExclusive_erase g (bs.foldl hide r),
+      Expr.exclusive_erase b (bs.foldl hide r), armsExclusive_erase arms r]
+
+theorem guardExclusive_erase : ∀ (g : Option Expr) (r : List Shape),
+    guardExclusive r (eraseGuard g) = guardExclusive r g
+  | none, _ => rfl
+  | some g, r => by simp [eraseGuard, guardExclusive, Expr.exclusive_erase g r]
 
 end
 
@@ -315,7 +329,12 @@ theorem pathFree_erase (x : Name) : ∀ p : List Projection, pathFree x (erasePa
 
 theorem armsFree_erase (x : Name) : ∀ arms : List Arm, armsFree x (eraseArms arms) = armsFree x arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [eraseArms, armsFree, Expr.free_erase x b, armsFree_erase x arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [eraseArms, armsFree, guardFree_erase x g, Expr.free_erase x b, armsFree_erase x arms]
+
+theorem guardFree_erase (x : Name) : ∀ g : Option Expr, guardFree x (eraseGuard g) = guardFree x g
+  | none => rfl
+  | some g => by simp [eraseGuard, guardFree, Expr.free_erase x g]
 
 end
 

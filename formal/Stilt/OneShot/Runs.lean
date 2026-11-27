@@ -1,6 +1,7 @@
 import Stilt.OneShot.Steps
 import Stilt.OneShot.Instances
 import Stilt.Matching
+import Stilt.Selection
 
 /-!
 # Runs that resume at most so often
@@ -21,13 +22,17 @@ def OneShotRun (run : Expr → Eval Copy.State Value) : Prop :=
   ∀ e, e.oneShot = true → e.resumes ≤ 1 → Eval.OneShot e.resumes Value.OneShot (run e)
 
 theorem armsOneShot_mem : ∀ {arms : List Arm} {arm : Arm}, armsOneShot arms = true → arm ∈ arms →
-    arm.body.oneShot = true ∧ arm.body.resumes ≤ armsResumes arms
-  | ⟨_, _, _⟩ :: _, _, h, hm => by
+    arm.body.oneShot = true ∧ arm.body.resumes ≤ armsResumes arms ∧
+      ∀ g, arm.guard = some g → g.oneShot = true ∧ loopResumes g.resumes ≤ armsResumes arms
+  | ⟨_, _, guard, _⟩ :: _, _, h, hm => by
     simp only [armsOneShot, Bool.and_eq_true] at h
     rcases List.mem_cons.1 hm with rfl | hm
-    · exact ⟨h.1, by simp only [armsResumes]; omega⟩
-    · obtain ⟨h₁, h₂⟩ := armsOneShot_mem h.2 hm
-      exact ⟨h₁, by simp only [armsResumes]; omega⟩
+    · refine ⟨h.1.2, by simp only [armsResumes]; omega, fun g hg => ?_⟩
+      subst hg
+      exact ⟨h.1.1, by simp only [armsResumes, guardResumes]; omega⟩
+    · obtain ⟨h₁, h₂, h₃⟩ := armsOneShot_mem h.2 hm
+      exact ⟨h₁, by simp only [armsResumes]; omega,
+        fun g hg => ⟨(h₃ g hg).1, by simp only [armsResumes]; have := (h₃ g hg).2; omega⟩⟩
 
 /-- A loop that may run its body twice counts two. -/
 theorem loopResumes_le {n : Nat} (h : loopResumes n ≤ 1) : n = 0 := by
@@ -104,18 +109,22 @@ theorem args : ∀ (as : List Arg), argsOneShot as = true → argsResumes as ≤
 theorem select (w : WriteBack) {arms : List Arm} (harms : armsOneShot arms = true)
     (hn : armsResumes arms ≤ 1) {v : Value} (hv : v.OneShot) :
     Eval.OneShot (armsResumes arms) Value.OneShot (Eval.select (Copy.memoryWith w) run arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact stuck
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, hm⟩ := selectArm_mem hsel
-    obtain ⟨hb, hbn⟩ := armsOneShot_mem harms hmem
-    dsimp only
-    split
-    · exact withVars w ((h _ hb (by omega)).mono hbn fun _ h => h) _ fun xv hxv =>
-        arm.pattern.matchOn_parts Value.OneShot.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2
-    · exact stuck
+  refine Eval.select_of (Eval.OneShot (armsResumes arms) Value.OneShot) (.inl stuck) (.inl stuck)
+    (fun arm ha _ us hm _ => ?_) fun arm ha g hg us hu _ m hm => ?_
+  · obtain ⟨hb, hbn, -⟩ := armsOneShot_mem harms ha
+    exact withVars w ((h _ hb (by omega)).mono hbn fun _ h => h) _ fun xv hxv =>
+      arm.pattern.matchOn_parts Value.OneShot.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2
+  · obtain ⟨hb, hbn, hgs⟩ := armsOneShot_mem harms ha
+    obtain ⟨hgo, hgn⟩ := hgs g hg
+    have hg0 : g.resumes = 0 := by
+      unfold loopResumes at hgn; split at hgn <;> omega
+    obtain ⟨q, -, hq⟩ := Pattern.mem_ways hu
+    have hparts : ∀ xv ∈ arm.binders.zip us, xv.2.OneShot := fun xv hxv =>
+      q.matchOn_parts Value.OneShot.passesToParts hv hq xv.2 (List.of_mem_zip hxv).2
+    refine bindLe (a := 0) (b := armsResumes arms)
+      (withVars w (bindLe (a := 0) (b := 0) (hg0 ▸ h g hgo (by omega)) (fun _ _ => asBool)
+        (by omega)) _ hparts) (fun b _ => ite b ?_ hm) (by omega)
+    exact withVars w ((h _ hb (by omega)).mono hbn fun _ h => h) _ hparts
 
 theorem assign (w : WriteBack) (x : Name) {ps : List Projection} (hps : pathOneShot ps = true)
     {value : Expr} (hv : value.oneShot = true) (hn : pathResumes ps + value.resumes ≤ 1) :

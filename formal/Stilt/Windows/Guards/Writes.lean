@@ -90,7 +90,7 @@ theorem eval_writes (D : Decls) :
     case «if» c τ a b =>
       exact bind (bind (ih c) fun _ _ => asBool) fun v _ => ite v (ih a) (ih b)
     case «match» e τ arms =>
-      exact bind (ih e) fun v _ => select (fun arm _ => ihR arm.body _) v
+      exact bind (ih e) fun v _ => select (fun arm _ => ⟨ihR arm.body _, fun g _ => ihR g _⟩) v
     case «for» x τ e body => exact loop x (ih e) (ih body) (hide_nil_sub x _)
     case raise e => exact bind (ih e) fun v _ => throw v
     case «try» e => exact ih e

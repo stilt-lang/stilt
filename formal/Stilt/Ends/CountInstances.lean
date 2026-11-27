@@ -54,7 +54,12 @@ theorem pathContFree_substTys : ∀ p : List Projection, pathContFree (substPath
 
 theorem armsContFree_substTys : ∀ arms : List Arm, armsContFree (substArmTys s arms) = armsContFree arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmTys, armsContFree, Expr.contFree_substTys b, armsContFree_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsContFree, guardContFree_substTys g, Expr.contFree_substTys b, armsContFree_substTys arms]
+
+theorem guardContFree_substTys : ∀ g : Option Expr, guardContFree (substGuardTys s g) = guardContFree g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardContFree, Expr.contFree_substTys g]
 
 end
 
@@ -166,7 +171,12 @@ theorem pathContFree_substRows : ∀ p : List Projection, pathContFree (substPat
 
 theorem armsContFree_substRows : ∀ arms : List Arm, armsContFree (substArmRows s arms) = armsContFree arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmRows, armsContFree, Expr.contFree_substRows b, armsContFree_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsContFree, guardContFree_substRows g, Expr.contFree_substRows b, armsContFree_substRows arms]
+
+theorem guardContFree_substRows : ∀ g : Option Expr, guardContFree (substGuardRows s g) = guardContFree g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardContFree, Expr.contFree_substRows g]
 
 end
 

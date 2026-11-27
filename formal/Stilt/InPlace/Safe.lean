@@ -156,13 +156,16 @@ theorem args_safe : ∀ {args : List Arg}, argsExclusive r args = true →
     exact ArgsSafe.cons_inout (path_safe h.1 h'.1) (args_safe h.2 h'.2)
 
 theorem arms_safe : ∀ {arms : List Arm}, armsExclusive r arms = true →
-    armsDistinctParams arms = true → ∀ arm ∈ arms, arm.body.Safe
+    armsDistinctParams arms = true →
+      ∀ arm ∈ arms, arm.body.Safe ∧ ∀ g, arm.guard = some g → g.Safe
   | [], _, _ => by simp
-  | ⟨C, binders, body⟩ :: arms, h, h' => by
+  | ⟨C, binders, guard, body⟩ :: arms, h, h' => by
     simp only [armsExclusive, armsDistinctParams, Bool.and_eq_true] at h h'
     intro arm harm
     rcases List.mem_cons.1 harm with rfl | harm
-    · exact ⟨⟨_, h.1⟩, h'.1⟩
+    · refine ⟨⟨⟨_, h.1.2⟩, h'.1.2⟩, fun g hg => ?_⟩
+      subst hg
+      exact ⟨⟨_, h.1.1⟩, h'.1.1⟩
     · exact arms_safe h.2 h'.2 arm harm
 
 end Parts

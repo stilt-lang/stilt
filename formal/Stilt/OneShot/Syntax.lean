@@ -68,10 +68,17 @@ def pathResumes : List Projection → Nat
   | .field _ :: path => pathResumes path
   | .index i :: path => i.resumes + pathResumes path
 
-/-- One arm of a `match` runs: the most of any. -/
+/-- An arm's guard runs, then its body or the next arms: the most of either. A guard may
+run more than once, with each way its pattern matches (patterns.guards), so one that may
+resume counts two, as a loop does. -/
 def armsResumes : List Arm → Nat
   | [] => 0
-  | ⟨_, _, body⟩ :: arms => max body.resumes (armsResumes arms)
+  | ⟨_, _, guard, body⟩ :: arms => guardResumes guard + max body.resumes (armsResumes arms)
+
+/-- The `resume`s of an arm's guard, which may run more than once. -/
+def guardResumes : Option Expr → Nat
+  | none => 0
+  | some g => loopResumes g.resumes
 
 end
 
@@ -116,7 +123,11 @@ def pathOneShot : List Projection → Bool
 
 def armsOneShot : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.oneShot && armsOneShot arms
+  | ⟨_, _, guard, body⟩ :: arms => guardOneShot guard && body.oneShot && armsOneShot arms
+
+def guardOneShot : Option Expr → Bool
+  | none => true
+  | some g => g.oneShot
 
 end
 

@@ -308,15 +308,31 @@ theorem args {run run' : Expr → Eval σ Value} (h : Runs run run') :
   | .value e :: as => bind (h e) fun _ => bind (args h as) fun _ => refl _
   | .inout ⟨_, ps⟩ :: as => bind (path h ps) fun _ => bind (args h as) fun _ => refl _
 
-theorem select (M : Memory σ) {run run' : Expr → Eval σ Value} (h : Runs run run')
-    (arms : List Arm) (v : Value) :
-    (Eval.select M run arms v).Below (Eval.select M run' arms v) := by
-  unfold Eval.select
-  split
-  · split
-    · exact withVars M (h _) _
+theorem guarded (M : Memory σ) {run run' : Expr → Eval σ Value} (h : Runs run run')
+    (bs : List Name) (g body : Expr) {next next' : Eval σ Value} (hn : next.Below next') :
+    ∀ ways, (Eval.guarded M run bs g body next ways).Below
+      (Eval.guarded M run' bs g body next' ways)
+  | [] => hn
+  | us :: ways => by
+    simp only [Eval.guarded]
+    split
+    · exact bind (withVars M (bind (h g) fun _ => refl _) _) fun b =>
+        ite b (withVars M (h body) _) (guarded M h bs g body hn ways)
     · exact refl _
-  · exact refl _
+
+theorem select (M : Memory σ) {run run' : Expr → Eval σ Value} (h : Runs run run') :
+    ∀ (arms : List Arm) (v : Value),
+      (Eval.select M run arms v).Below (Eval.select M run' arms v)
+  | [], _ => refl _
+  | arm :: arms, v => by
+    simp only [Eval.select]
+    split
+    · split
+      · split
+        · exact withVars M (h _) _
+        · exact refl _
+      · exact select M h arms v
+    · exact guarded M h _ _ _ (select M h arms v) _
 
 theorem assign (M : Memory σ) {run run' : Expr → Eval σ Value} (h : Runs run run') (x : Name)
     (ps : List Projection) (value : Expr) :

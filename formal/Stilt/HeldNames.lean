@@ -64,8 +64,12 @@ def pathBindsNone (P : Name → Bool) : List Projection → Bool
 
 def armsBindsNone (P : Name → Bool) : List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms => binders.all (fun x => !P x) && body.bindsNone P &&
-    armsBindsNone P arms
+  | ⟨_, binders, guard, body⟩ :: arms => binders.all (fun x => !P x) &&
+    guardBindsNone P guard && body.bindsNone P && armsBindsNone P arms
+
+def guardBindsNone (P : Name → Bool) : Option Expr → Bool
+  | none => true
+  | some g => g.bindsNone P
 
 end
 

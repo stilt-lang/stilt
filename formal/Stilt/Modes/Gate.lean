@@ -69,8 +69,13 @@ theorem erasePath_gate : ∀ (p : List Projection) (k : κ),
 theorem eraseArms_gate : ∀ (arms : List Arm) (kf : Nat → κ) (n : Nat),
     eraseArms (gateArms child keep kf n arms) = eraseArms arms
   | [], _, _ => rfl
-  | ⟨_, _, b⟩ :: arms, kf, n => by
-    simp [gateArms, eraseArms, Expr.erase_gate b, eraseArms_gate arms]
+  | ⟨_, _, g, b⟩ :: arms, kf, n => by
+    simp [gateArms, eraseArms, eraseGuard_gate g, Expr.erase_gate b, eraseArms_gate arms]
+
+theorem eraseGuard_gate : ∀ (g : Option Expr) (k : κ),
+    eraseGuard (gateGuard child keep k g) = eraseGuard g
+  | none, _ => rfl
+  | some g, k => by simp [gateGuard, eraseGuard, Expr.erase_gate g]
 
 end
 
@@ -132,8 +137,13 @@ theorem pathMentions_gate : ∀ (p : List Projection) (k : κ),
 theorem armsMentions_gate : ∀ (arms : List Arm) (kf : Nat → κ) (n : Nat),
     armsMentions (gateArms child keep kf n arms) = armsMentions arms
   | [], _, _ => rfl
-  | ⟨_, _, b⟩ :: arms, kf, n => by
-    simp [gateArms, armsMentions, Expr.mentions_gate b, armsMentions_gate arms]
+  | ⟨_, _, g, b⟩ :: arms, kf, n => by
+    simp [gateArms, armsMentions, guardMentions_gate g, Expr.mentions_gate b, armsMentions_gate arms]
+
+theorem guardMentions_gate : ∀ (g : Option Expr) (k : κ),
+    guardMentions (gateGuard child keep k g) = guardMentions g
+  | none, _ => rfl
+  | some g, k => by simp [gateGuard, guardMentions, Expr.mentions_gate g]
 
 end
 
@@ -230,9 +240,16 @@ theorem pathMovesOk_gate : ∀ (p : List Projection) (k : κ) (L : Live),
 theorem armsMovesOk_gate : ∀ (arms : List Arm) (kf : Nat → κ) (n : Nat) (L : Live),
     armsMovesOk L arms = true → armsMovesOk L (gateArms child keep kf n arms) = true
   | [], _, _, _, _ => rfl
-  | ⟨_, _, b⟩ :: arms, kf, n, L, h => by
-    simp only [gateArms, armsMovesOk, Bool.and_eq_true] at h ⊢
-    exact ⟨Expr.movesOk_gate b _ _ h.1, armsMovesOk_gate arms kf _ L h.2⟩
+  | ⟨_, _, g, b⟩ :: arms, kf, n, L, h => by
+    simp only [gateArms, armsMovesOk, armsMentions_gate, Expr.mentions_gate, guardMentions_gate,
+      Bool.and_eq_true] at h ⊢
+    exact ⟨⟨guardMovesOk_gate g _ _ h.1.1, Expr.movesOk_gate b _ _ h.1.2⟩,
+      armsMovesOk_gate arms kf _ L h.2⟩
+
+theorem guardMovesOk_gate : ∀ (g : Option Expr) (k : κ) (L : Live),
+    guardMovesOk L g = true → guardMovesOk L (gateGuard child keep k g) = true
+  | none, _, _, _ => rfl
+  | some g, k, L, h => Expr.movesOk_gate g k L h
 
 end
 

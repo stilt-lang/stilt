@@ -30,7 +30,7 @@ def aImpl : ImplDecl := ⟨"A", [peek]⟩
 /-- `var a = A { b: 0 }; raise a.f(inout a.b)`, in a `main` whose row is
 `raise<i64>`. modes.overlapping-inout rejects the call. -/
 def receiverAliased : Program :=
-  ⟨⟨[aType], [], [], [aImpl], [], [], []⟩,
+  ⟨⟨[aType], [], [], [aImpl], [], [], [], []⟩,
     .varIn "a" (.record "A" []) (.record "A" [] [("b", .int 0)])
       (.raise (Expr.methodCall "A" "f" [] (.inout ⟨"a", []⟩) [.inout ⟨"a", [.field "b"]⟩] .i64)),
     ⟨false, some .i64, [], [], none⟩, {}⟩

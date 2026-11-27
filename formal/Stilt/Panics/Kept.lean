@@ -1,4 +1,5 @@
 import Stilt.Panics.Keeps
+import Stilt.Selection
 
 /-!
 # Evaluation keeps what it doesn't write
@@ -18,18 +19,26 @@ def KeepsRun (run : Expr → Eval Copy.State Value) : Prop :=
   ∀ e W L, e.writes ⊆ W → e.resizes ⊆ L → Eval.Keeps W L (fun _ => True) (run e)
 
 theorem armsWrites_mem : ∀ {arms : List Arm} {arm : Arm}, arm ∈ arms →
-    arm.body.writes ⊆ armsWrites arms
-  | ⟨_, _, _⟩ :: _, _, hm => by
+    arm.body.writes ⊆ armsWrites arms ∧ ∀ g, arm.guard = some g → g.writes ⊆ armsWrites arms
+  | ⟨_, _, guard, _⟩ :: _, _, hm => by
     rcases List.mem_cons.1 hm with rfl | hm
-    · exact List.subset_append_left _ _
-    · exact (armsWrites_mem hm).trans (List.subset_append_right _ _)
+    · refine ⟨fun x hx => by simp [armsWrites, hx], fun g hg x hx => ?_⟩
+      subst hg
+      simp [armsWrites, guardWrites, hx]
+    · obtain ⟨h₁, h₂⟩ := armsWrites_mem hm
+      exact ⟨h₁.trans (List.subset_append_right _ _),
+        fun g hg => (h₂ g hg).trans (List.subset_append_right _ _)⟩
 
 theorem armsResizes_mem : ∀ {arms : List Arm} {arm : Arm}, arm ∈ arms →
-    arm.body.resizes ⊆ armsResizes arms
-  | ⟨_, _, _⟩ :: _, _, hm => by
+    arm.body.resizes ⊆ armsResizes arms ∧ ∀ g, arm.guard = some g → g.resizes ⊆ armsResizes arms
+  | ⟨_, _, guard, _⟩ :: _, _, hm => by
     rcases List.mem_cons.1 hm with rfl | hm
-    · exact List.subset_append_left _ _
-    · exact (armsResizes_mem hm).trans (List.subset_append_right _ _)
+    · refine ⟨fun x hx => by simp [armsResizes, hx], fun g hg x hx => ?_⟩
+      subst hg
+      simp [armsResizes, guardResizes, hx]
+    · obtain ⟨h₁, h₂⟩ := armsResizes_mem hm
+      exact ⟨h₁.trans (List.subset_append_right _ _),
+        fun g hg => (h₂ g hg).trans (List.subset_append_right _ _)⟩
 
 namespace Eval.Keeps
 
@@ -89,18 +98,19 @@ theorem args : ∀ as : List Arg, argsWrites as ⊆ W → argsResizes as ⊆ L �
             simpa using hl.1⟩
         · exact hqs q hq
 
+omit h in
+theorem asBool (v : Value) : Eval.Keeps W L (fun _ => True) (Eval.asBool v : Eval Copy.State Bool) := by
+  cases v <;> first | exact pure trivial | exact fail _
+
 theorem select {arms : List Arm} (hw : armsWrites arms ⊆ W) (hl : armsResizes arms ⊆ L) (v : Value) :
     Eval.Keeps W L (fun _ => True) (Eval.select (Copy.memoryWith w) run arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact fail _
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, -⟩ := selectArm_mem hsel
-    dsimp only
-    split
-    · exact withVars w (h _ W L ((armsWrites_mem hmem).trans hw) ((armsResizes_mem hmem).trans hl)) _
-    · exact fail _
+  refine Eval.select_of (Eval.Keeps W L (fun _ => True)) (.inl (fail _)) (.inl (fail _))
+    (fun arm ha _ _ _ _ => ?_) fun arm ha g hg _ _ _ m hm => ?_
+  · exact withVars w (h _ W L ((armsWrites_mem ha).1.trans hw) ((armsResizes_mem ha).1.trans hl)) _
+  · exact bind (withVars w (bind (h g W L (((armsWrites_mem ha).2 g hg).trans hw)
+        (((armsResizes_mem ha).2 g hg).trans hl)) fun v _ => asBool v) _) fun b _ =>
+      ite b (withVars w (h _ W L ((armsWrites_mem ha).1.trans hw)
+        ((armsResizes_mem ha).1.trans hl)) _) hm
 
 omit h in
 theorem memoryWith_write (s : Copy.State) (x : Name) (p : Path) (v : Value) :
@@ -131,10 +141,6 @@ theorem assign (x : Name) {ps : List Projection} {value : Expr}
 omit h in
 theorem asList (v : Value) :
     Eval.Keeps W L (fun _ => True) (Eval.asList v : Eval Copy.State (List Value)) := by
-  cases v <;> first | exact pure trivial | exact fail _
-
-omit h in
-theorem asBool (v : Value) : Eval.Keeps W L (fun _ => True) (Eval.asBool v : Eval Copy.State Bool) := by
   cases v <;> first | exact pure trivial | exact fail _
 
 theorem loop (x : Name) {e body : Expr} (he : e.writes ⊆ W) (hb : body.writes ⊆ W)

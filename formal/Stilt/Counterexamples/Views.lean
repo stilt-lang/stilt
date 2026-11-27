@@ -24,7 +24,7 @@ namespace Stilt.Counterexamples
 open Stilt.Views
 
 /-- No declarations. -/
-private def noDecls : Decls := ⟨[], [], [], [], [], [], []⟩
+private def noDecls : Decls := ⟨[], [], [], [], [], [], [], []⟩
 
 /-- `xs`, a list of `i64`, as a variable. -/
 private def xs : VExpr := .var "xs"

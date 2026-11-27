@@ -17,7 +17,7 @@ namespace Stilt.Examples.ViewChecks
 private def decls : Decls :=
   ⟨[⟨"Doc", [("lines", .list .str), ("n", .i64)], []⟩], [],
     [⟨"bump", [], [], [⟨.inout, "xs", .list .i64, none⟩], .unit, Row.pure, .unit, {}⟩],
-    [], [], [], []⟩
+    [], [], [], [], []⟩
 
 private def ints (ns : List Int) : Expr := .list .i64 (ns.map .int)
 

@@ -63,7 +63,11 @@ def pathWrites : List Projection → List Name
 
 def armsWrites : List Arm → List Name
   | [] => []
-  | ⟨_, _, body⟩ :: arms => body.writes ++ armsWrites arms
+  | ⟨_, _, guard, body⟩ :: arms => guardWrites guard ++ body.writes ++ armsWrites arms
+
+def guardWrites : Option Expr → List Name
+  | none => []
+  | some g => g.writes
 
 end
 
@@ -119,7 +123,11 @@ def pathResizes : List Projection → List Name
 
 def armsResizes : List Arm → List Name
   | [] => []
-  | ⟨_, _, body⟩ :: arms => body.resizes ++ armsResizes arms
+  | ⟨_, _, guard, body⟩ :: arms => guardResizes guard ++ body.resizes ++ armsResizes arms
+
+def guardResizes : Option Expr → List Name
+  | none => []
+  | some g => g.resizes
 
 end
 
@@ -185,8 +193,13 @@ theorem pathResizes_subset : ∀ ps : List Projection, pathResizes ps ⊆ pathWr
 
 theorem armsResizes_subset : ∀ arms : List Arm, armsResizes arms ⊆ armsWrites arms
   | [] => List.Subset.refl _
-  | ⟨_, _, body⟩ :: arms =>
-    append_subset_append (Expr.resizes_subset body) (armsResizes_subset arms)
+  | ⟨_, _, guard, body⟩ :: arms =>
+    append_subset_append (append_subset_append (guardResizes_subset guard)
+      (Expr.resizes_subset body)) (armsResizes_subset arms)
+
+theorem guardResizes_subset : ∀ guard : Option Expr, guardResizes guard ⊆ guardWrites guard
+  | none => List.Subset.refl _
+  | some g => Expr.resizes_subset g
 
 end
 

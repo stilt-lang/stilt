@@ -71,8 +71,14 @@ theorem pathLockFree_substTys : ∀ p : List Projection,
 theorem armsLockFree_substTys : ∀ arms : List Arm,
     armsLockFree D L (substArmTys s arms) = armsLockFree D L arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmTys, armsLockFree, Expr.lockFree_substTys b, armsLockFree_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsLockFree, guardLockFree_substTys g, Expr.lockFree_substTys b,
+      armsLockFree_substTys arms]
+
+theorem guardLockFree_substTys : ∀ g : Option Expr,
+    guardLockFree D L (substGuardTys s g) = guardLockFree D L g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardLockFree, Expr.lockFree_substTys g]
 
 end
 
@@ -136,8 +142,14 @@ theorem pathLockFree_substRows : ∀ p : List Projection,
 theorem armsLockFree_substRows : ∀ arms : List Arm,
     armsLockFree D L (substArmRows s arms) = armsLockFree D L arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmRows, armsLockFree, Expr.lockFree_substRows b, armsLockFree_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsLockFree, guardLockFree_substRows g, Expr.lockFree_substRows b,
+      armsLockFree_substRows arms]
+
+theorem guardLockFree_substRows : ∀ g : Option Expr,
+    guardLockFree D L (substGuardRows s g) = guardLockFree D L g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardLockFree, Expr.lockFree_substRows g]
 
 end
 

@@ -111,8 +111,14 @@ theorem erasePath_substRows :
 theorem eraseArms_substRows :
     ∀ arms : List Arm, eraseArms (substArmRows s arms) = substArmRows s (eraseArms arms)
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmRows, eraseArms, Expr.erase_substRows b, eraseArms_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, eraseArms, eraseGuard_substRows g, Expr.erase_substRows b,
+      eraseArms_substRows arms]
+
+theorem eraseGuard_substRows :
+    ∀ g : Option Expr, eraseGuard (substGuardRows s g) = substGuardRows s (eraseGuard g)
+  | none => rfl
+  | some g => by simp [substGuardRows, eraseGuard, Expr.erase_substRows g]
 
 end
 
@@ -175,8 +181,14 @@ theorem erasePath_substTys :
 theorem eraseArms_substTys :
     ∀ arms : List Arm, eraseArms (substArmTys s arms) = substArmTys s (eraseArms arms)
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmTys, eraseArms, Expr.erase_substTys b, eraseArms_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, eraseArms, eraseGuard_substTys g, Expr.erase_substTys b,
+      eraseArms_substTys arms]
+
+theorem eraseGuard_substTys :
+    ∀ g : Option Expr, eraseGuard (substGuardTys s g) = substGuardTys s (eraseGuard g)
+  | none => rfl
+  | some g => by simp [substGuardTys, eraseGuard, Expr.erase_substTys g]
 
 end
 
@@ -274,18 +286,37 @@ theorem declare (D : Decls) (R : Name) (written : List (Name × Value)) :
     | none => exact fail _ _
     | some fs => exact pure Value.erase (.record R fs)
 
-theorem select (h : Runs run run') (arms : List Arm) (v : Value) :
-    Erases Value.erase (Eval.select Copy.memory run arms v)
-      (Eval.select Copy.memory run' (eraseArms arms) v.erase) := by
-  simp only [Eval.select, selectArm_erase]
-  cases selectArm arms v with
-  | none => exact fail _ _
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    simp only [Option.map_some, length_eraseValues, zip_eraseValues]
+theorem guarded (h : Runs run run') (bs : List Name) (g body : Expr)
+    {next next' : Eval Copy.State Value} (hn : Erases Value.erase next next') :
+    ∀ ways : List (List Value), Erases Value.erase (Eval.guarded Copy.memory run bs g body next ways)
+      (Eval.guarded Copy.memory run' bs g.erase body.erase next' (ways.map eraseValues))
+  | [] => hn
+  | us :: ways => by
+    simp only [Eval.guarded, List.map_cons, length_eraseValues]
     split
-    · exact withVars (h arm.body) _
+    · simp only [Eval.tryWay, zip_eraseValues]
+      exact bind (withVars (bind (h g) asBool) _) fun b =>
+        ite b (withVars (h body) _) (guarded h bs g body hn ways)
     · exact fail _ _
+
+theorem select (h : Runs run run') : ∀ (arms : List Arm) (v : Value),
+    Erases Value.erase (Eval.select Copy.memory run arms v)
+      (Eval.select Copy.memory run' (eraseArms arms) v.erase)
+  | [], _ => fail _ _
+  | ⟨p, bs, guard, b⟩ :: arms, v => by
+    cases guard with
+    | none =>
+      simp only [eraseArms, eraseGuard, Eval.select, Pattern.matchOn_erase p v]
+      cases p.matchOn v with
+      | none => exact select h arms v
+      | some us =>
+        simp only [Option.map_some, length_eraseValues, zip_eraseValues]
+        split
+        · exact withVars (h b) _
+        · exact fail _ _
+    | some g =>
+      simp only [eraseArms, eraseGuard, Eval.select, Pattern.ways_erase]
+      exact guarded h bs g b (select h arms v) _
 
 theorem assign (h : Runs run run') (x : Name) (ps : List Projection) (value : Expr) :
     Erases Value.erase (Eval.assign Copy.memory run x ps value)

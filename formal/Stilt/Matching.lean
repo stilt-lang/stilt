@@ -5,7 +5,8 @@ import Stilt.Values
 # Matching
 
 How a pattern matches a value, and how a `match` picks its arm: the arms are
-tried in order and the first whose pattern matches runs (patterns.match). A
+tried in order and the first whose pattern matches, and whose guard, if it has one, is
+true in a way the pattern matches, runs (patterns.match and patterns.guards). A
 pattern that matches gives the parts of the value its binders bind, in the
 order `Pattern.binders` lists them; each is a copy of the part it matched
 (patterns.bindings-are-copies), and values are immutable, so a copy of a part is
@@ -19,8 +20,9 @@ mutual
 /-- The parts of `v` that the binders of `p` bind, if `p` matches `v`
 (patterns.pattern-forms). A literal matches an equal value, a tuple pattern a
 tuple element by element, a record pattern the fields it lists, a variant
-pattern the variant it names with its payload matched by position, and an
-or-pattern what its first alternative matches, else what its second does. -/
+pattern the variant it names with its payload matched by position, an
+or-pattern what its first alternative matches, else what its second does, and a constant
+what its value does, the values structurally equal to it (patterns.constants). -/
 def Pattern.matchOn : Pattern → Value → Option (List Value)
   | .wild, _ => some []
   | .bind _, v => some [v]
@@ -36,6 +38,7 @@ def Pattern.matchOn : Pattern → Value → Option (List Value)
     | some us => some us
     | none => q.matchOn v
   | .list ps r, .list vs => matchOnList ps r vs
+  | .const _ p, v => (p.matchOn v).map fun _ => []
   | _, _ => none
 
 /-- A list pattern's elements matching a list's from its first: with an exact
@@ -75,50 +78,15 @@ def matchOnFields : List (Name × Pattern) → List (Name × Value) → Option (
 
 end
 
-/-- The first arm whose pattern matches the value, with the parts its binders
-bind (patterns.match). -/
-def selectArm : List Arm → Value → Option (Arm × List Value)
-  | [], _ => none
-  | arm :: arms, v =>
-    match arm.pattern.matchOn v with
-    | some us => some (arm, us)
-    | none => selectArm arms v
+/-- Every way in which a pattern matches a value, in the order a guard tries them, each as
+the parts its binders bind: one for each of its alternatives that matches
+(patterns.guards). -/
+def Pattern.ways (p : Pattern) (v : Value) : List (List Value) :=
+  p.alternatives.filterMap (·.matchOn v)
 
-theorem selectArm_mem : ∀ {arms : List Arm} {v : Value} {arm : Arm} {us : List Value},
-    selectArm arms v = some (arm, us) → arm ∈ arms ∧ arm.pattern.matchOn v = some us
-  | [], _, _, _, h => nomatch h
-  | a :: arms, v, arm, us, h => by
-    unfold selectArm at h
-    split at h
-    · rename_i us' h'
-      cases h
-      exact ⟨List.mem_cons_self, h'⟩
-    · obtain ⟨hm, hp⟩ := selectArm_mem h
-      exact ⟨List.mem_cons_of_mem _ hm, hp⟩
-
-/-- An arm whose pattern matches makes the `match` select an arm. -/
-theorem selectArm_isSome : ∀ {arms : List Arm} {v : Value} {arm : Arm}, arm ∈ arms →
-    (arm.pattern.matchOn v).isSome → (selectArm arms v).isSome
-  | [], _, _, h, _ => nomatch h
-  | a :: arms, v, arm, hm, h => by
-    unfold selectArm
-    split
-    · rfl
-    · rename_i hn
-      rcases List.mem_cons.1 hm with rfl | hm
-      · rw [hn] at h; exact nomatch h
-      · exact selectArm_isSome hm h
-
-/-- Selecting an arm reads only the arms' patterns. -/
-theorem selectArm_map (f : Expr → Expr) : ∀ (arms : List Arm) (v : Value),
-    selectArm (arms.map fun a => ⟨a.pattern, a.binders, f a.body⟩) v =
-      (selectArm arms v).map fun (a, us) => (⟨a.pattern, a.binders, f a.body⟩, us)
-  | [], _ => rfl
-  | a :: arms, v => by
-    simp only [List.map_cons, selectArm]
-    cases h : a.pattern.matchOn v with
-    | some us => rfl
-    | none => exact selectArm_map f arms v
+theorem Pattern.mem_ways {p : Pattern} {v : Value} {us : List Value} (h : us ∈ p.ways v) :
+    ∃ q ∈ p.alternatives, q.matchOn v = some us := by
+  simpa [Pattern.ways] using h
 
 theorem map_snd_positionsFrom {α : Type} : ∀ (i : Nat) (xs : List α),
     (positionsFrom i xs).map Prod.snd = xs
@@ -173,6 +141,10 @@ theorem Pattern.matchOn_parts (hP : Value.PassesToParts P) : ∀ (p : Pattern) {
   | .list ps r, v, _, hv, h => by
     cases v <;> simp only [Pattern.matchOn, reduceCtorEq] at h
     exact matchOnList_parts hP ps r ((hP.list _).1 hv) h
+  | .const _ _, _, _, _, h => by
+    simp only [Pattern.matchOn, Option.map_eq_some_iff] at h
+    obtain ⟨_, _, rfl⟩ := h
+    simp
 
 theorem matchOnAll_parts (hP : Value.PassesToParts P) : ∀ (ps : List Pattern) {vs : List Value} {us : List Value},
     (∀ v ∈ vs, P v) → matchOnAll ps vs = some us → ∀ u ∈ us, P u

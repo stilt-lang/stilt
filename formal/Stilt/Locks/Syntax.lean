@@ -75,7 +75,11 @@ def pathLockFree (D : Decls) (L : List Name) : List Projection → Bool
 
 def armsLockFree (D : Decls) (L : List Name) : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.lockFree D L && armsLockFree D L arms
+  | ⟨_, _, guard, body⟩ :: arms => guardLockFree D L guard && body.lockFree D L && armsLockFree D L arms
+
+def guardLockFree (D : Decls) (L : List Name) : Option Expr → Bool
+  | none => true
+  | some g => g.lockFree D L
 
 end
 

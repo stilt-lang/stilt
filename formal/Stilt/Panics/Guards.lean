@@ -448,13 +448,13 @@ def Expr.alwaysJumps : Expr → Bool
 /-- Whether every arm's body always jumps. -/
 def armsAlwaysJump : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.alwaysJumps && armsAlwaysJump arms
+  | ⟨_, _, _, body⟩ :: arms => body.alwaysJumps && armsAlwaysJump arms
 
 end
 
 theorem armsAlwaysJump_mem : ∀ {arms : List Arm} {arm : Arm}, armsAlwaysJump arms = true →
     arm ∈ arms → arm.body.alwaysJumps = true
-  | ⟨_, _, _⟩ :: _, _, h, hm => by
+  | ⟨_, _, _, _⟩ :: _, _, h, hm => by
     simp only [armsAlwaysJump, Bool.and_eq_true] at h
     rcases List.mem_cons.1 hm with rfl | hm
     · exact h.1

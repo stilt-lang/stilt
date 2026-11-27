@@ -20,7 +20,7 @@ private def list (ks : List Int) : VExpr := .list .i64 (ks.map .int)
 
 /-- A body whose parameter `xs` holds `[10, 20, 30, 40]`. -/
 private def body (result : VTy) (e : VExpr) : VProgram :=
-  ⟨⟨[], [], [], [], [], [], []⟩, [("xs", .list .i64, .list ([10, 20, 30, 40].map .int))], result, e⟩
+  ⟨⟨[], [], [], [], [], [], [], []⟩, [("xs", .list .i64, .list ([10, 20, 30, 40].map .int))], result, e⟩
 
 private def xs : VExpr := .var "xs"
 

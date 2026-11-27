@@ -74,7 +74,13 @@ def pathNames (N : List Name) : List Projection → Bool
 /-- Whether an arm names one of `N` outside its binders. -/
 def armsNames (N : List Name) : List Arm → Bool
   | [] => false
-  | ⟨_, binders, body⟩ :: arms => body.names (N.removeAll binders) || armsNames N arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    guardNames (N.removeAll binders) guard || body.names (N.removeAll binders) || armsNames N arms
+
+/-- Whether an arm's guard names one of `N`. -/
+def guardNames (N : List Name) : Option Expr → Bool
+  | none => false
+  | some g => g.names N
 
 end
 
@@ -132,8 +138,14 @@ def pathNoEscape (D : Decls) (N : List Name) : List Projection → Bool
 /-- No parameter of `N` escapes from the arms of a `match`. -/
 def armsNoEscape (D : Decls) (N : List Name) : List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms =>
-    body.noEscape D (N.removeAll binders) false && armsNoEscape D N arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    guardNoEscape D (N.removeAll binders) guard && body.noEscape D (N.removeAll binders) false &&
+      armsNoEscape D N arms
+
+/-- No parameter of `N` escapes from an arm's guard. -/
+def guardNoEscape (D : Decls) (N : List Name) : Option Expr → Bool
+  | none => true
+  | some g => g.noEscape D N false
 
 end
 
@@ -177,8 +189,12 @@ theorem pathNames_nil : ∀ path : List Projection, pathNames [] path = false
 
 theorem armsNames_nil : ∀ arms : List Arm, armsNames [] arms = false
   | [] => rfl
-  | ⟨_, _, body⟩ :: arms => by
-    simp [armsNames, Expr.names_nil body, armsNames_nil arms]
+  | ⟨_, _, guard, body⟩ :: arms => by
+    simp [armsNames, guardNames_nil guard, Expr.names_nil body, armsNames_nil arms]
+
+theorem guardNames_nil : ∀ guard : Option Expr, guardNames [] guard = false
+  | none => rfl
+  | some g => by simp [guardNames, Expr.names_nil g]
 
 end
 
@@ -231,8 +247,13 @@ theorem pathNoEscape_nil (D : Decls) : ∀ path : List Projection, pathNoEscape 
 
 theorem armsNoEscape_nil (D : Decls) : ∀ arms : List Arm, armsNoEscape D [] arms = true
   | [] => rfl
-  | ⟨_, _, body⟩ :: arms => by
-    simp [armsNoEscape, Expr.noEscape_nil D false body, armsNoEscape_nil D arms]
+  | ⟨_, _, guard, body⟩ :: arms => by
+    simp [armsNoEscape, guardNoEscape_nil D guard, Expr.noEscape_nil D false body,
+      armsNoEscape_nil D arms]
+
+theorem guardNoEscape_nil (D : Decls) : ∀ guard : Option Expr, guardNoEscape D [] guard = true
+  | none => rfl
+  | some g => by simp [guardNoEscape, Expr.noEscape_nil D false g]
 
 end
 

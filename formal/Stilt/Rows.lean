@@ -82,7 +82,13 @@ def substPathRows (s : RowSubst) : List Projection → List Projection
 /-- Replaces the row variables in the arms of a `match`. -/
 def substArmRows (s : RowSubst) : List Arm → List Arm
   | [] => []
-  | ⟨C, binders, body⟩ :: arms => ⟨C, binders, body.substRows s⟩ :: substArmRows s arms
+  | ⟨C, binders, guard, body⟩ :: arms =>
+    ⟨C, binders, substGuardRows s guard, body.substRows s⟩ :: substArmRows s arms
+
+/-- Replaces the row variables in the guard of an arm. -/
+def substGuardRows (s : RowSubst) : Option Expr → Option Expr
+  | none => none
+  | some g => some (g.substRows s)
 
 end
 

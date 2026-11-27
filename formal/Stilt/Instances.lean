@@ -367,11 +367,19 @@ theorem ArmsFit.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     ∀ {Γ fx arms σ τ}, ArmsFit D scope Γ fx arms σ τ → fx.row.ParamFree →
       ArmsFit D scope' (Γ.substTys s) (fx.substTys s) (substArmTys s arms) (σ.substTys s) (τ.substTys s)
   | _, _, _, _, _, .nil, _ => .nil
-  | _, _, _, _, _, .cons hp hbs hnd hb hfit has, hfx => by
+  | _, _, _, _, _, .cons hp hbs hnd hg hb hfit has, hfx => by
     have hb' := HasType.substTys hD hs hb hfx
-    rw [Ctx.bindAll_substTys_map] at hb'
+    have hg' := GuardFits.substTys hD hs hg hfx
+    rw [Ctx.bindAll_substTys_map] at hb' hg'
     rw [substArmTys_cons]
-    exact .cons (hp.substTys s hD) hbs hnd hb' (hfit.substTys s) (ArmsFit.substTys hD hs has hfx)
+    exact .cons (hp.substTys s hD) hbs hnd hg' hb' (hfit.substTys s)
+      (ArmsFit.substTys hD hs has hfx)
+
+theorem GuardFits.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
+    ∀ {Γ fx g}, GuardFits D scope Γ fx g → fx.row.ParamFree →
+      GuardFits D scope' (Γ.substTys s) (fx.substTys s) (substGuardTys s g)
+  | _, _, _, .none, _ => .none
+  | _, _, _, .some hg hfit, hfx => .some (HasType.substTys hD hs hg hfx) (hfit.substTys s)
 
 end
 

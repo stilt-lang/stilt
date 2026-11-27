@@ -28,7 +28,7 @@ private def decls : Decls :=
     fn "outer" [] (callOf (.fnRef "inner" [] [])),
     fn "stored" [] (.letIn "g" (.fn [] .unit Row.pure) (.fnRef "inner" [] []) .unit),
     fn "through" [⟨.let, "g", .fn [] .unit Row.pure, none⟩] (callOf (.var "g"))],
-    [], [], [], []⟩
+    [], [], [], [], []⟩
 
 /-- `inner`, `outer` and `stored` have the fact, `through` doesn't. -/
 example : decls.locks = ["inner", "outer", "stored"] := by decide

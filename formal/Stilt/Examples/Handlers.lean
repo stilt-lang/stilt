@@ -71,7 +71,7 @@ private def decls : Decls :=
   ⟨[⟨"AroundAsk", [("ask", .fn [(.let, .unit)] .i64 (controlRow .i64 .i64))], []⟩,
       ⟨"ToDefault", [("fail", .fn [(.let, .i64)] .i64 (controlRow .i64 .i64))], []⟩,
       ⟨"Answer", [("ask", .fn [(.let, .unit)] .i64 (row "Ask"))], []⟩],
-    [], fns, [], [], [], [⟨"Ask", [("ask", .unit, .i64)]⟩, ⟨"Fail", [("fail", .i64, .i64)]⟩]⟩
+    [], fns, [], [], [], [⟨"Ask", [("ask", .unit, .i64)]⟩, ⟨"Fail", [("fail", .i64, .i64)]⟩], []⟩
 
 /-- A call of one of the functions. -/
 private def call (f : Name) (args : List Expr) (result : Ty :=

@@ -22,7 +22,7 @@ namespace Stilt.Examples.Panics
 /-- `a / b` on `i64`s. -/
 private def div (a b : Expr) : Expr := .op (.arith .div .i64) [a, b]
 
-private def program (main : Expr) : Program := ⟨⟨[], [], [], [], [], [], []⟩, main, Row.pure, {}⟩
+private def program (main : Expr) : Program := ⟨⟨[], [], [], [], [], [], [], []⟩, main, Row.pure, {}⟩
 
 example : (div (.var "n") (.int 2)).panicFree Limited.all = true := rfl
 example : (div (.var "n") (.var "d")).panicFree Limited.all = false := rfl
@@ -84,9 +84,9 @@ one path of the `if` or one arm of the `match` ends. -/
 example : (early (.if (.var "b") .unit (.return (.int 0)) (.raise (.int 1)))).panicFree Limited.all = true := rfl
 example : (early (.letIn "y" .i64 (.int 1) (.return (.var "y")))).panicFree Limited.all = true := rfl
 example : (early (.if (.var "b") .unit (.return (.int 0)) .unit)).panicFree Limited.all = false := rfl
-example : (early (.match (.var "b") .unit [⟨.int 0, [], .return (.int 0)⟩, ⟨.wild, [], .break⟩])).panicFree Limited.all =
+example : (early (.match (.var "b") .unit [⟨.int 0, [], none, .return (.int 0)⟩, ⟨.wild, [], none, .break⟩])).panicFree Limited.all =
     true := rfl
-example : (early (.match (.var "b") .unit [⟨.int 0, [], .return (.int 0)⟩, ⟨.wild, [], .unit⟩])).panicFree Limited.all =
+example : (early (.match (.var "b") .unit [⟨.int 0, [], none, .return (.int 0)⟩, ⟨.wild, [], none, .unit⟩])).panicFree Limited.all =
     false := rfl
 
 /-- `for d in a..4 { n / d }`. -/

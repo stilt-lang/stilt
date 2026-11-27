@@ -42,7 +42,7 @@ private def twice : FnDecl :=
   ⟨"twice", [⟨"T", ["Size"]⟩], [], [⟨.let, "v", .param "T", none⟩], .i64, Row.pure,
     .op (.arith .add .i64) [sizeOf (.param "T") (.var "v"), sizeOf (.param "T") (.var "v")], {}⟩
 
-private def decls : Decls := ⟨[point], [], [twice], [], [size], [sizeI64, sizePoint], []⟩
+private def decls : Decls := ⟨[point], [], [twice], [], [size], [sizeI64, sizePoint], [], []⟩
 
 /-- A program whose `main` raises an `i64`. -/
 private def program (main : Expr) : Program := ⟨decls, main, ⟨false, some .i64, [], [], none⟩, {}⟩

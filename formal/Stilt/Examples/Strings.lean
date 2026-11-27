@@ -13,7 +13,7 @@ namespace Stilt.Examples.Strings
 
 /-- A program whose `main` raises a value of type `shown`. -/
 private def program (shown : Ty) (main : Expr) : Program :=
-  ⟨⟨[], [], [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
 
 /-- Both models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=

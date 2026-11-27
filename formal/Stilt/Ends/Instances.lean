@@ -157,9 +157,14 @@ theorem pathDivFree_substTys : ∀ (R : Roles) (p : List Projection),
 theorem armsDivFree_substTys : ∀ (R : Roles) (r : Role) (arms : List Arm),
     armsDivFree lim B me R r (substArmTys s arms) = armsDivFree lim B me R r arms
   | _, _, [] => rfl
-  | R, r, ⟨_, _, b⟩ :: arms => by
-    simp [substArmTys, armsDivFree, Expr.divFree_substTys _ b, armsDivFree_substTys R r arms,
-      Arm.role, Expr.writes_substTys]
+  | R, r, ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsDivFree, guardDivFree_substTys, Expr.divFree_substTys _ b,
+      armsDivFree_substTys R r arms, Arm.role, Expr.writes_substTys, guardWrites_substTys]
+
+theorem guardDivFree_substTys : ∀ (R : Roles) (g : Option Expr),
+    guardDivFree lim B me R (substGuardTys s g) = guardDivFree lim B me R g
+  | _, none => rfl
+  | R, some g => by simp [substGuardTys, guardDivFree, Expr.divFree_substTys R g]
 
 end
 
@@ -221,8 +226,13 @@ theorem pathDepth_substTys : ∀ p : List Projection, pathDepth (substPathTys s 
 
 theorem armsDepth_substTys : ∀ arms : List Arm, armsDepth (substArmTys s arms) = armsDepth arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmTys, armsDepth, Expr.depth_substTys b, armsDepth_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsDepth, guardDepth_substTys g, Expr.depth_substTys b,
+      armsDepth_substTys arms]
+
+theorem guardDepth_substTys : ∀ g : Option Expr, guardDepth (substGuardTys s g) = guardDepth g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardDepth, Expr.depth_substTys g]
 
 end
 
@@ -374,9 +384,14 @@ theorem pathDivFree_substRows : ∀ (R : Roles) (p : List Projection),
 theorem armsDivFree_substRows : ∀ (R : Roles) (r : Role) (arms : List Arm),
     armsDivFree lim B me R r (substArmRows s arms) = armsDivFree lim B me R r arms
   | _, _, [] => rfl
-  | R, r, ⟨_, _, b⟩ :: arms => by
-    simp [substArmRows, armsDivFree, Expr.divFree_substRows _ b, armsDivFree_substRows R r arms,
-      Arm.role, Expr.writes_substRows]
+  | R, r, ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsDivFree, guardDivFree_substRows, Expr.divFree_substRows _ b,
+      armsDivFree_substRows R r arms, Arm.role, Expr.writes_substRows, guardWrites_substRows]
+
+theorem guardDivFree_substRows : ∀ (R : Roles) (g : Option Expr),
+    guardDivFree lim B me R (substGuardRows s g) = guardDivFree lim B me R g
+  | _, none => rfl
+  | R, some g => by simp [substGuardRows, guardDivFree, Expr.divFree_substRows R g]
 
 end
 
@@ -438,8 +453,13 @@ theorem pathDepth_substRows : ∀ p : List Projection, pathDepth (substPathRows 
 
 theorem armsDepth_substRows : ∀ arms : List Arm, armsDepth (substArmRows s arms) = armsDepth arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmRows, armsDepth, Expr.depth_substRows b, armsDepth_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsDepth, guardDepth_substRows g, Expr.depth_substRows b,
+      armsDepth_substRows arms]
+
+theorem guardDepth_substRows : ∀ g : Option Expr, guardDepth (substGuardRows s g) = guardDepth g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardDepth, Expr.depth_substRows g]
 
 end
 

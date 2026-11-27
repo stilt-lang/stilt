@@ -265,15 +265,26 @@ theorem ArmsFit.strengthen :
     ∀ {Γ fx arms σ τ}, ArmsFit D s Γ fx arms σ τ →
       ∀ {Γ'}, Ctx.AgreeOn (armsFree · arms) Γ Γ' →
       ArmsFit D s Γ' fx arms σ τ
-  | _, _, _, _, _, .cons (arm := ⟨_, binders, body⟩) hc hb hnd hbody hfit harms, _, h =>
+  | _, _, _, _, _, .cons (arm := ⟨_, binders, guard, body⟩) hc hb hnd hg hbody hfit harms, _, h =>
+    have hl : binders.length = _ := by simp only at hb; rw [hb]; exact hc.length
     .cons hc hb hnd
+      (GuardFits.strengthen hg
+        (Ctx.agree_bindAll binders _ hl fun _ hn hz => h _ (by
+            simp only at hz
+            simp [armsFree, hz, show _ ∉ binders from by simpa using hn])))
       (HasType.strengthen hbody
-        (Ctx.agree_bindAll binders _ (by simp only at hb; rw [hb]; exact hc.length)
-          fun _ hn hz => h _ (by
+        (Ctx.agree_bindAll binders _ hl fun _ hn hz => h _ (by
             simp only at hz
             simp [armsFree, hz, show _ ∉ binders from by simpa using hn])))
       hfit (ArmsFit.strengthen harms (h.mono fun _ hz => by simp [armsFree, hz]))
   | _, _, _, _, _, .nil, _, _ => .nil
+
+theorem GuardFits.strengthen :
+    ∀ {Γ fx g}, GuardFits D s Γ fx g →
+      ∀ {Γ'}, Ctx.AgreeOn (guardFree · g) Γ Γ' →
+      GuardFits D s Γ' fx g
+  | _, _, _, .none, _, _ => .none
+  | _, _, _, .some hg hfit, _, h => .some (HasType.strengthen hg h) hfit
 
 end
 
@@ -342,8 +353,14 @@ theorem pathFree_substRows (θ : RowSubst) (x : Name) :
 theorem armsFree_substRows (θ : RowSubst) (x : Name) :
     ∀ arms : List Arm, armsFree x (substArmRows θ arms) = armsFree x arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [substArmRows, armsFree, Expr.free_substRows θ x b, armsFree_substRows θ x arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsFree, guardFree_substRows θ x g, Expr.free_substRows θ x b,
+      armsFree_substRows θ x arms]
+
+theorem guardFree_substRows (θ : RowSubst) (x : Name) :
+    ∀ g : Option Expr, guardFree x (substGuardRows θ g) = guardFree x g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardFree, Expr.free_substRows θ x g]
 
 end
 

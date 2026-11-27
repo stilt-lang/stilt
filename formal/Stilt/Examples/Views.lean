@@ -19,7 +19,7 @@ namespace Stilt.Examples.Views
 /-- A program from the type of the value it shows and `main`, whose row is
 `raise<shown>`. -/
 private def program (shown : Ty) (main : Expr) : Program :=
-  ⟨⟨[], [], [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
 
 /-- The three models give the same observation, a raised window observed as its part. -/
 private def agree (p : Program) (o : Observation) : Prop :=
@@ -64,7 +64,7 @@ example : agree (program .str
 
 /-- A view of a list has the view type, and its `copy` the list's type
 (views.making-view and views.functions-of-views). -/
-example : HasType ⟨[], [], [], [], [], [], []⟩ RowScope.closed [] ⟨Row.pure, false, false, .never, false, false⟩
+example : HasType ⟨[], [], [], [], [], [], [], []⟩ RowScope.closed [] ⟨Row.pure, false, false, .never, false, false⟩
     (copy (.view [ints [1]])) (.list .i64) := by
   have hwf : Ty.i64.WellFormed RowScope.closed :=
     ⟨fun _ h => by simp [Ty.rows] at h, fun _ h => by simp [Ty.params] at h,

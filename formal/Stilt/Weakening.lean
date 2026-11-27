@@ -139,9 +139,14 @@ theorem ArmsFit.weaken (Δ : Ctx) :
     ∀ {Γ fx arms σ τ},
       ArmsFit D s Γ fx arms σ τ → ArmsFit D s (Γ ++ Δ) fx arms σ τ
   | _, _, _, _, _, .nil => .nil
-  | _, _, _, _, _, .cons hc hlen hnd hb hfit harms =>
-    .cons hc hlen hnd
+  | _, _, _, _, _, .cons hc hlen hnd hg hb hfit harms =>
+    .cons hc hlen hnd (by rw [Ctx.bindAll_append]; exact GuardFits.weaken Δ hg)
       (by rw [Ctx.bindAll_append]; exact HasType.weaken Δ hb) hfit (ArmsFit.weaken Δ harms)
+
+theorem GuardFits.weaken (Δ : Ctx) :
+    ∀ {Γ fx g}, GuardFits D s Γ fx g → GuardFits D s (Γ ++ Δ) fx g
+  | _, _, _, .none => .none
+  | _, _, _, .some hg hfit => .some (HasType.weaken Δ hg) hfit
 
 end
 
@@ -278,8 +283,13 @@ theorem PathFits.of_le (hs : s.Le s') :
 theorem ArmsFit.of_le (hs : s.Le s') :
     ∀ {Γ fx arms σ τ}, ArmsFit D s Γ fx arms σ τ → ArmsFit D s' Γ fx arms σ τ
   | _, _, _, _, _, .nil => .nil
-  | _, _, _, _, _, .cons hc hlen hnd hb hfit harms =>
-    .cons hc hlen hnd (HasType.of_le hs hb) hfit (ArmsFit.of_le hs harms)
+  | _, _, _, _, _, .cons hc hlen hnd hg hb hfit harms =>
+    .cons hc hlen hnd (GuardFits.of_le hs hg) (HasType.of_le hs hb) hfit (ArmsFit.of_le hs harms)
+
+theorem GuardFits.of_le (hs : s.Le s') :
+    ∀ {Γ fx g}, GuardFits D s Γ fx g → GuardFits D s' Γ fx g
+  | _, _, _, .none => .none
+  | _, _, _, .some hg hfit => .some (HasType.of_le hs hg) hfit
 
 end
 

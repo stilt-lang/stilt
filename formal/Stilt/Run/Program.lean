@@ -51,7 +51,7 @@ def head (j : Json) : Except String Head := do
   | some h => pure h
   | none => throw s!"no impl is for the type {j.compress}"
 
-/-- The declarations: an object of their lists, the effects' one optional. -/
+/-- The declarations: an object of their lists, the effects' and the constants' optional. -/
 def decls (j : Json) : Except String Decls := do
   let get (k : String) : Except String Json := j.getObjVal? k
   return {
@@ -77,7 +77,10 @@ def decls (j : Json) : Except String Decls := do
       | _ => throw s!"a trait impl, not {i.compress}")
     effects := ← (j.getObjVal? "effects").toOption.getD (.arr #[]) |> list (fun e => do
       let (n, ops) ← pair str (list (pair str (pair ty ty))) e
-      pure ⟨n, ops⟩) }
+      pure ⟨n, ops⟩)
+    consts := ← (j.getObjVal? "consts").toOption.getD (.arr #[]) |> list (fun c => match c with
+      | .arr #[n, t, v] => return ⟨← str n, ← ty t, ← expr v⟩
+      | _ => throw s!"a constant, not {c.compress}") }
 
 /-- A program: an object of its declarations, `main`, `main`'s row and, when given,
 the limits `main`'s body keeps. -/
@@ -181,7 +184,12 @@ def pathMakesView : List Projection → Bool
 /-- Whether an arm makes a view. -/
 def armsMakeView : List Arm → Bool
   | [] => false
-  | ⟨_, _, body⟩ :: arms => body.makesView || armsMakeView arms
+  | ⟨_, _, guard, body⟩ :: arms => guardMakesView guard || body.makesView || armsMakeView arms
+
+/-- Whether an arm's guard makes a view. -/
+def guardMakesView : Option Expr → Bool
+  | none => false
+  | some g => g.makesView
 
 end
 

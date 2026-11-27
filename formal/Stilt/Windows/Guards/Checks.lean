@@ -68,15 +68,21 @@ theorem pathViewsRead_mem : ∀ {Γ : ViewScope} {R : List Shape} {ps : List Pro
       exact h.1
     · exact pathViewsRead_mem h.2 i hi
 
-/-- Each arm's body is checked under the reads around the `match`, its binders' hidden. -/
+/-- Each arm's guard and body are checked under the reads around the `match`, its binders'
+hidden. -/
 theorem armsViewsRead_mem : ∀ {Γ : ViewScope} {R S : List Shape} {arms : List Arm},
     armsViewsRead D Γ R S arms = true →
-      ∀ arm ∈ arms, ∃ Γ', arm.body.viewsRead D Γ' (arm.binders.foldl hide R) = true
+      ∀ arm ∈ arms, ∃ Γ', arm.body.viewsRead D Γ' (arm.binders.foldl hide R) = true ∧
+        ∀ g, arm.guard = some g → g.viewsRead D Γ' (arm.binders.foldl hide R) = true
   | _, _, _, [], _, _, h => by cases h
-  | Γ, _, S, ⟨_, binders, body⟩ :: arms, h, arm, harm => by
+  | Γ, _, S, ⟨_, binders, guard, body⟩ :: arms, h, arm, harm => by
     simp only [armsViewsRead, Bool.and_eq_true] at h
     rcases List.mem_cons.1 harm with rfl | harm
-    · exact ⟨_, h.1⟩
+    · refine ⟨_, h.1.2, fun g hg => ?_⟩
+      have := h.1.1
+      simp only at hg
+      subst hg
+      exact this
     · exact armsViewsRead_mem h.2 arm harm
 
 /-- The arguments of a call keep the regions when every expression checked under reads that

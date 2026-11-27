@@ -348,14 +348,19 @@ theorem substArgTys_inout (s : TySubst) (p : Place) (args : List Arg) :
 
 theorem substArmTys_cons (s : TySubst) (arm : Arm) (arms : List Arm) :
     substArmTys s (arm :: arms) =
-      ⟨arm.pattern, arm.binders, arm.body.substTys s⟩ :: substArmTys s arms := by
+      ⟨arm.pattern, arm.binders, substGuardTys s arm.guard, arm.body.substTys s⟩ ::
+        substArmTys s arms := by
   cases arm; rfl
 
 /-- Instantiating a `match`'s arms leaves their patterns as they are. -/
 theorem armRows_substTys (s : TySubst) : ∀ arms : List Arm,
     armRows (substArmTys s arms) = armRows arms
   | [] => rfl
-  | ⟨_, _, _⟩ :: arms => by simp [armRows, substArmTys] at *; exact armRows_substTys s arms
+  | ⟨p, _, g, _⟩ :: arms => by
+    have ih := armRows_substTys s arms
+    simp only [armRows] at ih ⊢
+    cases g <;> cases hp : p.hasConst <;>
+      simp [substArmTys, substGuardTys, Arm.counts, hp, ih]
 
 theorem Forall₂.length_eq {α β : Type} {R : α → β → Prop} :
     ∀ {xs : List α} {ys : List β}, Forall₂ R xs ys → xs.length = ys.length

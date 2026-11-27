@@ -189,9 +189,21 @@ structure EffectDecl where
   name : Name
   ops : List (Name × Ty × Ty)
 
+/-- A constant, `const NAME: T = e` (declarations.constant-declarations): at module level
+under its name, or in an inherent `impl` block under its qualified name `Type.NAME`, with one
+value for every type argument of its block (declarations.impl-constants). Its value is a
+constant expression (`Expr.IsConstant`), which names other constants as variables. A read of a
+constant in an expression is the expression of its value: constant expressions are pure, so
+reading the value where the constant is read gives the value a first evaluation would
+(declarations.constant-evaluation). -/
+structure ConstDecl where
+  name : Name
+  type : Ty
+  value : Expr
+
 /-- The declarations of a program: records, variant types, the functions at
-the top level, the `impl` blocks, the traits and their impls, and the
-effects. -/
+the top level, the `impl` blocks, the traits and their impls, the
+effects, and the constants, in an order where each constant names only those before it. -/
 structure Decls where
   records : List RecordDecl
   variants : List VariantDecl
@@ -200,6 +212,7 @@ structure Decls where
   traits : List TraitDecl
   traitImpls : List TraitImpl
   effects : List EffectDecl
+  consts : List ConstDecl := []
 
 namespace Decls
 
@@ -237,7 +250,96 @@ def effect? (D : Decls) (name : Name) : Option EffectDecl :=
 def operation? (D : Decls) (op : Operation) : Option (Ty × Ty) :=
   (D.effect? op.effect).bind (·.ops.lookup op.name)
 
+/-- The constant with this name. -/
+def const? (D : Decls) (name : Name) : Option ConstDecl :=
+  D.consts.find? (·.name == name)
+
 end Decls
+
+/-! ## Constants -/
+
+mutual
+
+/-- A constant expression as the pattern that matches the values equal to its value, the
+constants it names read through `env`: literals, a unary `-` on an integer, tuples, lists,
+records and variants (declarations.constant-expressions and patterns.constants). A float,
+itself or in a part, has none: no pattern matches a float (patterns.floats). -/
+def Expr.constPattern (env : Name → Option Pattern) : Expr → Option Pattern
+  | .int n => some (.int n)
+  | .bool b => some (.bool b)
+  | .unit => some .unit
+  | .op (.str s) [] => some (.str s)
+  | .op (.neg _) [e] =>
+    match e.constPattern env with
+    | some (.int n) => some (.int (-n))
+    | _ => none
+  | .op .tuple es => (exprsConstPatterns env es).map .tuple
+  | .list _ es => (exprsConstPatterns env es).map (.list · .exact)
+  | .record R _ fields => (fieldsConstPatterns env fields).map (.record R)
+  | .variant T _ C es => (exprsConstPatterns env es).map (.variant T C)
+  | .var x => env x
+  | _ => none
+
+def exprsConstPatterns (env : Name → Option Pattern) : List Expr → Option (List Pattern)
+  | [] => some []
+  | e :: es =>
+    match e.constPattern env, exprsConstPatterns env es with
+    | some p, some ps => some (p :: ps)
+    | _, _ => none
+
+def fieldsConstPatterns (env : Name → Option Pattern) :
+    List (Name × Expr) → Option (List (Name × Pattern))
+  | [] => some []
+  | (f, e) :: fields =>
+    match e.constPattern env, fieldsConstPatterns env fields with
+    | some p, some ps => some ((f, p) :: ps)
+    | _, _ => none
+
+end
+
+mutual
+
+/-- A constant expression (declarations.constant-expressions): a literal, a string's
+without interpolation, a unary `-`, a tuple, a list, a record or a variant of constant
+expressions, or another constant, which a constant's value names as a variable. Arithmetic,
+a call, a field access, a block, an `if`, a closure, a function named as a value, a hole and
+anything else is E0326. -/
+inductive Expr.IsConstant : Expr → Prop
+  | int {n : Int} : Expr.IsConstant (.int n)
+  | bool {b : Bool} : Expr.IsConstant (.bool b)
+  | unit : Expr.IsConstant .unit
+  | str {s : String} : Expr.IsConstant (.op (.str s) [])
+  | float {k : FloatTy} {m : Nat} {neg : Bool} {e : Nat} :
+      Expr.IsConstant (.op (.float k m neg e) [])
+  | neg {k : IntTy} {e : Expr} : Expr.IsConstant e → Expr.IsConstant (.op (.neg k) [e])
+  | fneg {k : FloatTy} {e : Expr} : Expr.IsConstant e → Expr.IsConstant (.op (.fneg k) [e])
+  | tuple {es : List Expr} : ExprsConstant es → Expr.IsConstant (.op .tuple es)
+  | list {τ : Ty} {es : List Expr} : ExprsConstant es → Expr.IsConstant (.list τ es)
+  | record {R : Name} {args : List Ty} {fields : List (Name × Expr)} :
+      FieldsConstant fields → Expr.IsConstant (.record R args fields)
+  | variant {T : Name} {args : List Ty} {C : Name} {es : List Expr} :
+      ExprsConstant es → Expr.IsConstant (.variant T args C es)
+  | const {x : Name} : Expr.IsConstant (.var x)
+
+inductive ExprsConstant : List Expr → Prop
+  | nil : ExprsConstant []
+  | cons {e : Expr} {es : List Expr} : Expr.IsConstant e → ExprsConstant es → ExprsConstant (e :: es)
+
+inductive FieldsConstant : List (Name × Expr) → Prop
+  | nil : FieldsConstant []
+  | cons {f : Name} {e : Expr} {fields : List (Name × Expr)} :
+      Expr.IsConstant e → FieldsConstant fields → FieldsConstant ((f, e) :: fields)
+
+end
+
+/-- The pattern of the constant `C` among constants listed the latest first, each naming
+only those after it. -/
+def constPatternIn : List ConstDecl → Name → Option Pattern
+  | [], _ => none
+  | c :: cs, C => if c.name = C then c.value.constPattern (constPatternIn cs) else constPatternIn cs C
+
+/-- The value of the constant `C` as a pattern (patterns.constants). -/
+def Decls.constPattern (D : Decls) (C : Name) : Option Pattern := constPatternIn D.consts.reverse C
 
 /-- `recv.m(args)`, where `m` is a method of the `impl` blocks of `type`, the
 type of `recv` (traits.method-resolution). It is the call `type.m(recv, args)` of the
@@ -263,8 +365,9 @@ structure Program where
 /-- Declarations without `impl` blocks have only the functions at the top
 level. -/
 @[simp] theorem Decls.fns_mk (records : List RecordDecl) (variants : List VariantDecl)
-    (functions : List FnDecl) (traits : List TraitDecl) (effects : List EffectDecl) :
-    (Decls.mk records variants functions [] traits [] effects).fns = functions := by
+    (functions : List FnDecl) (traits : List TraitDecl) (effects : List EffectDecl)
+    (consts : List ConstDecl) :
+    (Decls.mk records variants functions [] traits [] effects consts).fns = functions := by
   simp [Decls.fns]
 
 /-- The declarations with `f` applied to every function, at the top level and
@@ -297,7 +400,7 @@ leaves its declarations as they are. -/
 theorem Decls.mapFns_eq_self {f : FnDecl → FnDecl}
     (hf : ∀ T d, f (d.qualify T) = (f d).qualify T) (hname : ∀ d, (f d).name = d.name)
     {D : Decls} (h : ∀ d ∈ D.fns, f d = d) : D.mapFns f = D := by
-  obtain ⟨records, variants, functions, impls, traits, traitImpls, effects⟩ := D
+  obtain ⟨records, variants, functions, impls, traits, traitImpls, effects, consts⟩ := D
   have hq : ∀ T d, f (d.qualify T) = d.qualify T → f d = d := by
     intro T d hq
     rw [hf] at hq

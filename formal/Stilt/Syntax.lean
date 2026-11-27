@@ -229,9 +229,8 @@ def ListRest.binders : ListRest → List Name
 /-- A pattern (patterns.pattern-forms), in elaborated form: a variant pattern
 names its variant type, and a record pattern its record and the fields it
 matches, a bare field `g` written `g: g`, as if it ended in `..`, since one that
-doesn't names every field (patterns.pattern-types). Constants, and the guards
-that a pattern's ways of matching meet, have a calculus of their own
-(`Stilt.Guards`); patterns over other modules' names are outside the calculus. -/
+doesn't names every field (patterns.pattern-types), and a constant the value it is declared
+with. Patterns over other modules' names are outside the calculus. -/
 inductive Pattern where
   /-- `_`, which matches anything and binds nothing. -/
   | wild
@@ -257,6 +256,10 @@ inductive Pattern where
   element from its first, a list with no more elements than listed, or as many
   more as the rest allows (patterns.pattern-forms). -/
   | list (elems : List Pattern) (rest : ListRest)
+  /-- A constant `C` or `Type.NAME`, with the value of its declaration written as the
+  pattern of literals, tuples, records, variants and lists that matches the values equal to
+  it (patterns.constants and declarations.constants-in-patterns). It binds nothing. -/
+  | const (name : Name) (value : Pattern)
 
 mutual
 
@@ -264,7 +267,7 @@ mutual
 are its first alternative's, which every alternative binds
 (patterns.or-patterns). -/
 def Pattern.binders : Pattern → List Name
-  | .wild | .int _ | .bool _ | .str _ | .unit => []
+  | .wild | .int _ | .bool _ | .str _ | .unit | .const _ _ => []
   | .bind x => [x]
   | .tuple ps => patternsBinders ps
   | .record _ fields => fieldPatternsBinders fields
@@ -292,6 +295,53 @@ inductive Form where
   | letElse
   | orElse
   deriving DecidableEq, Repr
+
+mutual
+
+/-- The alternatives of a pattern: the patterns without or-patterns that it is the
+alternatives of, in the order a guard tries the ways the pattern matches
+(patterns.guards). An or-pattern's first alternative's come before its second's, and of
+several or-patterns in the parts of a pattern, the alternatives of the leftmost vary slowest. -/
+def Pattern.alternatives : Pattern → List Pattern
+  | .or p q => p.alternatives ++ q.alternatives
+  | .tuple ps => (patternsAlternatives ps).map .tuple
+  | .record R fps => (fieldPatternsAlternatives fps).map (.record R)
+  | .variant T C ps => (patternsAlternatives ps).map (.variant T C)
+  | .list ps r => (patternsAlternatives ps).map (.list · r)
+  | p => [p]
+
+/-- The alternatives of patterns position by position, the first position's varying slowest. -/
+def patternsAlternatives : List Pattern → List (List Pattern)
+  | [] => [[]]
+  | p :: ps => p.alternatives.flatMap fun q => (patternsAlternatives ps).map (q :: ·)
+
+/-- The alternatives of the field patterns of a record pattern, the first field's varying
+slowest. -/
+def fieldPatternsAlternatives : List (Name × Pattern) → List (List (Name × Pattern))
+  | [] => [[]]
+  | (f, p) :: fps => p.alternatives.flatMap fun q => (fieldPatternsAlternatives fps).map ((f, q) :: ·)
+
+end
+
+mutual
+
+/-- Whether a pattern holds a constant, at any depth (patterns.guards-and-constants). -/
+def Pattern.hasConst : Pattern → Bool
+  | .const _ _ => true
+  | .tuple ps | .variant _ _ ps | .list ps _ => patternsHaveConst ps
+  | .record _ fps => fieldPatternsHaveConst fps
+  | .or p q => p.hasConst || q.hasConst
+  | _ => false
+
+def patternsHaveConst : List Pattern → Bool
+  | [] => false
+  | p :: ps => p.hasConst || patternsHaveConst ps
+
+def fieldPatternsHaveConst : List (Name × Pattern) → Bool
+  | [] => false
+  | (_, p) :: fps => p.hasConst || fieldPatternsHaveConst fps
+
+end
 
 mutual
 
@@ -421,15 +471,19 @@ inductive Projection where
   | field (name : Name)
   | index (index : Expr)
 
-/-- A `match` arm `p => body` (patterns.match). Elaborated, it carries the
-names its pattern binds, in order, as every binder carries its type; typing
-checks that they are `pattern.binders`. Guards have a calculus of their own
-(`Stilt.Guards`). -/
+/-- A `match` arm, `p => body` or `p if c => body` with a guard `c` (patterns.match and
+patterns.guards). Elaborated, it carries the names its pattern binds, in order, as every
+binder carries its type; typing checks that they are `pattern.binders`. -/
 structure Arm where
   pattern : Pattern
   binders : List Name
+  guard : Option Expr
   body : Expr
 
 end
+
+/-- Whether an arm counts for exhaustiveness: it has no guard, and its pattern holds no
+constant (patterns.guards-and-constants). -/
+def Arm.counts (a : Arm) : Bool := a.guard.isNone && !a.pattern.hasConst
 
 end Stilt

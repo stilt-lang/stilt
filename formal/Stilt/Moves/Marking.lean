@@ -99,8 +99,16 @@ def markPath (after : Live) : List Projection → List Projection
 /-- Marks the last uses in the arms of a `match`. -/
 def markArms (after : Live) : List Arm → List Arm
   | [] => []
-  | ⟨C, binders, body⟩ :: arms =>
-    ⟨C, binders, body.markMoves (after.eraseAll binders) false⟩ :: markArms after arms
+  | ⟨C, binders, guard, body⟩ :: arms =>
+    ⟨C, binders,
+      markGuard ((((after.union (armsMentions arms)).eraseAll binders).union body.mentions).union
+        (guardMentions guard)) guard,
+      body.markMoves (after.eraseAll binders) false⟩ :: markArms after arms
+
+/-- Marks the last uses in an arm's guard. -/
+def markGuard (after : Live) : Option Expr → Option Expr
+  | none => none
+  | some g => some (g.markMoves after false)
 
 end
 
@@ -198,8 +206,14 @@ theorem pathMentions_mark : ∀ (p : List Projection) (L : Live),
 theorem armsMentions_mark : ∀ (arms : List Arm) (L : Live),
     armsMentions (markArms L arms) = armsMentions arms
   | [], _ => rfl
-  | ⟨_, _, b⟩ :: arms, L => by
-    simp [markArms, armsMentions, Expr.mentions_markMoves b, armsMentions_mark arms L]
+  | ⟨_, _, g, b⟩ :: arms, L => by
+    simp [markArms, armsMentions, guardMentions_mark g, Expr.mentions_markMoves b,
+      armsMentions_mark arms L]
+
+theorem guardMentions_mark : ∀ (g : Option Expr) (L : Live),
+    guardMentions (markGuard L g) = guardMentions g
+  | none, _ => rfl
+  | some g, L => by simp [markGuard, guardMentions, Expr.mentions_markMoves g]
 
 end
 
@@ -303,8 +317,15 @@ theorem pathMovesOk_mark : ∀ (p : List Projection) (L : Live),
 theorem armsMovesOk_mark : ∀ (arms : List Arm) (L : Live),
     armsMovesOk L (markArms L arms) = true
   | [], _ => rfl
-  | ⟨_, _, b⟩ :: arms, L => by
-    simp [markArms, armsMovesOk, Expr.movesOk_markMoves b, armsMovesOk_mark arms L]
+  | ⟨_, _, g, b⟩ :: arms, L => by
+    simp [markArms, armsMovesOk, armsMentions_mark, mentions_markMoves, guardMentions_mark,
+      guardMovesOk_mark g,
+      Expr.movesOk_markMoves b, armsMovesOk_mark arms L]
+
+theorem guardMovesOk_mark : ∀ (g : Option Expr) (L : Live),
+    guardMovesOk L (markGuard L g) = true
+  | none, _ => rfl
+  | some g, L => by simp [markGuard, guardMovesOk, Expr.movesOk_markMoves g]
 
 end
 

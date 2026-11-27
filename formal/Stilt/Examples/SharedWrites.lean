@@ -38,7 +38,7 @@ def grow : FnDecl :=
 
 /-- `var xs = [0]; grow(inout xs); raise xs[0]`, in a `main` whose row is `raise<i64>`. -/
 def writtenBack : Program :=
-  ⟨⟨[], [], [grow], [], [], [], []⟩,
+  ⟨⟨[], [], [grow], [], [], [], [], []⟩,
     .varIn "xs" listTy (ints [0])
       (.seq (.call (.fnRef "grow" [] []) [.inout ⟨"xs", []⟩] .unit)
         (.raise (.index (.var "xs") (.int 0)))),
@@ -112,7 +112,7 @@ def descend : Expr :=
 x = x.kids[0]; x.items[0] = 9; raise z.kids[0].items[0]`, in a `main` whose row is
 `raise<i64>`. -/
 def selfPart : Program :=
-  ⟨⟨[treeDecl], [], [], [], [], [], []⟩,
+  ⟨⟨[treeDecl], [], [], [], [], [], [], []⟩,
     .varIn "x" treeTy (tree 1 [tree 2 []]) (.letIn "z" treeTy (.var "x") descend),
     ⟨false, some .i64, [], [], none⟩, {}⟩
 

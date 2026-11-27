@@ -5,6 +5,7 @@ import Stilt.Holding
 import Stilt.Matching
 import Stilt.Memory
 import Stilt.Ops
+import Stilt.Scope
 
 /-!
 # Semantics
@@ -20,53 +21,6 @@ program runs in either model of `Stilt.Memory`: `Copy`, the reference interprete
 -/
 
 namespace Stilt
-
-namespace Eval
-
-variable {σ α : Type}
-
-/-- An outcome of a scope's body, the scope ended: the newest binding gone
-from its state, and from a performance's rest when it ends (expressions.scope). -/
-def _root_.Stilt.Outcome.unbind (M : Memory σ) : Outcome σ α → Outcome σ α
-  | .done a s' => .done a (M.unbind s')
-  | .raised e s' => .raised e (M.unbind s')
-  | .jumped j s' => .jumped j (M.unbind s')
-  | .panicked k s' => .panicked k (M.unbind s')
-  | .performed op v s' k => .performed op v (M.unbind s') fun w x => (k w x).unbind M
-  | .outOfFuel => .outOfFuel
-  | .stuck => .stuck
-
-/-- Runs `m` with `x` bound to `v`, and ends the binding however `m` ends
-(expressions.scope). -/
-def withVar (M : Memory σ) (x : Name) (v : Value) (m : Eval σ α) : Eval σ α := fun s =>
-  (m (M.bind s x v)).unbind M
-
-/-- Binds `x` to the value `v` of its initializer `init`. When `init` is the
-last use of a variable, the model may hand that variable's storage over
-(values.let-and-var and values.passing-values). -/
-def _root_.Stilt.Memory.bindInit (M : Memory σ) (s : σ) (x : Name) (init : Expr) (v : Value) :
-    σ :=
-  match init with
-  | .move y => M.bindMoved s x y v
-  | _ => M.bind s x v
-
-/-- Runs `m` with `x` bound to the value `v` of its initializer `init`, as
-`let` and `var` do, and ends the binding however `m` ends (expressions.scope). -/
-def withInit (M : Memory σ) (x : Name) (init : Expr) (v : Value) (m : Eval σ α) :
-    Eval σ α := fun s =>
-  (m (M.bindInit s x init v)).unbind M
-
-/-- An initializer that isn't the last use of a variable binds a new one. -/
-theorem withInit_eq_withVar (M : Memory σ) (x : Name) {init : Expr} (h : ∀ y, init ≠ .move y)
-    (v : Value) (m : Eval σ α) : withInit M x init v m = withVar M x v m := by
-  cases init <;> first | exact absurd rfl (h _) | rfl
-
-/-- Runs `m` with each name bound to its value, the first one outermost. -/
-def withVars (M : Memory σ) : List (Name × Value) → Eval σ α → Eval σ α
-  | [], m => m
-  | (x, v) :: bindings, m => withVar M x v (withVars M bindings m)
-
-end Eval
 
 /-- Pairs each parameter with its argument, if their number and their modes
 agree: an `inout` parameter takes a place, and a `let` parameter a value. -/
@@ -259,17 +213,38 @@ def args (run : Expr → Eval σ Value) : List Arg → Eval σ (List Passed)
     let vs ← args run rest
     pure (.place x p :: vs)
 
-/-- Runs the first arm of a `match` whose pattern matches the value, with the
-parts its pattern binds bound to its names (expressions.match and patterns.match;
-patterns.bindings-are-copies). -/
-def select (M : Memory σ) (run : Expr → Eval σ Value) (arms : List Arm) (v : Value) :
-    Eval σ Value :=
-  match selectArm arms v with
-  | some (arm, us) =>
-    if arm.binders.length = us.length then
-      withVars M (arm.binders.zip us) (run arm.body)
+/-- Runs an arm's guard `g` with the parts `us` of one way bound to the names `bs`, then its
+body if the guard is true, or `next` if it is false (patterns.guards). -/
+def tryWay (M : Memory σ) (run : Expr → Eval σ Value) (bs : List Name) (g body : Expr)
+    (us : List Value) (next : Eval σ Value) : Eval σ Value := do
+  if ← withVars M (bs.zip us) (run g >>= asBool) then withVars M (bs.zip us) (run body) else next
+
+/-- Runs an arm's guard `g` with each way in turn that its pattern matches, the parts the
+way binds bound to the names `bs`, and its body with the first way the guard is true, or
+`next` when the guard is true with none (patterns.guards). The names are bound again for
+the body, to the same parts: they are immutable (patterns.var-bindings), so the guard has
+left them as they were. -/
+def guarded (M : Memory σ) (run : Expr → Eval σ Value) (bs : List Name) (g body : Expr)
+    (next : Eval σ Value) : List (List Value) → Eval σ Value
+  | [] => next
+  | us :: ways =>
+    if bs.length = us.length then tryWay M run bs g body us (guarded M run bs g body next ways)
     else fail .stuck
-  | none => fail .stuck
+
+/-- Runs the first arm of a `match` whose pattern matches the value and whose guard, if it
+has one, is true, with the parts its pattern binds bound to its names (expressions.match and
+patterns.match; patterns.bindings-are-copies). -/
+def select (M : Memory σ) (run : Expr → Eval σ Value) : List Arm → Value → Eval σ Value
+  | [], _ => fail .stuck
+  | arm :: arms, v =>
+    match arm.guard with
+    | none =>
+      match arm.pattern.matchOn v with
+      | some us =>
+        if arm.binders.length = us.length then withVars M (arm.binders.zip us) (run arm.body)
+        else fail .stuck
+      | none => select M run arms v
+    | some g => guarded M run arm.binders g arm.body (select M run arms v) (arm.pattern.ways v)
 
 /-- Assigns the value of an expression to the place that `x` and its
 projections name. -/

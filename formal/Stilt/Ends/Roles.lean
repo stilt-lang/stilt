@@ -59,7 +59,7 @@ mutual
 /-- Whether a pattern reaches what it binds through fields, tuple elements and variants'
 payloads alone: no or-pattern and no list pattern. -/
 def Pattern.within : Pattern → Bool
-  | .wild | .bind _ | .int _ | .bool _ | .str _ | .unit => true
+  | .wild | .bind _ | .int _ | .bool _ | .str _ | .unit | .const _ _ => true
   | .tuple ps | .variant _ _ ps => patternsWithin ps
   | .record _ fields => fieldPatternsWithin fields
   | .or _ _ | .list _ _ => false
@@ -74,6 +74,39 @@ def fieldPatternsWithin : List (Name × Pattern) → Bool
 
 end
 
+mutual
+
+/-- A pattern within has no or-pattern, so it is its one alternative. -/
+theorem Pattern.alternatives_within : ∀ {p : Pattern}, p.within = true → p.alternatives = [p]
+  | .wild, _ | .bind _, _ | .int _, _ | .bool _, _ | .str _, _ | .unit, _ | .const _ _, _ => rfl
+  | .tuple _, h => by
+    simp only [Pattern.within] at h
+    simp [Pattern.alternatives, patternsAlternatives_within h]
+  | .record _ _, h => by
+    simp only [Pattern.within] at h
+    simp [Pattern.alternatives, fieldPatternsAlternatives_within h]
+  | .variant _ _ _, h => by
+    simp only [Pattern.within] at h
+    simp [Pattern.alternatives, patternsAlternatives_within h]
+  | .or _ _, h | .list _ _, h => by simp [Pattern.within] at h
+
+theorem patternsAlternatives_within : ∀ {ps : List Pattern}, patternsWithin ps = true →
+    patternsAlternatives ps = [ps]
+  | [], _ => rfl
+  | _ :: _, h => by
+    simp only [patternsWithin, Bool.and_eq_true] at h
+    simp [patternsAlternatives, Pattern.alternatives_within h.1, patternsAlternatives_within h.2]
+
+theorem fieldPatternsAlternatives_within : ∀ {fps : List (Name × Pattern)},
+    fieldPatternsWithin fps = true → fieldPatternsAlternatives fps = [fps]
+  | [], _ => rfl
+  | (_, _) :: _, h => by
+    simp only [fieldPatternsWithin, Bool.and_eq_true] at h
+    simp [fieldPatternsAlternatives, Pattern.alternatives_within h.1,
+      fieldPatternsAlternatives_within h.2]
+
+end
+
 /-- Whether a pattern takes a step before it binds anything: a tuple, record or variant
 pattern. -/
 def Pattern.steps : Pattern → Bool
@@ -82,9 +115,12 @@ def Pattern.steps : Pattern → Bool
 
 /-- The role of what an arm binds when its scrutinee has the role `r`: a strict part when
 its pattern takes a step, what the scrutinee holds when it binds the scrutinee whole, and
-`other` when its pattern has an or-pattern or a list pattern, or its body writes a binder. -/
+`other` when its pattern has an or-pattern or a list pattern, or its guard or its body writes
+a binder: the guard is code of the arm's, run with the same binders. -/
 def Arm.role (r : Role) (arm : Arm) : Role :=
-  if arm.pattern.within && arm.binders.all (fun x => decide (x ∉ arm.body.writes)) then
+  if arm.pattern.within &&
+      arm.binders.all (fun x => decide (x ∉ arm.body.writes) && decide (x ∉ guardWrites arm.guard))
+  then
     if arm.pattern.steps then r.step else r
   else .other
 
@@ -235,6 +271,10 @@ theorem Pattern.matchOn_le : ∀ (p : Pattern) {v : Value} {us : List Value}, p.
     simp only [Pattern.matchOn, Option.some.injEq] at h; subst h; simp
   | .int _, v, _, _, h | .bool _, v, _, _, h | .str _, v, _, _, h | .unit, v, _, _, h => by
     cases v <;> simp only [Pattern.matchOn] at h <;> (try split at h) <;> simp_all
+  | .const _ _, _, _, _, h => by
+    simp only [Pattern.matchOn, Option.map_eq_some_iff] at h
+    obtain ⟨_, -, rfl⟩ := h
+    simp
   | .tuple ps, v, _, hw, h => fun u hu => Nat.le_of_lt (Pattern.matchOn_lt (.tuple ps) hw rfl h u hu)
   | .record R fps, v, _, hw, h => fun u hu => Nat.le_of_lt (Pattern.matchOn_lt (.record R fps) hw rfl h u hu)
   | .variant T C ps, v, _, hw, h => fun u hu =>
@@ -308,6 +348,10 @@ theorem Pattern.matchOn_same : ∀ (p : Pattern) {v : Value} {us : List Value}, 
     simp only [Pattern.matchOn, Option.some.injEq] at h; subst h; simp
   | .int _, v, _, _, _, h | .bool _, v, _, _, _, h | .str _, v, _, _, _, h | .unit, v, _, _, _, h => by
     cases v <;> simp only [Pattern.matchOn] at h <;> (try split at h) <;> simp_all
+  | .const _ _, _, _, _, _, h => by
+    simp only [Pattern.matchOn, Option.map_eq_some_iff] at h
+    obtain ⟨_, -, rfl⟩ := h
+    simp
   | .tuple _, _, _, _, hs, _ | .record _ _, _, _, _, hs, _ | .variant _ _ _, _, _, _, hs, _ => by
     simp [Pattern.steps] at hs
   | .or _ _, _, _, hw, _, _ | .list _ _, _, _, hw, _, _ => by simp [Pattern.within] at hw
@@ -329,14 +373,22 @@ theorem Arm.role_holds {arm : Arm} {r : Role} {v : Value} {us : List Value} {m :
       exact hv
   · trivial
 
-/-- An arm gives its binders a role only when its body writes none of them. -/
-theorem Arm.role_avoids {arm : Arm} {r : Role} (h : arm.role r ≠ .other) :
-    ∀ x ∈ arm.binders, x ∉ arm.body.writes := by
+/-- An arm gives its binders a role only when its guard and its body write none of them. -/
+theorem Arm.role_avoids_both {arm : Arm} {r : Role} (h : arm.role r ≠ .other) :
+    ∀ x ∈ arm.binders, x ∉ arm.body.writes ∧ x ∉ guardWrites arm.guard := by
   unfold Arm.role at h
   split at h
   · rename_i hw
     simp only [Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hw
     exact hw.2
   · exact absurd rfl h
+
+/-- An arm gives its binders a role only when its body writes none of them. -/
+theorem Arm.role_avoids {arm : Arm} {r : Role} (h : arm.role r ≠ .other) :
+    ∀ x ∈ arm.binders, x ∉ arm.body.writes := fun x hx => (Arm.role_avoids_both h x hx).1
+
+/-- An arm gives its binders a role only when its guard writes none of them. -/
+theorem Arm.role_avoids_guard {arm : Arm} {r : Role} (h : arm.role r ≠ .other) :
+    ∀ x ∈ arm.binders, x ∉ guardWrites arm.guard := fun x hx => (Arm.role_avoids_both h x hx).2
 
 end Stilt

@@ -64,6 +64,13 @@ inductive PatFits : Pattern → Ty → List Ty → Prop
   | list {ps : List Pattern} {r : ListRest} {τ : Ty} {σs : List Ty} :
       PatsFit ps (List.replicate ps.length τ) σs →
       PatFits (.list ps r) (.list τ) (σs ++ r.binders.map fun _ => .list τ)
+  /-- A constant fits the type it is declared with, and its value is its declaration's,
+  the pattern of literals that matches the values equal to it (patterns.constants and
+  declarations.constants-in-patterns). A constant whose type can hold a float has no such
+  pattern (patterns.floats). -/
+  | const {C : Name} {c : ConstDecl} {v : Pattern} {τ : Ty} :
+      D.const? C = some c → c.type = τ → D.constPattern C = some v → PatFits v τ [] →
+      PatFits (.const C v) τ []
 
 /-- Patterns fit types position by position. -/
 inductive PatsFit : List Pattern → List Ty → List Ty → Prop
@@ -200,8 +207,9 @@ inductive Exhaustive (D : Decls) : Rows → List Ty → Prop
       Exhaustive D (specialize (listRow m true) P) (List.replicate m τ ++ τs) →
       Exhaustive D P (.list τ :: τs)
 
-/-- The rows of a `match`'s arms: one column, the arm's pattern. -/
-def armRows (arms : List Arm) : Rows := arms.map fun a => [a.pattern]
+/-- The rows of a `match`'s arms: one column, the pattern of each arm that counts. An arm
+with a guard, or whose pattern holds a constant, covers nothing (patterns.guards-and-constants). -/
+def armRows (arms : List Arm) : Rows := (arms.filter Arm.counts).map fun a => [a.pattern]
 
 /-! ## Lemmas -/
 
@@ -220,7 +228,7 @@ mutual
 theorem PatFits.length : ∀ {p : Pattern} {τ : Ty} {σs : List Ty}, PatFits D p τ σs →
     p.binders.length = σs.length
   | _, _, _, .wild | _, _, _, .bind | _, _, _, .int _ | _, _, _, .bool | _, _, _, .str
-  | _, _, _, .unit => rfl
+  | _, _, _, .unit | _, _, _, .const .. => rfl
   | _, _, _, .tuple h | _, _, _, .variant _ _ _ h => PatsFit.length h
   | _, _, _, .record _ _ _ h => FieldPatsFit.length h
   | _, _, _, .or h _ _ => by rw [Pattern.binders]; exact PatFits.length h
@@ -236,6 +244,94 @@ theorem FieldPatsFit.length : ∀ {declared : List (Name × Ty)} {fps : List (Na
   | _, _, _, .nil => rfl
   | _, _, _, .cons _ h hs => by
     simp [fieldPatternsBinders, PatFits.length h, FieldPatsFit.length hs]
+
+end
+
+end
+
+/-! ## Alternatives -/
+
+section
+
+variable {D : Decls}
+
+theorem PatsFit.types_length : ∀ {ps : List Pattern} {τs σs : List Ty}, PatsFit D ps τs σs →
+    ps.length = τs.length
+  | _, _, _, .nil => rfl
+  | _, _, _, .cons _ hs => by simp [PatsFit.types_length hs]
+
+theorem patternsBinders_eq_flatMap : ∀ ps : List Pattern,
+    patternsBinders ps = ps.flatMap Pattern.binders
+  | [] => rfl
+  | p :: ps => by simp [patternsBinders, patternsBinders_eq_flatMap ps]
+
+mutual
+
+/-- Each alternative of a pattern fits its type as the pattern does, and binds its names
+(patterns.or-patterns). -/
+theorem PatFits.alternative : ∀ {p : Pattern} {τ : Ty} {σs : List Ty}, PatFits D p τ σs →
+    ∀ q ∈ p.alternatives, PatFits D q τ σs ∧ q.binders = p.binders
+  | _, _, _, h@(.wild), q, hq | _, _, _, h@(.bind), q, hq | _, _, _, h@(.int _), q, hq
+  | _, _, _, h@(.bool), q, hq | _, _, _, h@(.str), q, hq | _, _, _, h@(.unit), q, hq
+  | _, _, _, h@(.const ..), q, hq => by
+    simp only [Pattern.alternatives, List.mem_singleton] at hq
+    subst hq; exact ⟨h, rfl⟩
+  | _, _, _, .tuple h, q, hq => by
+    simp only [Pattern.alternatives, List.mem_map] at hq
+    obtain ⟨qs, hqs, rfl⟩ := hq
+    obtain ⟨h', hb⟩ := PatsFit.alternative h qs hqs
+    exact ⟨.tuple h', by simp [Pattern.binders, hb]⟩
+  | _, _, _, .record hr hargs hnd h, q, hq => by
+    simp only [Pattern.alternatives, List.mem_map] at hq
+    obtain ⟨qs, hqs, rfl⟩ := hq
+    obtain ⟨h', hb, hn⟩ := FieldPatsFit.alternative h qs hqs
+    exact ⟨.record hr hargs (hn ▸ hnd) h', by simp [Pattern.binders, hb]⟩
+  | _, _, _, .variant ht hargs hc h, q, hq => by
+    simp only [Pattern.alternatives, List.mem_map] at hq
+    obtain ⟨qs, hqs, rfl⟩ := hq
+    obtain ⟨h', hb⟩ := PatsFit.alternative h qs hqs
+    exact ⟨.variant ht hargs hc h', by simp [Pattern.binders, hb]⟩
+  | _, _, _, .or hp hq' hb, q, hq => by
+    simp only [Pattern.alternatives, List.mem_append] at hq
+    rcases hq with hq | hq
+    · obtain ⟨h', hb'⟩ := PatFits.alternative hp q hq
+      exact ⟨h', by simp [Pattern.binders, hb']⟩
+    · obtain ⟨h', hb'⟩ := PatFits.alternative hq' q hq
+      exact ⟨h', by simp [Pattern.binders, hb', hb]⟩
+  | _, _, _, .list (ps := ps) (r := r) h, q, hq => by
+    simp only [Pattern.alternatives, List.mem_map] at hq
+    obtain ⟨qs, hqs, rfl⟩ := hq
+    obtain ⟨h', hb⟩ := PatsFit.alternative h qs hqs
+    have hl : qs.length = ps.length := by simpa using PatsFit.types_length h'
+    refine ⟨?_, by simp [Pattern.binders, hb]⟩
+    rw [← hl] at h'
+    exact .list h'
+
+theorem PatsFit.alternative : ∀ {ps : List Pattern} {τs σs : List Ty}, PatsFit D ps τs σs →
+    ∀ qs ∈ patternsAlternatives ps, PatsFit D qs τs σs ∧ patternsBinders qs = patternsBinders ps
+  | _, _, _, .nil, qs, hqs => by
+    simp only [patternsAlternatives, List.mem_singleton] at hqs
+    subst hqs; exact ⟨.nil, rfl⟩
+  | _, _, _, .cons h hs, qs, hqs => by
+    simp only [patternsAlternatives, List.mem_flatMap, List.mem_map] at hqs
+    obtain ⟨q, hq, qs', hqs', rfl⟩ := hqs
+    obtain ⟨h', hb⟩ := PatFits.alternative h q hq
+    obtain ⟨hs', hbs⟩ := PatsFit.alternative hs qs' hqs'
+    exact ⟨.cons h' hs', by simp [patternsBinders, hb, hbs]⟩
+
+theorem FieldPatsFit.alternative : ∀ {declared : List (Name × Ty)} {fps : List (Name × Pattern)}
+    {σs : List Ty}, FieldPatsFit D declared fps σs →
+    ∀ qs ∈ fieldPatternsAlternatives fps, FieldPatsFit D declared qs σs ∧
+      fieldPatternsBinders qs = fieldPatternsBinders fps ∧ qs.map Prod.fst = fps.map Prod.fst
+  | _, _, _, .nil, qs, hqs => by
+    simp only [fieldPatternsAlternatives, List.mem_singleton] at hqs
+    subst hqs; exact ⟨.nil, rfl, rfl⟩
+  | _, _, _, .cons hl h hs, qs, hqs => by
+    simp only [fieldPatternsAlternatives, List.mem_flatMap, List.mem_map] at hqs
+    obtain ⟨q, hq, qs', hqs', rfl⟩ := hqs
+    obtain ⟨h', hb⟩ := PatFits.alternative h q hq
+    obtain ⟨hs', hbs, hn⟩ := FieldPatsFit.alternative hs qs' hqs'
+    exact ⟨.cons hl h' hs', by simp [fieldPatternsBinders, hb, hbs], by simp [hn]⟩
 
 end
 

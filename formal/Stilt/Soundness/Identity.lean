@@ -106,7 +106,12 @@ theorem substPathRows_nil : ∀ path : List Projection, substPathRows [] path = 
 
 theorem substArmRows_nil : ∀ arms : List Arm, substArmRows [] arms = arms
   | [] => rfl
-  | ⟨_, _, body⟩ :: arms => by rw [substArmRows, Expr.substRows_nil body, substArmRows_nil arms]
+  | ⟨_, _, guard, body⟩ :: arms => by
+    rw [substArmRows, substGuardRows_nil guard, Expr.substRows_nil body, substArmRows_nil arms]
+
+theorem substGuardRows_nil : ∀ guard : Option Expr, substGuardRows [] guard = guard
+  | none => rfl
+  | some g => by rw [substGuardRows, Expr.substRows_nil g]
 
 end
 

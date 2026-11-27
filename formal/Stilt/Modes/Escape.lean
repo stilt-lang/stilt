@@ -144,8 +144,15 @@ def pathLeave (L : Leaving) : List Projection → Bool
 name hides it. -/
 def armsLeave (L : Leaving) (out : Option (List Sel)) : List Arm → Bool
   | [] => false
-  | ⟨_, binders, body⟩ :: arms =>
-    (!binders.contains L.name && body.leaves (L.hide binders) out) || armsLeave L out arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    (!binders.contains L.name &&
+      (guardLeave (L.hide binders) guard || body.leaves (L.hide binders) out)) ||
+      armsLeave L out arms
+
+/-- Whether the binding leaves in an arm's guard, whose value, a condition, leaves nothing. -/
+def guardLeave (L : Leaving) : Option Expr → Bool
+  | none => false
+  | some g => g.leaves L none
 
 end
 

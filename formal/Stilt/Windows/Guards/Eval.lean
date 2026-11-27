@@ -136,7 +136,8 @@ theorem eval_guards (D : Decls) (G : List Path) :
         ite v (ih a Γ R h.1.2) (ih b Γ R h.2)
     case «match» e τ arms =>
       exact bind (ih e Γ R h.1) fun v _ => select (fun arm harm =>
-        (armsViewsRead_mem h.2 arm harm).elim fun Γ' h' => ih arm.body Γ' _ h') v
+        (armsViewsRead_mem h.2 arm harm).elim fun Γ' h' =>
+          ⟨ih arm.body Γ' _ h'.1, fun g hg => ih g Γ' _ (h'.2 g hg)⟩) v
     case «for» x τ e body =>
       exact loop x (ih e Γ R h.1) (ih body _ _ h.2) (hide_sub_hide _ R x)
     case raise e => exact bind (ih e Γ R h) fun v _ => throw v

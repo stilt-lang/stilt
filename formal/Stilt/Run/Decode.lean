@@ -341,6 +341,7 @@ partial def pattern (j : Json) : Except String Pattern := do
   | "variant" => return .variant (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= list pattern)
   | "or" => return .or (← f 0 >>= pattern) (← f 1 >>= pattern)
   | "list" => return .list (← f 0 >>= list pattern) (← f 1 >>= listRest)
+  | "const" => return .const (← f 0 >>= str) (← f 1 >>= pattern)
   | _ => throw s!"no pattern is named {tag}"
 
 mutual
@@ -419,9 +420,12 @@ partial def projection (j : Json) : Except String Projection := do
   | "index" => .index <$> (field fs 0 >>= expr)
   | _ => throw s!"no projection is named {tag}"
 
-/-- An arm: `[pattern, binders, body]`. -/
+/-- An arm: `[pattern, binders, guard, body]`, its guard `null` when it has none, or
+`[pattern, binders, body]` without a guard. -/
 partial def arm : Decoder Arm
-  | .arr #[p, bs, b] => return ⟨← pattern p, ← list str bs, ← expr b⟩
+  | .arr #[p, bs, b] => return ⟨← pattern p, ← list str bs, none, ← expr b⟩
+  | .arr #[p, bs, .null, b] => return ⟨← pattern p, ← list str bs, none, ← expr b⟩
+  | .arr #[p, bs, g, b] => return ⟨← pattern p, ← list str bs, some (← expr g), ← expr b⟩
   | j => throw s!"an arm, not {j.compress}"
 
 end

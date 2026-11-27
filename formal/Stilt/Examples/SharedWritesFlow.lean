@@ -33,7 +33,7 @@ private def raiseFirst (x : Name) : Expr := .raise (.index (.var x) (.int 0))
 
 /-- A `main` whose row is `raise<i64>`. -/
 private def program (main : Expr) : Program :=
-  ⟨⟨[], [], [], [], [], [], []⟩, main, ⟨false, some .i64, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some .i64, [], [], none⟩, {}⟩
 
 /-- `var w = [1]; var z = [0]; if true { var u = [5]; w = u; z = u }; z[0] = 9; raise w[0]`. -/
 def poppedSource : Program := program <|

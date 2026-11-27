@@ -65,24 +65,24 @@ theorem args : ∀ as : List Arg, ArgsKeep G R run as →
   | .inout ⟨_, ps⟩ :: as, ⟨hps, has⟩ =>
     bind (path ps hps) fun _ hp => bind (args as has) fun _ hq => pure ⟨rfl, hp, hq⟩
 
-/-- A `match` runs the arm it selects, whose reads hide the shapes rooted at its binders. -/
+/-- A `match` runs the arm it selects, its guard first if it has one, whose reads hide the
+shapes rooted at its binders. -/
 theorem select {arms : List Arm}
-    (h : ∀ arm ∈ arms, Eval.Guards G (arm.binders.foldl hide R) (fun _ => True) (run arm.body))
+    (h : ∀ arm ∈ arms, Eval.Guards G (arm.binders.foldl hide R) (fun _ => True) (run arm.body) ∧
+      ∀ g, arm.guard = some g → Eval.Guards G (arm.binders.foldl hide R) (fun _ => True) (run g))
     (v : Value) : Eval.Guards G R (fun _ => True) (Eval.select InPlace.memory run arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact fail _
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    have hmem := (selectArm_mem hsel).1
-    dsimp only
-    by_cases hlen : arm.binders.length = us.length
-    · simp only [hlen, ↓reduceIte]
-      refine withVars _ ?_
+  refine Eval.select_of (Eval.Guards G R (fun _ => True)) (.inl (fail _)) (.inl (fail _))
+    (fun arm ha _ us _ hlen => ?_) fun arm ha g hg us _ hlen m hm => ?_
+  · refine withVars _ ?_
+    rw [List.map_fst_zip (Nat.le_of_eq hlen)]
+    exact (h arm ha).1
+  · have hR : ((arm.binders.zip us).map Prod.fst).foldl hide R = arm.binders.foldl hide R := by
       rw [List.map_fst_zip (Nat.le_of_eq hlen)]
-      exact h arm hmem
-    · simp only [hlen, ↓reduceIte]
-      exact fail _
+    refine bind (P := fun _ => True) (withVars _ ?_) fun b _ => ite b (withVars _ ?_) hm
+    · rw [hR]
+      exact bind ((h arm ha).2 g hg) fun _ _ => asBool
+    · rw [hR]
+      exact (h arm ha).1
 
 /-- An assignment keeps the regions when the place it writes, whatever its indexes, avoids
 them. -/

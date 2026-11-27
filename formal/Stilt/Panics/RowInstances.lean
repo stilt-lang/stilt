@@ -59,7 +59,13 @@ theorem pathWrites_substRows : ∀ p : List Projection, pathWrites (substPathRow
 
 theorem armsWrites_substRows : ∀ arms : List Arm, armsWrites (substArmRows s arms) = armsWrites arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmRows, armsWrites, Expr.writes_substRows b, armsWrites_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsWrites, guardWrites_substRows g, Expr.writes_substRows b,
+      armsWrites_substRows arms]
+
+theorem guardWrites_substRows : ∀ g : Option Expr, guardWrites (substGuardRows s g) = guardWrites g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardWrites, Expr.writes_substRows g]
 
 end
 
@@ -106,7 +112,14 @@ theorem pathResizes_substRows : ∀ p : List Projection, pathResizes (substPathR
 
 theorem armsResizes_substRows : ∀ arms : List Arm, armsResizes (substArmRows s arms) = armsResizes arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmRows, armsResizes, Expr.resizes_substRows b, armsResizes_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsResizes, guardResizes_substRows g, Expr.resizes_substRows b,
+      armsResizes_substRows arms]
+
+theorem guardResizes_substRows : ∀ g : Option Expr,
+    guardResizes (substGuardRows s g) = guardResizes g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardResizes, Expr.resizes_substRows g]
 
 end
 
@@ -231,7 +244,7 @@ theorem Expr.alwaysJumps_substRows : ∀ e : Expr, (e.substRows s).alwaysJumps =
 
 theorem armsAlwaysJump_substRows : ∀ arms : List Arm, armsAlwaysJump (substArmRows s arms) = armsAlwaysJump arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
+  | ⟨_, _, _, b⟩ :: arms => by
     simp [substArmRows, armsAlwaysJump, Expr.alwaysJumps_substRows b, armsAlwaysJump_substRows arms]
 
 end
@@ -426,9 +439,14 @@ theorem argsPanicFree_substRows : ∀ (G : List Known) (args : List Arg),
 theorem armsPanicFree_substRows : ∀ (G : List Known) (arms : List Arm),
     armsPanicFree lim G (substArmRows s arms) = armsPanicFree lim G arms
   | _, [] => rfl
-  | G, ⟨_, bs, b⟩ :: arms => by
-    simp [substArmRows, armsPanicFree, Expr.panicFree_substRows (withoutNames G bs) b,
-      armsPanicFree_substRows G arms]
+  | G, ⟨_, bs, g, b⟩ :: arms => by
+    simp [substArmRows, armsPanicFree, guardWrites_substRows, guardPanicFree_substRows _ g,
+      Expr.panicFree_substRows _ b, armsPanicFree_substRows _ arms]
+
+theorem guardPanicFree_substRows : ∀ (G : List Known) (g : Option Expr),
+    guardPanicFree lim G (substGuardRows s g) = guardPanicFree lim G g
+  | _, none => rfl
+  | G, some g => by simp [substGuardRows, guardPanicFree, Expr.panicFree_substRows G g]
 
 end
 

@@ -105,11 +105,11 @@ def callRaisingBool (f : Name) : Expr :=
 
 /-- The program whose row is formed by an annotation. -/
 def annotated : Program :=
-  ⟨⟨[box], [], [annotatedF], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
+  ⟨⟨[box], [], [annotatedF], [], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
 
 /-- The program whose row is formed by an instantiation. -/
 def generic : Program :=
-  ⟨⟨[box], [], [apply, genericF], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
+  ⟨⟨[box], [], [apply, genericF], [], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
 
 /-! ## effects.no-escape as it was written is unsound -/
 
@@ -287,7 +287,7 @@ abbrev raisesI64 : Row := ⟨false, some .i64, [], [], none⟩
 `raise<i64>`. The call instantiates `f'` with the argument's effects beyond
 `raise<Box>`: none. -/
 def paired : Program :=
-  ⟨⟨[box], [], [orZero], [], [], [], []⟩,
+  ⟨⟨[box], [], [orZero], [], [], [], [], []⟩,
     .raise (.call (.fnRef "or_zero" [] [Row.pure]) [.value (.closure [] .i64 raisesBox raiseBox)] .i64),
     raisesI64, {}⟩
 

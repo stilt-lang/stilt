@@ -168,7 +168,8 @@ theorem declsWellFormed {D : Decls}
     (hparams : ∀ d ∈ D.fns, (d.params.map Param.name).Nodup)
     (hrowParams : ∀ d ∈ D.fns, d.rowParams.Nodup)
     (hsigs : D.fns.all signatureCheck = true)
-    (himplicit : D.fns.all implicitRowsCheck = true) (hreceivers : D.Receivers) :
+    (himplicit : D.fns.all implicitRowsCheck = true) (hreceivers : D.Receivers)
+    (hconsts : D.consts = [] := by rfl) :
     D.WellFormed := by
   obtain ⟨hv, ht, hti, he⟩ := hvariants
   have hf := fun r hr => List.all_eq_true.1 hfields r hr
@@ -184,6 +185,7 @@ theorem declsWellFormed {D : Decls}
     by simp [ht], by simp [hti], by simpa [Decls.typeNames, hv, ht, he] using hrecords,
     by simp [he], by simp [hti], by simp [hti],
     ⟨fun r hr f hfm => effectsIn_of_check (by simpa using ((hf r hr).2 f hfm).2), by simp [hv],
-      signatureEffects_of_check hsigs, by simp [he], by simp [ht]⟩⟩
+      signatureEffects_of_check hsigs, by simp [he], by simp [ht]⟩,
+    by simp [hconsts], by simp [hconsts], fun _ _ _ h => by simp [hconsts] at h⟩
 
 end Stilt.Counterexamples

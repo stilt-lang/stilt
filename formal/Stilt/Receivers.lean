@@ -210,7 +210,7 @@ example :
   decide
 
 /-- `type Counter = { n: i64 }`. -/
-private def counterDecls : Decls := ⟨[⟨"Counter", [("n", .i64)], []⟩], [], [], [], [], [], []⟩
+private def counterDecls : Decls := ⟨[⟨"Counter", [("n", .i64)], []⟩], [], [], [], [], [], [], []⟩
 
 /-- The body of a method of `Counter` whose receiver takes `mode`. -/
 private def receiverCtx (mode : Mode) : Ctx :=

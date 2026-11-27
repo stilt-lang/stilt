@@ -53,7 +53,7 @@ private def firstAbove : FnDecl :=
   ⟨"first", [], [], [⟨.let, "n", .i64, none⟩], .i64, Row.pure,
     .varIn "i" .i64 (.int 0) (.loop (.loop turn)), {}⟩
 
-private def decls : Decls := ⟨[], [], [sumFrom3, firstAbove], [], [], [], []⟩
+private def decls : Decls := ⟨[], [], [sumFrom3, firstAbove], [], [], [], [], []⟩
 
 /-- A call of one of the functions. -/
 private def call (f : Name) (e : Expr) (result : Ty :=

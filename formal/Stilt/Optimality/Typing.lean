@@ -209,6 +209,9 @@ theorem decls_wellFormed : (decls ss a b extra).WellFormed where
       subst this
       exact nomatch hE
   fnNames := by simp [decls, callee]
+  constNames := by simp [decls]
+  constTypes := fun _ h => by simp [decls] at h
+  consts := fun _ _ _ h => by simp [decls] at h
   paramNames := fun d hd => by
     simp only [decls, Decls.fns_mk, List.mem_singleton] at hd
     subst hd

@@ -124,8 +124,15 @@ def pathUse (O : OnceParams) (f : Name) : List Projection → Use
 /-- How the arms of a `match` use `f`; an arm that binds `f` hides it. -/
 def armsUse (O : OnceParams) (f : Name) : List Arm → Use
   | [] => .none
-  | ⟨_, binders, body⟩ :: arms =>
-    (if binders.contains f then .none else body.use O f).add (armsUse O f arms)
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    (if binders.contains f then .none else (guardUse O f guard).add (body.use O f)).add
+      (armsUse O f arms)
+
+/-- How an arm's guard uses `f`: it may run more than once, with each way its pattern
+matches (patterns.guards). -/
+def guardUse (O : OnceParams) (f : Name) : Option Expr → Use
+  | none => .none
+  | some g => (g.use O f).again
 
 end
 
@@ -135,7 +142,8 @@ def Expr.occurs (x : Name) (e : Expr) : Bool := e.use (fun _ _ => false) x != .n
 
 /-- Whether an arm of a `match` uses `x`. -/
 def armsOccur (x : Name) (arms : List Arm) : Bool :=
-  arms.any fun arm => !arm.binders.contains x && arm.body.occurs x
+  arms.any fun arm =>
+    !arm.binders.contains x && ((arm.guard.any (·.occurs x)) || arm.body.occurs x)
 
 /-! ## Once parameters -/
 

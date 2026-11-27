@@ -17,7 +17,7 @@ private def self : Expr := .call (.fnRef "f" [] []) [.value (.var "n")] .i64
 
 /-- `fn f(n: i64) -> i64 { f(n) }`. -/
 def decls : Decls :=
-  ⟨[], [], [⟨"f", [], [], [⟨.let, "n", .i64, none⟩], .i64, Row.pure, self, {}⟩], [], [], [], []⟩
+  ⟨[], [], [⟨"f", [], [], [⟨.let, "n", .i64, none⟩], .i64, Row.pure, self, {}⟩], [], [], [], [], []⟩
 
 /-- No ranking, and no way for `f`'s self-calls to go down, makes `f` free of `div`. -/
 theorem unranked (lim : Limited) (B : Name → Nat) (desc : Name → Descent) (hf : lim.fn "f" = true) :

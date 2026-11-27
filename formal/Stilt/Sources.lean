@@ -178,7 +178,7 @@ def argsSources (D : Decls) (Γ : ViewScope) : List Arg → List Shape
 /-- The sources of the arms' values. -/
 def armsSources (D : Decls) (Γ : ViewScope) (scrutinee : List Shape) : List Arm → List Shape
   | [] => []
-  | ⟨_, binders, body⟩ :: arms =>
+  | ⟨_, binders, _, body⟩ :: arms =>
     body.sources D (ViewScope.binders Γ binders scrutinee) ++
       armsSources D Γ scrutinee arms
 

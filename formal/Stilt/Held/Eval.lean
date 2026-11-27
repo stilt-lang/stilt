@@ -183,16 +183,29 @@ theorem args : ∀ as : List Arg, Eval.KeepsHeld k (Eval.args run as)
   | .value e :: as => bind (h e) fun _ => bind (args as) fun _ => pure _
   | .inout ⟨_, ps⟩ :: as => bind (path h ps) fun _ => bind (args as) fun _ => pure _
 
-theorem select (arms : List Arm) (v : Value) :
-    Eval.KeepsHeld k (Eval.select F.withWorld run arms v) := by
-  unfold Eval.select
-  cases selectArm arms v with
-  | none => exact fail _
-  | some au =>
-    dsimp only
+theorem guarded (bs : List Name) (g body : Expr) {next : Eval (τ × World) Value}
+    (hn : Eval.KeepsHeld k next) :
+    ∀ ways, Eval.KeepsHeld k (Eval.guarded F.withWorld run bs g body next ways)
+  | [] => hn
+  | us :: ways => by
+    simp only [Eval.guarded]
     split
-    · exact withVars F (h _) _
+    · exact bind (withVars F (bind (h g) asBool) _) fun b =>
+        ite b (withVars F (h body) _) (guarded bs g body hn ways)
     · exact fail _
+
+theorem select : ∀ (arms : List Arm) (v : Value),
+    Eval.KeepsHeld k (Eval.select F.withWorld run arms v)
+  | [], _ => fail _
+  | arm :: arms, v => by
+    simp only [Eval.select]
+    split
+    · split
+      · split
+        · exact withVars F (h _) _
+        · exact fail _
+      · exact select arms v
+    · exact guarded F h _ _ _ (select arms v) _
 
 theorem assign (x : Name) (ps : List Projection) (value : Expr) :
     Eval.KeepsHeld k (Eval.assign F.withWorld run x ps value) :=

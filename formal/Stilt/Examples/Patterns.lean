@@ -28,7 +28,7 @@ private def opt : VariantDecl := ⟨"Opt", [("Some", [.variant "Shape" []]), ("N
 /-- `type P = { x: i64, y: i64 }`. -/
 private def point : RecordDecl := ⟨"P", [("x", .i64), ("y", .i64)], []⟩
 
-private def decls : Decls := ⟨[point], [shape, opt], [], [], [], [], []⟩
+private def decls : Decls := ⟨[point], [shape, opt], [], [], [], [], [], []⟩
 
 /-- A program whose `main` raises a value of `shown`. -/
 private def program (shown : Ty) (main : Expr) : Program :=
@@ -39,7 +39,7 @@ private def agree (p : Program) (o : Observation) : Prop :=
   (p.runCopy 64).observe = o ∧ (p.runInPlace 64).observe = o
 
 /-- An arm, with the names its pattern binds. -/
-private def arm (p : Pattern) (body : Expr) : Arm := ⟨p, p.binders, body⟩
+private def arm (p : Pattern) (body : Expr) : Arm := ⟨p, p.binders, none, body⟩
 
 private def circle (p : Pattern) : Pattern := .variant "Shape" "Circle" [p]
 private def rect (p q : Pattern) : Pattern := .variant "Shape" "Rect" [p, q]
@@ -146,7 +146,10 @@ example : exhaustive decls 16 [[.or (circle .wild) (rect .wild .wild)]] [.varian
 /-- An `if let` is exhaustive whatever its pattern: its `else` is `_`. -/
 theorem ifLet_exhaustive (D : Decls) (p : Pattern) (σ : Ty) (a b : Expr) :
     Exhaustive D (armRows [arm p a, arm .wild b]) [σ] :=
-  .default (.done (by simp [specialize, armRows, arm, defaultRow]))
+  .default (.done (by
+    simp only [specialize, armRows, arm, List.mem_map, List.mem_filter, List.mem_cons,
+      List.not_mem_nil, or_false, List.mem_flatMap]
+    exact ⟨_, ⟨_, ⟨Or.inr rfl, rfl⟩, rfl⟩, by simp [defaultRow]⟩))
 
 /-- `if let Circle(r) = Circle(2) { r } else { 7 }` has the type `i64`: its
 pattern fits `Shape`, binding `r: i64`, and its arms are exhaustive. -/
@@ -159,8 +162,8 @@ example : HasType decls RowScope.closed [] ⟨Row.pure, false, false, .never, fa
   refine .match hwf
     (.variant rfl rfl (fun _ h => nomatch h) rfl (.cons (.int (by decide)) (.refl _) .nil))
     (ifLet_exhaustive _ _ _ _ _) ?_
-  refine .cons (.variant rfl rfl rfl (.cons .bind .nil)) rfl (by decide) (.var rfl) (.refl _) ?_
-  exact .cons .wild rfl (by decide) (.int (by decide)) (.refl _) .nil
+  refine .cons (.variant rfl rfl rfl (.cons .bind .nil)) rfl (by decide) .none (.var rfl) (.refl _) ?_
+  exact .cons .wild rfl (by decide) .none (.int (by decide)) (.refl _) .nil
 
 /-! ## List patterns -/
 
@@ -220,7 +223,7 @@ example : Exhaustive decls [[lst [] .exact], [lst [.bool true] .any], [lst [.boo
 private def optNever : VariantDecl := ⟨"OptNever", [("Some", [.never]), ("None", [])], []⟩
 private def loopTy : VariantDecl := ⟨"Loop", [("Loop", [.variant "Loop" []])], []⟩
 private def holds : RecordDecl := ⟨"Holds", [("n", .i64), ("loop", .variant "Loop" [])], []⟩
-private def empties : Decls := ⟨[holds], [optNever, loopTy], [], [], [], [], []⟩
+private def empties : Decls := ⟨[holds], [optNever, loopTy], [], [], [], [], [], []⟩
 
 /-- A match on an `Option<Never>` is exhaustive with `None` alone: `Some`'s payload
 has no values. -/

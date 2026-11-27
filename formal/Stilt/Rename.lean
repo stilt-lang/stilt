@@ -76,7 +76,13 @@ def renamePath (g : Name → Name) : List Projection → List Projection
 its binders say they are. -/
 def renameArms (g : Name → Name) : List Arm → List Arm
   | [] => []
-  | ⟨p, binders, body⟩ :: arms => ⟨p, binders.map g, body.rename g⟩ :: renameArms g arms
+  | ⟨p, binders, guard, body⟩ :: arms =>
+    ⟨p, binders.map g, renameGuard g guard, body.rename g⟩ :: renameArms g arms
+
+/-- An arm's guard, each binder written as `g` gives it. -/
+def renameGuard (g : Name → Name) : Option Expr → Option Expr
+  | none => none
+  | some c => some (c.rename g)
 
 end
 

@@ -42,8 +42,10 @@ import Stilt.ViewContained
 import Stilt.Receivers
 import Stilt.Eval
 import Stilt.Memory
+import Stilt.Scope
 import Stilt.Semantics
 import Stilt.Else
+import Stilt.Selection
 import Stilt.Related
 import Stilt.Handling
 import Stilt.Holding

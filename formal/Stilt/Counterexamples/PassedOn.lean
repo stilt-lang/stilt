@@ -57,7 +57,7 @@ def unpairedCaller : FnDecl :=
 /-- The program in which `caller` passes its unpaired `r` on to `f`'s paired
 `e`. -/
 def passedOn : Program :=
-  ⟨⟨[box], [], [pairedF, unpairedCaller], [], [], [], []⟩, callRaisingBool "caller", raisesBool, {}⟩
+  ⟨⟨[box], [], [pairedF, unpairedCaller], [], [], [], [], []⟩, callRaisingBool "caller", raisesBool, {}⟩
 
 /-- `f`'s signature pairs `e` with `Box`, in `k`'s type. -/
 private theorem pairedF_pairs : pairedF.pairs "e" (.record "Box" []) :=
@@ -143,7 +143,7 @@ def pairedCaller : FnDecl :=
 `main` whose row is `raise<i64>`. The `catch` returns 0 only if a `Box`
 escapes `caller`. -/
 def passedOnPaired : Program :=
-  ⟨⟨[box], [], [pairedF, pairedCaller], [], [], [], []⟩,
+  ⟨⟨[box], [], [pairedF, pairedCaller], [], [], [], [], []⟩,
     .letIn "n" .i64
       (.tryCatch
         (.call (.fnRef "caller" [] [Row.pure]) [.value (.closure [] .unit raisesBox raiseBox)] .i64)

@@ -87,7 +87,7 @@ each a copy (modes.copies). A tuple's elements are its fields by position, a
 list's are its elements, and a variant's payload and a list's rest are at no
 known place. -/
 def Pattern.partsAt (b : Name) (parts : List Part) : Pattern → List Part
-  | .wild | .int _ | .bool _ | .str _ | .unit => []
+  | .wild | .int _ | .bool _ | .str _ | .unit | .const _ _ => []
   | .bind y => if y == b then parts.map Part.bound else []
   | .tuple ps => patternsPartsAt b parts (fun n => some (.field (tupleField n))) 0 ps
   | .record _ fields => fieldPatternsPartsAt b parts fields

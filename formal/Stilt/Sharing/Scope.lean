@@ -1,4 +1,5 @@
 import Stilt.Sharing.Bind
+import Stilt.Selection
 
 /-!
 # Scopes with sharing
@@ -71,22 +72,19 @@ section Runs
 variable {run : Expr → Eval Copy.State Value} {run' : Expr → Eval (State × World) Value}
 
 theorem select (shared : Name → Bool) (h : SimRun run run') {arms : List Arm}
-    (harms : ∀ arm ∈ arms, arm.body.Safe) {v : Value} (hv : v.Safe) :
+    (harms : ∀ arm ∈ arms, arm.body.Safe ∧ ∀ g, arm.guard = some g → g.Safe) {v : Value}
+    (hv : v.Safe) :
     Sim Value.Safe (Eval.select Copy.memory run arms v)
       (Eval.select (memory shared) run' arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact fail _
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, hm⟩ := selectArm_mem hsel
-    dsimp only
-    by_cases hlen : arm.binders.length = us.length
-    · simp only [hlen, ↓reduceIte]
-      exact withVars shared (h _ (harms arm hmem)) _ fun xv hxv =>
-        arm.pattern.matchOn_parts Value.Safe.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2
-    · simp only [hlen, ↓reduceIte]
-      exact fail _
+  refine Eval.select_rel (Sim Value.Safe) (fail _) (fun arm ha _ us hm _ => ?_)
+    fun arm ha g hg us hu _ m m' hmm => ?_
+  · exact withVars shared (h _ (harms arm ha).1) _ fun xv hxv =>
+      arm.pattern.matchOn_parts Value.Safe.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2
+  · obtain ⟨q, -, hq⟩ := Pattern.mem_ways hu
+    have hparts : ∀ xv ∈ arm.binders.zip us, xv.2.Safe := fun xv hxv =>
+      q.matchOn_parts Value.Safe.passesToParts hv hq xv.2 (List.of_mem_zip hxv).2
+    exact bind (withVars shared (bind (h g ((harms arm ha).2 g hg)) fun _ _ => asBool) _ hparts)
+      fun b _ => ite b (withVars shared (h _ (harms arm ha).1) _ hparts) hmm
 
 theorem loop (shared : Name → Bool) (h : SimRun run run') (x : Name) {e body : Expr}
     (he : e.Safe) (hb : body.Safe) :

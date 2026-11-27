@@ -1,5 +1,6 @@
 import Stilt.Soundness.Cases
 import Stilt.Soundness.Patterns
+import Stilt.Selection
 
 /-!
 # Literals, `match` and `for`
@@ -10,8 +11,9 @@ builds holds every declared field, in the declared order, at its declared
 type at the literal's type arguments. Fields and payloads have closed types
 (effects.row-variables), so at arguments they read as their declared types at the
 arguments read (declarations.type-parameters). A `match` runs the first arm whose pattern
-matches (patterns.match), which its typing checked against the scrutinee's
-type, and its arms are exhaustive (patterns.algorithm), so it always finds one. A
+matches and whose guard is true (patterns.match and patterns.guards), which its typing checked
+against the scrutinee's type, and its arms without guards are exhaustive (patterns.algorithm
+and patterns.guards-and-constants), so it always finds one. A
 `for` loop runs a turn of its body for each element (expressions.for-iterables),
 until a `break` ends it (expressions.break-and-continue).
 -/
@@ -136,18 +138,20 @@ theorem Eval.Ok.forEach {Γ : Ctx} {η : REnv} {X : Exits} {f : Value → Eval C
 theorem ArmsFit.mem {scope : RowScope} :
     ∀ {Γ : Ctx} {fx : Effects} {arms : List Arm} {σ τ : Ty}, ArmsFit D scope Γ fx arms σ τ →
       ∀ {arm : Arm}, arm ∈ arms → ∃ σs ρ, PatFits D arm.pattern σ σs ∧
-        arm.binders = arm.pattern.binders ∧ HasType D scope (Γ.bindAll arm.binders σs) fx arm.body ρ ∧
-          Fits ρ τ
+        arm.binders = arm.pattern.binders ∧
+          GuardFits D scope (Γ.bindAll arm.binders σs) fx arm.guard ∧
+          HasType D scope (Γ.bindAll arm.binders σs) fx arm.body ρ ∧ Fits ρ τ
   | _, _, _, _, _, .nil, _, h => nomatch h
-  | _, _, _, _, _, .cons hp hbs _ hb hfit hrest, _, h => by
+  | _, _, _, _, _, .cons hp hbs _ hg hb hfit hrest, _, h => by
     rcases List.mem_cons.1 h with rfl | h
-    · exact ⟨_, _, hp, hbs, hb, hfit⟩
+    · exact ⟨_, _, hp, hbs, hg, hb, hfit⟩
     · exact ArmsFit.mem hrest h
 
 theorem substArmRows_eq_map (θ : RowSubst) : ∀ arms : List Arm,
-    substArmRows θ arms = arms.map fun a => ⟨a.pattern, a.binders, a.body.substRows θ⟩
+    substArmRows θ arms =
+      arms.map fun a => ⟨a.pattern, a.binders, substGuardRows θ a.guard, a.body.substRows θ⟩
   | [] => rfl
-  | ⟨_, _, _⟩ :: arms => by simp [substArmRows, substArmRows_eq_map θ arms]
+  | ⟨_, _, _, _⟩ :: arms => by simp [substArmRows, substArmRows_eq_map θ arms]
 
 theorem Values.Typed.length : ∀ {vs : List Value} {τs : List Ty} {π : SParams},
     Values.Typed D vs τs π → vs.length = τs.length
@@ -195,26 +199,52 @@ theorem list_ok {τ : Ty} {es : List Expr} (hes : ExprsFit D scope Γ fx es (Lis
 
 theorem match_ok {e : Expr} {σ τ : Ty} {arms : List Arm}
     (he : HasType D scope Γ fx e σ) (hx : Exhaustive D (armRows arms) [σ])
-    (ha : ArmsFit D scope Γ fx arms σ τ) :
+    (ha' : ArmsFit D scope Γ fx arms σ τ) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
       (eval D Copy.memory (n + 1) ((Expr.match e τ arms).substRows θ)) := by
   refine Eval.Ok.bind (hs he hη θ) fun v hv => ?_
   show Eval.Ok D Γ η _ _ (Eval.select Copy.memory (eval D Copy.memory n) (substArmRows θ arms) v)
-  have hsome := Exhaustive.select hD hx hv
-  cases hsel : selectArm arms v with
-  | none => rw [hsel] at hsome; exact nomatch hsome
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, hm⟩ := selectArm_mem hsel
-    obtain ⟨σs, ρ, hp, hbs, hb, hfit⟩ := ha.mem hmem
-    have hus := hp.bound hD hv hm
+  obtain ⟨arm, hmem, hg, hm⟩ := Exhaustive.select hD hx hv
+  rw [substArmRows_eq_map]
+  refine Eval.select_of _ (.inr ⟨_, List.mem_map_of_mem hmem, by simp [hg, substGuardRows], hm⟩)
+    (.inr fun a ha us hus => ?_) ?_ ?_
+  · obtain ⟨arm, hmem, rfl⟩ := List.mem_map.1 ha
+    obtain ⟨σs, ρ, hp, hbs, -, -, -⟩ := ha'.mem hmem
     have hlen : arm.binders.length = σs.length := by rw [hbs, hp.length]
-    have hl : arm.binders.length = us.length := by rw [hlen, hus.length]
-    simp only [Eval.select, substArmRows_eq_map, selectArm_map, hsel, Option.map_some, hl,
-      ↓reduceIte]
-    exact Eval.Ok.withVars hlen hus
+    rcases hus with hm | hus
+    · rw [hlen, (hp.bound hD hv hm).length]
+    · obtain ⟨q, hq, hqm⟩ := Pattern.mem_ways hus
+      rw [hlen, ((hp.alternative q hq).1.bound hD hv hqm).length]
+  · intro a ha _ us hm _
+    obtain ⟨arm, hmem, rfl⟩ := List.mem_map.1 ha
+    obtain ⟨σs, ρ, hp, hbs, -, hb, hfit⟩ := ha'.mem hmem
+    exact Eval.Ok.withVars (by rw [hbs, hp.length]) (hp.bound hD hv hm)
       ((hs hb hη θ).mono (fun _ hv => hv.fits (hfit.close η)) (fun _ F hF he => ⟨F, hF, he⟩)
         fun _ h => h)
+  · intro a ha g hga us hus _ m hm
+    obtain ⟨arm, hmem, rfl⟩ := List.mem_map.1 ha
+    obtain ⟨σs, ρ, hp, hbs, hgt, hb, hfit⟩ := ha'.mem hmem
+    obtain ⟨q, hq, hqm⟩ := Pattern.mem_ways hus
+    obtain ⟨hqp, -⟩ := hp.alternative q hq
+    have hlen : arm.binders.length = σs.length := by rw [hbs, hp.length]
+    have hut := hqp.bound hD hv hqm
+    cases harm : arm.guard with
+    | none => simp [harm, substGuardRows] at hga
+    | some g₀ =>
+      rw [harm] at hgt hga
+      cases hgt with
+      | some hgt hfg =>
+        simp only [substGuardRows, Option.some.injEq] at hga
+        subst hga
+        refine Eval.Ok.bind (P := fun _ => True)
+          (Eval.Ok.withVars hlen hut (Eval.Ok.bind (hs hgt hη θ) fun w hw => ?_)) fun k _ => ?_
+        · obtain ⟨k, rfl⟩ := (hw.fits (hfg.close η)).bool_inv
+          exact Eval.Ok.pure trivial
+        · cases k
+          · exact hm
+          · exact Eval.Ok.withVars hlen hut
+              ((hs hb hη θ).mono (fun _ hv => hv.fits (hfit.close η))
+                (fun _ F hF he => ⟨F, hF, he⟩) fun _ h => h)
 
 omit hD in
 theorem for_ok {x : Name} {τ : Ty} {e body : Expr} {σ : Ty} (he : HasType D scope Γ fx e (.list τ))

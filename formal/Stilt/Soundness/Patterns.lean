@@ -74,6 +74,10 @@ theorem PatFits.bound (hD : D.WellFormed) : ∀ {p : Pattern} {σ : Ty} {σs : L
       ValuesAt D η us σs
   | _, _, _, .wild, _, _, _, h => by cases h; exact .nil
   | _, _, _, .bind, _, _, hv, h => by cases h; exact .cons hv .nil
+  | _, _, _, .const .., _, _, _, h => by
+    simp only [Pattern.matchOn, Option.map_eq_some_iff] at h
+    obtain ⟨_, _, rfl⟩ := h
+    exact .nil
   | _, _, _, .int _, v, _, _, h | _, _, _, .bool, v, _, _, h | _, _, _, .str, v, _, _, h
   | _, _, _, .unit, v, _, _, h => by
     cases v <;> simp only [Pattern.matchOn, reduceCtorEq] at h <;> (try split at h) <;>
@@ -252,14 +256,16 @@ theorem Exhaustive.sound {P : Rows} {τs : List Ty} (h : Exhaustive D P τs) :
         rw [List.length_take, Nat.min_eq_left (by omega)] at hw
         exact (listRow_long_sound m xs (by omega)).lift (ihl (hw.append hvs))
 
-/-- A well-typed `match` finds an arm for every value of its scrutinee's type. -/
+/-- A well-typed `match` has, for every value of its scrutinee's type, an arm without a
+guard whose pattern matches it (patterns.guards-and-constants), so it always finds an arm. -/
 theorem Exhaustive.select {arms : List Arm} {σ : Ty} (h : Exhaustive D (armRows arms) [σ])
-    {v : Value} (hv : Value.Typed D v (σ.close η)) : (selectArm arms v).isSome := by
+    {v : Value} (hv : Value.Typed D v (σ.close η)) :
+    ∃ arm ∈ arms, arm.guard = none ∧ (arm.pattern.matchOn v).isSome := by
   obtain ⟨row, hrow, hm⟩ := Exhaustive.sound hD h (.cons hv .nil)
   obtain ⟨arm, harm, rfl⟩ := List.mem_map.1 hrow
-  refine selectArm_isSome harm ?_
-  obtain ⟨h₁, _⟩ := rowMatches_cons.1 hm
-  exact h₁
+  obtain ⟨harm, hc⟩ := List.mem_filter.1 harm
+  simp only [Arm.counts, Bool.and_eq_true, Option.isNone_iff_eq_none] at hc
+  exact ⟨arm, harm, hc.1, (rowMatches_cons.1 hm).1⟩
 
 end
 

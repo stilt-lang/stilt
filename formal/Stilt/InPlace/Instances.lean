@@ -154,9 +154,14 @@ theorem armsExclusive_substTys :
     ∀ (arms : List Arm) (r : List Shape),
       armsExclusive r (substArmTys s arms) = armsExclusive r arms
   | [], _ => rfl
-  | ⟨_, binders, body⟩ :: arms, r => by
-    simp [substArmTys, armsExclusive, Expr.exclusive_substTys body (binders.foldl hide r),
-      armsExclusive_substTys arms r]
+  | ⟨_, binders, g, body⟩ :: arms, r => by
+    simp [substArmTys, armsExclusive, guardExclusive_substTys g (binders.foldl hide r),
+      Expr.exclusive_substTys body (binders.foldl hide r), armsExclusive_substTys arms r]
+
+theorem guardExclusive_substTys :
+    ∀ (g : Option Expr) (r : List Shape), guardExclusive r (substGuardTys s g) = guardExclusive r g
+  | none, _ => rfl
+  | some g, r => by simp [substGuardTys, guardExclusive, Expr.exclusive_substTys g r]
 
 end
 
@@ -255,9 +260,14 @@ theorem pathDistinctParams_substTys :
 theorem armsDistinctParams_substTys :
     ∀ arms : List Arm, armsDistinctParams (substArmTys s arms) = armsDistinctParams arms
   | [] => rfl
-  | ⟨_, _, body⟩ :: arms => by
-    simp [substArmTys, armsDistinctParams, Expr.distinctParams_substTys body,
-      armsDistinctParams_substTys arms]
+  | ⟨_, _, g, body⟩ :: arms => by
+    simp [substArmTys, armsDistinctParams, guardDistinctParams_substTys g,
+      Expr.distinctParams_substTys body, armsDistinctParams_substTys arms]
+
+theorem guardDistinctParams_substTys :
+    ∀ g : Option Expr, guardDistinctParams (substGuardTys s g) = guardDistinctParams g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardDistinctParams, Expr.distinctParams_substTys g]
 
 end
 

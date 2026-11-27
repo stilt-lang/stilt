@@ -147,36 +147,100 @@ theorem args : ∀ (as : List Arg) {R : Roles}, argsDivFree lim B me R as = true
           (eval_keeps D w n) ps (List.Subset.refl _) (List.Subset.refl _)) hA₁ hd'))
         fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-omit h in
-theorem arms_mem : ∀ {arms : List Arm} {arm : Arm} {R : Roles} {r : Role},
-    armsDivFree lim B me R r arms = true → armsDepth arms ≤ k → arm ∈ arms →
-      arm.body.divFree lim B me (R.bindAll arm.binders (arm.role r)) = true ∧ arm.body.depth ≤ k
-  | ⟨_, _, _⟩ :: _, _, _, _, hd, hn, hm => by
-    simp only [armsDivFree, armsDepth, Bool.and_eq_true, Nat.max_le] at hd hn
-    rcases List.mem_cons.1 hm with rfl | hm
-    · exact ⟨hd.1, hn.1⟩
-    · exact arms_mem hd.2 hn.2 hm
-
-theorem select {arms : List Arm} {R : Roles} {r : Role} (hd : armsDivFree lim B me R r arms = true)
-    (hn : armsDepth arms ≤ k) (hA : R.Avoids (armsWrites arms)) (v : Value)
-    (hv : r.Holds v m) (s : Copy.State) (hI : R.Inv s.1 m) :
-    Halts (fun n => Eval.select (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) arms v)
-      (fun _ => True) s := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact const (Eval.Ends.fail _)
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, hmatch⟩ := selectArm_mem hsel
-    obtain ⟨hda, hna⟩ := arms_mem hd hn hmem
-    dsimp only
+/-- An arm with a guard halts: its guard with each way of its pattern, then its body or what
+comes next. Its binders have a role only when its pattern has no or-pattern, so that it has one
+way, the one its pattern matches. -/
+theorem guarded {p : Pattern} {xs : List Name} {g body : Expr} {R : Roles} {r : Role}
+    (hgd : g.divFree lim B me (R.bindAll xs (Arm.role r ⟨p, xs, some g, body⟩)) = true)
+    (hgn : g.depth ≤ k)
+    (hbd : body.divFree lim B me (R.bindAll xs (Arm.role r ⟨p, xs, some g, body⟩)) = true)
+    (hbn : body.depth ≤ k) (hA : R.Avoids (g.writes ++ body.writes)) {v : Value}
+    (hv : r.Holds v m) {next : Nat → Eval Copy.State Value}
+    (hnext : ∀ s : Copy.State, R.Inv s.1 m → Halts next (fun _ => True) s) :
+    ∀ ways : List (List Value), (∀ us ∈ ways, ∀ u ∈ us,
+        (Arm.role r ⟨p, xs, some g, body⟩).Holds u m) → ∀ s : Copy.State, R.Inv s.1 m →
+      Halts (fun n => Eval.guarded (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) xs g body
+        (next n) ways) (fun _ => True) s
+  | [], _, s, hI => hnext s hI
+  | us :: ways, hw, s, hI => by
+    simp only [Eval.guarded]
     split
-    · rename_i hlen
-      refine withVarsAt _ _ s (h _ _ hda hna ?_ _ ?_)
-      · exact Roles.Avoids.bindAll (Arm.role_avoids) (hA.mono (armsWrites_mem hmem))
-      · rw [Copy.foldl_bind]
-        exact hI.bindAll _ _ hlen (Arm.role_holds hv hmatch)
-    · exact const (Eval.Ends.fail _)
+    case isFalse => exact const (Eval.Ends.fail _)
+    rename_i hlen
+    have hAg : R.Avoids g.writes := hA.mono (List.subset_append_left _ _)
+    have hguard : Halts (fun n => Eval.withVars (Copy.memoryWith w) (xs.zip us)
+        (eval D (Copy.memoryWith w) n g >>= Eval.asBool)) (fun _ => True) s := by
+      refine withVarsAt _ _ s (bind (h _ _ hgd hgn
+        (Roles.Avoids.bindAll (fun hr x hx => Arm.role_avoids_guard (arm := ⟨p, xs, some g, body⟩)
+          hr x hx) hAg) _ ?_) fun v _ _ _ => const (Eval.Ends.asBool v))
+      rw [Copy.foldl_bind]
+      exact hI.bindAll _ _ hlen (hw us List.mem_cons_self)
+    simp only [Eval.tryWay]
+    refine bind hguard fun b s' _ hd' => ?_
+    have hI' : R.Inv s'.1 m := hI.after (W := g.writes) (L := g.resizes)
+      (fun n => Eval.Keeps.withVars w (Eval.Keeps.bind (eval_keeps D w n g _ _
+        (List.Subset.refl _) (List.Subset.refl _)) fun v _ => Eval.Keeps.asBool v) _) hAg hd'
+    refine ite b ?_ (guarded hgd hgn hbd hbn hA hv hnext ways
+      (fun us' hu => hw us' (List.mem_cons_of_mem _ hu)) s' hI')
+    refine withVarsAt _ _ s' (h _ _ hbd hbn (Roles.Avoids.bindAll
+      (Arm.role_avoids (arm := ⟨p, xs, some g, body⟩)) (hA.mono (List.subset_append_right _ _)))
+      _ ?_)
+    rw [Copy.foldl_bind]
+    exact hI'.bindAll _ _ hlen (hw us List.mem_cons_self)
+
+omit h in
+/-- The ways of a pattern that the role of its arm reads: with a role, the pattern has no
+or-pattern, so its one way is the one it matches. -/
+theorem Arm.role_ways {arm : Arm} {r : Role} {v : Value} {us : List Value} {m : Meas}
+    (hv : r.Holds v m) (hu : us ∈ arm.pattern.ways v) : ∀ u ∈ us, (arm.role r).Holds u m := by
+  intro u hu'
+  unfold Arm.role
+  split
+  · rename_i hw
+    simp only [Bool.and_eq_true] at hw
+    obtain ⟨q, hq, hqm⟩ := Pattern.mem_ways hu
+    rw [Pattern.alternatives_within hw.1] at hq
+    obtain rfl := List.mem_singleton.1 hq
+    split
+    · rename_i hs
+      exact hv.step (Pattern.matchOn_lt _ hw.1 hs hqm u hu')
+    · rename_i hs
+      rw [Pattern.matchOn_same _ hw.1 (by simpa using hs) hqm u hu']
+      exact hv
+  · trivial
+
+theorem select {R : Roles} {r : Role} {v : Value} (hv : r.Holds v m) :
+    ∀ {arms : List Arm}, armsDivFree lim B me R r arms = true → armsDepth arms ≤ k →
+      R.Avoids (armsWrites arms) → ∀ (s : Copy.State), R.Inv s.1 m →
+      Halts (fun n => Eval.select (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) arms v)
+        (fun _ => True) s
+  | [], _, _, _, _, _ => const (Eval.Ends.fail _)
+  | ⟨p, xs, guard, body⟩ :: arms, hd, hn, hA, s, hI => by
+    simp only [armsDivFree, armsDepth, Bool.and_eq_true, Nat.max_le] at hd hn
+    simp only [armsWrites] at hA
+    have hrest := fun s hI => select hv hd.2 hn.2.2
+      (hA.mono (List.subset_append_right _ _)) s hI
+    simp only [Eval.select]
+    cases guard with
+    | none =>
+      simp only
+      cases hmatch : p.matchOn v with
+      | none => exact hrest s hI
+      | some us =>
+        simp only
+        split
+        · rename_i hlen
+          refine withVarsAt _ _ s (h _ _ hd.1.2 hn.2.1 ?_ _ ?_)
+          · exact Roles.Avoids.bindAll (Arm.role_avoids (arm := ⟨p, xs, none, body⟩))
+              (hA.mono fun z hz => List.mem_append_left _ (List.mem_append_right _ hz))
+          · rw [Copy.foldl_bind]
+            exact hI.bindAll _ _ hlen (Arm.role_holds (arm := ⟨p, xs, none, body⟩) hv hmatch)
+        · exact const (Eval.Ends.fail _)
+    | some g =>
+      simp only [guardDivFree, guardDepth] at hd hn
+      exact guarded h hd.1.1 hn.1 hd.1.2 hn.2.1
+        (hA.mono fun z hz => by rcases List.mem_append.1 hz with hz | hz <;> simp [guardWrites, hz]) hv
+        hrest _ (fun us hu => Arm.role_ways (arm := ⟨p, xs, some g, body⟩) hv hu) s hI
 
 theorem assign (x : Name) {ps : List Projection} {R : Roles} (hd : pathDivFree lim B me R ps = true)
     (hn : pathDepth ps ≤ k) {value : Expr} (hvd : value.divFree lim B me R = true)

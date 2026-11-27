@@ -41,7 +41,7 @@ private def bump : FnDecl :=
     when1 "c" "pc"
       (.assign ⟨"pc", [.field "balance"]⟩ (add (.field (.var "pc") "balance") (.int 1))), {}⟩
 
-private def decls : Decls := ⟨[⟨"Account", [("balance", .i64)], []⟩], [], [bump], [], [], [], []⟩
+private def decls : Decls := ⟨[⟨"Account", [("balance", .i64)], []⟩], [], [bump], [], [], [], [], []⟩
 
 private def program (body : Expr) : Program :=
   ⟨decls, body, ⟨false, Option.some .i64, [], [], .none⟩, {}⟩

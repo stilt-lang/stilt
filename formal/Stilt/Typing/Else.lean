@@ -49,11 +49,11 @@ def Decls.IsOption (D : Decls) (T : Name) : Prop :=
 (patterns.let-else). A `var` let-else's rest starts by binding each name as a `var` of the value
 `P` bound to it (patterns.var-bindings). -/
 def Expr.letElse (p : Pattern) (bs : List Name) (e : Expr) (τ : Ty) (rest x : Expr) : Expr :=
-  .form .letElse (.match e τ [⟨p, bs, rest⟩, ⟨.wild, [], x⟩])
+  .form .letElse (.match e τ [⟨p, bs, none, rest⟩, ⟨.wild, [], none, x⟩])
 
 /-- `e₁ else e₂` at the type `τ`, where `T` names `Option`: the `match`
 `match e₁ { Some(v) => v, _ => e₂ }` for a name `v` of its own (expressions.option-fallback). -/
 def Expr.orElse (T : Name) (τ : Ty) (v : Name) (e₁ e₂ : Expr) : Expr :=
-  .form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], .var v⟩, ⟨.wild, [], e₂⟩])
+  .form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩])
 
 end Stilt

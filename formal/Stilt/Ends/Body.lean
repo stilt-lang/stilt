@@ -201,7 +201,7 @@ theorem eval_halts (hC : CallsHalt D w lim B me m) : ∀ k, HaltsRun D w lim B m
     case «match» e τ arms =>
       have hA₁ : R.Avoids e.writes := hA.mono (List.subset_append_left _ _)
       exact bind (ih e R hd.1 hn.1 hA₁ s hI) fun v s' _ hdv =>
-        select ih hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) v (roleIn_holds hI hdv) s'
+        select ih (roleIn_holds hI hdv) hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) s'
           (hI.afterEval hA₁ hdv)
     case «for» x τ e body =>
       exact loop ih x hd.1 hn.1 (hA.mono (List.subset_append_left _ _)) hd.2 hn.2 s hI

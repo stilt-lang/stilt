@@ -16,7 +16,7 @@ namespace Stilt.Examples.Tuples
 /-- A program from its functions, the type of the value it shows and `main`,
 whose row is `raise<shown>`. -/
 private def program (fns : List FnDecl) (shown : Ty) (main : Expr) : Program :=
-  ⟨⟨[], [], fns, [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
+  ⟨⟨[], [], fns, [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
 
 /-- Both models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=

@@ -60,7 +60,13 @@ theorem pathResumes_substTys : ∀ p : List Projection, pathResumes (substPathTy
 
 theorem armsResumes_substTys : ∀ arms : List Arm, armsResumes (substArmTys s arms) = armsResumes arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmTys, armsResumes, Expr.resumes_substTys b, armsResumes_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsResumes, guardResumes_substTys g, Expr.resumes_substTys b,
+      armsResumes_substTys arms]
+
+theorem guardResumes_substTys : ∀ g : Option Expr, guardResumes (substGuardTys s g) = guardResumes g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardResumes, Expr.resumes_substTys g]
 
 end
 
@@ -110,7 +116,13 @@ theorem pathOneShot_substTys : ∀ p : List Projection, pathOneShot (substPathTy
 
 theorem armsOneShot_substTys : ∀ arms : List Arm, armsOneShot (substArmTys s arms) = armsOneShot arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmTys, armsOneShot, Expr.oneShot_substTys b, armsOneShot_substTys arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmTys, armsOneShot, guardOneShot_substTys g, Expr.oneShot_substTys b,
+      armsOneShot_substTys arms]
+
+theorem guardOneShot_substTys : ∀ g : Option Expr, guardOneShot (substGuardTys s g) = guardOneShot g
+  | none => rfl
+  | some g => by simp [substGuardTys, guardOneShot, Expr.oneShot_substTys g]
 
 end
 
@@ -168,7 +180,13 @@ theorem pathResumes_substRows : ∀ p : List Projection, pathResumes (substPathR
 
 theorem armsResumes_substRows : ∀ arms : List Arm, armsResumes (substArmRows s arms) = armsResumes arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmRows, armsResumes, Expr.resumes_substRows b, armsResumes_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsResumes, guardResumes_substRows g, Expr.resumes_substRows b,
+      armsResumes_substRows arms]
+
+theorem guardResumes_substRows : ∀ g : Option Expr, guardResumes (substGuardRows s g) = guardResumes g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardResumes, Expr.resumes_substRows g]
 
 end
 
@@ -219,7 +237,13 @@ theorem pathOneShot_substRows : ∀ p : List Projection, pathOneShot (substPathR
 
 theorem armsOneShot_substRows : ∀ arms : List Arm, armsOneShot (substArmRows s arms) = armsOneShot arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by simp [substArmRows, armsOneShot, Expr.oneShot_substRows b, armsOneShot_substRows arms]
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [substArmRows, armsOneShot, guardOneShot_substRows g, Expr.oneShot_substRows b,
+      armsOneShot_substRows arms]
+
+theorem guardOneShot_substRows : ∀ g : Option Expr, guardOneShot (substGuardRows s g) = guardOneShot g
+  | none => rfl
+  | some g => by simp [substGuardRows, guardOneShot, Expr.oneShot_substRows g]
 
 end
 

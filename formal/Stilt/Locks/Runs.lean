@@ -1,6 +1,7 @@
 import Stilt.Locks.Steps
 import Stilt.Locks.Instances
 import Stilt.InPlace.Enter
+import Stilt.Selection
 
 /-!
 # Runs that take no cell
@@ -21,11 +22,11 @@ def LockFreeRun (D : Decls) (L : List Name) (run : Expr → Eval Copy.State Valu
   ∀ e, e.lockFree D L = true → Eval.TakesNone D L (Value.LockFree D L) (run e)
 
 theorem armsLockFree_mem : ∀ {arms : List Arm} {arm : Arm}, armsLockFree D L arms = true →
-    arm ∈ arms → arm.body.lockFree D L = true
-  | ⟨_, _, _⟩ :: _, _, h, hm => by
+    arm ∈ arms → arm.body.lockFree D L = true ∧ ∀ g, arm.guard = some g → g.lockFree D L = true
+  | ⟨_, _, _, _⟩ :: _, _, h, hm => by
     simp only [armsLockFree, Bool.and_eq_true] at h
     rcases List.mem_cons.1 hm with rfl | hm
-    · exact h.1
+    · exact ⟨h.1.2, fun g hg => by subst hg; exact h.1.1⟩
     · exact armsLockFree_mem h.2 hm
 
 namespace Eval.TakesNone
@@ -86,17 +87,16 @@ theorem args : ∀ (as : List Arg), argsLockFree D L as = true →
 theorem select (w : WriteBack) {arms : List Arm} (harms : armsLockFree D L arms = true)
     {v : Value} (hv : v.LockFree D L) :
     Eval.TakesNone D L (Value.LockFree D L) (Eval.select (Copy.memoryWith w) run arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact stuck
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, hm⟩ := selectArm_mem hsel
-    dsimp only
-    split
-    · exact withVars w (h _ (armsLockFree_mem harms hmem)) _ fun xv hxv =>
-        arm.pattern.matchOn_parts Value.LockFree.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2
-    · exact stuck
+  refine Eval.select_of (Eval.TakesNone D L (Value.LockFree D L)) (.inl stuck) (.inl stuck)
+    (fun arm ha _ us hm _ => ?_) fun arm ha g hg us hu _ m hm => ?_
+  · exact withVars w (h _ (armsLockFree_mem harms ha).1) _ fun xv hxv =>
+      arm.pattern.matchOn_parts Value.LockFree.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2
+  · obtain ⟨hb, hgs⟩ := armsLockFree_mem harms ha
+    obtain ⟨q, -, hq⟩ := Pattern.mem_ways hu
+    have hparts : ∀ xv ∈ arm.binders.zip us, xv.2.LockFree D L := fun xv hxv =>
+      q.matchOn_parts Value.LockFree.passesToParts hv hq xv.2 (List.of_mem_zip hxv).2
+    exact bind (withVars w (bind (h g (hgs g hg)) fun _ _ => asBool) _ hparts)
+      fun b _ => ite b (withVars w (h _ hb) _ hparts) hm
 
 theorem assign (w : WriteBack) (x : Name) {ps : List Projection} (hps : pathLockFree D L ps = true)
     {value : Expr} (hv : value.lockFree D L = true) :

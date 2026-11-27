@@ -106,11 +106,17 @@ def pathContained (D : Decls) (Γ : ViewScope) (params : List Name) : List Proje
 def armsContained (D : Decls) (Γ : ViewScope) (params : List Name) (scrutinee : List Shape) :
     List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms =>
+  | ⟨_, binders, guard, body⟩ :: arms =>
     let Γ' := Γ.binders binders scrutinee
+    guardContained D Γ' (params.filter (!binders.contains ·)) guard &&
     body.contained D Γ' (params.filter (!binders.contains ·)) &&
       (body.sources D Γ').all (!binders.contains ·.root) &&
         armsContained D Γ params scrutinee arms
+
+/-- Whether no view of an arm's guard outlives a source; its value is a condition. -/
+def guardContained (D : Decls) (Γ : ViewScope) (params : List Name) : Option Expr → Bool
+  | none => true
+  | some g => g.contained D Γ params
 
 end
 

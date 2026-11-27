@@ -131,12 +131,18 @@ inductive PathInst (D : Decls) : List Projection → List Projection → Prop
   | index {i i' : Expr} {ps ps' : List Projection} :
       Expr.Inst D i i' → PathInst D ps ps' → PathInst D (.index i :: ps) (.index i' :: ps')
 
-/-- The arms of a `match`, each body an instance of its own. -/
+/-- The arms of a `match`, each guard and body an instance of its own. -/
 inductive ArmsInst (D : Decls) : List Arm → List Arm → Prop
   | nil : ArmsInst D [] []
-  | cons (pat : Pattern) (xs : List Name) {b b' : Expr} {arms arms' : List Arm} :
-      Expr.Inst D b b' → ArmsInst D arms arms' →
-      ArmsInst D (⟨pat, xs, b⟩ :: arms) (⟨pat, xs, b'⟩ :: arms')
+  | cons (pat : Pattern) (xs : List Name) {g g' : Option Expr} {b b' : Expr}
+      {arms arms' : List Arm} :
+      GuardInst D g g' → Expr.Inst D b b' → ArmsInst D arms arms' →
+      ArmsInst D (⟨pat, xs, g, b⟩ :: arms) (⟨pat, xs, g', b'⟩ :: arms')
+
+/-- An arm's guard, an instance of its own. -/
+inductive GuardInst (D : Decls) : Option Expr → Option Expr → Prop
+  | none : GuardInst D none none
+  | some {g g' : Expr} : Expr.Inst D g g' → GuardInst D (some g) (some g')
 
 end
 
@@ -342,8 +348,15 @@ theorem pathInst_subst : ∀ (ps : List Projection) (r : List Shape), pathDistin
 theorem armsInst_subst : ∀ (arms : List Arm) (r : List Shape), armsDistinctParams arms = true →
     armsExclusive r arms = true → ArmsInst D arms (substArmRows ρ (substArmTys σ arms))
   | [], _, _, _ => .nil
-  | ⟨pat, xs, b⟩ :: arms, r, h, x => .cons pat xs (Expr.inst_subst b _ (both h).1 (both x).1)
+  | ⟨pat, xs, g, b⟩ :: arms, r, h, x =>
+    .cons pat xs (guardInst_subst g _ (both (both h).1).1 (both (both x).1).1)
+      (Expr.inst_subst b _ (both (both h).1).2 (both (both x).1).2)
       (armsInst_subst arms r (both h).2 (both x).2)
+
+theorem guardInst_subst : ∀ (g : Option Expr) (r : List Shape), guardDistinctParams g = true →
+    guardExclusive r g = true → GuardInst D g (substGuardRows ρ (substGuardTys σ g))
+  | none, _, _, _ => .none
+  | some g, r, h, x => .some (Expr.inst_subst g r h x)
 
 end
 

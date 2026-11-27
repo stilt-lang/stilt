@@ -300,17 +300,17 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   each of its variants, which the Reference reads against the annotation or the type of `e`. -/
   | letElse {Γ fx e τ p bs rest x} :
       ¬ p.Irrefutable D → HasType Γ fx x .never →
-      HasType Γ fx (.match e τ [⟨p, bs, rest⟩, ⟨.wild, [], x⟩]) τ →
-      HasType Γ fx (.form .letElse (.match e τ [⟨p, bs, rest⟩, ⟨.wild, [], x⟩])) τ
+      HasType Γ fx (.match e τ [⟨p, bs, none, rest⟩, ⟨.wild, [], none, x⟩]) τ →
+      HasType Γ fx (.form .letElse (.match e τ [⟨p, bs, none, rest⟩, ⟨.wild, [], none, x⟩])) τ
   /-- `e₁ else e₂` requires `e₁` to have type `Option<T>`, the prelude's, so a `Result` must be
   converted with `.ok()` first, and `e₂` to have type `T` or `Never`, or it is E0311
   (expressions.option-fallback). Its value is the value inside a `Some`, and `e₂` runs only on a
   `None`: it means, and is typed as, `match e₁ { Some(v) => v, _ => e₂ }` (`Expr.orElse`). -/
   | orElse {Γ fx e₁ T τ v e₂ σ} :
       D.IsOption T → HasType Γ fx e₁ (.variant T [τ]) → HasType Γ fx e₂ σ → Fits σ τ →
-      HasType Γ fx (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], .var v⟩, ⟨.wild, [], e₂⟩]) τ →
+      HasType Γ fx (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩]) τ →
       HasType Γ fx
-        (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], .var v⟩, ⟨.wild, [], e₂⟩])) τ
+        (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩])) τ
 
 /-- Each expression fits the type at its position. -/
 inductive ExprsFit : Ctx → Effects → List Expr → List Ty → Prop
@@ -376,17 +376,24 @@ inductive PathFits : Ctx → Effects → Ty → List Projection → Ty → Prop
       PathFits Γ fx (.tuple τs) (.field f :: path) τ'
 
 /-- Each arm's pattern fits the scrutinee's type `σ`, its distinct names
-are bound immutably (patterns.pattern-types and patterns.var-bindings), and its
-body fits the type of the `match` (patterns.arm-types). -/
+are bound immutably (patterns.pattern-types and patterns.var-bindings), its guard and its
+body see them (patterns.match), and its body fits the type of the `match` (patterns.arm-types). -/
 inductive ArmsFit : Ctx → Effects → List Arm → Ty → Ty → Prop
   | nil {Γ fx σ τ} : ArmsFit Γ fx [] σ τ
   | cons {Γ fx arm arms σ σs τ ρ} :
       PatFits D arm.pattern σ σs →
       arm.binders = arm.pattern.binders →
       arm.binders.Nodup →
+      GuardFits (Γ.bindAll arm.binders σs) fx arm.guard →
       HasType (Γ.bindAll arm.binders σs) fx arm.body ρ → Fits ρ τ →
       ArmsFit Γ fx arms σ τ →
       ArmsFit Γ fx (arm :: arms) σ τ
+
+/-- An arm's guard, if it has one, is a condition: a `bool`, or `Never`
+(patterns.guards and expressions.conditions). -/
+inductive GuardFits : Ctx → Effects → Option Expr → Prop
+  | none {Γ fx} : GuardFits Γ fx none
+  | some {Γ fx g ρ} : HasType Γ fx g ρ → Fits ρ .bool → GuardFits Γ fx (some g)
 
 end
 

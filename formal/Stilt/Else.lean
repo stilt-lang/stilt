@@ -21,12 +21,12 @@ theorem eval_form (k : Form) (m : Expr) : eval D M (n + 1) (.form k m) = eval D 
 /-- A let-else runs as `match e { P => rest, _ => x }`. -/
 theorem eval_letElse (p : Pattern) (bs : List Name) (e : Expr) (τ : Ty) (rest x : Expr) :
     eval D M (n + 1) (Expr.letElse p bs e τ rest x) =
-      eval D M n (.match e τ [⟨p, bs, rest⟩, ⟨.wild, [], x⟩]) := rfl
+      eval D M n (.match e τ [⟨p, bs, none, rest⟩, ⟨.wild, [], none, x⟩]) := rfl
 
 /-- An `Option` fallback runs as `match e₁ { Some(v) => v, _ => e₂ }`. -/
 theorem eval_orElse (T : Name) (τ : Ty) (v : Name) (e₁ e₂ : Expr) :
     eval D M (n + 1) (Expr.orElse T τ v e₁ e₂) =
-      eval D M n (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], .var v⟩, ⟨.wild, [], e₂⟩]) :=
+      eval D M n (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩]) :=
   rfl
 
 end Stilt

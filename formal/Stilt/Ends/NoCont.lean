@@ -1,3 +1,4 @@
+import Stilt.Selection
 import Stilt.Ends.Counting
 import Stilt.Semantics
 
@@ -266,25 +267,19 @@ theorem args : ∀ as : List Arg, argsContFree as = true → Eval.NoCont (Eval.a
 
 omit h in
 theorem arms_mem : ∀ {arms : List Arm} {arm : Arm}, armsContFree arms = true → arm ∈ arms →
-    arm.body.contFree = true
-  | ⟨_, _, _⟩ :: _, _, hc, hm => by
+    arm.body.contFree = true ∧ ∀ g, arm.guard = some g → g.contFree = true
+  | ⟨_, _, _, _⟩ :: _, _, hc, hm => by
     simp only [armsContFree, Bool.and_eq_true] at hc
     rcases List.mem_cons.1 hm with rfl | hm
-    · exact hc.1
+    · exact ⟨hc.1.2, fun g hg => by subst hg; exact hc.1.1⟩
     · exact arms_mem hc.2 hm
 
 theorem select {arms : List Arm} (hc : armsContFree arms = true) (v : Value) :
-    Eval.NoCont (Eval.select M run arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact fail _
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, -⟩ := selectArm_mem hsel
-    dsimp only
-    split
-    · exact withVars M (h _ (arms_mem hc hmem)) _
-    · exact fail _
+    Eval.NoCont (Eval.select M run arms v) :=
+  Eval.select_of Eval.NoCont (.inl (fail _)) (.inl (fail _))
+    (fun _ ha _ _ _ _ => withVars M (h _ (arms_mem hc ha).1) _) fun _ ha g hg _ _ _ _ hm =>
+      bind (withVars M (bind (h g ((arms_mem hc ha).2 g hg)) fun v => asBool v) _) fun b =>
+        ite b (withVars M (h _ (arms_mem hc ha).1) _) hm
 
 theorem assign (x : Name) {ps : List Projection} (hp : pathContFree ps = true) {value : Expr}
     (hv : value.contFree = true) : Eval.NoCont (Eval.assign M run x ps value) :=

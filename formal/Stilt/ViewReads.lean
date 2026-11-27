@@ -103,9 +103,15 @@ def pathViewsRead (D : Decls) (Γ : ViewScope) (reading : List Shape) : List Pro
 holds what the scrutinee reads, and hides the variable of its name. -/
 def armsViewsRead (D : Decls) (Γ : ViewScope) (reading scrutinee : List Shape) : List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms =>
-    body.viewsRead D (Γ.binders binders scrutinee) (binders.foldl hide reading) &&
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    guardViewsRead D (Γ.binders binders scrutinee) (binders.foldl hide reading) guard &&
+      body.viewsRead D (Γ.binders binders scrutinee) (binders.foldl hide reading) &&
       armsViewsRead D Γ reading scrutinee arms
+
+/-- Whether an arm's guard modifies no source of a live view. -/
+def guardViewsRead (D : Decls) (Γ : ViewScope) (reading : List Shape) : Option Expr → Bool
+  | none => true
+  | some g => g.viewsRead D Γ reading
 
 end
 

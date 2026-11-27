@@ -318,11 +318,21 @@ of `x` that the scrutinee holds, `parts`, at the places of it they match
 def armsCopies (W : Writes) (d h : Nat) (later : Name → Bool) (parts : List Part) (s : Copies) :
     List Arm → Copies × List Part
   | [] => (s, [])
-  | ⟨pattern, binders, body⟩ :: arms =>
+  | ⟨pattern, binders, guard, body⟩ :: arms =>
     let s' := binders.foldl (fun s b => s.give b d (pattern.partsAt b parts)) s
-    Copies.either (if binders.contains W.x then body.copies W.own d h later s'.fresh
-      else body.copies W d h later s')
-      (armsCopies W d h later parts s arms)
+    let later' := fun z => later z || body.occurs z || armsOccur z arms
+    if binders.contains W.x then
+      Copies.either (body.copies W.own d h later (guardCopies W.own d later' s'.fresh guard))
+        (armsCopies W d h later parts s arms)
+    else
+      let sg := guardCopies W d later' s' guard
+      Copies.either (body.copies W d h later sg) (armsCopies W d h later parts sg arms)
+
+/-- Walks an arm's guard, a condition, which the arm's body or the next arms follow; the
+next arms start from the state after it, with the arm's copies still counted. -/
+def guardCopies (W : Writes) (d : Nat) (later : Name → Bool) (s : Copies) : Option Expr → Copies
+  | none => s
+  | some g => (g.copies W (d + 1) (d + 1) later s).1.close (d + 1)
 
 end
 

@@ -101,8 +101,14 @@ def pathExclusiveWith (rule : CallRule) (reading : List Shape) : List Projection
 /-- Whether the arms of a `match` obey the law under `rule`. -/
 def armsExclusiveWith (rule : CallRule) (reading : List Shape) : List Arm → Bool
   | [] => true
-  | ⟨_, binders, body⟩ :: arms =>
-    body.exclusiveWith rule (binders.foldl hide reading) && armsExclusiveWith rule reading arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    guardExclusiveWith rule (binders.foldl hide reading) guard &&
+      body.exclusiveWith rule (binders.foldl hide reading) && armsExclusiveWith rule reading arms
+
+/-- Whether an arm's guard obeys the law under `rule`. -/
+def guardExclusiveWith (rule : CallRule) (reading : List Shape) : Option Expr → Bool
+  | none => true
+  | some g => g.exclusiveWith rule reading
 
 end
 
@@ -211,9 +217,15 @@ theorem armsExclusive_eq_with :
     ∀ (arms : List Arm) (r : List Shape),
       armsExclusive r arms = armsExclusiveWith pairwiseDisjoint r arms
   | [], _ => rfl
-  | ⟨_, binders, body⟩ :: arms, r => by
-    simp [armsExclusive, armsExclusiveWith, Expr.exclusive_eq_with body (binders.foldl hide r),
-      armsExclusive_eq_with arms r]
+  | ⟨_, binders, g, body⟩ :: arms, r => by
+    simp [armsExclusive, armsExclusiveWith, guardExclusive_eq_with g (binders.foldl hide r),
+      Expr.exclusive_eq_with body (binders.foldl hide r), armsExclusive_eq_with arms r]
+
+theorem guardExclusive_eq_with :
+    ∀ (g : Option Expr) (r : List Shape),
+      guardExclusive r g = guardExclusiveWith pairwiseDisjoint r g
+  | none, _ => rfl
+  | some g, r => by simp [guardExclusive, guardExclusiveWith, Expr.exclusive_eq_with g r]
 
 end
 
@@ -329,10 +341,17 @@ theorem armsExclusiveWith_mono (hle : ∀ ss, r₁ ss = true → r₂ ss = true)
     ∀ (arms : List Arm) (r : List Shape),
       armsExclusiveWith r₁ r arms = true → armsExclusiveWith r₂ r arms = true
   | [], _, _ => rfl
-  | ⟨_, binders, body⟩ :: arms, r, h => by
+  | ⟨_, binders, g, body⟩ :: arms, r, h => by
     simp only [armsExclusiveWith, Bool.and_eq_true] at h ⊢
-    exact ⟨Expr.exclusiveWith_mono hle body (binders.foldl hide r) h.1,
+    exact ⟨⟨guardExclusiveWith_mono hle g (binders.foldl hide r) h.1.1,
+      Expr.exclusiveWith_mono hle body (binders.foldl hide r) h.1.2⟩,
       armsExclusiveWith_mono hle arms r h.2⟩
+
+theorem guardExclusiveWith_mono (hle : ∀ ss, r₁ ss = true → r₂ ss = true) :
+    ∀ (g : Option Expr) (r : List Shape),
+      guardExclusiveWith r₁ r g = true → guardExclusiveWith r₂ r g = true
+  | none, _, _ => rfl
+  | some g, r, h => Expr.exclusiveWith_mono hle g r h
 
 end
 

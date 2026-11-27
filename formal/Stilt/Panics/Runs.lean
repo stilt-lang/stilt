@@ -2,6 +2,7 @@ import Stilt.Panics.Steps
 import Stilt.Panics.Tests
 import Stilt.Panics.RowInstances
 import Stilt.InPlace.Enter
+import Stilt.Selection
 
 /-!
 # Runs without panics
@@ -22,13 +23,26 @@ def PanicFreeRun (lim : Limited) (run : Expr → Eval Copy.State Value) : Prop :
 
 variable {lim : Limited}
 
-theorem armsPanicFree_mem : ∀ {G : List Known} {arms : List Arm} {arm : Arm},
-    armsPanicFree lim G arms = true → arm ∈ arms → arm.body.panicFreeIn lim (withoutNames G arm.binders) = true
-  | _, ⟨_, _, _⟩ :: _, _, h, hm => by
-    simp only [armsPanicFree, Bool.and_eq_true] at h
-    rcases List.mem_cons.1 hm with rfl | hm
-    · exact h.1
-    · exact armsPanicFree_mem h.2 hm
+@[simp] theorem withoutNames_nil (G : List Known) : withoutNames G [] = G := by
+  simp [withoutNames]
+
+/-- Facts that read none of `W` don't read what a part of `W` names. -/
+theorem withoutNames_sub {G : List Known} {W W' : List Name} (h : W' ⊆ W) :
+    withoutNames G W ⊆ withoutNames G W' := fun f hf => by
+  obtain ⟨hG, hW⟩ := mem_withoutNames.1 hf
+  exact mem_withoutNames.2 ⟨hG, fun x hx hx' => hW x hx (h hx')⟩
+
+/-- Dropping the facts that read `W` twice drops no more than once. -/
+theorem withoutNames_twice (G : List Known) (W : List Name) :
+    withoutNames G W ⊆ withoutNames (withoutNames G W) W := fun f hf => by
+  obtain ⟨hG, hW⟩ := mem_withoutNames.1 hf
+  exact mem_withoutNames.2 ⟨hf, hW⟩
+
+theorem withoutNames_zip_fst (G : List Known) (bs : List Name) (us : List Value) :
+    withoutNames G bs ⊆ withoutNames G ((bs.zip us).map Prod.fst) :=
+  withoutNames_sub fun _ hx => by
+    obtain ⟨p, hp, rfl⟩ := List.mem_map.1 hx
+    exact (List.of_mem_zip hp).1
 
 /-- A path that takes only fields evaluates nothing, and writes nothing. -/
 theorem pathWrites_of_fields : ∀ {ps : List Projection},
@@ -164,26 +178,61 @@ theorem args : ∀ {G : List Known} (as : List Arg), argsPanicFree lim G as = tr
           · exact hp
           · exact hps q hq
 
-omit hk in
-theorem select {arms : List Arm} (harms : armsPanicFree lim G arms = true) {v : Value}
-    (hv : v.PanicFree lim) :
-    Eval.PanicFree lim G (Value.PanicFree lim) (Eval.select (Copy.memoryWith w) run arms v) := by
-  unfold Eval.select
-  cases hsel : selectArm arms v with
-  | none => exact stuck
-  | some au =>
-    obtain ⟨arm, us⟩ := au
-    obtain ⟨hmem, hm⟩ := selectArm_mem hsel
-    have hbody := armsPanicFree_mem harms hmem
-    dsimp only
-    by_cases hlen : arm.binders.length = us.length
-    · simp only [hlen, ↓reduceIte]
-      refine withVars w _ (fun xv hxv =>
-        arm.pattern.matchOn_parts Value.PanicFree.passesToParts hv hm xv.2 (List.of_mem_zip hxv).2) ?_
-      rw [List.map_fst_zip (by omega)]
-      exact h _ _ hbody
-    · simp only [hlen, ↓reduceIte]
-      exact stuck
+/-- An arm with a guard, run with facts `H` that read nothing the guard writes: the guard
+with each way, then the body or what comes next. -/
+theorem guarded {bs : List Name} {g body : Expr} {H : List Known} {next : Eval Copy.State Value}
+    (hH : H ⊆ withoutNames H g.writes)
+    (hg : g.panicFreeIn lim (withoutNames H bs) = true)
+    (hb : body.panicFreeIn lim (withoutNames H bs) = true)
+    (hn : Eval.PanicFree lim H (Value.PanicFree lim) next) :
+    ∀ ways : List (List Value), (∀ us ∈ ways, ∀ u ∈ us, u.PanicFree lim) →
+      Eval.PanicFree lim H (Value.PanicFree lim)
+        (Eval.guarded (Copy.memoryWith w) run bs g body next ways)
+  | [], _ => hn
+  | us :: ways, hw => by
+    have hparts : ∀ xv ∈ bs.zip us, xv.2.PanicFree lim := fun xv hxv =>
+      hw us List.mem_cons_self xv.2 (List.of_mem_zip hxv).2
+    have hrest := guarded hH hg hb hn ways fun us' hu => hw us' (List.mem_cons_of_mem _ hu)
+    simp only [Eval.guarded, Eval.tryWay]
+    split
+    case isFalse => exact stuck
+    refine bind (W := g.writes) (L := g.resizes)
+      (withVars w _ hparts (weaken (bind (h _ g hg)
+        (hk g _ _ (List.Subset.refl _) (List.Subset.refl _)) fun _ _ => asBool)
+        (withoutNames_zip_fst H bs us)))
+      (Eval.Keeps.withVars w (Eval.Keeps.bind (hk g _ _ (List.Subset.refl _) (List.Subset.refl _))
+        fun v _ => Eval.Keeps.asBool v) _)
+      fun b _ => weaken (ite b ?_ hrest) hH
+    exact withVars w _ hparts (weaken (h _ _ hb) (withoutNames_zip_fst H bs us))
+
+theorem select : ∀ {G : List Known} {arms : List Arm}, armsPanicFree lim G arms = true →
+    ∀ {v : Value}, v.PanicFree lim →
+      Eval.PanicFree lim G (Value.PanicFree lim) (Eval.select (Copy.memoryWith w) run arms v)
+  | _, [], _, _, _ => stuck
+  | G, ⟨p, bs, guard, body⟩ :: arms, harms, v, hv => by
+    simp only [armsPanicFree, Bool.and_eq_true] at harms
+    obtain ⟨⟨hg, hb⟩, hrest⟩ := harms
+    simp only [Eval.select]
+    cases guard with
+    | none =>
+      simp only [guardWrites, withoutNames_nil] at hb hrest
+      simp only
+      cases hm : p.matchOn v with
+      | some us =>
+        simp only
+        split
+        case isFalse => exact stuck
+        exact withVars w _ (fun xv hxv => p.matchOn_parts Value.PanicFree.passesToParts hv hm xv.2
+          (List.of_mem_zip hxv).2) (weaken (h _ _ hb) (withoutNames_zip_fst G bs us))
+      | none => exact select hrest hv
+    | some g =>
+      simp only [guardPanicFree, guardWrites] at hg hb hrest
+      simp only
+      refine weaken (G' := withoutNames G g.writes)
+        (guarded w h hk (withoutNames_twice G g.writes) hg hb (select hrest hv) _ fun us hu => ?_)
+        fun _ hf => (mem_withoutNames.1 hf).1
+      obtain ⟨q, -, hq⟩ := Pattern.mem_ways hu
+      exact fun u hu' => q.matchOn_parts Value.PanicFree.passesToParts hv hq u hu'
 
 theorem assign (x : Name) {ps : List Projection} (hps : ps.all (fun q => q.fieldName?.isSome) = true)
     {value : Expr} (hv : value.panicFreeIn lim G = true) :

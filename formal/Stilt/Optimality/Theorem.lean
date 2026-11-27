@@ -142,7 +142,7 @@ def indexedCallee : FnDecl :=
 removes the indexes, so the two places have the shape `xs`, and modes.overlapping-inout rejects
 the call. -/
 def indexed : Program :=
-  ⟨⟨[], [], [indexedCallee], [], [], [], []⟩,
+  ⟨⟨[], [], [indexedCallee], [], [], [], [], []⟩,
     .varIn "xs" (.list .i64) (.list .i64 [.int 0, .int 0])
       (.call (.fnRef "alias" [] [])
         [.inout ⟨"xs", [.index (.int 0)]⟩, .inout ⟨"xs", [.index (.int 1)]⟩] .unit),

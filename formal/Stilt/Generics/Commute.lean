@@ -326,7 +326,13 @@ def substPathTys (s : TySubst) : List Projection → List Projection
 /-- Replaces the type parameters in the arms of a `match`. -/
 def substArmTys (s : TySubst) : List Arm → List Arm
   | [] => []
-  | ⟨C, binders, body⟩ :: arms => ⟨C, binders, body.substTys s⟩ :: substArmTys s arms
+  | ⟨C, binders, guard, body⟩ :: arms =>
+    ⟨C, binders, substGuardTys s guard, body.substTys s⟩ :: substArmTys s arms
+
+/-- Replaces the type parameters in the guard of an arm. -/
+def substGuardTys (s : TySubst) : Option Expr → Option Expr
+  | none => none
+  | some g => some (g.substTys s)
 
 end
 
@@ -398,7 +404,12 @@ theorem substPathTys_nil : ∀ path : List Projection, substPathTys [] path = pa
 
 theorem substArmTys_nil : ∀ arms : List Arm, substArmTys [] arms = arms
   | [] => rfl
-  | ⟨_, _, body⟩ :: arms => by rw [substArmTys, Expr.substTys_nil body, substArmTys_nil arms]
+  | ⟨_, _, guard, body⟩ :: arms => by
+    rw [substArmTys, substGuardTys_nil guard, Expr.substTys_nil body, substArmTys_nil arms]
+
+theorem substGuardTys_nil : ∀ guard : Option Expr, substGuardTys [] guard = guard
+  | none => rfl
+  | some g => by rw [substGuardTys, Expr.substTys_nil g]
 
 end
 

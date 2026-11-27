@@ -69,7 +69,11 @@ def pathContFree : List Projection → Bool
 
 def armsContFree : List Arm → Bool
   | [] => true
-  | ⟨_, _, body⟩ :: arms => body.contFree && armsContFree arms
+  | ⟨_, _, guard, body⟩ :: arms => guardContFree guard && body.contFree && armsContFree arms
+
+def guardContFree : Option Expr → Bool
+  | none => true
+  | some g => g.contFree
 
 end
 

@@ -75,9 +75,14 @@ theorem pathDistinctParams_erase :
 theorem armsDistinctParams_erase :
     ∀ arms : List Arm, armsDistinctParams (eraseArms arms) = armsDistinctParams arms
   | [] => rfl
-  | ⟨_, _, b⟩ :: arms => by
-    simp [eraseArms, armsDistinctParams, Expr.distinctParams_erase b,
+  | ⟨_, _, g, b⟩ :: arms => by
+    simp [eraseArms, armsDistinctParams, guardDistinctParams_erase g, Expr.distinctParams_erase b,
       armsDistinctParams_erase arms]
+
+theorem guardDistinctParams_erase :
+    ∀ g : Option Expr, guardDistinctParams (eraseGuard g) = guardDistinctParams g
+  | none => rfl
+  | some g => by simp [eraseGuard, guardDistinctParams, Expr.distinctParams_erase g]
 
 end
 
@@ -146,8 +151,12 @@ theorem PathFits.erase_eq : ∀ {Γ fx σ path τ}, PathFits D s Γ fx σ path �
 
 theorem ArmsFit.erase_eq : ∀ {Γ fx arms σ τ}, ArmsFit D s Γ fx arms σ τ → eraseArms arms = arms
   | _, _, _, _, _, .nil => rfl
-  | _, _, ⟨_, _, _⟩ :: _, _, _, .cons _ _ _ h _ hs => by
-    simp [eraseArms, HasType.erase_eq h, ArmsFit.erase_eq hs]
+  | _, _, ⟨_, _, _, _⟩ :: _, _, _, .cons _ _ _ hg h _ hs => by
+    simp [eraseArms, GuardFits.erase_eq hg, HasType.erase_eq h, ArmsFit.erase_eq hs]
+
+theorem GuardFits.erase_eq : ∀ {Γ fx g}, GuardFits D s Γ fx g → eraseGuard g = g
+  | _, _, _, .none => rfl
+  | _, _, _, .some h _ => by simp [eraseGuard, HasType.erase_eq h]
 
 end
 

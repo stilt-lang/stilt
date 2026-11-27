@@ -55,10 +55,16 @@ def pathFree (x : Name) : List Projection → Bool
   | .field _ :: path => pathFree x path
   | .index i :: path => i.free x || pathFree x path
 
-/-- Whether an arm uses `x`, which its binders hide. -/
+/-- Whether an arm uses `x`, in its guard or its body, which its binders hide. -/
 def armsFree (x : Name) : List Arm → Bool
   | [] => false
-  | ⟨_, binders, body⟩ :: arms => (!binders.contains x && body.free x) || armsFree x arms
+  | ⟨_, binders, guard, body⟩ :: arms =>
+    (!binders.contains x && (guardFree x guard || body.free x)) || armsFree x arms
+
+/-- Whether an arm's guard, if it has one, uses `x`. -/
+def guardFree (x : Name) : Option Expr → Bool
+  | none => false
+  | some g => g.free x
 
 end
 
