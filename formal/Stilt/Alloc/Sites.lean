@@ -15,8 +15,11 @@ covers (`Limited`, facts.inference), and a call through a function value adds no
 
 The other sites, the writes through an index that aren't in place and the arguments a call
 copies for an in-place parameter, read where a binding holds its own storage, and are in
-`Stilt.Alloc.Storage`. The calculus has no `yield`, no key path and no `for` over an `Iter`,
-so it has none of their sites.
+`Stilt.Alloc.Storage`. The calculus has no key path and no `for` over an `Iter`,
+so it has none of their sites. A form counts as the code it means (`Expr.form`), which the
+evaluator runs: a projection's body, its `yield` and a call of a projection where a place is
+mean code that keeps the values yielded in a list and passes the access as a closure literal, so
+each allocates in the model.
 -/
 
 namespace Stilt
