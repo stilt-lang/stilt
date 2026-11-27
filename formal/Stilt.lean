@@ -60,6 +60,7 @@ import Stilt.Holding
 import Stilt.Cells
 import Stilt.Handling.Related
 import Stilt.Handling.Sound
+import Stilt.Handling.Unseen
 import Stilt.Matching
 import Stilt.Exhaustive
 import Stilt.Exhaustive.Decide

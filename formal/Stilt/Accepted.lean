@@ -10,6 +10,7 @@ import Stilt.Locks.Theorem
 import Stilt.HeldNames.Unmerge
 import Stilt.Limits
 import Stilt.Projections.Theorem
+import Stilt.Handling.Unseen
 
 /-!
 # Accepted programs and their soundness
@@ -60,6 +61,8 @@ rules of projections (projections.once-on-every-path).
 * every path through the body of a projection runs one `yield` to its end or a `return`, and
   at most one to a raise or a performance, so the caller's access runs once
   (`Program.Projections.yields`, projections.once-on-every-path);
+* a handler's clause runs the same from whatever frames the calls it ends left, and gives them
+  back, so it sees no place of those calls (`callAs_unseen`, handlers.when-place-is-seen);
 * a call of a function limited by `without panic`, on panic-free arguments, panics only with
   `overflow` or `deadlock`, and only with `deadlock` when `without overflow` limits it too; a
   call of one limited by `without div`, on arguments whose values at its non-escaping
@@ -195,6 +198,14 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       s.1.lookup rb.1 = some (.list []) →
       (eval p.decls Copy.memory n rb.2 s).Yielding rb.1 (s.1.map Prod.fst) (some (some 1))
         (fun _ => True)
+  /-- handlers.when-place-is-seen: a handler's clause, called on its operation's argument as a
+  `with` calls it, from whatever frames the code it ends left, runs the same and gives them
+  back, one outcome for every frame with that frame put back (`callAs_unseen`): the body reaches
+  no place of the calls it ends, so whether one is written back before or after the body runs
+  can't be observed. A property of the evaluator, whether the program is accepted or not. -/
+  unseen : ∀ (n : Nat) (control : Bool) (c v : Value) (w : World), ∃ o : Outcome Copy.State Value,
+      ∀ fr : Copy.Frame, Eval.callAs p.decls Copy.memory (eval p.decls Copy.memory n) control c
+        [.value v] (fr, w) = o.atFrame fr
   /-- effects.without-panic: a call of a function limited by `without panic`, and a run whose
   `main` is, panics only with `overflow` or `deadlock` (`Program.PanicsKeptBy`). -/
   panics : p.PanicsKeptBy (·.panic) true fuel input
@@ -226,6 +237,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
     fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs,
     fun rb hrb n s hs => h.projections.yields rb hrb n s hs,
+    fun _ control c v w => callAs_unseen p.decls _ control c v w,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
     Program.PanicKeptBy.kept h.overflowLimits h.wellTyped h.exclusive fuel input,
     h.divLimits.kept h.wellTyped h.exclusive input⟩
