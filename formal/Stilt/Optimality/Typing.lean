@@ -191,6 +191,10 @@ theorem decls_wellFormed : (decls ss a b extra).WellFormed where
     simp only [decls, Decls.fns_mk, List.mem_singleton] at hd
     subst hd
     exact nomatch hp
+  memberTypes := fun d hd p hp => by
+    simp only [decls, Decls.fns_mk, List.mem_singleton] at hd
+    subst hd
+    exact nomatch hp
   effectsDeclared := by
     refine ⟨fun r hr f hf ρ hρ => ?_, fun _ h => (nomatch h), fun d hd ρ hρ E hE => ?_,
       fun _ h => (nomatch h), fun _ h => (nomatch h)⟩

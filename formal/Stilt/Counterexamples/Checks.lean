@@ -192,6 +192,7 @@ theorem declsWellFormed {D : Decls}
     fun i hi d hd => ⟨by simp [hti], fun t _ hm => by
       have := List.all_eq_true.1 (List.all_eq_true.1 hclash i hi) d hd
       cases t <;> simp_all [PreludeTrait.fns]⟩,
+    fun d hd p hp => by simp [(signatures_of_check hsigs d hd).1] at hp,
     fun d hd p hp => by simp [(signatures_of_check hsigs d hd).1] at hp⟩
 
 end Stilt.Counterexamples

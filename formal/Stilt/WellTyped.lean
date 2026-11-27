@@ -190,6 +190,32 @@ def Decls.BoundArgs (D : Decls) : Prop :=
     B ∈ p.bounds ∧ (∃ t, D.trait? B = some t ∧ args.length = t.params.length) ∧
       ∀ a ∈ args, ∀ T ∈ a.params, T ∈ d.typeParams.map TypeParam.name
 
+/-- The name of the member type `C.Item`, as elaboration declares it: a type parameter of the
+function, which no name that a program writes is, since a type parameter's name holds no `.`
+(traits.member-types). -/
+def memberName (C Item : Name) : Name := C ++ "." ++ Item
+
+/-- The traits of a type parameter's bounds that have a parameter `Item`. -/
+def Decls.boundsWith (D : Decls) (q : TypeParam) (Item : Name) : List Name :=
+  q.bounds.filter fun B => (D.trait? B).any fun t => t.params.contains Item
+
+/-- Each member type `C.Item` names something: elaborated, it is a type parameter of its
+function named `C.Item`, which the bound of `C` whose trait has a parameter `Item` gives as
+that parameter's argument, so a use of the function gives it the type that the impl of that
+trait for the type of `C` gives `Item`, as it gives every bound's arguments
+(`TypeArgsFit`, traits.bound-arguments). `C` is a type parameter of the function or of its
+impl block, and of the traits of its bounds exactly one has a parameter `Item`: none is E0334,
+two E0335 (traits.member-types). A `where` clause bounds member types, and each of its bounds
+is a bound of that parameter, checked at each use as a bound beside a parameter is
+(traits.where). The model elaborates a member type whose bound writes its argument as that
+argument, and leaves out E0336 and a `where` clause on a trait impl, whose parameters' bounds
+write no arguments. -/
+def Decls.MemberTypes (D : Decls) : Prop :=
+  ∀ d ∈ D.fns, ∀ p ∈ d.typeParams, ∀ C Item, p.name = memberName C Item →
+    ∃ q ∈ d.typeParams, q.name = C ∧ ∃ B t i args, D.boundsWith q Item = [B] ∧
+      D.trait? B = some t ∧ t.params.idxOf? Item = some i ∧ q.argsOf B = some args ∧
+      args[i]? = some (.param p.name)
+
 /-- The constants declared before a constant, as the bindings its value reads: each of its
 type, and immutable. -/
 def constCtx (cs : List ConstDecl) : Ctx := cs.reverse.map fun c => (c.name, ⟨c.type, false⟩)
@@ -322,6 +348,8 @@ structure Decls.WellFormed (D : Decls) : Prop where
   /-- A bound's arguments are one for each of its trait's parameters (E0300,
   traits.bound-arguments). -/
   boundArgs : D.BoundArgs
+  /-- Each member type names something (E0334, E0335, traits.member-types). -/
+  memberTypes : D.MemberTypes
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`
