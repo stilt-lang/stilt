@@ -159,8 +159,8 @@ bounds, in a list or a string, integer overflow, integer division by zero,
 slicing a string inside a UTF-8 sequence, indexing a map without a default with
 a missing key, `panic(msg)`, `unreachable()`, `unwrap` and `expect` of a `None`
 or an `Err`, a false `assert`, a `when` on a value that a `when` holds
-(shared.when-on-value-already-held), and code with an error, reached, which the export
-writes as this panic. -/
+(shared.when-on-value-already-held), code with an error, reached, which the export
+writes as this panic, and a typed hole, reached. -/
 inductive PanicKind where
   | bounds
   | overflow
@@ -173,6 +173,11 @@ inductive PanicKind where
   | assert
   | deadlock
   | checkError
+  /-- A typed hole `?`, which the export writes as `Op.panic .hole` with no operands: the
+  signature `Op.Sig.panic` gives it every type, so it takes the type its context expects
+  (declarations.typed-holes), and a program with holes runs, a hole panicking with this
+  kind only where it is reached (declarations.running-holes). -/
+  | hole
   deriving DecidableEq, Repr
 
 /-- The methods of the integer types that give an integer (std.integers):

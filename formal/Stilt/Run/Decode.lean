@@ -282,6 +282,7 @@ def op (j : Json) : Except String Op := do
     | "assert" => pure (.panic .assert)
     | "deadlock" => pure (.panic .deadlock)
     | "checkError" => pure (.panic .checkError)
+    | "hole" => pure (.panic .hole)
     | "bounds" => pure (.panic .bounds)
     | k => throw s!"a panic of a kind the export doesn't give, {k}"
   | "structural" =>
@@ -401,6 +402,12 @@ partial def expr (j : Json) : Except String Expr := do
   -- `["orElse", e₁, type, option, name, e₂]`: `e₁ else e₂`, the `Option` named `option`.
   | "orElse" =>
     return .orElse (← f 2 >>= str) (← f 1 >>= ty) (← f 3 >>= str) (← f 0 >>= expr) (← f 4 >>= expr)
+  -- `["compound", m]` and `["intFloat", m]`: `place op= e` and an integer literal at a float
+  -- type, each written as what it means (`Form.Shaped`).
+  | "compound" => .form .compound <$> (f 0 >>= expr)
+  | "intFloat" => .form .intFloat <$> (f 0 >>= expr)
+  -- `["optionField", m]`: `e.f` through an `Option`, written as the `match` it means.
+  | "optionField" => .form .optionField <$> (f 0 >>= expr)
   -- `["projection", res, type, body]`: a projection's body written for an access whose value
   -- has `type`, which keeps the access's values in `res` (`Expr.projectionBody`).
   | "projection" => return .projectionBody (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)

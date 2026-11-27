@@ -3,7 +3,8 @@
 
 The forms of the Reference that the calculus keeps with the code they mean (`Expr.form`): those
 whose typing has rules of its own, those of projections (`Stilt.Projections`) and those of
-writable views (`Stilt.Writable`).
+writable views (`Stilt.Writable`), and those whose meaning has a shape of its own
+(`Form.Shaped`).
 -/
 
 namespace Stilt
@@ -36,6 +37,9 @@ inductive Form where
   does; a view made from `v` has that parameter as its source, so a change through `v` while it
   lives is E0423 (projections.places-through-views). -/
   | through
+  /-- `place op= e` (`Expr.Compound`), an integer literal at a float type, and `e.f` through an
+  `Option` (`Form.Shaped`). -/
+  | compound | intFloat | optionField
   deriving DecidableEq, Repr
 
 end Stilt

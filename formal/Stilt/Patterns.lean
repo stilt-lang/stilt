@@ -1,4 +1,5 @@
 import Stilt.Inhabited
+import Stilt.Modes.Threads
 
 /-!
 # Patterns
@@ -28,6 +29,17 @@ namespace Stilt
 section
 
 variable (D : Decls)
+
+/-- Whether the program writes the `Eq` of the type whose head `σ` has. -/
+def Decls.eqWritten (σ : Ty) : Bool :=
+  match σ.head? with
+  | some h => (D.traitImpl? "Eq" h).isSome
+  | none => false
+
+/-- No type that `τ` holds, at any depth (`Decls.holds`: itself, its type arguments, its
+elements, and the fields and payloads of its records and variants at its arguments), has an
+`Eq` that the program writes (patterns.constants-with-written-eq). -/
+def Decls.EqNotWritten (τ : Ty) : Prop := D.holds D.eqWritten τ = false
 
 mutual
 
@@ -67,10 +79,12 @@ inductive PatFits : Pattern → Ty → List Ty → Prop
   /-- A constant fits the type it is declared with, and its value is its declaration's,
   the pattern of literals that matches the values equal to it (patterns.constants and
   declarations.constants-in-patterns). A constant whose type can hold a float has no such
-  pattern (patterns.floats). -/
+  pattern (patterns.floats). Nor is a constant a pattern when its type holds, at any depth, a
+  type whose `Eq` the program writes, whose `==` may differ from the structural match: it is
+  E0331 (patterns.constants-with-written-eq). -/
   | const {C : Name} {c : ConstDecl} {v : Pattern} {τ : Ty} :
-      D.const? C = some c → c.type = τ → D.constPattern C = some v → PatFits v τ [] →
-      PatFits (.const C v) τ []
+      D.const? C = some c → c.type = τ → D.EqNotWritten c.type → D.constPattern C = some v →
+      PatFits v τ [] → PatFits (.const C v) τ []
 
 /-- Patterns fit types position by position. -/
 inductive PatsFit : List Pattern → List Ty → List Ty → Prop

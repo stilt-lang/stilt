@@ -177,7 +177,7 @@ inductive Op where
   and `sorted_desc_by(key)` order a list once `key` has given each element's key
   (std.lists). -/
   | sortedByKey (descending : Bool) (orders : List (Name × List Name))
-  /-- `panic(msg)` and `unreachable()`: a panic of the kind, which the message
+  /-- `panic(msg)`, `unreachable()` and a typed hole: a panic of the kind, which the message
   doesn't change (effects.panic-kinds and program.prelude-functions). -/
   | panic (kind : PanicKind)
   /-- A function of lists (std.lists). -/
@@ -444,7 +444,7 @@ inductive Expr where
   | held (names : List (Name × Ty)) (handles : List Expr) (body : Expr)
   /-- A let-else or an `Option` fallback, written as the `match` it means, `meaning`: typing
   checks it by the form's own rules (`HasType.letElse` and `HasType.orElse`), and it runs as
-  `meaning` does (`eval_form`). The forms of projections are typed as `meaning` (`HasType.form`). -/
+  `meaning` does (`eval_form`). The other forms are typed as `meaning` (`HasType.form`, `.shaped`). -/
   | form (form : Form) (meaning : Expr)
 
 /-- An argument. An `inout` argument is marked at the call and is a place

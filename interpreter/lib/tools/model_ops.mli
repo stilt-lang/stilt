@@ -47,6 +47,10 @@ val float_lit : Types.ty -> string -> Model_json.t
 (** A float literal as written, of the float type its context expects
     (numbers.float-literals): its digits and decimal exponent. *)
 
+val int_float : Types.ty -> string -> Model_json.t
+(** An integer literal written in decimal at a float type: the calculus's form
+    of it, the float literal of its value (numbers.integer-literals). *)
+
 val cmp : Ast.binary -> string option
 (** The calculus's name of a comparison operator. *)
 

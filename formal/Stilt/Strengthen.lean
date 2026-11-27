@@ -186,6 +186,7 @@ theorem HasType.strengthen :
     .orElse ho (HasType.strengthen h₁ (part h)) (HasType.strengthen h₂ (part h)) hf
       (HasType.strengthen hm (part h))
   | _, _, _, _, .form hk hm, _, h => .form hk (HasType.strengthen hm (part h))
+  | _, _, _, _, .shaped hk hm, _, h => .shaped hk (HasType.strengthen hm (part h))
   | _, _, _, _, .assign (p := ⟨_, _⟩) hp he hfit, _, h =>
     .assign (PlaceFits.strengthen hp (assign_agree h)) (HasType.strengthen he (part h)) hfit
   | _, _, _, _, .seq ha hfit hb, _, h =>

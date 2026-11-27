@@ -4,6 +4,7 @@ import Stilt.Patterns
 import Stilt.Typing.Uses
 import Stilt.Typing.Context
 import Stilt.Typing.Else
+import Stilt.Typing.Shapes
 import Stilt.Syntax.Forms
 import Stilt.Typing.Io
 
@@ -216,7 +217,8 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       fx.row.raise = some E →
       HasType Γ fx e σ → Fits σ E →
       HasType Γ fx (.raise e) .never
-  /-- `try e` has the type and the effects of `e` (effects.marking). -/
+  /-- `try e` has the type and the effects of `e` (effects.marking): it marks raising calls
+  and does nothing else, so `try r` on a `Result` is still a `Result` (effects.result). -/
   | «try» {Γ fx e τ} :
       HasType Γ { fx with marked := true } e τ →
       HasType Γ fx (.try e) τ
@@ -327,6 +329,13 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   projections.call-is-place); so is a form of writable views, whose rules `Program.ViewsWrite`
   checks (`Stilt.Writable`). -/
   | form {Γ fx k m τ} : k.meant = true → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
+  /-- A compound assignment, an integer literal at a float type and a field read through an
+  `Option` are typed as the expression they mean, which has the shape that `Form.Shaped` gives:
+  `place op= e` runs as values.compound-assignment-order orders it, an integer literal takes a
+  float type that represents it exactly (numbers.integer-literals), and `e.f` reads the field
+  of the value inside the `Option` of `e`, evaluated once (types.fields-through-option), at
+  `Option<U>` (types.option-field-types). -/
+  | shaped {Γ fx k m τ} : k.Shaped m → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
 
 /-- Each expression fits the type at its position. -/
 inductive ExprsFit : Ctx → Effects → List Expr → List Ty → Prop

@@ -1,0 +1,167 @@
+import Stilt.Generics.Commute
+import Stilt.Typing.Else
+
+/-!
+# Forms of a shape
+
+What the typing rule `HasType.shaped` of `Stilt.Typing` asks of the meaning of a compound
+assignment, of an integer literal at a float type and of a field read through an `Option`: the
+expression that the form's parts build, which typing then checks as it checks any
+(`Form.Shaped`). An instance of a generic body keeps each shape (`Form.Shaped.substTys`); what
+only a written body's types decide is `Form.Known`, which `Program.FormsKnown` checks.
+-/
+
+namespace Stilt
+
+/-- `let t₁: τ₁ = i₁` and the others around `body`, the temporaries bound in order. -/
+def Expr.lets : List (Name × Ty × Expr) → Expr → Expr
+  | [], body => body
+  | (t, τ, i) :: ts, body => .letIn t τ i (Expr.lets ts body)
+
+/-- The expression that reads the part of `b`'s value that a path reaches. -/
+def Expr.readPath : Expr → List Projection → Expr
+  | b, [] => b
+  | b, .field f :: ps => Expr.readPath (.field b f) ps
+  | b, .index i :: ps => Expr.readPath (.index b i) ps
+
+/-- The expression that reads a place. -/
+def Place.read (P : Place) : Expr := Expr.readPath (.var P.root) P.path
+
+/-- Every index of the path is one of the variables `ts`. -/
+def Projection.IndexedBy (ts : List Name) (q : Projection) : Prop :=
+  (∃ f, q = .field f) ∨ ∃ t ∈ ts, q = .index (.var t)
+
+/-- `place op= e` as it runs (values.compound-assignment-order): the place's index expressions,
+and a map's key, are each evaluated once, in order, into the temporaries `ts`, whose variables
+are the place's indexes; then `e`, into `v`; then the place is read, `op` applied to its value
+and `e`'s, and the result written back. -/
+inductive Expr.Compound : Expr → Prop
+  /-- A place of fields, tuple fields and list indexes, written back by `place = …`. -/
+  | path {ts : List (Name × Ty × Expr)} {v : Name} {σ : Ty} {e : Expr} {o : Op} {P : Place} :
+      (∀ q ∈ P.path, q.IndexedBy (ts.map (·.1))) →
+      Expr.Compound (Expr.lets ts (.letIn v σ e (.assign P (.op o [P.read, .var v]))))
+  /-- An element of the map at such a place, at the key `k`: it is read as `m[k]` reads it, so
+  a map without a default panics with `missing-key` only after `e` has been evaluated, and the
+  map with the result at `k` is written back. -/
+  | entry {ts : List (Name × Ty × Expr)} {v k : Name} {σ : Ty} {e : Expr} {o : Op} {P : Place} :
+      (∀ q ∈ P.path, q.IndexedBy (ts.map (·.1))) → k ∈ ts.map (·.1) →
+      Expr.Compound (Expr.lets ts (.letIn v σ e (.assign P (.op (.map .insert)
+        [P.read, .var k, .op o [.op (.map .index) [P.read, .var k], .var v]]))))
+
+/-- The integers that a float type represents exactly: `m × 2^e` with `m` below `2^p`, for the
+type's precision `p`, that are finite, below `2^128` for an `f32` and `2^1024` for an `f64`
+(numbers.ieee-754). -/
+def FloatTy.Represents : FloatTy → Nat → Prop
+  | .f32, n => ∃ m e, n = m * 2 ^ e ∧ m < 2 ^ 24 ∧ e + 24 ≤ 128
+  | .f64, n => ∃ m e, n = m * 2 ^ e ∧ m < 2 ^ 53 ∧ e + 53 ≤ 1024
+
+/-- `Option<τ>`, the prelude's `Option` (`Decls.IsOption`) at `τ`. -/
+abbrev Ty.option (τ : Ty) : Ty := .variant optionName [τ]
+
+/-- `match e { Some(x) => r, None => None }` at the type `Option<U>`. -/
+def Expr.throughOption (e : Expr) (U : Ty) (x : Name) (r : Expr) : Expr :=
+  .match e U.option [⟨.variant optionName "Some" [.bind x], [x], none, r⟩,
+    ⟨.variant optionName "None" [], [], none, .variant optionName [U] "None" []⟩]
+
+/-- `e.f` on `e : Option<T>`, a read of the field `f` through the `Option` of the scrutinee
+`e` (types.fields-through-option): `e` is evaluated once, a `None` gives `None`, and a `Some(x)`
+reads the field of `x`, through `x` again when `x` is itself an `Option`. Typing gives the read
+the type `Option<U>` (types.option-field-types): `x.f` itself when the field has that type,
+so that the read adds no level of `Option`, a read through `x` when `x` is an `Option`, and
+`Some(x.f)` when the field has the type `U`, which for a written body is no `Option`
+(`Form.Known`). -/
+inductive Expr.ThroughOption (f : Name) : Expr → Expr → Prop
+  | field {e : Expr} {U : Ty} {x : Name} :
+      Expr.ThroughOption f e (e.throughOption U x (.field (.var x) f))
+  | some {e : Expr} {U : Ty} {x : Name} :
+      Expr.ThroughOption f e (e.throughOption U x (.variant optionName [U] "Some" [.field (.var x) f]))
+  | through {e m : Expr} {U : Ty} {x : Name} : Expr.ThroughOption f (.var x) m →
+      Expr.ThroughOption f e (e.throughOption U x (.form .optionField m))
+
+/-- The meaning that each form typed by `HasType.shaped` must have. A compound assignment is
+`Expr.Compound`. An integer literal at a float type is the float literal of its value, which
+the type must represent exactly, so `9007199254740993` can't be an `f64`
+(numbers.integer-literals); a negative one is that literal negated
+(numbers.negative-literals). -/
+def Form.Shaped : Form → Expr → Prop
+  | .compound, m => m.Compound
+  | .intFloat, m => ∃ k n, m = .op (.float k n false 0) [] ∧ k.Represents n
+  | .optionField, m => ∃ f e, m.ThroughOption f e
+  | _, _ => False
+
+/-- What a form of a written body, before any instance replaces its type parameters, asks of
+its parts: a read through an `Option` adds a level of `Option` only at a field whose type,
+as the read's own types give it, is no `Option` (types.option-field-types). So inside a
+function generic in `T`, a field of type `T` isn't an `Option`, even where a caller instantiates
+`T` with one (types.option-field-known). -/
+def Form.Known : Form → Expr → Prop
+  | .optionField, .match _ _ (⟨_, _, _, .variant _ [U] "Some" _⟩ :: _) => ∀ V : Ty, U ≠ V.option
+  | _, _ => True
+
+theorem Expr.lets_substTys (s : TySubst) (b : Expr) : ∀ ts : List (Name × Ty × Expr),
+    (Expr.lets ts b).substTys s =
+      Expr.lets (ts.map fun t => (t.1, t.2.1.substTys s, t.2.2.substTys s)) (b.substTys s)
+  | [] => rfl
+  | (t, τ, i) :: ts => by
+    simp only [Expr.lets, Expr.substTys, List.map_cons]
+    rw [Expr.lets_substTys s b ts]
+
+theorem Expr.readPath_substTys (s : TySubst) (ts : List Name) : ∀ (ps : List Projection) (b : Expr),
+    (∀ q ∈ ps, q.IndexedBy ts) → (Expr.readPath b ps).substTys s = Expr.readPath (b.substTys s) ps
+  | [], _, _ => rfl
+  | .field f :: ps, b, h => by
+    rw [Expr.readPath, Expr.readPath_substTys s ts ps _ fun q hq => h q (.tail _ hq)]; rfl
+  | .index i :: ps, b, h => by
+    rw [Expr.readPath, Expr.readPath_substTys s ts ps _ fun q hq => h q (.tail _ hq)]
+    rcases h _ (.head _) with ⟨_, hf⟩ | ⟨t, _, ht⟩
+    · cases hf
+    · cases ht; rfl
+
+theorem substPathTys_indexed (s : TySubst) (ts : List Name) : ∀ ps : List Projection,
+    (∀ q ∈ ps, q.IndexedBy ts) → substPathTys s ps = ps
+  | [], _ => rfl
+  | .field f :: ps, h => by
+    rw [substPathTys, substPathTys_indexed s ts ps fun q hq => h q (.tail _ hq)]
+  | .index i :: ps, h => by
+    rw [substPathTys, substPathTys_indexed s ts ps fun q hq => h q (.tail _ hq)]
+    rcases h _ (.head _) with ⟨_, hf⟩ | ⟨t, _, ht⟩
+    · cases hf
+    · cases ht; rfl
+
+private theorem names_map (s : TySubst) (ts : List (Name × Ty × Expr)) :
+    (ts.map fun t => (t.1, t.2.1.substTys s, t.2.2.substTys s)).map (·.1) = ts.map (·.1) := by
+  simp [List.map_map, Function.comp_def]
+
+theorem Expr.Compound.substTys (s : TySubst) {m : Expr} (h : m.Compound) :
+    (m.substTys s).Compound := by
+  cases h with
+  | @path ts v σ e o P h =>
+    obtain ⟨x, path⟩ := P
+    have hr := Expr.readPath_substTys s _ path (.var x) h
+    have hp := substPathTys_indexed s _ path h
+    rw [Expr.lets_substTys]
+    simp only [Expr.substTys, substExprTys, Place.read] at hr ⊢
+    rw [hp, hr]
+    exact .path (by rw [names_map]; exact h)
+  | @entry ts v k σ e o P h hk =>
+    obtain ⟨x, path⟩ := P
+    have hr := Expr.readPath_substTys s _ path (.var x) h
+    have hp := substPathTys_indexed s _ path h
+    rw [Expr.lets_substTys]
+    simp only [Expr.substTys, substExprTys, Place.read] at hr ⊢
+    rw [hp, hr]
+    exact .entry (by rw [names_map]; exact h) (by rw [names_map]; exact hk)
+
+theorem Expr.ThroughOption.substTys (s : TySubst) {f : Name} :
+    ∀ {e m : Expr}, m.ThroughOption f e → (m.substTys s).ThroughOption f (e.substTys s)
+  | _, _, .field => .field
+  | _, _, .some => .some
+  | _, _, .through h => .through (h.substTys s)
+
+theorem Form.Shaped.substTys (s : TySubst) : ∀ {k : Form} {m : Expr},
+    k.Shaped m → k.Shaped (m.substTys s)
+  | .compound, _, h => Expr.Compound.substTys s h
+  | .intFloat, _, ⟨k, n, hm, hn⟩ => ⟨k, n, by rw [hm]; rfl, hn⟩
+  | .optionField, _, ⟨f, e, h⟩ => ⟨f, e.substTys s, h.substTys s⟩
+
+end Stilt

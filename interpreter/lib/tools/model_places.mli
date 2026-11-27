@@ -14,6 +14,14 @@ val through : Model_types.writable -> string -> Model_json.t -> Model_json.t
     [i] read into [j]: the index into its source, or [-1] when it lies outside
     the binding's part (projections.places-through-views). *)
 
+val through_map : Tast.expr -> bool
+(** Whether a place goes through a map's element (std.map-element-places). *)
+
+val compound_place : Model_types.cx -> Tast.expr -> bool
+(** Whether the calculus has [p op= e] at the place [p] as its form
+    (values.compound-assignment-order): at a place that [p = e] stores, or at
+    the last key of a map whose keys are the calculus's. *)
+
 val write : store -> Model_json.t -> Model_json.t
 (** The store of a value. *)
 

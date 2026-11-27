@@ -19,6 +19,8 @@ import Stilt.Typing.Bounds
 import Stilt.Typing.Uses
 import Stilt.Typing.Context
 import Stilt.Typing.Else
+import Stilt.Typing.Shapes
+import Stilt.Typing.Known
 import Stilt.Typing.Io
 import Stilt.Typing
 import Stilt.Inhabited

@@ -123,6 +123,7 @@ def _root_.Stilt.PanicKind.name : PanicKind → String
   | .assert => "assert"
   | .deadlock => "deadlock"
   | .checkError => "check-error"
+  | .hole => "hole"
 
 /-- What a panic writes to standard error: its kind, then where it happened,
 which the model can't tell (program.exit-statuses). -/

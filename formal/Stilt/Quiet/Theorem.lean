@@ -81,7 +81,7 @@ theorem Quiet.step (hq : Quiet D n) (hs : Sound D n) (hD : D.Typed) {scope : Row
     withControl_keeps hq hs hη θ hio hD hne heff hh hr hfits hb hfit
   | _, _, _, _, .held _ _ hes hb _, _, hη, hio, θ => held_keeps hq hs hη θ hio hes hb
   | _, _, _, _, .letElse _ _ hm, _, hη, hio, θ | _, _, _, _, .orElse _ _ _ _ hm, _, hη, hio, θ
-  | _, _, _, _, .form _ hm, _, hη, hio, θ => by
+  | _, _, _, _, .form _ hm, _, hη, hio, θ | _, _, _, _, .shaped _ hm, _, hη, hio, θ => by
     rw [Expr.substRows, eval_form]
     exact hq hm hη hio θ
 

@@ -2,14 +2,12 @@ conformance/builds/unfused_multiply_add.lt
 conformance/capabilities/accepted.lt
 conformance/capabilities/grants
 conformance/cycles/kept.lt
-conformance/declarations/hole_reached.lt
 conformance/declarations/never.lt
 conformance/effects/catch_all_uses_error.lt
 conformance/effects/closure_in_catch_operand.lt
 conformance/effects/closure_passed_on.lt
 conformance/effects/panic_expect.lt
 conformance/effects/panic_expect_err.lt
-conformance/effects/panic_hole.lt
 conformance/effects/passed_to_paired_parameter_paired.lt
 conformance/encoding/hashes.lt
 conformance/expressions/key_path_annotated.lt
@@ -94,7 +92,6 @@ conformance/program/syntax_error_in_function.lt
 conformance/program/syntax_error_in_method.lt
 conformance/program/syntax_error_in_type.lt
 conformance/projections/copied_out.lt
-conformance/projections/hole_arm.lt
 conformance/protocol/args_and_stdin.lt
 conformance/protocol/working_directory.lt
 conformance/reflection/bound_tests.lt

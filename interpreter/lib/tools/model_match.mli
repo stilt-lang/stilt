@@ -20,4 +20,6 @@ val match_e :
   Tast.expr ->
   Tast.arm list ->
   Model_json.t
-(** [match_e ~expr cx e x arms]: the [match] [e] on [x]. *)
+(** [match_e ~expr cx e x arms]: the [match] [e] on [x], kept as the calculus's
+    form of a field read through an [Option] when it is the checker's [match]
+    for one (types.fields-through-option). *)

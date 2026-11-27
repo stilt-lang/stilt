@@ -117,6 +117,19 @@ example (D : Decls) (s : RowScope) (Γ : Ctx) (fx : Effects) :
   cases h with
   | int h => exact absurd h (by decide)
 
+/-- An integer literal at a float type must be one the type represents exactly
+(numbers.integer-literals): `2^53` is an `f64`, and `2^53 + 1` isn't. -/
+example : FloatTy.f64.Represents 9007199254740992 := ⟨1, 53, by decide, by decide, by decide⟩
+
+example : ¬ FloatTy.f64.Represents 9007199254740993 := by
+  rintro ⟨m, e, h, hm, -⟩
+  cases e with
+  | zero => simp at h; omega
+  | succ e =>
+    rw [Nat.pow_succ, ← Nat.mul_assoc] at h
+    generalize m * 2 ^ e = k at h
+    omega
+
 /-- `-128` is an `i8`, and `-0` a `u8` (numbers.negative-literals). -/
 example (D : Decls) (s : RowScope) (Γ : Ctx) (fx : Effects) :
     HasType D s Γ fx (.int (-128)) (.int .i8) := .int (by decide)

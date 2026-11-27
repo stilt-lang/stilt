@@ -12,13 +12,13 @@ namespace Stilt
 /-- The forms of projections, which typing checks as the calls each means (`HasType.form`). -/
 def Form.ofProjection : Form → Bool
   | .projection | .yield | .yielded | .project => true
-  | .letElse | .orElse | .writes | .through => false
+  | .letElse | .orElse | .writes | .through | .compound | .intFloat | .optionField => false
 
 /-- The forms of writable views, which typing checks as the code each means (`HasType.form`) and
 `Program.ViewsWrite` checks the rules of (`Stilt.Writable`). -/
 def Form.ofWritable : Form → Bool
   | .writes | .through => true
-  | .letElse | .orElse | .projection | .yield | .yielded | .project => false
+  | .letElse | .orElse | .projection | .yield | .yielded | .project | .compound | .intFloat | .optionField => false
 
 /-- The forms that typing checks as the code each means: those of projections and those of
 writable views (`HasType.form`). -/

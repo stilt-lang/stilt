@@ -239,6 +239,10 @@ let float_lit t text =
        ])
     []
 
+(* An integer literal at a float type, the float literal of its value, kept as
+   the calculus's form (numbers.integer-literals). *)
+let int_float t text = tag "intFloat" [ float_lit t text ]
+
 (* A splice with a format spec: its value's text by the spec's precision or kind,
    or as [Show] shows it, padded by its fill, alignment and width, which align a
    number right by default (std.width-fill-and-alignment, std.precision,

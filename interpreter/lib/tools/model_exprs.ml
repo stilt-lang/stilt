@@ -7,9 +7,9 @@ open Model_natives
 let rec expr cx (e : Tast.expr) =
   let e = Model_projections.desugar cx (Model_views.desugar e) in
   match e.desc with
-  | Int text when decimal_at_float e.ty text -> float_lit e.ty text
+  | Int text when decimal_at_float e.ty text -> int_float e.ty text
   | Unary (Neg, { desc = Int text; _ }) when decimal_at_float e.ty text ->
-      unary Neg e.ty (float_lit e.ty text)
+      unary Neg e.ty (int_float e.ty text)
   | Int text -> int_lit e.ty text ~negated:false
   | Unary (Neg, { desc = Int text; _ }) -> int_lit e.ty text ~negated:true
   | Str s -> str_lit s
@@ -134,7 +134,8 @@ and control cx (e : Tast.expr) =
   | Error ->
       (* program.bodies-with-errors: code with an error panics where it is reached. *)
       op (tag "panic" [ Str "checkError" ]) []
-  | Reflect _ | Quote _ | Hole -> outside "reflection, a quote or a hole"
+  | Hole -> (* declarations.running-holes *) op (tag "panic" [ Str "hole" ]) []
+  | Reflect _ | Quote _ -> outside "reflection or a quote"
   | _ -> outside "an expression the model lacks"
 
 (* A constant's value, a constant expression of literals, tuples, lists,
@@ -440,19 +441,19 @@ and binding cx form (b : Tast.binding) rest =
 
 and assign cx o (p : Tast.expr) (v : Tast.expr) =
   match o with
-  | None when not (through_map p) -> tag "assign" [ place cx p; expr cx v ]
+  | None when not (Model_places.through_map p) ->
+      tag "assign" [ place cx p; expr cx v ]
   | None ->
       stored cx p [ v ] (fun _ vs -> match vs with [ x ] -> x | _ -> unit_e)
   | Some b ->
-      stored cx p [ v ] (fun read vs ->
-          match vs with [ value ] -> binary b p.ty v.ty read value | _ -> read)
-
-(* Whether a place goes through a map's element (std.map-element-places). *)
-and through_map (e : Tast.expr) =
-  match e.desc with
-  | Field (b, _) | Tuple_field (b, _) -> through_map b
-  | Index (b, _) -> is_map b.ty || through_map b
-  | _ -> false
+      let m =
+        stored cx p [ v ] (fun read vs ->
+            match vs with
+            | [ value ] -> binary b p.ty v.ty read value
+            | _ -> read)
+      in
+      (* values.compound-assignment-order: the calculus's form of [p op= e]. *)
+      if Model_places.compound_place cx p then tag "compound" [ m ] else m
 
 (* A store into a place that also reads it, as [p op= e] and a call with an
    [inout self] receiver are: the place's index expressions are evaluated once,

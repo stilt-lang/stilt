@@ -36,6 +36,32 @@ let through_writable ~expr cx (w : writable) (i : Tast.expr) =
     Path (Arr [ Str w.src; Arr [ tag "index" [ at ] ] ]),
     tag "index" [ var_e w.src; at ] )
 
+(* Whether a place goes through a map's element (std.map-element-places). *)
+let rec through_map (e : Tast.expr) =
+  match e.desc with
+  | Field (b, _) | Tuple_field (b, _) -> through_map b
+  | Index (b, _) -> is_map b.ty || through_map b
+  | _ -> false
+
+(* Whether a place's root is a writable binding, whose indexes are its source's. *)
+let rec through_writable_root cx (e : Tast.expr) =
+  match e.desc with
+  | Local v -> writable_of cx v <> None
+  | Field (b, _) | Tuple_field (b, _) | Index (b, _) ->
+      through_writable_root cx b
+  | _ -> false
+
+(* Whether the calculus has [p op= e] as its form (values.compound-assignment-order):
+   at a place that [p = e] stores, or at the last key of a map that the calculus holds,
+   neither through a writable binding. *)
+let compound_place cx (p : Tast.expr) =
+  (not (through_writable_root cx p))
+  &&
+  match p.desc with
+  | Index (b, _) when is_map b.ty ->
+      (not (through_map b)) && Option.is_none (Model_keys.keyed cx b.ty)
+  | _ -> not (through_map p)
+
 (* A place whose index expressions and keys are temporaries: their bindings,
    how a value is stored into it, and the expression that reads it. A place
    through a map's element stores the changed element back with [m[k] = …],

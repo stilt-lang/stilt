@@ -82,5 +82,26 @@ let arms ~expr cx arms =
 let guarded ~expr cx t scrutinee a =
   tag "match" [ scrutinee; ty cx t; Arr (arms ~expr cx a) ]
 
+(* Whether the arms are those of the checker's [match] for a field read through an
+   [Option], [Some(x) => …, None => None], whose [x] no declaration has
+   (types.fields-through-option). *)
+let through_option (arms : Tast.arm list) =
+  let prelude (c : Hir.item) name = c.home = "std.prelude" && c.name = name in
+  match arms with
+  | [
+   {
+     pattern = { pat = P_variant (s, [ { pat = P_bind x; _ } ]); _ };
+     guard = None;
+     _;
+   };
+   { pattern = { pat = P_variant (n, []); _ }; guard = None; _ };
+  ] ->
+      x.id < 0 && x.name = "x" && x.loc.line = 0 && prelude s "Some"
+      && prelude n "None"
+  | _ -> false
+
+(* A field read through an [Option] is the calculus's form of it, the [match] it
+   means (types.fields-through-option). *)
 let match_e ~expr cx (e : Tast.expr) (x : Tast.expr) a =
-  guarded ~expr cx e.ty (expr x) a
+  let m = guarded ~expr cx e.ty (expr x) a in
+  if through_option a then tag "optionField" [ m ] else m

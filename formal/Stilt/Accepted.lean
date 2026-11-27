@@ -10,6 +10,7 @@ import Stilt.Locks.Theorem
 import Stilt.HeldNames.Unmerge
 import Stilt.Limits
 import Stilt.Projections.Theorem
+import Stilt.Typing.Known
 import Stilt.Handling.Unseen
 import Stilt.Alloc.Theorem
 import Stilt.Quiet.Theorem
@@ -140,6 +141,9 @@ structure Program.Accepted (p : Program) : Prop where
   or, for a closure literal or a binding of one, by what it captures (modes.demands and
   shared.tasks-and-modes, E0432). -/
   demands : p.Demands
+  /-- Each form is what the written body's own types make it: a field read through an `Option`
+  adds a level only at a field whose type is no `Option` (types.option-field-known). -/
+  formsKnown : p.FormsKnown
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where

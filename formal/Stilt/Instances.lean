@@ -273,6 +273,7 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     obtain ⟨q, hq, rfl⟩ := List.mem_map.1 hp
     exact hs.wellFormed (hwf q hq)
   | _, _, _, _, .form hk hm, hfx => .form hk (HasType.substTys hD hs hm hfx)
+  | _, _, _, _, .shaped hk hm, hfx => .shaped (hk.substTys s) (HasType.substTys hD hs hm hfx)
   | _, _, _, _, .letElse hr hx hm, hfx =>
     .letElse hr (HasType.substTys hD hs hx hfx) (HasType.substTys hD hs hm hfx)
   | _, _, _, _, .orElse ho h₁ h₂ hf hm, hfx =>

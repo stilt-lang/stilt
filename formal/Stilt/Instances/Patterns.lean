@@ -77,13 +77,13 @@ theorem PatFits.substTys (hD : D.WellFormed) :
     exact .variant hT (by rw [List.length_map]; exact hlen) (hD.lookup_ctorsAt_substTys s hT hlen hC)
       (PatsFit.substTys hD h)
   | _, _, _, .or hp hq hb => .or (PatFits.substTys hD hp) (PatFits.substTys hD hq) hb
-  | _, _, _, .const (c := c) hC hτ hv hp => by
+  | _, _, _, .const (c := c) hC hτ hw hv hp => by
     subst hτ
     have hc : c.type.substTys s = c.type :=
       Ty.substTys_of_params (hD.constTypes c (List.mem_of_find?_eq_some hC)) s
     have hp' := PatFits.substTys hD hp
     rw [hc] at hp' ⊢
-    exact .const hC rfl hv hp'
+    exact .const hC rfl hw hv hp'
   | _, _, _, .list (ps := ps) (r := r) (τ := τ) h => by
     have h' := PatsFit.substTys hD h
     rw [List.map_replicate] at h'
