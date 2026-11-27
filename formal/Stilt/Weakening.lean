@@ -174,12 +174,13 @@ theorem HandlerFits.of_le {fx : Effects} {eff : EffectDecl} {fields : List (Name
 
 theorem Satisfies.of_le {τ : Ty} {B : Name} (h : Satisfies D s τ B) (hs : s.Le s') :
     Satisfies D s' τ B :=
-  h.imp (fun ⟨p, hp, h⟩ => ⟨p, hs.types p hp, h⟩)
-    (Or.imp id fun ⟨t, ht, hi⟩ => ⟨t, ht, hi.of_types hs.types⟩)
+  h.of_types hs.types
 
 theorem MethodAt.of_le {τ : Ty} {Tr : Name} {args : List Ty} (h : MethodAt D s τ Tr args)
     (hs : s.Le s') : MethodAt D s' τ Tr args :=
-  h.imp (fun ⟨hp, q, hq, h⟩ => ⟨hp, q, hs.types q hq, h⟩) id
+  h.imp (fun ⟨hp, q, hq, h⟩ => ⟨hp, q, hs.types q hq, h⟩)
+    fun ⟨h, i, hh, hi, ⟨hl, hv, hb⟩, ha⟩ =>
+      ⟨h, i, hh, hi, ⟨hl, hv, fun pa hpa B hB => (hb pa hpa B hB).of_le hs⟩, ha⟩
 
 theorem TraitArgs.of_le {τ : Ty} {B : Name} {args : List Ty} (h : TraitArgs D s τ B args)
     (hs : s.Le s') : TraitArgs D s' τ B args :=

@@ -227,10 +227,10 @@ theorem Ty.substTys_of_params {τ : Ty} (h : τ.params = []) (s : TySubst) : τ.
 theorem Head.params_type (h : Head) : h.type.params = [] := by
   cases h <;> rfl
 
-theorem Ty.eq_of_head? {τ : Ty} {h : Head} (hh : τ.head? = some h) : τ = h.type := by
+/-- A type with a head is its head at its arguments. -/
+theorem Ty.eq_of_head? {τ : Ty} {h : Head} (hh : τ.head? = some h) : τ = h.at τ.args := by
   cases τ with
-  | record R args | variant R args =>
-    cases args <;> simp [Ty.head?] at hh; subst hh; rfl
+  | record R args | variant R args => simp [Ty.head?] at hh; subst hh; rfl
   | _ => simp [Ty.head?] at hh <;> subst hh <;> rfl
 
 /-! ## Rows and type parameters of an instance -/
@@ -442,6 +442,18 @@ theorem Head.substTys_type (h : Head) (s : TySubst) : h.type.substTys s = h.type
   Ty.substTys_of_params h.params_type s
 
 theorem Head.head?_type (h : Head) : h.type.head? = some h := by
+  cases h <;> rfl
+
+/-- An instance keeps a type's head, and instantiates its arguments. -/
+theorem Ty.head?_substTys {τ : Ty} {h : Head} (hh : τ.head? = some h) (s : TySubst) :
+    (τ.substTys s).head? = some h := by
+  cases τ <;> simp_all [Ty.substTys, Ty.head?]
+
+theorem Ty.args_substTys {τ : Ty} {h : Head} (hh : τ.head? = some h) (s : TySubst) :
+    (τ.substTys s).args = τ.args.map (Ty.substTys s) := by
+  cases τ <;> simp_all [Ty.substTys, Ty.head?, Ty.args, substTyList_eq_map]
+
+theorem Head.head?_at (h : Head) (args : List Ty) : (h.at args).head? = some h := by
   cases h <;> rfl
 
 theorem Head.closed_type (h : Head) : h.type.Closed := by

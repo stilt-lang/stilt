@@ -34,39 +34,63 @@ def PassesOnPairs (scope : RowScope) (d : FnDecl) (s : RowSubst) : Prop :=
 
 /-- `τ` implements the trait `B`, as far as a body whose type parameters `scope` describes
 knows: a type parameter through its bounds, which are all the body knows of it; a type
-with a head through the program's impl of `B` for that head (traits.unsatisfied-bounds and
-traits.implementing-trait); and for `Eq`, `Ord` and `Show`, a type that implements them
+with a head through the program's impl of `B` for that head, whose parameters' bounds the
+type's arguments meet (traits.unsatisfied-bounds, traits.implementing-trait and
+traits.bounded-blocks); and for `Eq`, `Ord`, `Show` and `Hash`, a type that implements them
 through the built-in and structural impls, which the calculus's operations compute
-(traits.built-in-impls and traits.structural-impls). A bound of `Eq`, `Ord` or `Show` is
-met only through those: an impl of one of them that the program writes is reached through
+(traits.built-in-impls and traits.structural-impls). A bound of a prelude trait is met only
+through those: an impl of one of them that the program writes is reached through
 `Trait.m` (`MethodAt`), and no type parameter stands for its type. -/
-def Satisfies (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) : Prop :=
-  (∃ p ∈ scope.types, τ = .param p.name ∧ B ∈ p.bounds) ∨
-    (PreludeTrait.ofName? B = none ∧ ∃ h, τ.head? = some h ∧ (D.traitImpl? B h).isSome) ∨
-    ∃ t, PreludeTrait.ofName? B = some t ∧ D.Implements scope t τ
+inductive Satisfies (D : Decls) (scope : RowScope) : Ty → Name → Prop
+  | param {p : TypeParam} {B : Name} :
+      p ∈ scope.types → B ∈ p.bounds → Satisfies D scope (.param p.name) B
+  | impl {τ : Ty} {B : Name} {h : Head} {i : TraitImpl} :
+      PreludeTrait.ofName? B = none → τ.head? = some h → D.traitImpl? B h = some i →
+      i.typeParams.length = τ.args.length → (∀ a ∈ τ.args, a.ViewsViewable) →
+      (∀ pa ∈ i.typeParams.zip τ.args, ∀ B' ∈ pa.1.bounds, Satisfies D scope pa.2 B') →
+      Satisfies D scope τ B
+  | prelude {τ : Ty} {B : Name} {t : PreludeTrait} :
+      PreludeTrait.ofName? B = some t → D.Implements scope t τ → Satisfies D scope τ B
+
+/-- What a body knows of its type parameters, kept in a scope that has them all. -/
+theorem Satisfies.of_types {D : Decls} {s s' : RowScope} (hs : ∀ p ∈ s.types, p ∈ s'.types)
+    {τ : Ty} {B : Name} (h : Satisfies D s τ B) : Satisfies D s' τ B := by
+  induction h with
+  | param hp hB => exact .param (hs _ hp) hB
+  | impl hn hh hi hl hv _ ih => exact .impl hn hh hi hl hv ih
+  | prelude ht hi => exact .prelude ht (hi.of_types hs)
+
+/-- The impl of a trait for a type's head applies to the type: one argument for each of the
+impl's parameters, each meeting its bounds (traits.implementing-trait). -/
+def ImplApplies (D : Decls) (scope : RowScope) (i : TraitImpl) (τ : Ty) : Prop :=
+  i.typeParams.length = τ.args.length ∧ (∀ a ∈ τ.args, a.ViewsViewable) ∧
+    ∀ pa ∈ i.typeParams.zip τ.args, ∀ B ∈ pa.1.bounds, Satisfies D scope pa.2 B
 
 /-- The arguments `args` that `τ` gives the parameters of the trait `B`, as far as a body
 whose type parameters `scope` describes knows: a type parameter through a bound of `B` that
 writes them, and a type with a head through the program's impl of `B` for it, whose type fixes
-them (traits.trait-arguments and traits.bound-arguments). A type meets a bound that writes
-arguments when it gives the trait those. -/
+them, at the type's arguments (traits.trait-arguments and traits.bound-arguments). A type
+meets a bound that writes arguments when it gives the trait those. -/
 def TraitArgs (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) (args : List Ty) : Prop :=
   (∃ p ∈ scope.types, τ = .param p.name ∧ B ∈ p.bounds ∧ p.argsOf B = some args) ∨
-    ∃ h i, τ.head? = some h ∧ D.traitImpl? B h = some i ∧ i.args = args
+    ∃ h i, τ.head? = some h ∧ D.traitImpl? B h = some i ∧ i.typeParams.length = τ.args.length ∧
+      i.args.map (Ty.substTys (i.typeArgs τ.args)) = args
 
 /-- `Trait.m` at `τ` names a function that the evaluator finds (traits.qualified-calls), at
 the arguments `args` of the trait's parameters: the function of a trait other than `Eq`, `Ord`,
 `Show` and `Hash` at a type parameter bounded by the trait, whose bound gives the arguments,
 none for a trait without parameters, or the function of the impl that the program writes
-for `τ`'s head, at the arguments the impl gives, an impl of a prelude trait among them, which
-replaces the structural one (traits.structural-impls). So `a == b` at a type whose `Eq` the
-program writes is `Eq.eq(a, b)`, a call of the impl's method, and `a < b` tests the `Ordering`
-that `Ord.compare(a, b)` gives (traits.operators). The built-in and structural impls of the
-prelude traits are the calculus's operations, which no `Trait.m` names. -/
+for `τ`'s head, which applies to `τ`, at the arguments the impl gives, an impl of a prelude
+trait among them, which replaces the structural one (traits.structural-impls). So `a == b`
+at a type whose `Eq` the program writes is `Eq.eq(a, b)`, a call of the impl's method, and
+`a < b` tests the `Ordering` that `Ord.compare(a, b)` gives (traits.operators). The built-in
+and structural impls of the prelude traits are the calculus's operations, which no `Trait.m`
+names. -/
 def MethodAt (D : Decls) (scope : RowScope) (τ : Ty) (Tr : Name) (args : List Ty) : Prop :=
   (PreludeTrait.ofName? Tr = none ∧ ∃ p ∈ scope.types, τ = .param p.name ∧ Tr ∈ p.bounds ∧
       (p.argsOf Tr = some args ∨ args = [] ∧ ∃ t, D.trait? Tr = some t ∧ t.params = [])) ∨
-    ∃ h i, τ.head? = some h ∧ D.traitImpl? Tr h = some i ∧ i.args = args
+    ∃ h i, τ.head? = some h ∧ D.traitImpl? Tr h = some i ∧ ImplApplies D scope i τ ∧
+      i.args.map (Ty.substTys (i.typeArgs τ.args)) = args
 
 /-- A relation that pairs two lists pairs them under a weaker one. -/
 theorem Forall₂.imp {α β : Type} {R R' : α → β → Prop} (h : ∀ {x y}, R x y → R' x y) :

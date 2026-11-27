@@ -147,17 +147,28 @@ def Head.type : Head → Ty
   | .record R => .record R []
   | .variant T => .variant T []
 
-/-- The head of a type, if a trait impl can be for it: impls for a generic type's
-instances are outside the calculus. -/
+/-- A head at type arguments: a record or variant type at them, any other head alone. -/
+def Head.at : Head → List Ty → Ty
+  | .record R, args => .record R args
+  | .variant T, args => .variant T args
+  | h, _ => h.type
+
+/-- The head of a type, if a trait impl can be for it: a record or variant type's at any
+arguments, since an impl covers a whole constructor (traits.coherence). -/
 def Ty.head? : Ty → Option Head
   | .int k => some (.int k)
   | .float k => some (.float k)
   | .bool => some .bool
   | .str => some .str
   | .unit => some .unit
-  | .record R [] => some (.record R)
-  | .variant T [] => some (.variant T)
+  | .record R _ => some (.record R)
+  | .variant T _ => some (.variant T)
   | _ => none
+
+/-- The type arguments of a record or variant type, and none of any other type. -/
+def Ty.args : Ty → List Ty
+  | .record _ args | .variant _ args => args
+  | _ => []
 
 /-- `Self`, the type parameter of a trait's signatures (traits.declaring-trait). -/
 def selfParam : Name := "Self"
@@ -173,16 +184,28 @@ structure TraitDecl where
   /-- The trait's own parameters. -/
   params : List Name := []
 
-/-- `impl Trait<T, …> for Type { fn … }`, for a type with no type parameters
-(traits.implementing-trait), with an argument for each of the trait's parameters
-(traits.trait-arguments). -/
+/-- `impl<A: Bound, …> Trait<T, …> for Con<A, …> { fn … }` (traits.implementing-trait), with
+an argument for each of the trait's parameters (traits.trait-arguments). Its type is `Con` at
+the impl's parameters, one for each of the constructor's, in its order: the elaborated form of
+an impl that writes them in another order. -/
 structure TraitImpl where
   trait : Name
   type : Head
   fns : List FnDecl
   /-- The types it gives the trait's parameters, which the impl's type fixes: a trait has one
-  impl per type, whatever its arguments (traits.coherence). -/
+  impl per type, whatever its arguments (traits.coherence). They may name the impl's
+  parameters. -/
   args : List Ty := []
+  /-- The impl's parameters, with their bounds, which a type's arguments meet for the impl's
+  functions to apply to it. -/
+  typeParams : List TypeParam := []
+
+/-- The type of an impl: its constructor at its parameters. -/
+def TraitImpl.selfType (i : TraitImpl) : Ty := i.type.at (i.typeParams.map fun p => .param p.name)
+
+/-- The instantiation of an impl's parameters by a type's arguments. -/
+def TraitImpl.typeArgs (i : TraitImpl) (τs : List Ty) : List (Name × Ty) :=
+  (i.typeParams.map TypeParam.name).zip τs
 
 /-- The name of an integer type (numbers.numeric-types). -/
 def IntTy.name : IntTy → Name
@@ -210,9 +233,9 @@ def implQualifier (trait : Name) (type : Head) : Name := trait ++ " for " ++ typ
 def implName (trait : Name) (type : Head) (m : Name) : Name :=
   qualify (implQualifier trait type) m
 
-/-- The functions of a trait impl, under their qualified names. -/
+/-- The functions of a trait impl, under their qualified names, with the impl's parameters. -/
 def TraitImpl.members (i : TraitImpl) : List FnDecl :=
-  i.fns.map (FnDecl.qualify (implQualifier i.trait i.type))
+  i.fns.map (FnDecl.within i.typeParams (implQualifier i.trait i.type))
 
 /-- `effect Name { fn op(param: A) -> B; … }` (handlers.declaring-effect): each
 operation with the type of its argument, its parameters as one value, and of
@@ -428,7 +451,7 @@ theorem Decls.fns_mapFns {f : FnDecl → FnDecl}
     refine congrArg (List.flatMap · D.impls) (funext fun i => ?_)
     exact List.map_congr_left fun d _ => (hf i.typeParams i.type d).symm
   · refine congrArg (List.flatMap · D.traitImpls) (funext fun i => ?_)
-    exact List.map_congr_left fun d _ => (hf [] _ d).symm
+    exact List.map_congr_left fun d _ => (hf i.typeParams _ d).symm
 
 /-- A change to functions that leaves every function of the program as it is
 leaves its declarations as they are. -/
@@ -456,11 +479,11 @@ theorem Decls.mapFns_eq_self {f : FnDecl → FnDecl}
       (List.mem_flatMap.2 ⟨⟨T, fns, ps⟩, hi, List.mem_map_of_mem hd⟩))))
   have htrait : (traitImpls.map fun i => { i with fns := i.fns.map f }) = traitImpls := by
     refine (List.map_congr_left fun i hi => ?_).trans (List.map_id _)
-    obtain ⟨Tr, H, fns, args⟩ := i
+    obtain ⟨Tr, H, fns, args, ps⟩ := i
     suffices fns.map f = fns by simp [this]
     refine (List.map_congr_left fun d hd => ?_).trans (List.map_id _)
-    exact hq [] _ d (h _ (List.mem_append_right _ (List.mem_flatMap.2
-      ⟨⟨Tr, H, fns, args⟩, hi, List.mem_map_of_mem hd⟩)))
+    exact hq ps _ d (h _ (List.mem_append_right _ (List.mem_flatMap.2
+      ⟨⟨Tr, H, fns, args, ps⟩, hi, List.mem_map_of_mem hd⟩)))
   simp [Decls.mapFns, hfun, himpl, htrait]
 
 end Stilt

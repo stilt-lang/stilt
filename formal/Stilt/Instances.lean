@@ -441,12 +441,9 @@ theorem TypeArgsFit.fits (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) {sc
     exact hw.2.2.2
   · obtain ⟨τ, hl, _, _, hb⟩ := Forall₂.lookup_zip h (hD.typeParams d hd) hp
     refine ⟨τ, hl, fun B hB => ⟨?_, fun args ha => ?_⟩⟩
-    · rcases (hb B hB).1 with ⟨q, hq, _⟩ | hi
-      · rw [hscope] at hq
+    · exact (hb B hB).1.of_types fun q hq => by
+        rw [hscope] at hq
         exact nomatch hq
-      · exact .inr (hi.imp id fun ⟨t, ht, h⟩ => ⟨t, ht, h.of_types fun q hq => by
-          rw [hscope] at hq
-          exact nomatch hq⟩)
     · rcases ((hb B hB).2 args ha).2 with ⟨q, hq, _⟩ | hi
       · rw [hscope] at hq
         exact nomatch hq

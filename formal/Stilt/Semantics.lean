@@ -114,12 +114,13 @@ def callAs (D : Decls) (M : Memory σ) (run : Expr → Eval σ Value) (control :
   if !control && f.takesControl D then fail .stuck else call D M run f args
 
 /-- `Trait.m` at a type: the function `m` of the impl of the trait for the
-type's head, the one impl it has (traits.qualified-calls and traits.coherence). -/
+type's head, the one impl it has (traits.qualified-calls and traits.coherence), at the type's
+arguments, which the impl's parameters take. -/
 def method (D : Decls) (trait m : Name) (τ : Ty) : Eval σ Value :=
   match τ.head? with
   | some h =>
     match D.traitImpl? trait h with
-    | some _ => pure (.function (implName trait h m) [] [])
+    | some _ => pure (.function (implName trait h m) τ.args [])
     | none => fail .stuck
   | none => fail .stuck
 

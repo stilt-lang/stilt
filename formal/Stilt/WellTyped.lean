@@ -162,17 +162,26 @@ structure TraitDecl.WellFormed (t : TraitDecl) : Prop where
   signatures : ∀ mσ ∈ t.methods, mσ.2.WellFormed t.scope
   params : (selfParam :: t.params).Nodup
 
-/-- An impl gives each method of its trait a function with no type parameters
+/-- The number of type parameters of the constructor that a head names. -/
+def Decls.arity (D : Decls) : Head → Nat
+  | .record R => ((D.record? R).map (·.typeParams.length)).getD 0
+  | .variant T => ((D.variant? T).map (·.typeParams.length)).getD 0
+  | _ => 0
+
+/-- An impl gives each method of its trait a function with no type parameters of its own
 or row variables, whose signature is the trait's with `Self` replaced by the
 impl's type and each trait parameter by the impl's argument for it (traits.impl-members and
-traits.impl-signatures). It gives one argument for each of the trait's parameters, or it is
-E0300, each a ground type, since an impl has no parameters of its own in the calculus
-(traits.trait-arguments). -/
+traits.impl-signatures). Its type is its constructor at its parameters, one for each of the
+constructor's, or it is E0302 (traits.implementing-trait). It gives one argument for each of the
+trait's parameters, or it is E0300, each a type that names only the impl's parameters
+(traits.trait-arguments). The bounds of its parameters write no trait arguments. -/
 def TraitImpl.Implements (D : Decls) (i : TraitImpl) : Prop :=
-  ∃ t, D.trait? i.trait = some t ∧ i.args.length = t.params.length ∧ (∀ a ∈ i.args, a.Ground) ∧
+  ∃ t, D.trait? i.trait = some t ∧ i.args.length = t.params.length ∧
+    (∀ a ∈ i.args, a.Closed ∧ ∀ T ∈ a.params, T ∈ i.typeParams.map TypeParam.name) ∧
+    i.typeParams.length = D.arity i.type ∧ (∀ p ∈ i.typeParams, p.args = []) ∧
     ∀ m σ, t.methods.lookup m = some σ →
     ∃ d ∈ i.fns, d.name = m ∧ d.typeParams = [] ∧ d.rowParams = [] ∧
-      d.type = σ.substTys ((selfParam, i.type.type) :: t.params.zip i.args)
+      d.type = σ.substTys ((selfParam, i.selfType) :: t.params.zip i.args)
 
 /-- A bound that writes its trait's arguments writes one for each of the trait's parameters,
 or it is E0300, and they name only the function's type parameters (traits.bound-arguments). -/

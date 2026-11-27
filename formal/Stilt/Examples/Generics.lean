@@ -26,12 +26,12 @@ private def sizeFn (τ : Ty) (body : Expr) : FnDecl :=
   ⟨"size", [], [], [⟨.let, selfName, τ, none⟩], .i64, Row.pure, body, {}⟩
 
 /-- `impl Size for i64 { fn size(self) -> i64 { self } }`. -/
-private def sizeI64 : TraitImpl := ⟨"Size", .int .i64, [sizeFn .i64 (.var selfName)], []⟩
+private def sizeI64 : TraitImpl := ⟨"Size", .int .i64, [sizeFn .i64 (.var selfName)], [], []⟩
 
 /-- `impl Size for Point { fn size(self) -> i64 { self.x + self.y } }`. -/
 private def sizePoint : TraitImpl :=
   ⟨"Size", .record "Point", [sizeFn (.record "Point" [])
-    (.op (.arith .add .i64) [.field (.var selfName) "x", .field (.var selfName) "y"])], []⟩
+    (.op (.arith .add .i64) [.field (.var selfName) "x", .field (.var selfName) "y"])], [], []⟩
 
 /-- `e.size()` on a value of type `τ`, which calls `Size.size` at `τ`. -/
 private def sizeOf (τ : Ty) (e : Expr) (result : Ty :=
@@ -80,8 +80,6 @@ example : twice.WellTyped decls twice.scope := by
     refine ⟨fun _ h => (nomatch h), fun T hT => ?_, fun _ h => (nomatch h), fun _ h => (nomatch h)⟩
     simp only [Ty.params, List.mem_singleton] at hT
     simp [hT, FnDecl.scope, twice]
-  have hsat : Satisfies decls twice.scope (.param "T") "Size" :=
-    .inl ⟨⟨"T", ["Size"], []⟩, by simp [FnDecl.scope, twice], rfl, by simp⟩
   have hm : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (.method "Size" "size" (.param "T")) (.fn [(.let, .param "T")] .i64 Row.pure) :=
     .method (t := size) (m := "size") (σ := .fn [(.let, .param selfParam)] .i64 Row.pure) rfl rfl
@@ -103,20 +101,24 @@ example (s : RowScope) (Γ : Ctx) (fx : Effects) (τ : Ty) :
     obtain rfl : twice = _ := Option.some.inj (Eq.trans rfl hd)
     cases htys with
     | cons hx _ =>
-      rcases hx.2.2 "Size" (by simp) with ⟨_, _, h, _⟩ | ⟨_, _, hh, hi⟩ | ⟨_, ht, _⟩
-      · exact nomatch h
-      · cases hh
-        exact absurd hi (by decide)
-      · exact nomatch ht
+      cases (hx.2.2 "Size" (by simp)).1 with
+      | impl _ hh hi =>
+        simp only [Ty.head?, Option.some.injEq] at hh
+        subst hh
+        simp [Decls.traitImpl?, decls, sizeI64, sizePoint] at hi
+      | prelude ht => exact nomatch ht
 
 /-- Without a bound, a body knows nothing of `T`: `fn bad<T>(v: T) -> i64 {
 v.size() }` can't call `size` (traits.unsatisfied-bounds). -/
 example : ¬Satisfies decls ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", [], []⟩]⟩ (.param "T") "Size" := by
-  rintro (⟨p, hp, _, hB⟩ | ⟨_, _, hh, _⟩ | ⟨_, ht, _⟩)
-  · simp only [List.mem_singleton] at hp
+  intro h
+  generalize hτ : Ty.param "T" = τ at h
+  cases h with
+  | param hp hB =>
+    simp only [List.mem_singleton] at hp
     subst hp
     exact nomatch hB
-  · exact nomatch hh
-  · exact nomatch ht
+  | impl _ hh => subst hτ; exact nomatch hh
+  | prelude ht => exact nomatch ht
 
 end Stilt.Examples.Generics
