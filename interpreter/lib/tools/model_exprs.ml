@@ -4,12 +4,8 @@ open Model_ops
 open Model_forms
 open Model_natives
 
-let writable cx (v : Hir.var) = List.mem v.id cx.writable
-
 let rec expr cx (e : Tast.expr) =
-  let e =
-    Model_projections.desugar cx (Model_views.desugar ~writable:(writable cx) e)
-  in
+  let e = Model_projections.desugar cx (Model_views.desugar e) in
   match e.desc with
   | Int text when decimal_at_float e.ty text -> float_lit e.ty text
   | Unary (Neg, { desc = Int text; _ }) when decimal_at_float e.ty text ->
@@ -18,6 +14,9 @@ let rec expr cx (e : Tast.expr) =
   | Unary (Neg, { desc = Int text; _ }) -> int_lit e.ty text ~negated:true
   | Str s -> str_lit s
   | Bool b -> tag "bool" [ Bool b ]
+  | Local v when writable_of cx v <> None ->
+      (* projections.writable-bindings: a writable binding read is the view of its part. *)
+      Model_writes.part_of (Option.get (writable_of cx v))
   | Local v -> tag "var" [ Str (var_name v) ]
   | Interpolated segs -> op (Str "concat") (List.map (segment cx) segs)
   | Tuple [] -> unit_e
@@ -90,12 +89,16 @@ and control cx (e : Tast.expr) =
   | Try (x, None) -> tag "try" [ expr cx x ]
   | Try (x, Some c) ->
       let error = { Hir.id = -1; name = "error"; loc = e.loc } in
+      let operand () =
+        allowing cx { cx.allowed with raise = Some c.error } (fun () ->
+            expr cx x)
+      in
       let scrutinee = tag "var" [ Str (var_name error) ] in
       let handler =
         Model_match.guarded ~expr:(expr cx) cx e.ty scrutinee c.arms
       in
       tag "tryCatch"
-        [ expr cx x; ty cx c.error; Str (var_name error); handler; ty cx e.ty ]
+        [ operand (); ty cx c.error; Str (var_name error); handler; ty cx e.ty ]
   | While (c, b) -> tag "while" [ expr cx c; block cx b ]
   | Loop b -> tag "loop" [ block cx b ]
   | Break -> Str "break"
@@ -107,6 +110,8 @@ and control cx (e : Tast.expr) =
       expr cx (Model_forms.trait_constant cx e trait name self)
   | Value_param _ -> outside "a constant"
   | Callee (Function i, targs) when Model_fns.code cx (Function i) <> None ->
+      if Model_writes.target_writes cx (Function i) <> None then
+        outside "a function whose result writes, as a value";
       Model_fns.value cx i targs
   | Callee (c, ts) -> eta_closure cx e (fun a r -> Tast.Call (c, ts, a, r))
   | Constructor (i, ts) ->
@@ -136,36 +141,7 @@ and control cx (e : Tast.expr) =
    records and variants (declarations.constant-expressions), stands where it is
    read: evaluating it there gives the value, and the panic of a unary [-] that
    overflows at its first use (declarations.constant-evaluation). *)
-(* A [for] over a list, or over the list of the integers a range yields
-   (expressions.range-iteration), each element matched against the loop's
-   pattern. *)
-and for_loop cx (e : Tast.expr) (p : Tast.pattern) it b =
-  let iterable, elem_ty =
-    match it with
-    | Iter it when is_map it.ty -> (
-        (* expressions.for-iterables: a map yields its pairs in insertion
-           order, which are its entries (std.maps). *)
-        match (norm it.ty, Model_keys.keyed cx it.ty) with
-        | _, Some (k, v) ->
-            (Model_keys.entries cx k v (expr cx it), Types.Tuple [ k; v ])
-        | Con (_, [ k; v ]), None ->
-            (map_op "entries" [ expr cx it ], Types.Tuple [ k; v ])
-        | _ -> outside "an iteration over something other than a list")
-    | Iter it -> (expr cx it, elem it.ty)
-    | Range (a, z, fin) ->
-        let incl = fin = Ast.Inclusive in
-        let range = tag "list" [ tag "range" [ Bool incl ] ] in
-        (op range [ expr cx a; expr cx z ], p.pty)
-  in
-  let body = block cx b in
-  let name, body =
-    match p.pat with
-    | P_bind v -> (var_name v, body)
-    | _ ->
-        let n = temp "for" e.loc in
-        (n, tag "match" [ var_e n; ty cx (block_ty b); Arr [ arm cx p body ] ])
-  in
-  tag "for" [ Str name; ty cx elem_ty; iterable; body ]
+and for_loop cx e p it b = Model_bodies.for_loop (bodies cx) cx e p it b
 
 and segment cx = function
   | Tast.Text s -> str_lit s
@@ -180,7 +156,7 @@ and call cx (e : Tast.expr) callee targs args =
   | Member (owner, name) when Model_shared.owns owner ->
       Model_shared.member_call (shared cx) cx e owner name args
   | Member (owner, name) when owner = Model_views.view_item ->
-      Model_views.call ~writable:(writable cx) ~expr:(expr cx) e name args
+      Model_views.call ~expr:(expr cx) e name args
   | Member (owner, name) when gives_option owner name e.ty ->
       option_call cx e owner name
         (List.map (fun (a : Tast.arg) -> expr cx a.value) args)
@@ -234,6 +210,10 @@ and function_call cx (e : Tast.expr) (i : Hir.item) targs args =
       match args with
       | [ l ] -> Model_lists.array_from_list (callbacks cx) cx e l.value
       | _ -> outside "the function std.array.from_list")
+  | None, _
+    when Model_fns.code cx (Function i) <> None
+         && Model_writes.target_writes cx (Function i) <> None ->
+      Model_writes.call_result (writing cx) cx e
   | None, _ when Model_fns.code cx (Function i) <> None ->
       code_call ~maps:true cx e (Function i) targs args
   | None, _ -> outside "the function %s" (item_name i)
@@ -273,7 +253,7 @@ and code_call ?(maps = false) ?self cx (e : Tast.expr) target targs args =
     | _ -> false
   in
   if projected target && not (Model_calls.has_map_inout args) then
-    tag "project" [ make (List.map (arg cx) args) ]
+    tag "project" [ make (List.concat_map (passed cx) args) ]
   else if maps && Model_calls.has_map_inout args then
     let s = Model_fns.signature cx target in
     let _, raise = flat (Model_fns.instantiated_row inst s.row) in
@@ -281,7 +261,7 @@ and code_call ?(maps = false) ?self cx (e : Tast.expr) target targs args =
       { Model_calls.expr = expr cx; place = place cx; store = assign cx None }
     in
     Model_calls.through_maps cb cx e ~raise make args
-  else make (List.map (arg cx) args)
+  else make (List.concat_map (passed cx) args)
 
 and writing cx : Model_writes.callbacks = { expr = expr cx; block = block cx }
 
@@ -298,12 +278,28 @@ and callbacks cx : Model_lists.callbacks =
   }
 
 and call_value cx (f : Tast.expr) args result =
-  call_e cx (expr cx f) (List.map (arg cx) args) result
+  call_e cx (expr cx f) (List.concat_map (passed cx) args) result
 
 and arg cx (a : Tast.arg) =
   match a.mode with
   | Inout -> tag "inout" [ place cx a.value ]
   | Let -> tag "value" [ expr cx a.value ]
+
+(* The arguments an argument passes: itself, or for a writable binding passed [inout],
+   three, its source's parameter [inout] and its part's start and end, as the parameter
+   that takes it is three (projections.writable-bindings). *)
+and passed cx (a : Tast.arg) =
+  match (a.mode, a.value.desc) with
+  | Inout, Local v when writable_of cx v <> None ->
+      let w = Option.get (writable_of cx v) in
+      [
+        tag "inout" [ Arr [ Str w.src; Arr [] ] ];
+        tag "value" [ var_e w.start ];
+        tag "value" [ var_e w.stop ];
+      ]
+  | Inout, _ when viewed a.value.ty <> None ->
+      outside "a view passed inout that no writable binding holds"
+  | _ -> [ arg cx a ]
 
 and place cx (e : Tast.expr) =
   let extend b step =
@@ -312,6 +308,13 @@ and place cx (e : Tast.expr) =
     | p -> p
   in
   match e.desc with
+  | Local v when writable_of cx v <> None ->
+      outside "a writable binding as a place of its own"
+  | Index ({ desc = Local v; _ }, i) when writable_of cx v <> None ->
+      (* projections.places-through-views: [v[i]] is a place of the source's parameter. *)
+      let w = Option.get (writable_of cx v) in
+      let at = Model_places.through w (temp "through" i.loc) (expr cx i) in
+      Arr [ Str w.src; Arr [ tag "index" [ at ] ] ]
   | Local v -> Arr [ Str (var_name v); Arr [] ]
   | Field (b, f) -> extend b (tag "field" [ Str f ])
   | Tuple_field (b, i) -> extend b (tag "field" [ Str (string_of_int i) ])
@@ -319,43 +322,11 @@ and place cx (e : Tast.expr) =
   | Index (b, i) -> extend b (tag "index" [ expr cx i ])
   | _ -> outside "a place the model lacks"
 
-and closure cx (e : Tast.expr) ps body =
-  match norm e.ty with
-  | Fn (sig_ps, result, r) ->
-      (* expressions.closures: a parameter written as a pattern binds a fresh name, which
-         the body matches against the pattern, irrefutable there
-         (patterns.irrefutable-positions). *)
-      let named i (p : Tast.pattern) =
-        match p.pat with
-        | P_bind v -> (var_name v, None)
-        | _ -> (Printf.sprintf "%s/%d" (temp "closure-param" e.loc) i, Some p)
-      in
-      let names = List.mapi named ps in
-      let param (n, _) (m, t) =
-        Arr [ mode m; Str n; param_ty cx (m, t); Null ]
-      in
-      List.iter2
-        (fun (p : Tast.pattern) (m, t) ->
-          match p.pat with P_bind v -> writes cx m v t | _ -> ())
-        ps sig_ps;
-      let bound acc (n, p) =
-        match p with
-        | Some p -> tag "match" [ var_e n; ty cx result; Arr [ arm cx p acc ] ]
-        | None -> acc
-      in
-      let saved = cx.yielding in
-      cx.yielding <- None;
-      let body =
-        Fun.protect
-          ~finally:(fun () -> cx.yielding <- saved)
-          (fun () ->
-            List.fold_left bound
-              (raises_in cx r (fun () -> expr cx body))
-              (List.rev names))
-      in
-      tag "closure"
-        [ Arr (List.map2 param names sig_ps); ty cx result; row cx r; body ]
-  | _ -> outside "a closure of a type the model lacks"
+and closure cx e ps body = Model_bodies.closure (bodies cx) cx e ps body
+and result_block cx p stmts = Model_bodies.result_block (bodies cx) cx p stmts
+
+and bodies cx : Model_bodies.callbacks =
+  { expr = expr cx; block = block cx; assign = assign cx; writing = writing cx }
 
 and eta_closure cx e make =
   let ps, body = eta e make in
@@ -368,7 +339,7 @@ and block cx (stmts : Tast.block) =
   | { stmt; at } :: rest -> (
       match stmt with
       | Expr e -> tag "seq" [ expr cx e; block cx rest ]
-      | Assign (_, { desc = Local w; _ }, _) when writable cx w ->
+      | Assign (_, { desc = Local w; _ }, _) when writable_of cx w <> None ->
           outside "a view assigned to the whole of a writable binding"
       | Assign (o, p, v) when Model_projections.rooted p ->
           tag "seq"
@@ -393,6 +364,15 @@ and block cx (stmts : Tast.block) =
 and yield_ cx (p : Tast.expr) =
   match cx.yielding with
   | None -> outside "a yield"
+  | Some a when Model_writes.makes cx p ->
+      (* projections.yield: a view that writes its source, yielded as a writable
+         binding, its source's place and its part's offsets. *)
+      let extras =
+        List.map (fun value -> { Tast.mode = Inout; value }) a.extras
+      in
+      Model_writes.yielded (writing cx) cx p (fun first ->
+          let args = first @ List.concat_map (passed cx) extras in
+          tag "yield" [ Str a.res; call_e cx (expr cx a.k) args a.result ])
   | Some a ->
       let args =
         List.map (fun value -> { Tast.mode = Inout; value }) (p :: a.extras)

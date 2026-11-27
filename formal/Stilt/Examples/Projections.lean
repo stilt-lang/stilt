@@ -18,10 +18,10 @@ Two projections' calls that hold one source, as in `swap(inout at(inout xs, 0), 
 at(inout xs, 1))`, become a call whose `inout` arguments overlap, which the law of
 exclusivity rejects as modes.overlapping-inout does.
 
-A view that writes is the copy of its part that its binding holds, written back into its
-source element by element when the binding's scope ends, or when a raise leaves it
-(projections.writable-views and projections.what-view-writes); `view.split` copies two
-parts, which its function takes `inout`.
+`view.split` copies two parts, which its function takes `inout`, each a writable binding of a
+copy from its start, and writes them back into its source element by element when the function
+returns, or when a raise leaves it (projections.writable-views); `Stilt.Examples.Writable` runs
+the other views that write.
 -/
 
 namespace Stilt.Examples.Projections
@@ -109,14 +109,6 @@ private def writeBack (v : Name) (off : Int) (rest : Expr) : Expr :=
     (.seq (.for "j" .i64 (.op (.list (.range false)) [.int 0, .op (.list .len) [.var v]])
         (.assign ⟨"w", [.index (add (.int off) (.var "j"))]⟩ (.index (.var v) (.var "j"))))
       (.seq (.assign ⟨"xs", []⟩ (.var "w")) rest))
-
-/-- `{ var v = view.into(inout xs, 1, 3); v[0] = 10; v[1] += 5 }` gives `[1, 10, 8, 4]`. -/
-example : raisesBoth (program (.varIn "xs" ints (.list .i64 [.int 1, .int 2, .int 3, .int 4])
-    (.varIn "v" ints (slice (.var "xs") (.int 1) (.int 3))
-      (.seq (.assign ⟨"v", [.index (.int 0)]⟩ (.int 10))
-        (.seq (.assign ⟨"v", [.index (.int 1)]⟩ (add (at0 "v" 1) (.int 5)))
-          (writeBack "v" 1 (.raise (add sum (at0 "xs" 3))))))))) 23 := by
-  decide +kernel
 
 /-- `view.split(inout xs, 1, |inout a, inout b| { a[0] = 0; b[1] = 9; raise 7 })`, caught:
 the parts are written back before the raise leaves, so `xs` is `[0, 2, 9]`. -/

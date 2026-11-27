@@ -31,9 +31,14 @@ let fn_decl cx (inst : fn_instance) =
   let param (m, (v : Hir.var)) (_, t) =
     let t = Model_fns.instantiated inst t in
     writes cx m v t;
-    Arr [ mode m; Str (var_name v); param_ty cx (m, t); Null ]
+    param_decls cx (m, var_name v, t)
   in
-  let params = List.map2 param d.params s.params in
+  let params = List.concat (List.map2 param d.params s.params) in
+  let writes =
+    Model_writes.result_writes
+      (List.map (fun (m, t) -> (m, Model_fns.instantiated inst t)) s.params)
+      (Model_fns.instantiated inst s.ret)
+  in
   let access =
     match inst.target with
     | Function i ->
@@ -43,7 +48,13 @@ let fn_decl cx (inst : fn_instance) =
   let body =
     raises_in cx (Model_fns.instantiated_row inst s.row) (fun () ->
         yielding cx access (fun () ->
-            Model_exprs.block cx (Model_fns.body inst d s body)))
+            let body = Model_fns.body inst d s body in
+            match writes with
+            | Some k ->
+                Model_exprs.result_block cx
+                  (var_name (snd (List.nth d.params k)))
+                  body
+            | None -> Model_exprs.block cx body))
   in
   Arr
     [
@@ -51,7 +62,7 @@ let fn_decl cx (inst : fn_instance) =
       Arr [];
       Arr [];
       Arr params;
-      at s.ret;
+      (if writes = None then at s.ret else ty cx Model_writes.offsets_ty);
       row cx (Model_fns.instantiated_row inst s.row);
       body;
     ]
@@ -162,6 +173,7 @@ let written env program =
       yielding = None;
       writable = [];
       consts = [];
+      allowed = Types.empty_row;
     }
   in
   let main = Model_fns.instance cx (Function main_item) [] [] in

@@ -10,15 +10,13 @@ val viewed : Types.ty -> Types.ty option
 val view : Model_json.t list -> Model_json.t
 (** A view of its operands, the source first (views.making-view). *)
 
-val desugar : writable:(Hir.var -> bool) -> Tast.expr -> Tast.expr
+val desugar : Tast.expr -> Tast.expr
 (** [e] with each view it reads as an operand of [v[i]], a [for], a splice or an
     operator read as the view's [copy()], which gives the viewed part: those
     forms read the part as the same forms of the part's type do
-    (views.functions-of-views, views.for-over-view). A writable binding is its
-    part already (projections.writable-bindings). *)
+    (views.functions-of-views, views.for-over-view). *)
 
 val call :
-  writable:(Hir.var -> bool) ->
   expr:(Tast.expr -> Model_json.t) ->
   Tast.expr ->
   string ->

@@ -108,7 +108,9 @@ let with_ cb cx (h : Tast.expr) eff targs (b : Tast.block) =
     | _ -> outside "a handler of a type the model lacks"
   in
   let h = cb.expr h in
-  tag "with" [ Str key; Bool control; h; cb.block b ]
+  let row = { cx.allowed with effects = (eff, targs) :: cx.allowed.effects } in
+  tag "with"
+    [ Str key; Bool control; h; allowing cx row (fun () -> cb.block b) ]
 
 (* A handler literal, a [with] or a [resume]. *)
 let form cb cx (e : Tast.expr) =

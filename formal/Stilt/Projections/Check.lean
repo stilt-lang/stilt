@@ -92,9 +92,11 @@ def pathKeeps (res k : Name) (caught : Bool) (n : Nat) : List Projection → Boo
   | .index i :: path => i.keeps res k caught n && pathKeeps res k caught n path
 
 /-- The arguments of a `yield`'s access: places, rooted in neither `res` nor `k`, whose indexes
-run no `yield` (projections.yield). -/
+run no `yield` (projections.yield), and variables, which a yielded view that writes its source
+passes beside its source's place, its part's start and end (`Stilt.Writable`). -/
 def yieldArgsOnce (res k : Name) (caught : Bool) (n : Nat) : List Arg → Bool
   | [] => true
+  | .value (.var y) :: args => y != res && y != k && yieldArgsOnce res k caught n args
   | .value _ :: _ => false
   | .inout ⟨x, path⟩ :: args =>
     x != res && x != k && pathKeeps res k caught n path && yieldArgsOnce res k caught n args
@@ -204,7 +206,7 @@ def Expr.once (res k : Name) (caught : Bool) (n : Nat) : Expr → Yields
       | some a => if n == 0 && a.yieldOperand res k caught then some (some 1) else none
       | none => none
     | .letElse | .orElse => m.once res k caught n
-    | .project => Yields.kept n ((Expr.form .project m).keeps res k caught n)
+    | .project | .writes | .through => Yields.kept n ((Expr.form f m).keeps res k caught n)
     | .yielded | .projection => none
   | e => Yields.kept n (e.keeps res k caught n)
 

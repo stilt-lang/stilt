@@ -2,6 +2,7 @@ import Stilt.Numbers
 import Stilt.Declarations
 import Stilt.Typing.Else
 import Stilt.Projections
+import Stilt.Writable
 import Lean.Data.Json
 
 /-!
@@ -412,6 +413,13 @@ partial def expr (j : Json) : Except String Expr := do
   | "yielded" => return .yieldedOf (← f 0 >>= str)
   -- `["project", call]`: a call of a projection where a place is (`Expr.projectCall`).
   | "project" => return .form .project (← f 0 >>= expr)
+  -- `["writes", call]`: a writable binding and the rest of its block, the call of a closure
+  -- that takes its source `inout` (`Form.writes`).
+  | "writes" => return .form .writes (← f 0 >>= expr)
+  -- `["through", j, start, end, i]`: the index of a place through a writable binding whose
+  -- part runs from `start` up to `end` of its source (`Expr.throughOf`).
+  | "through" =>
+    return .throughOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= str) (← f 3 >>= expr)
   | _ => throw s!"no expression is named {tag}"
 
 partial def arg (j : Json) : Except String Arg := do

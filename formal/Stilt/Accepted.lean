@@ -13,6 +13,7 @@ import Stilt.Projections.Theorem
 import Stilt.Handling.Unseen
 import Stilt.Alloc.Theorem
 import Stilt.Quiet.Theorem
+import Stilt.Writable
 
 /-!
 # Accepted programs and their soundness
@@ -25,7 +26,8 @@ A program is **accepted** when it is well typed, which takes in mutability
 the law of exclusivity (modes.law), the names of one `when` of one type as one binding
 (shared.names-that-may-be-one-place), modifies no source of a view while the view
 lives (views.change-while-viewed) and keeps every view inside its sources' scopes
-(views.escaping), resumes a continuation at most once on each path
+(views.escaping), reaches nothing that a writable binding writes while it writes it
+(projections.reaching-written-source), resumes a continuation at most once on each path
 (handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), and keeps the
 rules of projections (projections.once-on-every-path).
 `soundness` says what that gives every run, at every fuel and on every input:
@@ -40,7 +42,9 @@ rules of projections (projections.once-on-every-path).
   handles may reach one value written as one, as the export writes it when they do
   (`Program.HeldNames.aliased`, shared.names-that-may-be-one-place);
 * views held as the compiler holds them, windows into their sources' storage
-  that hold no copy, show what copies show (`shows_windows`, views.what-view-is);
+  that hold no copy, show what copies show (`shows_windows`, views.what-view-is), and so do
+  writable bindings, which write their source's storage at once there and a copy written back
+  when their scope ends in copies (projections.what-view-writes);
 * the reuse of storage that the modes of bindings allow, at the last uses of
   `local`, `unique` bindings and the captures of `once` closures, shows nothing
   either (`modesAgreement`);
@@ -122,6 +126,14 @@ structure Program.Accepted (p : Program) : Prop where
   allocLimits : p.AllocLimited
   /-- Each function and `main` limited by `without copy` keeps the limit (E0204). -/
   copyLimits : p.CopyLimited
+  /-- The rules of writable bindings: while one writes a source, nothing else reaches it
+  (projections.reaching-written-source, E0429), and a view given to a `var` writes every source
+  it has (projections.writable-bindings, E0428). No promise below rests on it: a writable binding
+  is a call that takes its source `inout`, and the closure that is its scope reaches every other
+  variable by copy, so its runs agree in every model whatever the scope reaches. It is the check
+  under which that copy is the compiler's reach-through: a scope that reaches no source reads, by
+  copy, what the compiler reads in place. -/
+  viewsWrite : p.ViewsWrite
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
@@ -139,7 +151,10 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   heldNames : ∀ w ∈ p.whens, ∀ f : Name → Name, Held.Aliasing w.1 f →
       w.2.bindsNone (fun x => (Held.tyOf w.1 x).isSome) = true → (w.2.rename f).exclusive [] = true
   /-- No view reads a source that changed or is gone: with views as windows into their
-  sources' storage, the run shows and writes what copies do (views.what-view-is). -/
+  sources' storage, the run shows and writes what copies do (views.what-view-is). A writable
+  binding is a call that takes its source `inout` (`Form.writes`): with windows a write through
+  it writes the source's storage at once, and in copies its copy, which the end of its scope,
+  however it ends, writes back (projections.what-view-writes). -/
   views : (p.runCopy fuel input).shows = (p.runWindows fuel input).shows
   /-- The reuse the modes allow shows nothing and writes nothing else, up to the
   marks in a raised error (`ModesAgreement`). -/

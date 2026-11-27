@@ -9,6 +9,11 @@ type store =
           variable, or, for a place through a map's element, an expression built
           from the value. *)
 
+val through : Model_types.writable -> string -> Model_json.t -> Model_json.t
+(** [through w j i]: the index of [v[i]] through the writable binding [w], with
+    [i] read into [j]: the index into its source, or [-1] when it lies outside
+    the binding's part (projections.places-through-views). *)
+
 val write : store -> Model_json.t -> Model_json.t
 (** The store of a value. *)
 

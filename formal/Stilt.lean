@@ -87,6 +87,7 @@ import Stilt.Examples.Lists
 import Stilt.Examples.IntMethods
 import Stilt.Examples.StrNatives
 import Stilt.Examples.Views
+import Stilt.Examples.Writable
 import Stilt.Examples.ViewChecks
 import Stilt.Examples.Handlers
 import Stilt.Examples.Shared

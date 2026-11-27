@@ -1,4 +1,5 @@
 import Stilt.Syntax.Types
+import Stilt.Syntax.FormKind
 
 /-!
 # Syntax
@@ -286,23 +287,6 @@ def fieldPatternsBinders : List (Name × Pattern) → List Name
   | (_, p) :: fields => p.binders ++ fieldPatternsBinders fields
 
 end
-
-/-- A form of the Reference whose typing has rules of its own beside those of the `match`
-it means, which `Expr.form` keeps with it: `let P = e else x` with a refutable `P`, a
-let-else (patterns.let-else), and `e₁ else e₂`, the `Option` fallback
-(expressions.option-fallback). -/
-inductive Form where
-  | letElse
-  | orElse
-  /-- A projection's body, written for one type of its access (`Expr.projectionBody`). -/
-  | projection
-  /-- `yield p`, the access called with `p` `inout` (`Expr.yieldOf`). -/
-  | yield
-  /-- The access's value, which the body ends with and its `return` gives (`Expr.yieldedOf`). -/
-  | yielded
-  /-- A projection's call where a place is (projections.call-is-place, `Expr.projectCall`). -/
-  | project
-  deriving DecidableEq, Repr
 
 mutual
 

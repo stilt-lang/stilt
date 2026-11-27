@@ -324,8 +324,9 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
         (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩])) τ
   /-- A form of projections is typed as the calls it means (`Stilt.Projections`), and
   `Program.Projections` checks the rules of projections on it (projections.yield and
-  projections.call-is-place). -/
-  | form {Γ fx k m τ} : k.ofProjection = true → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
+  projections.call-is-place); so is a form of writable views, whose rules `Program.ViewsWrite`
+  checks (`Stilt.Writable`). -/
+  | form {Γ fx k m τ} : k.meant = true → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
 
 /-- Each expression fits the type at its position. -/
 inductive ExprsFit : Ctx → Effects → List Expr → List Ty → Prop

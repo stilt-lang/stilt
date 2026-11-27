@@ -95,7 +95,6 @@ conformance/program/syntax_error_in_method.lt
 conformance/program/syntax_error_in_type.lt
 conformance/projections/copied_out.lt
 conformance/projections/hole_arm.lt
-conformance/projections/results_accepted.lt
 conformance/protocol/args_and_stdin.lt
 conformance/protocol/working_directory.lt
 conformance/reflection/bound_tests.lt

@@ -7,6 +7,12 @@ open Model_forms
    the value. *)
 type store = Path of Model_json.t | Through of (Model_json.t -> Model_json.t)
 
+(* The index of [v[i]] through the writable binding [w], the index [i] read into [j]: the
+   index into its source, or [-1] when it lies outside the binding's part, which no list
+   has (projections.places-through-views). *)
+let through (w : writable) j i =
+  tag "through" [ Str j; Str w.start; Str w.stop; i ]
+
 let write store w =
   match store with Path p -> tag "assign" [ p; w ] | Through f -> f w
 
@@ -20,6 +26,15 @@ let element cx t read key =
         Model_keys.index at cx kt v read key )
   | None ->
       ((fun w -> map_op "insert" [ read; key; w ]), map_op "index" [ read; key ])
+
+(* [v[i]] through the writable binding [w], a place of its source's parameter
+   (projections.places-through-views): its index's temporary, the store and the read. *)
+let through_writable ~expr cx (w : writable) (i : Tast.expr) =
+  let n = Printf.sprintf "index/%d:%d" i.loc.line i.loc.col in
+  let at = through w (temp "through" i.loc) (var_e n) in
+  ( [ (n, ty cx i.ty, expr i) ],
+    Path (Arr [ Str w.src; Arr [ tag "index" [ at ] ] ]),
+    tag "index" [ var_e w.src; at ] )
 
 (* A place whose index expressions and keys are temporaries: their bindings,
    how a value is stored into it, and the expression that reads it. A place
@@ -52,6 +67,10 @@ let rec receiver ~expr cx (e : Tast.expr) =
     (lets, store, get read)
   in
   match e.desc with
+  | Local v when writable_of cx v <> None ->
+      outside "a writable binding as a place of its own"
+  | Index ({ desc = Local v; _ }, i) when writable_of cx v <> None ->
+      through_writable ~expr cx (Option.get (writable_of cx v)) i
   | Local v ->
       ( [],
         Path (Arr [ Str (var_name v); Arr [] ]),

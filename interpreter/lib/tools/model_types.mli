@@ -48,6 +48,17 @@ type access = {
 (** A projection's body written for one access
     (projections.when-projection-runs). *)
 
+type writable = {
+  src : string;
+      (** The variable that holds its source: an [inout] parameter of the
+          closure that its scope is, or of the function whose parameter it is.
+      *)
+  start : string;  (** The variable that holds its part's start. *)
+  stop : string;  (** The variable that holds its part's end. *)
+  part : Types.ty;  (** The viewed type, a list's. *)
+}
+(** What a writable binding stands for (projections.writable-bindings). *)
+
 type cx = {
   env : Env.t;
   program : Tast.program;
@@ -70,22 +81,42 @@ type cx = {
       (** The projections written for an access, each a function of its own. *)
   mutable yielding : access option;
       (** The access of the projection whose body is being exported. *)
-  mutable writable : int list;
+  mutable writable : (string * writable) list;
       (** The bindings of a view type that write their sources, [var]s and
-          [inout] parameters (projections.writable-bindings), by their ids. *)
+          [inout] parameters (projections.writable-bindings), by their names. *)
   mutable consts : (string * Tast.expr) list;
       (** The constants met in patterns, newest first, each with its value
           (patterns.constants). *)
+  mutable allowed : Types.row;
+      (** The row the code being exported may perform: its function's or
+          closure's, with the effects of the [with]s around it and the error of
+          a [catch] around it. *)
 }
 
 val item_name : Hir.item -> string
 
-val param_ty : cx -> Ast.mode * Types.ty -> Model_json.t
-(** The type of a parameter: an [inout] one of a view type is writable, held as
-    the copy of its part (projections.writable-bindings). *)
+val param_parts :
+  cx -> Ast.mode * string * Types.ty -> (Ast.mode * string * Model_json.t) list
+(** The parameters the calculus writes for a parameter of a mode, a name and a
+    type: itself, or for an [inout] one of a view type, which is writable, its
+    source's place, [inout], and its part's start and end
+    (projections.writable-bindings). *)
+
+val param_decls : cx -> Ast.mode * string * Types.ty -> Model_json.t list
+(** The declarations of {!param_parts}. *)
+
+val viewed : Types.ty -> Types.ty option
+(** [Some t] for a view type [View<t>]. *)
+
+val writable_of : cx -> Hir.var -> writable option
+(** The writable binding a variable is, if it is one. *)
+
+val bind_writable : cx -> Hir.var -> writable -> unit
+(** Records a writable binding by what it stands for. *)
 
 val writes : cx -> Ast.mode -> Hir.var -> Types.ty -> unit
-(** Records the binding as writable when it is an [inout] one of a view type. *)
+(** Records the binding as writable when it is an [inout] one of a view type,
+    which stands for the three parameters of {!param_parts}. *)
 
 val aliases : (int * Hir.var) list ref
 (** The bindings of a [when] written as another of its names, when their handles
@@ -122,7 +153,11 @@ val flat : Types.row -> bool * Types.ty option
 
 val raises_in : cx -> Types.row -> (unit -> 'a) -> 'a
 (** Runs the function with the row's error type as the error type of the code it
-    exports. *)
+    exports, and the row as the row that code may perform. *)
+
+val allowing : cx -> Types.row -> (unit -> 'a) -> 'a
+(** Runs the function with the row as the row the code it exports may perform.
+*)
 
 val declared : cx -> Hir.item -> Types.ty list -> string
 (** A record or variant type at its arguments, which the export declares: its

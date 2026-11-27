@@ -35,6 +35,12 @@ type access = {
   extras : Tast.expr list;
 }
 
+(* What a writable binding stands for (projections.writable-bindings): the variable that
+   holds its source, an [inout] parameter of the closure that its scope is, or of the
+   function whose parameter it is, and the variables that hold its part's start and end
+   in the source. *)
+type writable = { src : string; start : string; stop : string; part : Types.ty }
+
 type cx = {
   env : Env.t;
   program : Tast.program;
@@ -55,10 +61,13 @@ type cx = {
       (* The projections written for an access, each a function of its own. *)
   mutable yielding : access option;
       (* The access of the projection whose body is being written. *)
-  mutable writable : int list;
+  mutable writable : (string * writable) list;
+      (* The bindings of a view type that write their sources, by their names: [var]s
+         and [inout] parameters (projections.writable-bindings). *)
   mutable consts : (string * Tast.expr) list;
-      (* The bindings of a view type that write their sources: [var]s and [inout]
-         parameters (projections.writable-bindings). *)
+  mutable allowed : Types.row;
+      (* The row the code being written may perform: its function's or closure's, with
+         the effects of the [with]s around it and the error of a [catch] around it. *)
 }
 
 let item_name (i : Hir.item) = i.home ^ "." ^ i.name
@@ -113,11 +122,20 @@ let flat (r : Types.row) =
   (match r.tail with Row_params _ -> outside "a row parameter" | _ -> ());
   (r.io || r.effects <> [], r.raise)
 
-(* Runs [f] with [r]'s error type as the error type of the code it writes. *)
+(* Runs [f] with [r] as the row the code it writes may perform. *)
+let allowing cx r f =
+  let saved = cx.allowed in
+  cx.allowed <- r;
+  Fun.protect ~finally:(fun () -> cx.allowed <- saved) f
+
+(* Runs [f] with [r]'s error type as the error type of the code it writes, and [r] as the
+   row that code may perform. *)
 let raises_in cx r f =
   let saved = cx.raises in
   cx.raises <- snd (flat r);
-  Fun.protect ~finally:(fun () -> cx.raises <- saved) f
+  Fun.protect
+    ~finally:(fun () -> cx.raises <- saved)
+    (fun () -> allowing cx (Types.row_contents r) f)
 
 let async_item = { Hir.home = "std.prelude"; name = "async" }
 let mode : Ast.mode -> t = function Let -> Str "let" | Inout -> Str "inout"
@@ -160,11 +178,28 @@ let key cx t =
   in
   go [] t
 
-(* Records an [inout] binding of a view type as writable (projections.writable-bindings). *)
+(* The part of a view type: [T] for [View<T>]. *)
+let viewed t =
+  match norm t with
+  | Types.Con ({ home = "std.view"; name = "View" }, [ u ]) -> Some u
+  | _ -> None
+
+(* The writable binding a variable is, if it is one. *)
+let writable_of cx (v : Hir.var) = List.assoc_opt (var_name v) cx.writable
+
+(* Records a writable binding by what it stands for. *)
+let bind_writable cx (v : Hir.var) w =
+  cx.writable <- (var_name v, w) :: cx.writable
+
+(* Records an [inout] parameter of a view type as writable (projections.writable-bindings):
+   the calculus writes it as three parameters, its source's place, [inout], and its part's
+   start and end. *)
 let writes cx (m : Ast.mode) (v : Hir.var) t =
-  match (m, norm t) with
-  | Ast.Inout, Types.Con ({ home = "std.view"; name = "View" }, [ _ ]) ->
-      cx.writable <- v.id :: cx.writable
+  match (m, viewed t) with
+  | Ast.Inout, Some u ->
+      let n = var_name v in
+      bind_writable cx v
+        { src = n; start = n ^ "/start"; stop = n ^ "/end"; part = u }
   | _ -> ()
 
 let rec ty cx (t : Types.ty) =
@@ -230,15 +265,33 @@ let rec ty cx (t : Types.ty) =
 
 (* A function type. *)
 and fn_ty cx ps r rw =
-  let params = List.map (fun (m, t) -> Arr [ mode m; param_ty cx (m, t) ]) ps in
+  let params =
+    List.concat_map
+      (fun (m, t) ->
+        List.map
+          (fun (m, _, t) -> Arr [ mode m; t ])
+          (param_parts cx (m, "", t)))
+      ps
+  in
   tag "fn" [ Arr params; ty cx r; row cx rw ]
 
-(* The type of a parameter: an [inout] one of a view type is writable, which the calculus
-   holds as the copy of its part (projections.writable-bindings). *)
-and param_ty cx (m, t) =
-  match (m, norm t) with
-  | Ast.Inout, Con ({ home = "std.view"; name = "View" }, [ u ]) -> ty cx u
-  | _ -> ty cx t
+(* The parameters the calculus writes for a parameter of mode [m], name [n] and type [t]:
+   itself, or for an [inout] one of a view type, which is writable, three: its source's
+   place, [inout], and its part's start and end (projections.writable-bindings). *)
+and param_parts cx (m, n, t) =
+  match (m, viewed t) with
+  | Ast.Inout, Some u ->
+      let i64 = tag "int" [ Str "i64" ] in
+      [
+        (Ast.Inout, n, ty cx u); (Let, n ^ "/start", i64); (Let, n ^ "/end", i64);
+      ]
+  | _ -> [ (m, n, ty cx t) ]
+
+(* A parameter's declarations, [[mode, name, type, null]] for each part. *)
+and param_decls cx (m, n, t) =
+  List.map
+    (fun (m, n, t) -> Arr [ mode m; Str n; t; Null ])
+    (param_parts cx (m, n, t))
 
 (* A type the calculus declares: a record or a variant type, at its arguments. *)
 and declared cx (i : Hir.item) args = fst (declared_args cx i args)

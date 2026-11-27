@@ -20,16 +20,9 @@ let is_list t =
   | Types.Con ({ home = "std.prelude"; name = "List" }, [ _ ]) -> true
   | _ -> false
 
-(* Whether [x] is a writable binding, which holds its part as a value of the viewed
-   type (projections.writable-bindings). *)
-let held ~writable (x : Tast.expr) =
-  match x.desc with Local v -> writable v | _ -> false
-
-(* [x.copy()] when [x] is a view: the viewed part, of the viewed type. A writable
-   binding is its part. *)
-let copied ~writable (x : Tast.expr) =
+(* [x.copy()] when [x] is a view: the viewed part, of the viewed type. *)
+let copied (x : Tast.expr) =
   match viewed x.ty with
-  | Some t when held ~writable x -> { x with ty = t }
   | Some t ->
       let arg = { Tast.mode = Ast.Let; value = x } in
       {
@@ -43,8 +36,7 @@ let copied ~writable (x : Tast.expr) =
    over [v], a splice of [v] and an operator on views, each of which reads the viewed
    part as the same form of the part's type does (views.functions-of-views,
    views.for-over-view). *)
-let desugar ~writable (e : Tast.expr) =
-  let copied = copied ~writable in
+let desugar (e : Tast.expr) =
   let splice = function
     | Tast.Splice (x, spec) -> Tast.Splice (copied x, spec)
     | s -> s
@@ -72,7 +64,7 @@ let view operands = tag "view" [ Arr operands ]
 (* A call [e] of a function of [impl<T> View<T>]: [View.of(source, start, end)],
    [View.all(source)] and [v.view(start, end)], the calculus's view, [len], [is_empty]
    and [copy] (views.functions-of-views). *)
-let call ~writable ~expr (e : Tast.expr) name (args : Tast.arg list) =
+let call ~expr (e : Tast.expr) name (args : Tast.arg list) =
   let values = List.map (fun (a : Tast.arg) -> expr a.value) args in
   let part () =
     match args with
@@ -82,11 +74,7 @@ let call ~writable ~expr (e : Tast.expr) name (args : Tast.arg list) =
         | None -> outside "a function of a view")
     | [] -> outside "a function of a view"
   in
-  let copy v =
-    match args with
-    | a :: _ when held ~writable a.value -> v
-    | _ -> op (Str "copy") [ v ]
-  in
+  let copy v = op (Str "copy") [ v ] in
   match (name, values, viewed e.ty) with
   | "of", [ s; a; b ], Some _ -> view [ s; a; b ]
   | "all", [ s ], Some _ -> view [ s ]

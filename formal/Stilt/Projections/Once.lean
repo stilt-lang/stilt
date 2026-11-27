@@ -216,7 +216,7 @@ theorem eval_yielding : ∀ fuel, YieldingRun (eval D Copy.memory fuel)
           · exact absurd rfl hr
         · exact absurd rfl hr
       case letElse | orElse => exact ih m res k caught n N hn hr
-      case project => exact kept_yielding D (fuel + 1) rfl hn hr
+      case project | writes | through => exact kept_yielding D (fuel + 1) rfl hn hr
       case yielded | projection => exact absurd rfl hr
     all_goals exact kept_yielding D (fuel + 1) rfl hn hr
 
