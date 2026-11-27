@@ -247,6 +247,7 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       HasType N Γ fx (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩]) τ →
       HasType N Γ fx
         (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩])) τ
+  | form {N Γ fx k m τ} : k.ofProjection = true → HasType N Γ fx m τ → HasType N Γ fx (.form k m) τ
 
 /-- Each expression is checked against the type at its position. -/
 inductive ExprsFit : List Name → Ctx → Effects → List Expr → List Ty → Prop

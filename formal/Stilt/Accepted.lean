@@ -9,6 +9,7 @@ import Stilt.OneShot.Theorem
 import Stilt.Locks.Theorem
 import Stilt.HeldNames.Unmerge
 import Stilt.Limits
+import Stilt.Projections.Check
 
 /-!
 # Accepted programs and their soundness
@@ -93,6 +94,12 @@ structure Program.Accepted (p : Program) : Prop where
   overflowLimits : p.OverflowLimited
   /-- Each function and `main` limited by `without div` keeps the limit (E0204). -/
   divLimits : p.DivLimited
+  /-- The rules of projections: every path through a projection's body runs one `yield` to its
+  end or a `return` and at most one to a raise or a panic (projections.once-on-every-path,
+  E0424); a `yield` only in a projection's body (projections.yield, E0425); a projection's body
+  raises nothing of its own (projections.cannot-raise, E0427); and a projection named only as
+  the callee of a call where a place is (projections.not-a-value, E0426). -/
+  projections : p.Projections
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where

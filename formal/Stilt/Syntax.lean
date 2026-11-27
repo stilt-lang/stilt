@@ -294,7 +294,24 @@ let-else (patterns.let-else), and `e₁ else e₂`, the `Option` fallback
 inductive Form where
   | letElse
   | orElse
+  /-- The body of a projection, `fn f(…) -> inout T { body }` (projections.declaring-projection),
+  as the function written for one type of its caller's access (`Expr.projectionBody`). -/
+  | projection
+  /-- `yield p` in a projection's body: the access called with the place `p`
+  (projections.yield and projections.when-projection-runs, `Expr.yieldOf`). -/
+  | yield
+  /-- The value of the access, which a projection's body ends with and its `return` gives
+  (projections.yield, `Expr.yieldedOf`). -/
+  | yielded
+  /-- A call of a projection where a place is, the caller's access to it
+  (projections.call-is-place, `Expr.projectCall`). -/
+  | project
   deriving DecidableEq, Repr
+
+/-- The forms of projections, which typing checks as the calls each means (`HasType.form`). -/
+def Form.ofProjection : Form → Bool
+  | .projection | .yield | .yielded | .project => true
+  | .letElse | .orElse => false
 
 mutual
 
@@ -452,7 +469,10 @@ inductive Expr where
   | held (names : List (Name × Ty)) (handles : List Expr) (body : Expr)
   /-- A let-else or an `Option` fallback, written as the `match` it means, `meaning`: typing
   checks it by the form's own rules (`HasType.letElse` and `HasType.orElse`), and it runs as
-  `meaning` does (`eval_form`). -/
+  `meaning` does (`eval_form`). A projection's body, its `yield`, the value it ends with and a
+  call of it where a place is are forms too, each written as the calls it means
+  (`Stilt.Projections`): typing checks `meaning` (`HasType.form`), and `Program.Projections`
+  the rules of projections. -/
   | form (form : Form) (meaning : Expr)
 
 /-- An argument. An `inout` argument is marked at the call and is a place

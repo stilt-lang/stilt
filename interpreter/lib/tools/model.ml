@@ -3,8 +3,9 @@ open Model_types
 
 let main_item = { Hir.home = "main"; name = "main" }
 
-(* A projection written for an access keeps the access's value in a one-element list,
-   which its body ends with (projections.when-projection-runs). *)
+(* A projection written for an access keeps the access's value in a list, which each
+   [yield] adds to and which its body ends with the first element of, a form of the
+   calculus: [["projection", res, type, body]] (projections.when-projection-runs). *)
 let yielding cx access body =
   let saved = cx.yielding in
   cx.yielding <- access;
@@ -14,18 +15,7 @@ let yielding cx access body =
       match access with
       | None -> body ()
       | Some a ->
-          let list = Types.Con (Model_forms.list_item, [ a.result ]) in
-          tag "varIn"
-            [
-              Str a.res;
-              ty cx list;
-              tag "list" [ ty cx a.result; Arr [] ];
-              tag "seq"
-                [
-                  body ();
-                  tag "index" [ Model_forms.var_e a.res; tag "int" [ Str "0" ] ];
-                ];
-            ])
+          tag "projection" [ Str a.res; ty cx a.result; body () ])
 
 (* A function at one instantiation: [name, typeParams, rowParams, params,
    result, row, body]. *)

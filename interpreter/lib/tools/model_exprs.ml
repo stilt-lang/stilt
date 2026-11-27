@@ -261,7 +261,15 @@ and code_call ?(maps = false) cx (e : Tast.expr) target targs args =
   let inst = Model_fns.instance cx target targs types in
   let f = tag "fnRef" [ Str inst.fkey; Arr []; Arr [] ] in
   let make passed = call_e cx f passed e.ty in
-  if maps && Model_calls.has_map_inout args then
+  (* projections.call-is-place: a call of a projection written for an access, a form of the
+     calculus, [["project", call]]. *)
+  let projected = function
+    | Function { home = "model.projection"; _ } -> true
+    | _ -> false
+  in
+  if projected target && not (Model_calls.has_map_inout args) then
+    tag "project" [ make (List.map (arg cx) args) ]
+  else if maps && Model_calls.has_map_inout args then
     let s = Model_fns.signature cx target in
     let _, raise = flat (Model_fns.instantiated_row inst s.row) in
     let cb =
@@ -374,7 +382,9 @@ and block cx (stmts : Tast.block) =
       | Yield p -> tag "seq" [ yield_ cx p; block cx rest ])
 
 (* [yield p] in a projection written for an access: the access called with [p] and the
-   places it threads, [inout], its value kept (projections.when-projection-runs). *)
+   places it threads, [inout], its value added to the list kept, a form of the calculus:
+   [["yield", res, call]] (projections.when-projection-runs). A place through a map's element
+   goes through the map as a call's [inout] argument does. *)
 and yield_ cx (p : Tast.expr) =
   match cx.yielding with
   | None -> outside "a yield"
@@ -401,10 +411,7 @@ and yield_ cx (p : Tast.expr) =
           Model_calls.through_maps cb cx e ~raise make args
         else expr cx e
       in
-      tag "assign"
-        [
-          Arr [ Str a.res; Arr [] ]; tag "list" [ ty cx a.result; Arr [ call ] ];
-        ]
+      tag "yield" [ Str a.res; call ]
 
 (* What [return] gives: its operand's value, and in a projection written for an access,
    which returns no value, the access's value. *)
@@ -412,7 +419,7 @@ and returned cx = function
   | Some x -> expr cx x
   | None -> (
       match cx.yielding with
-      | Some a -> tag "index" [ var_e a.res; tag "int" [ Str "0" ] ]
+      | Some a -> tag "yielded" [ Str a.res ]
       | None -> unit_e)
 
 and binding cx form (b : Tast.binding) rest =

@@ -1,6 +1,7 @@
 import Stilt.Numbers
 import Stilt.Declarations
 import Stilt.Typing.Else
+import Stilt.Projections
 import Lean.Data.Json
 
 /-!
@@ -399,6 +400,18 @@ partial def expr (j : Json) : Except String Expr := do
   -- `["orElse", e₁, type, option, name, e₂]`: `e₁ else e₂`, the `Option` named `option`.
   | "orElse" =>
     return .orElse (← f 2 >>= str) (← f 1 >>= ty) (← f 3 >>= str) (← f 0 >>= expr) (← f 4 >>= expr)
+  -- `["projection", res, type, body]`: a projection's body written for an access whose value
+  -- has `type`, which keeps the access's values in `res` (`Expr.projectionBody`).
+  | "projection" => return .projectionBody (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)
+  -- `["yield", res, call]`: `yield p`, the call of the access with `p` `inout`, its value
+  -- added to `res` (`Expr.yieldOf`).
+  | "yield" =>
+    let res ← f 0 >>= str
+    return .form .yield (.assign ⟨res, []⟩ (.op (.list .push) [.var res, .try (← f 1 >>= expr)]))
+  -- `["yielded", res]`: the access's value, which a projection's `return` gives.
+  | "yielded" => return .yieldedOf (← f 0 >>= str)
+  -- `["project", call]`: a call of a projection where a place is (`Expr.projectCall`).
+  | "project" => return .form .project (← f 0 >>= expr)
   | _ => throw s!"no expression is named {tag}"
 
 partial def arg (j : Json) : Except String Arg := do

@@ -317,6 +317,10 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩]) τ →
       HasType Γ fx
         (.form .orElse (.match e₁ τ [⟨.variant T "Some" [.bind v], [v], none, .var v⟩, ⟨.wild, [], none, e₂⟩])) τ
+  /-- A form of projections is typed as the calls it means (`Stilt.Projections`), and
+  `Program.Projections` checks the rules of projections on it (projections.yield and
+  projections.call-is-place). -/
+  | form {Γ fx k m τ} : k.ofProjection = true → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
 
 /-- Each expression fits the type at its position. -/
 inductive ExprsFit : Ctx → Effects → List Expr → List Ty → Prop

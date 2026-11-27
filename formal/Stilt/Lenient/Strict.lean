@@ -93,6 +93,7 @@ theorem Lenient.HasType.strict :
     have h := noEscape_else hne
     .orElse ho (Lenient.HasType.strict h₁ h.1) (Lenient.HasType.strict h₂ h.2) (strictFits hf h.2)
       (Lenient.HasType.strict (allowed := false) hm hne)
+  | _, _, _, _, _, _, .form hk hm, hne => .form hk (Lenient.HasType.strict (allowed := false) hm hne)
   | _, _, _, _, _, _, .letIn hwf hi hfit hb, hne =>
     have h := both hne
     .letIn hwf (Lenient.HasType.strict hi h.1) (strictFits hfit h.1)
@@ -250,6 +251,7 @@ theorem HasType.lenient :
   | _, _, _, _, _, .letElse hr hx hm => .letElse hr (HasType.lenient hx) (HasType.lenient hm)
   | _, _, _, _, _, .orElse ho h₁ h₂ hf hm =>
     .orElse ho (HasType.lenient h₁) (HasType.lenient h₂) (.inl hf) (HasType.lenient hm)
+  | _, _, _, _, _, .form hk hm => .form hk (HasType.lenient hm)
   | _, _, _, _, _, .assign hp he hfit =>
     .assign (PlaceFits.lenient hp) (HasType.lenient he) (.inl hfit)
   | _, _, _, _, _, .seq ha hfit hb => .seq (HasType.lenient ha) (.inl hfit) (HasType.lenient hb)
