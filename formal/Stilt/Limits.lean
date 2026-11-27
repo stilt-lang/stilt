@@ -25,8 +25,9 @@ What the limits promise, proved from the checks (`Program.PanicKeptBy.kept`,
   (effects.without-overflow). The calculus's values carry no type, so the check counts as
   overflowing every operation that checks a range (`Op.overflowFree`), and checks
   `without overflow` only beside `without panic`;
-* a call of a function limited by `without div` halts, from some fuel on, on any arguments,
-  and so does a run whose `main` is limited (facts.without-div);
+* a call of a function limited by `without div` halts, from some fuel on, on arguments whose
+  values at its non-escaping parameters are function values that halt, and so does a run whose
+  `main` is limited (facts.without-div and facts.div);
 * a run whose `main` is limited by both is total (`Program.total_of`).
 -/
 
@@ -59,11 +60,16 @@ def Program.OverflowLimited (p : Program) : Prop :=
 functions, holding every function limited by `without div`, holds no site of `div` and names
 only functions of the set, which call each other without recursion, but for self-calls that
 descend (facts.descending-self-calls) or shrink (facts.shrinking-recursion), and `main`'s body
-is such code when `main` is limited. -/
+is such code when `main` is limited. A function's body may call through its non-escaping
+parameters at the positions `H` gives, which adds no `div`: each call of the function passes
+there an argument whose sites are counted where it is written (facts.div). -/
 def Program.DivLimited (p : Program) : Prop :=
-  ∃ (lim : Limited) (B : Name → Nat) (desc : Name → Descent), p.decls.Ranked lim B desc ∧
+  ∃ (lim : Limited) (B : Name → Nat) (desc : Name → Descent) (H : Name → List Nat),
+    p.decls.Ranked lim B desc H ∧
+    (∀ name d, p.decls.fn? name = some d → ∀ k ∈ H name, ∃ q, d.params[k]? = some q ∧
+      q.implicit.isSome = true) ∧
     (∀ d ∈ p.decls.fns, d.limits.div = true → lim.fn d.name = true) ∧
-    (p.limits.div = true → p.main.divFree lim B none [] = true)
+    (p.limits.div = true → p.main.divFree lim B H none [] = true)
 
 /-- What a limit against `panic` promises (effects.without-panic and
 effects.without-overflow): the functions whose limits `limited` picks are among a set of
@@ -87,16 +93,22 @@ def Program.PanicsKeptBy (p : Program) (limited : Limits → Bool) (overflows : 
       (k = .overflow ∧ overflows = true) ∨ k = .deadlock)
 
 /-- What `without div` promises (facts.without-div): the functions limited by it are among a
-set of functions a call of any of which, on any arguments and from any state, halts: from
-some fuel on, it ends the same way, not out of fuel and not as a performance (`Halts`). A
-run whose `main` is limited never runs out of fuel from some fuel on, as the reference
-interpreter runs it and in place. With `Program.PanicsKeptBy` and type soundness, a run whose
-`main` is limited by `without panic, div` is total (`Program.total_of`). -/
+set of functions a call of any of which, from any state, on arguments that pass, at its
+non-escaping parameters, function values that halt on any arguments (`Value.Halting`), halts:
+from some fuel on, it ends the same way, not out of fuel and not as a performance (`Halts`).
+A call through a non-escaping parameter adds no `div` of the callee's: its sites are the
+argument's, counted where it is written (facts.div). A run whose `main` is limited never runs
+out of fuel from some fuel on, as the reference interpreter runs it and in place. With
+`Program.PanicsKeptBy` and type soundness, a run whose `main` is limited by
+`without panic, div` is total (`Program.total_of`). -/
 def Program.HaltsKept (p : Program) (input : String) : Prop :=
   (∃ lim : Limited, (∀ name d, p.decls.fn? name = some d → d.limits.div = true →
       lim.fn name = true) ∧
     ∀ (name : Name) (types : List Ty) (rows : List Row) (passed : List Passed) (s : Copy.State),
       lim.fn name = true →
+      (∀ d, p.decls.fn? name = some d → ∀ (k : Nat) (q : Param), d.params[k]? = some q →
+        q.implicit.isSome = true → ∃ (a : Passed) (u : Value), passed[k]? = some a ∧ (a = .value u ∨ ∃ z, a = .moved z u) ∧
+          u.Halting p.decls .leftToRight) →
       Halts (fun n => Eval.call p.decls Copy.memory (eval p.decls Copy.memory n)
         (.function name types rows) passed) (fun _ => True) s) ∧
   (p.limits.div = true →
@@ -123,11 +135,20 @@ theorem Program.PanicKeptBy.kept {p : Program} {limited : Limits → Bool} {over
 /-- The checks of `without div` keep its promises. -/
 theorem Program.DivLimited.kept {p : Program} (h : p.DivLimited) (hwt : p.WellTyped)
     (hex : p.Exclusive) (input : String) : p.HaltsKept input := by
-  obtain ⟨lim, B, desc, hR, hfns, hmain⟩ := h
-  refine ⟨⟨lim, fun name d hd hl => ?_, fun _ _ _ passed s hf => hR.call .leftToRight hf passed s⟩, fun hl =>
+  obtain ⟨lim, B, desc, H, hR, hH, hfns, hmain⟩ := h
+  refine ⟨⟨lim, fun name d hd hl => ?_, fun name _ _ passed s hf hp => ?_⟩, fun hl =>
     ⟨p.runCopyWith_halts hR (hmain hl) .leftToRight input,
       p.runInPlace_halts hR (hmain hl) hwt hex input⟩⟩
-  obtain ⟨hmem, rfl⟩ := Decls.fn?_spec hd
-  exact hfns d hmem hl
+  · obtain ⟨hmem, rfl⟩ := Decls.fn?_spec hd
+    exact hfns d hmem hl
+  · cases hd : p.decls.fn? name with
+    | none =>
+      unfold Eval.call
+      simp only [hd]
+      exact Halts.const (Eval.Ends.fail _)
+    | some d =>
+      refine hR.call .leftToRight hf passed (fun k hk => ?_) s
+      obtain ⟨q, hq, hi⟩ := hH name d hd k hk
+      exact hp d hd k q hq hi
 
 end Stilt

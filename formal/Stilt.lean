@@ -321,6 +321,7 @@ import Stilt.Ends.Counting
 import Stilt.Ends.Syntax
 import Stilt.Ends.CountInstances
 import Stilt.Ends.Instances
+import Stilt.Ends.Depths
 import Stilt.Ends.Steps
 import Stilt.Ends.Halts
 import Stilt.Ends.Runs
@@ -332,6 +333,7 @@ import Stilt.Ends.Descent
 import Stilt.Ends.Entry
 import Stilt.Ends.Tests
 import Stilt.Ends.Body
+import Stilt.Ends.Start
 import Stilt.Ends.Theorem
 import Stilt.Limits
 import Stilt.Counterexamples.Ends

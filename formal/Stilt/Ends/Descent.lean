@@ -41,11 +41,12 @@ def ShrinkBound.valAt : ShrinkBound → List Passed → Option Int
 argument at the descending position; for self-calls that shrink, the counter's distance from
 its bound, which way it goes, and the integers of the counter and the bound. -/
 noncomputable def Descent.meas : Descent → List Passed → Meas
-  | .parts k, passed => ⟨Passed.sizeAt passed k, true, none, none⟩
+  | .parts k, passed => { size := Passed.sizeAt passed k }
   | .shrinks k grow b, passed =>
-    ⟨match Passed.intAt passed k, b.valAt passed with
-      | some x, some y => countDistance grow x y
-      | _, _ => 0, grow, Passed.intAt passed k, b.valAt passed⟩
+    { size := match Passed.intAt passed k, b.valAt passed with
+        | some x, some y => countDistance grow x y
+        | _, _ => 0
+      grow, start := Passed.intAt passed k, limit := b.valAt passed }
 
 /-- A call's measure, which each self-call that goes down brings down. -/
 noncomputable def Descent.measure (d : Descent) (passed : List Passed) : Nat := (d.meas passed).size

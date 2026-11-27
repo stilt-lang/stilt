@@ -18,9 +18,9 @@ namespace Stilt
 /-- Running an expression free of `div` where `me` says, of depth at most `k`, halts from
 every state whose frame meets its roles, against what `m` knows of the call, when no
 variable with a role is written. -/
-def HaltsRun (D : Decls) (w : WriteBack) (lim : Limited) (B : Name → Nat)
+def HaltsRun (D : Decls) (w : WriteBack) (lim : Limited) (B : Name → Nat) (H : Name → List Nat)
     (me : Option (Name × Descent)) (m : Meas) (k : Nat) : Prop :=
-  ∀ e R, e.divFree lim B me R = true → e.depth ≤ k → R.Avoids e.writes → ∀ s : Copy.State,
+  ∀ e R, e.divFree lim B H me R = true → e.depth ≤ k → R.Avoids e.writes → ∀ s : Copy.State,
     R.Inv s.1 m → Halts (fun n => eval D (Copy.memoryWith w) n e) (fun _ => True) s
 
 theorem Expr.one_le_depth (e : Expr) : 1 ≤ e.depth := by
@@ -82,15 +82,15 @@ theorem withVarsAt (M : Memory σ) {F : Nat → Eval σ α} :
   | [], _, h => h
   | (x, v) :: bs, _, h => withVar M x v (withVarsAt M bs _ h)
 
-variable {D : Decls} {w : WriteBack} {lim : Limited} {B : Name → Nat} {me : Option (Name × Descent)}
-  {m : Meas} {k : Nat}
+variable {D : Decls} {w : WriteBack} {lim : Limited} {B : Name → Nat} {H : Name → List Nat}
+  {me : Option (Name × Descent)} {m : Meas} {k : Nat}
 
 section Runs
 
-variable (h : HaltsRun D w lim B me m k)
+variable (h : HaltsRun D w lim B H me m k)
 include h
 
-theorem list : ∀ (es : List Expr) {R : Roles}, exprsDivFree lim B me R es = true →
+theorem list : ∀ (es : List Expr) {R : Roles}, exprsDivFree lim B H me R es = true →
     exprsDepth es ≤ k → R.Avoids (exprsWrites es) → ∀ s : Copy.State, R.Inv s.1 m →
       Halts (fun n => Eval.list (eval D (Copy.memoryWith w) n) es) (fun _ => True) s
   | [], _, _, _, _, _, _ => const (Eval.Ends.pure trivial)
@@ -101,7 +101,7 @@ theorem list : ∀ (es : List Expr) {R : Roles}, exprsDivFree lim B me R es = tr
       bind (list es hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) s' (hI.afterEval hA₁ hd'))
         fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem fields : ∀ (fs : List (Name × Expr)) {R : Roles}, fieldsDivFree lim B me R fs = true →
+theorem fields : ∀ (fs : List (Name × Expr)) {R : Roles}, fieldsDivFree lim B H me R fs = true →
     fieldsDepth fs ≤ k → R.Avoids (fieldsWrites fs) → ∀ s : Copy.State, R.Inv s.1 m →
       Halts (fun n => Eval.fields (eval D (Copy.memoryWith w) n) fs) (fun _ => True) s
   | [], _, _, _, _, _, _ => const (Eval.Ends.pure trivial)
@@ -112,7 +112,7 @@ theorem fields : ∀ (fs : List (Name × Expr)) {R : Roles}, fieldsDivFree lim B
       bind (fields fs hd.2 hn.2 (hA.mono (List.subset_append_right _ _)) s' (hI.afterEval hA₁ hd'))
         fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem path : ∀ (ps : List Projection) {R : Roles}, pathDivFree lim B me R ps = true →
+theorem path : ∀ (ps : List Projection) {R : Roles}, pathDivFree lim B H me R ps = true →
     pathDepth ps ≤ k → R.Avoids (pathWrites ps) → ∀ s : Copy.State, R.Inv s.1 m →
       Halts (fun n => Eval.path (eval D (Copy.memoryWith w) n) ps) (fun _ => True) s
   | [], _, _, _, _, _, _ => const (Eval.Ends.pure trivial)
@@ -127,7 +127,7 @@ theorem path : ∀ (ps : List Projection) {R : Roles}, pathDivFree lim B me R ps
         (hI.after (keepsIndex D w · i) hA₁ hd'))
         fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem args : ∀ (as : List Arg) {R : Roles}, argsDivFree lim B me R as = true →
+theorem args : ∀ (as : List Arg) {R : Roles}, argsDivFree lim B H me R as = true →
     argsDepth as ≤ k → R.Avoids (argsWrites as) → ∀ s : Copy.State, R.Inv s.1 m →
       Halts (fun n => Eval.args (eval D (Copy.memoryWith w) n) as) (fun _ => True) s
   | [], _, _, _, _, _, _ => const (Eval.Ends.pure trivial)
@@ -151,9 +151,9 @@ theorem args : ∀ (as : List Arg) {R : Roles}, argsDivFree lim B me R as = true
 comes next. Its binders have a role only when its pattern has no or-pattern, so that it has one
 way, the one its pattern matches. -/
 theorem guarded {p : Pattern} {xs : List Name} {g body : Expr} {R : Roles} {r : Role}
-    (hgd : g.divFree lim B me (R.bindAll xs (Arm.role r ⟨p, xs, some g, body⟩)) = true)
+    (hgd : g.divFree lim B H me (R.bindAll xs (Arm.role r ⟨p, xs, some g, body⟩)) = true)
     (hgn : g.depth ≤ k)
-    (hbd : body.divFree lim B me (R.bindAll xs (Arm.role r ⟨p, xs, some g, body⟩)) = true)
+    (hbd : body.divFree lim B H me (R.bindAll xs (Arm.role r ⟨p, xs, some g, body⟩)) = true)
     (hbn : body.depth ≤ k) (hA : R.Avoids (g.writes ++ body.writes)) {v : Value}
     (hv : r.Holds v m) {next : Nat → Eval Copy.State Value}
     (hnext : ∀ s : Copy.State, R.Inv s.1 m → Halts next (fun _ => True) s) :
@@ -210,7 +210,7 @@ theorem Arm.role_ways {arm : Arm} {r : Role} {v : Value} {us : List Value} {m : 
   · trivial
 
 theorem select {R : Roles} {r : Role} {v : Value} (hv : r.Holds v m) :
-    ∀ {arms : List Arm}, armsDivFree lim B me R r arms = true → armsDepth arms ≤ k →
+    ∀ {arms : List Arm}, armsDivFree lim B H me R r arms = true → armsDepth arms ≤ k →
       R.Avoids (armsWrites arms) → ∀ (s : Copy.State), R.Inv s.1 m →
       Halts (fun n => Eval.select (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) arms v)
         (fun _ => True) s
@@ -242,8 +242,8 @@ theorem select {R : Roles} {r : Role} {v : Value} (hv : r.Holds v m) :
         (hA.mono fun z hz => by rcases List.mem_append.1 hz with hz | hz <;> simp [guardWrites, hz]) hv
         hrest _ (fun us hu => Arm.role_ways (arm := ⟨p, xs, some g, body⟩) hv hu) s hI
 
-theorem assign (x : Name) {ps : List Projection} {R : Roles} (hd : pathDivFree lim B me R ps = true)
-    (hn : pathDepth ps ≤ k) {value : Expr} (hvd : value.divFree lim B me R = true)
+theorem assign (x : Name) {ps : List Projection} {R : Roles} (hd : pathDivFree lim B H me R ps = true)
+    (hn : pathDepth ps ≤ k) {value : Expr} (hvd : value.divFree lim B H me R = true)
     (hvn : value.depth ≤ k) (hA : R.Avoids (pathWrites ps ++ value.writes)) (s : Copy.State)
     (hI : R.Inv s.1 m) :
     Halts (fun n => Eval.assign (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) x ps value)
@@ -255,8 +255,8 @@ theorem assign (x : Name) {ps : List Projection} {R : Roles} (hd : pathDivFree l
         (hA.mono (List.subset_append_left _ _)) hd')) fun _ _ _ _ =>
       bind (const (Eval.Ends.update _)) fun _ _ _ _ => const (Eval.Ends.pure trivial)
 
-theorem loop (x : Name) {e body : Expr} {R : Roles} (hed : e.divFree lim B me R = true)
-    (hen : e.depth ≤ k) (hA : R.Avoids e.writes) (hbd : body.divFree lim B me [] = true)
+theorem loop (x : Name) {e body : Expr} {R : Roles} (hed : e.divFree lim B H me R = true)
+    (hen : e.depth ≤ k) (hA : R.Avoids e.writes) (hbd : body.divFree lim B H me [] = true)
     (hbn : body.depth ≤ k) (s : Copy.State) (hI : R.Inv s.1 m) :
     Halts (fun n => Eval.loop (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) x e body)
       (fun _ => True) s :=

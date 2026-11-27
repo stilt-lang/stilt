@@ -13,12 +13,15 @@ matches a variable with a role takes the steps of its constructors, and a place 
 such a variable takes the steps of its fields. For self-calls that shrink
 (facts.shrinking-recursion): the integer parameter that shrinks (`counter`), the parameter
 its bound is (`limit`), and the counter where a test has shown it short of its bound
-(`guarded`). A variable keeps its role only where nothing writes it.
+(`guarded`). For calls through function values (facts.div): a non-escaping parameter, whose
+function value the caller vouches halts (`halting`). A variable keeps its role only where
+nothing writes it.
 
 Values are finite trees, and a part of a record, a tuple or a variant is smaller than it
 (`sizeOf`). So when a variable's role is `whole`, its value is no larger than the parameter's,
 and when it is `part`, smaller; a counter and a limit hold the integers the call was passed,
-and a guarded counter is short of its bound (`Roles.Inv`).
+and a guarded counter is short of its bound; a non-escaping parameter holds a function value
+that halts (`Roles.Inv`).
 -/
 
 namespace Stilt
@@ -31,6 +34,7 @@ inductive Role where
   | counter
   | limit
   | guarded
+  | halting
   deriving DecidableEq, Repr
 
 /-- The roles of a body's variables, the newest binding first. -/
@@ -139,6 +143,9 @@ structure Meas where
   grow : Bool := true
   start : Option Int := none
   limit : Option Int := none
+  /-- What the function values that the call's non-escaping parameters hold do: halt, in the
+  proof of `without div`. -/
+  fns : Value → Prop := fun _ => True
 
 /-- What a role says of a variable's value, against what the run knows of its call. -/
 def Role.Holds : Role → Value → Meas → Prop
@@ -149,6 +156,7 @@ def Role.Holds : Role → Value → Meas → Prop
   | .limit, u, μ => u.int? = μ.limit
   | .guarded, u, μ => ∃ x y, μ.start = some x ∧ μ.limit = some y ∧ u = .int x ∧
       (if μ.grow then x ≤ y else y ≤ x) ∧ countDistance μ.grow x y ≤ μ.size
+  | .halting, u, μ => μ.fns u
 
 /-- Each variable with a role holds a value that its role describes. -/
 def Roles.Inv (R : Roles) (fr : Copy.Frame) (m : Meas) : Prop :=

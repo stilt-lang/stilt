@@ -57,7 +57,8 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
   holds one (`Program.Locks.block`, shared.locks and shared.when-order);
 * a call of a function limited by `without panic`, on panic-free arguments, panics only with
   `overflow` or `deadlock`, and only with `deadlock` when `without overflow` limits it too; a
-  call of one limited by `without div` halts; and so does a run whose `main` is limited
+  call of one limited by `without div`, on arguments whose values at its non-escaping
+  parameters are function values that halt, halts; and so does a run whose `main` is limited
   (`Program.PanicKeptBy.kept`, `Program.DivLimited.kept`, effects.without-panic,
   effects.without-overflow and facts.without-div).
 -/
@@ -179,8 +180,10 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   /-- effects.without-overflow: a call of a function limited by `without panic, overflow`,
   and a run whose `main` is, panics only with `deadlock` (`Program.PanicsKeptBy`). -/
   overflows : p.PanicsKeptBy (fun l => l.panic && l.overflow) false fuel input
-  /-- facts.without-div: a call of a function limited by `without div`, and a run whose `main`
-  is, halts (`Program.HaltsKept`). -/
+  /-- facts.without-div: a call of a function limited by `without div`, on arguments whose
+  values at its non-escaping parameters are function values that halt, through which its body
+  may call with no `div` of its own (facts.div), and a run whose `main` is limited, halts
+  (`Program.HaltsKept`). -/
   halts : p.HaltsKept input
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/

@@ -13,7 +13,15 @@ namespace Stilt
 
 section
 
-variable (s : TySubst) {lim : Limited} {B : Name → Nat} {me : Option (Name × Descent)}
+variable (s : TySubst) {lim : Limited} {B : Name → Nat} {H : Name → List Nat}
+  {me : Option (Name × Descent)}
+
+theorem Expr.haltingIn_substTys (R : Roles) (e : Expr) : (e.substTys s).haltingIn R = e.haltingIn R := by
+  cases e <;> first | rfl | (rename_i t _; cases t; rfl)
+
+theorem haltingArg_substTys (R : Roles) (e : Expr) :
+    haltingArg lim B H me R (e.substTys s) = haltingArg lim B H me R e := by
+  cases e <;> first | rfl | (rename_i t _; cases t; rfl)
 
 theorem Expr.callable_substTys (e : Expr) : (e.substTys s).callable = e.callable := by
   cases e <;> first | rfl | (rename_i t _; cases t; rfl)
@@ -44,6 +52,12 @@ theorem argWith_substTys {ok : Expr → Bool} (hok : ∀ e, ok (e.substTys s) = 
   | k + 1, .value _ :: args | k + 1, .inout ⟨_, _⟩ :: args => by
     simp [substArgTys, argWith, argWith_substTys hok k args]
   | 0, [] | _ + 1, [] => rfl
+
+theorem Expr.passesHalting_substTys (R : Roles) (e : Expr) (args : List Arg) :
+    (e.substTys s).passesHalting lim B H me R (substArgTys s args) = e.passesHalting lim B H me R args := by
+  cases e <;> try rfl
+  case assign t _ => cases t; rfl
+  simp [Expr.substTys, Expr.passesHalting, argWith_substTys s (haltingArg_substTys s R)]
 
 theorem Expr.shrinksIn_substTys (R : Roles) (grow : Bool) (e : Expr) :
     (e.substTys s).shrinksIn R grow = e.shrinksIn R grow := by
@@ -91,7 +105,7 @@ theorem Roles.held_negated_substTys (R : Roles) (c : Expr) :
 mutual
 
 theorem Expr.divFree_substTys : ∀ (R : Roles) (e : Expr),
-    (e.substTys s).divFree lim B me R = e.divFree lim B me R
+    (e.substTys s).divFree lim B H me R = e.divFree lim B H me R
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
   | _, .fnRef .. | _, .method .. => rfl
   | R, .record _ _ fs => by simp [Expr.substTys, Expr.divFree, fieldsDivFree_substTys R fs]
@@ -115,6 +129,7 @@ theorem Expr.divFree_substTys : ∀ (R : Roles) (e : Expr),
       Expr.countsIn_substTys]
   | R, .call f args _ => by
     simp [Expr.substTys, Expr.divFree, Expr.callable_substTys s f, Expr.isSelf_substTys s f,
+      Expr.haltingIn_substTys s R f, Expr.passesHalting_substTys s R f args,
       Expr.divFree_substTys R f, argsDivFree_substTys R args, descends_substTys]
   | R, .assign ⟨_, p⟩ v => by
     simp [Expr.substTys, Expr.divFree, pathDivFree_substTys R p, Expr.divFree_substTys R v]
@@ -128,19 +143,19 @@ theorem Expr.divFree_substTys : ∀ (R : Roles) (e : Expr),
     simp [Expr.substTys, Expr.divFree, exprsDivFree_substTys R hs, Expr.divFree_substTys [] b]
 
 theorem exprsDivFree_substTys : ∀ (R : Roles) (es : List Expr),
-    exprsDivFree lim B me R (substExprTys s es) = exprsDivFree lim B me R es
+    exprsDivFree lim B H me R (substExprTys s es) = exprsDivFree lim B H me R es
   | _, [] => rfl
   | R, e :: es => by
     simp [substExprTys, exprsDivFree, Expr.divFree_substTys R e, exprsDivFree_substTys R es]
 
 theorem fieldsDivFree_substTys : ∀ (R : Roles) (fs : List (Name × Expr)),
-    fieldsDivFree lim B me R (substFieldTys s fs) = fieldsDivFree lim B me R fs
+    fieldsDivFree lim B H me R (substFieldTys s fs) = fieldsDivFree lim B H me R fs
   | _, [] => rfl
   | R, (_, e) :: fs => by
     simp [substFieldTys, fieldsDivFree, Expr.divFree_substTys R e, fieldsDivFree_substTys R fs]
 
 theorem argsDivFree_substTys : ∀ (R : Roles) (args : List Arg),
-    argsDivFree lim B me R (substArgTys s args) = argsDivFree lim B me R args
+    argsDivFree lim B H me R (substArgTys s args) = argsDivFree lim B H me R args
   | _, [] => rfl
   | R, .value e :: args => by
     simp [substArgTys, argsDivFree, Expr.divFree_substTys R e, argsDivFree_substTys R args]
@@ -148,91 +163,23 @@ theorem argsDivFree_substTys : ∀ (R : Roles) (args : List Arg),
     simp [substArgTys, argsDivFree, pathDivFree_substTys R p, argsDivFree_substTys R args]
 
 theorem pathDivFree_substTys : ∀ (R : Roles) (p : List Projection),
-    pathDivFree lim B me R (substPathTys s p) = pathDivFree lim B me R p
+    pathDivFree lim B H me R (substPathTys s p) = pathDivFree lim B H me R p
   | _, [] => rfl
   | R, .field _ :: p => by simpa [substPathTys, pathDivFree] using pathDivFree_substTys R p
   | R, .index i :: p => by
     simp [substPathTys, pathDivFree, Expr.divFree_substTys R i, pathDivFree_substTys R p]
 
 theorem armsDivFree_substTys : ∀ (R : Roles) (r : Role) (arms : List Arm),
-    armsDivFree lim B me R r (substArmTys s arms) = armsDivFree lim B me R r arms
+    armsDivFree lim B H me R r (substArmTys s arms) = armsDivFree lim B H me R r arms
   | _, _, [] => rfl
   | R, r, ⟨_, _, g, b⟩ :: arms => by
     simp [substArmTys, armsDivFree, guardDivFree_substTys, Expr.divFree_substTys _ b,
       armsDivFree_substTys R r arms, Arm.role, Expr.writes_substTys, guardWrites_substTys]
 
 theorem guardDivFree_substTys : ∀ (R : Roles) (g : Option Expr),
-    guardDivFree lim B me R (substGuardTys s g) = guardDivFree lim B me R g
+    guardDivFree lim B H me R (substGuardTys s g) = guardDivFree lim B H me R g
   | _, none => rfl
   | R, some g => by simp [substGuardTys, guardDivFree, Expr.divFree_substTys R g]
-
-end
-
-mutual
-
-theorem Expr.depth_substTys : ∀ e : Expr, (e.substTys s).depth = e.depth
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
-  | .closure .. => rfl
-  | .record _ _ fs => by simp [Expr.substTys, Expr.depth, fieldsDepth_substTys fs]
-  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
-    simp [Expr.substTys, Expr.depth, exprsDepth_substTys es]
-  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
-    simp [Expr.substTys, Expr.depth, Expr.depth_substTys e]
-  | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
-  | .while a b | .tryCatch a _ _ b _ => by
-    simp [Expr.substTys, Expr.depth, Expr.depth_substTys a, Expr.depth_substTys b]
-  | .call f args _ => by
-    simp [Expr.substTys, Expr.depth, Expr.depth_substTys f, Expr.bodyDepth_substTys f,
-      argsDepth_substTys args]
-  | .assign ⟨_, p⟩ v => by
-    simp [Expr.substTys, Expr.depth, pathDepth_substTys p, Expr.depth_substTys v]
-  | .if c _ a b => by
-    simp [Expr.substTys, Expr.depth, Expr.depth_substTys c, Expr.depth_substTys a,
-      Expr.depth_substTys b]
-  | .match e _ arms => by
-    simp [Expr.substTys, Expr.depth, Expr.depth_substTys e, armsDepth_substTys arms]
-  | .held _ hs b => by
-    simp [Expr.substTys, Expr.depth, exprsDepth_substTys hs, Expr.depth_substTys b]
-
-theorem Expr.bodyDepth_substTys : ∀ e : Expr, (e.substTys s).bodyDepth = e.bodyDepth
-  | .closure _ _ _ b => by simp [Expr.substTys, Expr.bodyDepth, Expr.depth_substTys b]
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
-  | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .call ..
-  | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ ..
-  | .withH .. | .held .. | .try .. | .form .. | .tryCatch .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
-  | .return _ => rfl
-
-theorem exprsDepth_substTys : ∀ es : List Expr, exprsDepth (substExprTys s es) = exprsDepth es
-  | [] => rfl
-  | e :: es => by simp [substExprTys, exprsDepth, Expr.depth_substTys e, exprsDepth_substTys es]
-
-theorem fieldsDepth_substTys :
-    ∀ fs : List (Name × Expr), fieldsDepth (substFieldTys s fs) = fieldsDepth fs
-  | [] => rfl
-  | (_, e) :: fs => by
-    simp [substFieldTys, fieldsDepth, Expr.depth_substTys e, fieldsDepth_substTys fs]
-
-theorem argsDepth_substTys : ∀ args : List Arg, argsDepth (substArgTys s args) = argsDepth args
-  | [] => rfl
-  | .value e :: args => by
-    simp [substArgTys, argsDepth, Expr.depth_substTys e, argsDepth_substTys args]
-  | .inout ⟨_, p⟩ :: args => by
-    simp [substArgTys, argsDepth, pathDepth_substTys p, argsDepth_substTys args]
-
-theorem pathDepth_substTys : ∀ p : List Projection, pathDepth (substPathTys s p) = pathDepth p
-  | [] => rfl
-  | .field _ :: p => by simpa [substPathTys, pathDepth] using pathDepth_substTys p
-  | .index i :: p => by simp [substPathTys, pathDepth, Expr.depth_substTys i, pathDepth_substTys p]
-
-theorem armsDepth_substTys : ∀ arms : List Arm, armsDepth (substArmTys s arms) = armsDepth arms
-  | [] => rfl
-  | ⟨_, _, g, b⟩ :: arms => by
-    simp [substArmTys, armsDepth, guardDepth_substTys g, Expr.depth_substTys b,
-      armsDepth_substTys arms]
-
-theorem guardDepth_substTys : ∀ g : Option Expr, guardDepth (substGuardTys s g) = guardDepth g
-  | none => rfl
-  | some g => by simp [substGuardTys, guardDepth, Expr.depth_substTys g]
 
 end
 
@@ -240,7 +187,15 @@ end
 
 section
 
-variable (s : RowSubst) {lim : Limited} {B : Name → Nat} {me : Option (Name × Descent)}
+variable (s : RowSubst) {lim : Limited} {B : Name → Nat} {H : Name → List Nat}
+  {me : Option (Name × Descent)}
+
+theorem Expr.haltingIn_substRows (R : Roles) (e : Expr) : (e.substRows s).haltingIn R = e.haltingIn R := by
+  cases e <;> first | rfl | (rename_i t _; cases t; rfl)
+
+theorem haltingArg_substRows (R : Roles) (e : Expr) :
+    haltingArg lim B H me R (e.substRows s) = haltingArg lim B H me R e := by
+  cases e <;> first | rfl | (rename_i t _; cases t; rfl)
 
 theorem Expr.callable_substRows (e : Expr) : (e.substRows s).callable = e.callable := by
   cases e <;> first | rfl | (rename_i t _; cases t; rfl)
@@ -271,6 +226,12 @@ theorem argWith_substRows {ok : Expr → Bool} (hok : ∀ e, ok (e.substRows s) 
   | k + 1, .value _ :: args | k + 1, .inout ⟨_, _⟩ :: args => by
     simp [substArgRows, argWith, argWith_substRows hok k args]
   | 0, [] | _ + 1, [] => rfl
+
+theorem Expr.passesHalting_substRows (R : Roles) (e : Expr) (args : List Arg) :
+    (e.substRows s).passesHalting lim B H me R (substArgRows s args) = e.passesHalting lim B H me R args := by
+  cases e <;> try rfl
+  case assign t _ => cases t; rfl
+  simp [Expr.substRows, Expr.passesHalting, argWith_substRows s (haltingArg_substRows s R)]
 
 theorem Expr.shrinksIn_substRows (R : Roles) (grow : Bool) (e : Expr) :
     (e.substRows s).shrinksIn R grow = e.shrinksIn R grow := by
@@ -318,7 +279,7 @@ theorem Roles.held_negated_substRows (R : Roles) (c : Expr) :
 mutual
 
 theorem Expr.divFree_substRows : ∀ (R : Roles) (e : Expr),
-    (e.substRows s).divFree lim B me R = e.divFree lim B me R
+    (e.substRows s).divFree lim B H me R = e.divFree lim B H me R
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
   | _, .fnRef .. | _, .method .. => rfl
   | R, .record _ _ fs => by simp [Expr.substRows, Expr.divFree, fieldsDivFree_substRows R fs]
@@ -342,6 +303,7 @@ theorem Expr.divFree_substRows : ∀ (R : Roles) (e : Expr),
       Expr.countsIn_substRows]
   | R, .call f args _ => by
     simp [Expr.substRows, Expr.divFree, Expr.callable_substRows s f, Expr.isSelf_substRows s f,
+      Expr.haltingIn_substRows s R f, Expr.passesHalting_substRows s R f args,
       Expr.divFree_substRows R f, argsDivFree_substRows R args, descends_substRows]
   | R, .assign ⟨_, p⟩ v => by
     simp [Expr.substRows, Expr.divFree, pathDivFree_substRows R p, Expr.divFree_substRows R v]
@@ -355,19 +317,19 @@ theorem Expr.divFree_substRows : ∀ (R : Roles) (e : Expr),
     simp [Expr.substRows, Expr.divFree, exprsDivFree_substRows R hs, Expr.divFree_substRows [] b]
 
 theorem exprsDivFree_substRows : ∀ (R : Roles) (es : List Expr),
-    exprsDivFree lim B me R (substExprRows s es) = exprsDivFree lim B me R es
+    exprsDivFree lim B H me R (substExprRows s es) = exprsDivFree lim B H me R es
   | _, [] => rfl
   | R, e :: es => by
     simp [substExprRows, exprsDivFree, Expr.divFree_substRows R e, exprsDivFree_substRows R es]
 
 theorem fieldsDivFree_substRows : ∀ (R : Roles) (fs : List (Name × Expr)),
-    fieldsDivFree lim B me R (substFieldRows s fs) = fieldsDivFree lim B me R fs
+    fieldsDivFree lim B H me R (substFieldRows s fs) = fieldsDivFree lim B H me R fs
   | _, [] => rfl
   | R, (_, e) :: fs => by
     simp [substFieldRows, fieldsDivFree, Expr.divFree_substRows R e, fieldsDivFree_substRows R fs]
 
 theorem argsDivFree_substRows : ∀ (R : Roles) (args : List Arg),
-    argsDivFree lim B me R (substArgRows s args) = argsDivFree lim B me R args
+    argsDivFree lim B H me R (substArgRows s args) = argsDivFree lim B H me R args
   | _, [] => rfl
   | R, .value e :: args => by
     simp [substArgRows, argsDivFree, Expr.divFree_substRows R e, argsDivFree_substRows R args]
@@ -375,91 +337,23 @@ theorem argsDivFree_substRows : ∀ (R : Roles) (args : List Arg),
     simp [substArgRows, argsDivFree, pathDivFree_substRows R p, argsDivFree_substRows R args]
 
 theorem pathDivFree_substRows : ∀ (R : Roles) (p : List Projection),
-    pathDivFree lim B me R (substPathRows s p) = pathDivFree lim B me R p
+    pathDivFree lim B H me R (substPathRows s p) = pathDivFree lim B H me R p
   | _, [] => rfl
   | R, .field _ :: p => by simpa [substPathRows, pathDivFree] using pathDivFree_substRows R p
   | R, .index i :: p => by
     simp [substPathRows, pathDivFree, Expr.divFree_substRows R i, pathDivFree_substRows R p]
 
 theorem armsDivFree_substRows : ∀ (R : Roles) (r : Role) (arms : List Arm),
-    armsDivFree lim B me R r (substArmRows s arms) = armsDivFree lim B me R r arms
+    armsDivFree lim B H me R r (substArmRows s arms) = armsDivFree lim B H me R r arms
   | _, _, [] => rfl
   | R, r, ⟨_, _, g, b⟩ :: arms => by
     simp [substArmRows, armsDivFree, guardDivFree_substRows, Expr.divFree_substRows _ b,
       armsDivFree_substRows R r arms, Arm.role, Expr.writes_substRows, guardWrites_substRows]
 
 theorem guardDivFree_substRows : ∀ (R : Roles) (g : Option Expr),
-    guardDivFree lim B me R (substGuardRows s g) = guardDivFree lim B me R g
+    guardDivFree lim B H me R (substGuardRows s g) = guardDivFree lim B H me R g
   | _, none => rfl
   | R, some g => by simp [substGuardRows, guardDivFree, Expr.divFree_substRows R g]
-
-end
-
-mutual
-
-theorem Expr.depth_substRows : ∀ e : Expr, (e.substRows s).depth = e.depth
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
-  | .closure .. => rfl
-  | .record _ _ fs => by simp [Expr.substRows, Expr.depth, fieldsDepth_substRows fs]
-  | .variant _ _ _ es | .list _ es | .op _ es | .view es => by
-    simp [Expr.substRows, Expr.depth, exprsDepth_substRows es]
-  | .field e _ | .raise e | .perform _ e | .try e | .form _ e | .loop e | .return e => by
-    simp [Expr.substRows, Expr.depth, Expr.depth_substRows e]
-  | .index a b | .seq a b | .withH _ _ a b | .letIn _ _ a b | .varIn _ _ a b | .for _ _ a b
-  | .while a b | .tryCatch a _ _ b _ => by
-    simp [Expr.substRows, Expr.depth, Expr.depth_substRows a, Expr.depth_substRows b]
-  | .call f args _ => by
-    simp [Expr.substRows, Expr.depth, Expr.depth_substRows f, Expr.bodyDepth_substRows f,
-      argsDepth_substRows args]
-  | .assign ⟨_, p⟩ v => by
-    simp [Expr.substRows, Expr.depth, pathDepth_substRows p, Expr.depth_substRows v]
-  | .if c _ a b => by
-    simp [Expr.substRows, Expr.depth, Expr.depth_substRows c, Expr.depth_substRows a,
-      Expr.depth_substRows b]
-  | .match e _ arms => by
-    simp [Expr.substRows, Expr.depth, Expr.depth_substRows e, armsDepth_substRows arms]
-  | .held _ hs b => by
-    simp [Expr.substRows, Expr.depth, exprsDepth_substRows hs, Expr.depth_substRows b]
-
-theorem Expr.bodyDepth_substRows : ∀ e : Expr, (e.substRows s).bodyDepth = e.bodyDepth
-  | .closure _ _ _ b => by simp [Expr.substRows, Expr.bodyDepth, Expr.depth_substRows b]
-  | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef .. | .method ..
-  | .record .. | .variant .. | .list .. | .op .. | .view _ | .field .. | .index .. | .call ..
-  | .letIn .. | .varIn .. | .seq .. | .if .. | .match .. | .for .. | .raise .. | .perform _ ..
-  | .withH .. | .held .. | .try .. | .form .. | .tryCatch .. | .assign ⟨_, _⟩ _ | .while .. | .loop _
-  | .return _ => rfl
-
-theorem exprsDepth_substRows : ∀ es : List Expr, exprsDepth (substExprRows s es) = exprsDepth es
-  | [] => rfl
-  | e :: es => by simp [substExprRows, exprsDepth, Expr.depth_substRows e, exprsDepth_substRows es]
-
-theorem fieldsDepth_substRows :
-    ∀ fs : List (Name × Expr), fieldsDepth (substFieldRows s fs) = fieldsDepth fs
-  | [] => rfl
-  | (_, e) :: fs => by
-    simp [substFieldRows, fieldsDepth, Expr.depth_substRows e, fieldsDepth_substRows fs]
-
-theorem argsDepth_substRows : ∀ args : List Arg, argsDepth (substArgRows s args) = argsDepth args
-  | [] => rfl
-  | .value e :: args => by
-    simp [substArgRows, argsDepth, Expr.depth_substRows e, argsDepth_substRows args]
-  | .inout ⟨_, p⟩ :: args => by
-    simp [substArgRows, argsDepth, pathDepth_substRows p, argsDepth_substRows args]
-
-theorem pathDepth_substRows : ∀ p : List Projection, pathDepth (substPathRows s p) = pathDepth p
-  | [] => rfl
-  | .field _ :: p => by simpa [substPathRows, pathDepth] using pathDepth_substRows p
-  | .index i :: p => by simp [substPathRows, pathDepth, Expr.depth_substRows i, pathDepth_substRows p]
-
-theorem armsDepth_substRows : ∀ arms : List Arm, armsDepth (substArmRows s arms) = armsDepth arms
-  | [] => rfl
-  | ⟨_, _, g, b⟩ :: arms => by
-    simp [substArmRows, armsDepth, guardDepth_substRows g, Expr.depth_substRows b,
-      armsDepth_substRows arms]
-
-theorem guardDepth_substRows : ∀ g : Option Expr, guardDepth (substGuardRows s g) = guardDepth g
-  | none => rfl
-  | some g => by simp [substGuardRows, guardDepth, Expr.depth_substRows g]
 
 end
 

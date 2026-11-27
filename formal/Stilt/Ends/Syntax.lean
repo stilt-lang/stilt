@@ -6,9 +6,11 @@ import Stilt.Ends.Roles
 
 Whether code holds no site of `div` (facts.div): no `loop`, no `while` but one
 that counts (facts.counting-loops, `Stilt.Ends.Counting`), and
-every call made of a function that the program names, `f(…)`, or of a closure
-literal where it is written, `(|x| …)(…)`, never of a function value that
-anything else gives, and no performance, which calls the handler's clause
+every call made of a function that the program names, `f(…)`, of a closure
+literal where it is written, `(|x| …)(…)`, or through a non-escaping parameter whose
+argument each call of the function writes as a closure literal, a function named or such a
+parameter of its own (`haltingArg`), never of a function value that anything else gives,
+and no performance, which calls the handler's clause
 (handlers.implicit-effects-and-capabilities); a `with` adds nothing, and neither does a
 `when` (shared.when-on-value-already-held). Naming a function adds `div` unless it is one
 of the functions a limit covers (`Limited`). The functions it covers are **ranked**
@@ -28,6 +30,12 @@ namespace Stilt
 literal, which the call runs where it is written (facts.div). -/
 def Expr.callable : Expr → Bool
   | .fnRef _ _ _ | .closure _ _ _ _ => true
+  | _ => false
+
+/-- Whether a call of `e` is a call through a non-escaping parameter, which adds no `div` of
+its own: its sites are counted where the argument is written (facts.div). -/
+def Expr.haltingIn (R : Roles) : Expr → Bool
+  | .var x | .move x => R.of x == .halting
   | _ => false
 
 /-- The descending argument of a call: whether the argument at position `k` gives a strict
@@ -97,7 +105,7 @@ section
 
 -- Where code is: in the body of the function `f`, whose self-calls go down as `d` says,
 -- when `me = some (f, d)`, and in `main`'s when `me = none`.
-variable (lim : Limited) (B : Name → Nat) (me : Option (Name × Descent))
+variable (lim : Limited) (B : Name → Nat) (H : Name → List Nat) (me : Option (Name × Descent))
 
 /-- The roles where a test held: a counter that a reading of the test shows short of its
 bound is guarded. Of the tests that guard code (facts.guarding-tests), the model reads a
@@ -121,6 +129,21 @@ def Expr.isSelf : Expr → Bool
   | .fnRef g _ _ => me.any (·.1 == g)
   | _ => false
 
+/-- Whether an argument given to a non-escaping parameter is one whose sites are counted
+where it is written (facts.div): a closure literal, whose body the check reads where it is,
+a function that may be named and that asks no argument to halt, or a non-escaping parameter
+itself. `H g` holds the positions of `g`'s parameters that its body calls through. -/
+def haltingArg (R : Roles) : Expr → Bool
+  | .closure _ _ _ _ => true
+  | .fnRef g _ _ => (H g).isEmpty && lim.names B me g
+  | e => e.haltingIn R
+
+/-- Whether a call passes, at each position of a parameter that the function named calls
+through, an argument whose sites are counted where it is written. -/
+def Expr.passesHalting (R : Roles) : Expr → List Arg → Bool
+  | .fnRef g _ _, args => (H g).all fun k => argWith (haltingArg lim B H me R) k args
+  | _, _ => true
+
 /-- Whether a self-call's arguments go down as the function's self-calls do
 (facts.descending-self-calls and facts.shrinking-recursion). -/
 def descends (R : Roles) (args : List Arg) : Bool := me.any fun (_, d) => d.calls R args
@@ -128,8 +151,12 @@ def descends (R : Roles) (args : List Arg) : Bool := me.any fun (_, d) => d.call
 mutual
 
 /-- Whether `e`, whose variables have the roles `R`, holds no site of `div`: no loop but
-`for` and a `while` that counts, and calls only of a named function or of a closure literal
-where it is written. A performance is a site of `div`, as a call through a stored function
+`for` and a `while` that counts, and calls only of a named function, of a closure literal
+where it is written, and through a parameter that the function's call vouches for, one at a
+position of `H` (facts.div). A call of a named function passes, at each position of `H` that
+function's parameters have, an argument whose sites are counted where it is written: a closure
+literal, a function named that asks no argument to halt, or such a parameter of its own
+(`haltingArg`); a call through a parameter adds nothing more. A performance is a site of `div`, as a call through a stored function
 value, the handler's clause, is; a `with` and a `when` add nothing of their own
 (handlers.implicit-effects-and-capabilities). Naming a function, to call it or as a value,
 adds `div` unless `lim` covers it, a function limited by `without div` counting as one
@@ -144,10 +171,11 @@ its value when its body doesn't write it, a `match` arm its binders the role of 
 hold (`Arm.role`), and a test the counter it shows short of its bound the role `guarded` in
 its branch (`Roles.held`); every other binder has none, and in a closure literal's body, a
 loop, a `catch` handler and a `when` block no variable has one. The sites are facts.div's,
-and a few more: every call through a function value is one, as through a stored one
-(facts.calls-through-function-values), a parameter not marked `escaping` and a bound in
-generic code included, and so is every recursive call that goes down in no way the model
-knows. -/
+and a few more: every other call through a function value is one, as through a stored one
+(facts.calls-through-function-values), a call through a bound in generic code and through a
+parameter that the check doesn't read as non-escaping included, and so is an argument given
+to a non-escaping parameter that isn't written there, and every recursive call that goes down
+in no way the model knows. -/
 def Expr.divFree : Roles → Expr → Bool
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
   | _, .fnRef f _ _ => lim.names B me f
@@ -160,8 +188,9 @@ def Expr.divFree : Roles → Expr → Bool
   | R, .index e i => e.divFree R && i.divFree R
   | _, .closure _ _ _ body => body.divFree []
   | R, .call callee args _ =>
-    callee.callable && (if callee.isSelf me then descends me R args else callee.divFree R) &&
-      argsDivFree R args
+    (callee.callable || callee.haltingIn R) &&
+      (if callee.isSelf me then descends me R args else callee.divFree R) &&
+      argsDivFree R args && callee.passesHalting lim B H me R args
   | R, .letIn x _ init body =>
     init.divFree R &&
       body.divFree ((x, if decide (x ∉ body.writes) then init.roleIn R else .other) :: R)
@@ -220,11 +249,12 @@ end
 
 mutual
 
-/-- The depth of `e`'s text: one more than its parts', a closure literal called where it is
-written counting its body. Running code free of `div` goes by induction on it. -/
+/-- The depth of `e`'s text: one more than its parts', a closure literal's body among them.
+Running code free of `div` goes by induction on it. -/
 def Expr.depth : Expr → Nat
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
-  | .method _ _ _ | .closure _ _ _ _ => 1
+  | .method _ _ _ => 1
+  | .closure _ _ _ body => body.depth + 1
   | .record _ _ fields => fieldsDepth fields + 1
   | .variant _ _ _ es => exprsDepth es + 1
   | .list _ es => exprsDepth es + 1
@@ -307,20 +337,32 @@ def FnDecl.entryRoles (d : FnDecl) : Descent → Roles
       | .lit _ => []
     | none => []
 
+/-- The non-escaping parameters at the positions `hs`, which a body may call through, each when
+`FnDecl.letParam?` finds it, with the role `halting`. -/
+def FnDecl.haltingRoles (d : FnDecl) (hs : List Nat) : Roles :=
+  hs.filterMap fun k => (d.letParam? k).map fun x => (x, .halting)
+
+/-- The roles a body starts with: its self-calls' and its non-escaping parameters'. -/
+def FnDecl.startRoles (d : FnDecl) (spec : Descent) (hs : List Nat) : Roles :=
+  d.entryRoles spec ++ d.haltingRoles hs
+
 /-- A ranking of the functions that `lim` covers, with the way `desc f` that each function's
-self-calls go down: each body is free of `div`, naming only functions that `lim` covers and
-ranks below it, and calling itself only on a strict part of its descending parameter
+self-calls go down and the positions `H f` of the parameters its body calls through: each
+body is free of `div`, naming only functions that `lim` covers and ranks below it, and
+calling itself only on a strict part of its descending parameter
 (facts.descending-self-calls) or with its counter stepped toward its bound
 (facts.shrinking-recursion), all its self-calls the same way. So the functions of one
 recursive group are one function, whose self-calls all descend or all shrink. -/
-def Decls.Ranked (D : Decls) (lim : Limited) (B : Name → Nat) (desc : Name → Descent) : Prop :=
+def Decls.Ranked (D : Decls) (lim : Limited) (B : Name → Nat) (desc : Name → Descent)
+    (H : Name → List Nat) : Prop :=
   ∀ name d, D.fn? name = some d → lim.fn name = true →
-    d.body.divFree lim B (some (name, desc name)) (d.entryRoles (desc name)) = true
+    d.body.divFree lim B H (some (name, desc name)) (d.startRoles (desc name) (H name)) = true
 
 /-- Every function of the program and `main` hold no site of `div`, and the functions call
 each other without recursion but self-calls that descend or shrink (facts.without-div). -/
 def Program.DivFree (p : Program) : Prop :=
-  ∃ B desc, p.decls.Ranked Limited.all B desc ∧ p.main.divFree Limited.all B none [] = true
+  ∃ B desc, p.decls.Ranked Limited.all B desc (fun _ => []) ∧
+    p.main.divFree Limited.all B (fun _ => []) none [] = true
 
 /-- The rank of each function: its position among the declarations, so that each may name
 those declared before it. -/
@@ -338,25 +380,27 @@ passes the check. -/
 def Decls.desc (D : Decls) (f : Name) : Descent :=
   match D.fn? f with
   | some d => (d.descents.find? fun k =>
-      d.body.divFree Limited.all D.rank (some (f, k)) (d.entryRoles k)).getD (.parts 0)
+      d.body.divFree Limited.all D.rank (fun _ => []) (some (f, k)) (d.entryRoles k)).getD (.parts 0)
   | none => .parts 0
 
 /-- Whether every function's body is free of `div` under the ranking and the positions. -/
 def Decls.rankedBy (D : Decls) (B : Name → Nat) (desc : Name → Descent) : Bool :=
-  D.fns.all fun d => d.body.divFree Limited.all B (some (d.name, desc d.name)) (d.entryRoles (desc d.name))
+  D.fns.all fun d =>
+    d.body.divFree Limited.all B (fun _ => []) (some (d.name, desc d.name)) (d.entryRoles (desc d.name))
 
 /-- The check of `Program.DivFree` for a program whose functions call only those
 declared before them, and themselves when the calls descend. -/
 def Program.divFree (p : Program) : Bool :=
-  p.decls.rankedBy p.decls.rank p.decls.desc && p.main.divFree Limited.all p.decls.rank none []
+  p.decls.rankedBy p.decls.rank p.decls.desc &&
+    p.main.divFree Limited.all p.decls.rank (fun _ => []) none []
 
 theorem Decls.ranked_of_rankedBy {D : Decls} {B : Name → Nat} {desc : Name → Descent}
-    (h : D.rankedBy B desc = true) : D.Ranked Limited.all B desc := by
+    (h : D.rankedBy B desc = true) : D.Ranked Limited.all B desc (fun _ => []) := by
   intro name d hd _
   have hmem := List.mem_of_find?_eq_some hd
   have hname : d.name = name := by simpa using List.find?_some hd
   have := List.all_eq_true.1 h d hmem
-  exact hname ▸ this
+  simpa [FnDecl.startRoles, FnDecl.haltingRoles, hname] using this
 
 theorem Program.divFree_spec {p : Program} (h : p.divFree = true) : p.DivFree := by
   simp only [Program.divFree, Bool.and_eq_true] at h

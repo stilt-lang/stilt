@@ -20,15 +20,22 @@ def decls : Decls :=
   ⟨[], [], [⟨"f", [], [], [⟨.let, "n", .i64, none⟩], .i64, Row.pure, self, {}⟩], [], [], [], [], []⟩
 
 /-- No ranking, and no way for `f`'s self-calls to go down, makes `f` free of `div`. -/
-theorem unranked (lim : Limited) (B : Name → Nat) (desc : Name → Descent) (hf : lim.fn "f" = true) :
-    ¬ decls.Ranked lim B desc := by
+theorem unranked (lim : Limited) (B : Name → Nat) (desc : Name → Descent) (H : Name → List Nat)
+    (hf : lim.fn "f" = true) : ¬ decls.Ranked lim B desc H := by
   intro h
   have := h "f" _ rfl hf
   revert this
   cases desc "f" with
-  | parts k => cases k <;> simp [self, Expr.divFree, Expr.callable, Expr.isSelf, descends,
-      Descent.calls, argPart, FnDecl.entryRoles, FnDecl.letParam?, Expr.roleIn, Roles.of, Expr.writes,
-      argsWrites]
+  | parts k =>
+    cases k with
+    | zero =>
+      have hn := startRoles_ne_part (hs := H "f") (x := "n")
+        (d := ⟨"f", [], [], [⟨.let, "n", .i64, none⟩], .i64, Row.pure, self, {}⟩) (spec := .parts 0)
+        (by simp [FnDecl.entryRoles, FnDecl.letParam?, Roles.of, Expr.writes, argsWrites, self])
+      simp only [self] at hn
+      simp only [self, Expr.divFree, Expr.callable, Expr.isSelf, descends, Descent.calls]
+      simp [argPart, Expr.roleIn, hn]
+    | succ k => simp [self, Expr.divFree, Expr.callable, Expr.isSelf, descends, Descent.calls, argPart]
   | shrinks k g b => cases k <;> simp [self, Expr.divFree, Expr.callable, Expr.isSelf, descends,
       Descent.calls, argWith, Expr.shrinksIn]
 
@@ -72,9 +79,9 @@ theorem call_diverges (w : WriteBack) (n : Nat) (v : Value) (s : Copy.State) :
 
 /-- `DescentNeeded`: some declarations that no ranking accepts have a call that never ends,
 so `Decls.Ranked.call` needs the check. -/
-theorem descent_needed : ∃ D : Decls, (∀ B desc, ¬ D.Ranked Limited.all B desc) ∧
+theorem descent_needed : ∃ D : Decls, (∀ B desc H, ¬ D.Ranked Limited.all B desc H) ∧
     ∀ w n v s, Eval.call D (Copy.memoryWith w) (eval D (Copy.memoryWith w) n) (.function "f" [] [])
       [.value v] s = .outOfFuel :=
-  ⟨decls, fun B desc => unranked _ B desc rfl, call_diverges⟩
+  ⟨decls, fun B desc H => unranked _ B desc H rfl, call_diverges⟩
 
 end Stilt.Counterexamples.Ends

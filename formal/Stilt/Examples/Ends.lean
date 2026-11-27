@@ -54,10 +54,35 @@ private def forever : Program :=
 example : forever.divFree = false := rfl
 example : (forever.runCopy 12).observe = .outOfFuel := rfl
 
-example : Expr.divFree Limited.all (fun _ => 0) none [] (.while (.bool true) .unit) = false := rfl
+example : Expr.divFree Limited.all (fun _ => 0) (fun _ => []) none [] (.while (.bool true) .unit) = false := rfl
 /-- `when c { x }` adds no `div` (shared.when). -/
-example : Expr.divFree Limited.all (fun _ => 0) none [] (.held [("x", .i64)] [.var "c"] (.var "x")) = true :=
+example : Expr.divFree Limited.all (fun _ => 0) (fun _ => []) none [] (.held [("x", .i64)] [.var "c"] (.var "x")) = true :=
   rfl
+
+/-! ## Calls through non-escaping parameters -/
+
+/-- `fn apply(f: fn() -> i64) -> i64 { f() }`, whose parameter isn't `escaping`: its body
+calls through it, which adds no `div`, and a caller passes it a closure literal, whose body
+the check reads where it is written, or a function that asks nothing of its arguments; not a
+function value that a binding holds (facts.div). -/
+private def applyFn : FnDecl :=
+  ⟨"apply", [], [], [⟨.let, "f", .fn [] .i64 Row.pure, some "e"⟩], .i64, Row.pure,
+    .call (.var "f") [] .i64, {}⟩
+
+/-- The positions of the parameters that each function's body calls through. -/
+private def through (g : Name) : List Nat := if g = "apply" then [0] else []
+
+private def applied (arg : Expr) : Expr := .call (.fnRef "apply" [] []) [.value arg] .i64
+
+example : (applyFn.startRoles (.parts 1) [0]).of "f" = .halting := rfl
+example : applyFn.body.divFree Limited.all (fun _ => 0) through (some ("apply", .parts 1))
+    (applyFn.startRoles (.parts 1) [0]) = true := rfl
+example : applyFn.body.divFree Limited.all (fun _ => 0) through (some ("apply", .parts 1)) [] = false := rfl
+example : (applied (.closure [] .i64 Row.pure (.int 1))).divFree Limited.all (fun _ => 0) through none [] =
+    true := rfl
+example : (applied (.fnRef "double" [] [])).divFree Limited.all (fun _ => 0) through none [] = true := rfl
+example : (Expr.letIn "g" (.fn [] .i64 Row.pure) (.closure [] .i64 Row.pure (.int 1))
+    (applied (.var "g"))).divFree Limited.all (fun _ => 0) through none [] = false := rfl
 
 /-! ## Descending recursion -/
 
