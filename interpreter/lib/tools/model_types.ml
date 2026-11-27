@@ -181,9 +181,11 @@ let rec ty cx (t : Types.ty) =
       tag "list" [ ty cx e ]
   | Con ({ home = "std.prelude"; name = "Map" }, [ k; v ]) when key cx k ->
       tag "map" [ ty cx k; ty cx v ]
-  | Con ({ home = "std.prelude"; name = "Map" }, _) ->
-      outside
-        "a map whose keys the calculus may not compare as the program does"
+  (* traits.hash-follows-written-eq: a map whose keys have impls that the program writes is
+     the list of its entries, each with its key's hash (Model_keys). *)
+  | Con ({ home = "std.prelude"; name = "Map" }, [ k; v ]) ->
+      tag "list"
+        [ tag "tuple" [ Arr [ tag "int" [ Str "u64" ]; ty cx k; ty cx v ] ] ]
   | Con ({ home = "std.prelude"; name = "Set" }, [ e ]) when key cx e ->
       tag "set" [ ty cx e ]
   (* views.what-view-is: a view of a viewable type (views.viewable-types). *)

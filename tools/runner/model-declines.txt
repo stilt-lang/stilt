@@ -42,9 +42,6 @@ conformance/packages/ungranted_run
 conformance/par/panics.lt
 conformance/parameters/constructors.lt
 conformance/parameters/constructors_several.lt
-conformance/parameters/shared_names.lt
-conformance/parameters/trait_functions.lt
-conformance/parameters/where_clauses.lt
 conformance/patterns/broken_module_in_pattern.lt
 conformance/patterns/shadowed_prelude_name_in_pattern.lt
 conformance/polymorphism/arguments.lt
@@ -125,7 +122,6 @@ conformance/std/argument_edges.lt
 conformance/std/arguments.lt
 conformance/std/cli_env.lt
 conformance/std/clock.lt
-conformance/std/collections.lt
 conformance/std/fs_files
 conformance/std/invalid_utf8_escapes_main
 conformance/std/io_errors
@@ -135,7 +131,6 @@ conformance/std/list_chunks_panic.lt
 conformance/std/map_compares_in_insertion_order.lt
 conformance/std/map_compares_only_equal_hashes.lt
 conformance/std/map_hashes_every_key.lt
-conformance/std/map_keeps_stored_key.lt
 conformance/std/math.lt
 conformance/std/random_below_panic.lt
 conformance/std/random_range_panic.lt
@@ -149,12 +144,6 @@ conformance/threads/scope_await.lt
 conformance/threads/scope_when.lt
 conformance/time/date_times.lt
 conformance/time/instants.lt
-conformance/traits/operators_use_impls.lt
-conformance/traits/structural_calls.lt
-conformance/traits/structural_hash_reaches_component.lt
-conformance/traits/structural_show.lt
-conformance/traits/user_impls_override.lt
-conformance/traits/written_eq_with_hash.lt
 conformance/variadics/dynamic_call.lt
 conformance/variadics/effects.lt
 conformance/variadics/recursion.lt

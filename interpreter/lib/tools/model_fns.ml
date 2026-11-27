@@ -120,17 +120,30 @@ let rec matched acc (written : Types.ty) (actual : Types.ty) =
   | Con (_, ws), Con (_, xs) | Tuple ws, Tuple xs -> pairs acc ws xs
   | _ -> acc
 
-(* The arguments of a generic impl that a call of one of its methods takes from its
-   receiver's type [self], which the impl's type matches (traits.implementing-trait): its
-   generics come first among the method's type parameters. *)
-let impl_args cx target targs args (s : Env.fn_sig) =
+(* The type a call of a trait's function is at: the [Self] it is named on, or its
+   receiver's type. *)
+let self_type ?self args =
+  match (self, args) with
+  | Some t, _ -> Some t
+  | None, t :: _ -> Some t
+  | None, [] -> None
+
+(* The arguments of a generic impl that a call of one of its functions takes from the type
+   [self] it is called at, which the impl's type matches, and those that the member types
+   of the impl's bounds imply (traits.implementing-trait and traits.member-types): its
+   generics come first among the function's type parameters. *)
+let impl_args cx target ?self targs args (s : Env.fn_sig) =
   match target with
   | Impl (trait, owner, _) -> (
-      match (Env.trait_impl cx.env ~trait owner, args) with
-      | Some { generics = _ :: _ as generics; self_ty; _ }, self :: _
+      match (Env.trait_impl cx.env ~trait owner, self_type ?self args) with
+      | Some ({ generics = _ :: _ as generics; _ } as impl), Some self
         when List.length generics + List.length targs
              = List.length s.type_params ->
-          let found = matched [] self_ty self in
+          let found =
+            match norm self with
+            | Con (_, a) -> Env.impl_subst cx.env [] impl a
+            | self -> matched [] impl.self_ty self
+          in
           let arg (v, _) =
             match List.assoc_opt v found with
             | Some t -> t
@@ -139,32 +152,36 @@ let impl_args cx target targs args (s : Env.fn_sig) =
                   "a generic impl whose receiver doesn't give its arguments"
           in
           List.map arg generics
-      | Some { generics = _ :: _; _ }, [] ->
+      | Some { generics = _ :: _; _ }, None ->
           outside "a generic impl's method without a receiver"
       | _ -> [])
   | _ -> []
 
-(* What a default's [Self] is: the type of its receiver, the type whose impl leaves the
-   method out (traits.impl-members). *)
-let self_of cx target args =
+(* What a default's [Self] is: the type it is called at, the type whose impl leaves the
+   function out, and what the trait's parameters are, the arguments that impl gives them
+   (traits.impl-members and traits.trait-arguments). *)
+let self_of cx target ?self args =
   match target with
   | Default (trait, _, name) -> (
-      match (trait_method cx trait name, args) with
-      | Some (info, _), _ when info.params <> [] ->
-          outside "the default of a trait with parameters"
-      | Some (info, { member_kind = Method _; _ }), self :: _ ->
-          [ (info.self_param, self) ]
+      match (trait_method cx trait name, self_type ?self args) with
+      | Some (info, _), Some self ->
+          let targs =
+            Option.value ~default:[] (Env.trait_args cx.env [] self trait)
+          in
+          if List.length targs <> List.length info.params then
+            outside "the default of a trait with parameters";
+          (info.self_param, self) :: List.combine info.params targs
       | _ -> outside "the default of a function without self")
   | _ -> []
 
-let instance cx target targs args =
+let instance ?self cx target targs args =
   let s = signature cx target in
-  let targs = impl_args cx target targs args s @ targs in
+  let targs = impl_args cx target ?self targs args s @ targs in
   if List.length s.type_params <> List.length targs then
     outside "a generic call of %s" (target_name target);
   if List.exists (fun t -> depth t > deepest_instance) targs then
     outside "a function called at ever deeper types";
-  let self = self_of cx target args in
+  let self = self_of cx target ?self args in
   let types_of =
     self @ List.map2 (fun (v, _) t -> (v, t)) s.type_params targs
   in

@@ -14,22 +14,25 @@ val code :
 val impl_args :
   Model_types.cx ->
   Model_types.target ->
+  ?self:Types.ty ->
   Types.ty list ->
   Types.ty list ->
   Env.fn_sig ->
   Types.ty list
-(** The arguments of a generic impl that a call of one of its methods takes from
-    its receiver's type, given the call's type arguments and its arguments'
-    types. *)
+(** The arguments of a generic impl that a call of one of its functions takes
+    from the type it is called at, [self] or its receiver's, given the call's
+    type arguments and its arguments' types. *)
 
 val instance :
+  ?self:Types.ty ->
   Model_types.cx ->
   Model_types.target ->
   Types.ty list ->
   Types.ty list ->
   Model_types.fn_instance
 (** The function at the type arguments of a call and the types of its arguments,
-    which give its row parameters' rows, met and so declared. *)
+    which give its row parameters' rows, met and so declared; a trait's function
+    at the type [self] it is named on, when it has no receiver to give it. *)
 
 val instantiated : Model_types.fn_instance -> Types.ty -> Types.ty
 (** A type of the function's, at the instance's arguments. *)

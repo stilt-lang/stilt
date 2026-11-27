@@ -34,6 +34,9 @@ let rec expr cx (e : Tast.expr) =
   | List es -> tag "list" [ ty cx (elem e.ty); Arr (List.map (expr cx) es) ]
   | Field (b, f) -> tag "field" [ expr cx b; Str f ]
   | Tuple_field (b, i) -> tag "field" [ expr cx b; Str (string_of_int i) ]
+  | Index (b, k) when Model_keys.keyed cx b.ty <> None ->
+      let kt, v = Option.get (Model_keys.keyed cx b.ty) in
+      Model_keys.index (Model_composed.at cx) cx kt v (expr cx b) (expr cx k)
   | Index (b, k) when is_map b.ty -> map_op "index" [ expr cx b; expr cx k ]
   | Index (b, i) -> tag "index" [ expr cx b; expr cx i ]
   | Call (callee, targs, args, _) -> call cx e callee targs args
@@ -50,10 +53,8 @@ let rec expr cx (e : Tast.expr) =
       | Some c ->
           op (tag "structural" [ Str c; orders ]) [ expr cx x; expr cx y ]
       | None -> outside "an operator")
-  | Binary (b, x, y) when Model_traits.composed_at cx b x.ty ->
-      Model_traits.composed_binary cx e b x.ty (expr cx x) (expr cx y)
-  | Binary (b, x, y) when Model_traits.through_written cx b x.ty ->
-      Model_traits.operator cx b (x.ty, expr cx x) (y.ty, expr cx y)
+  | Binary (b, x, y) when Model_impls.through_impls cx b x.ty ->
+      Model_impls.binary cx b x.ty (expr cx x) (expr cx y)
   | Binary (b, x, y) -> binary_at cx b x.ty y.ty (expr cx x) (expr cx y)
   | Closure (ps, _, body) -> closure cx e ps body
   | Block b -> block cx b
@@ -102,7 +103,9 @@ and control cx (e : Tast.expr) =
   | Return x -> tag "return" [ returned cx x ]
   | Float text -> float_lit e.ty text
   | Constant _ | Member_constant _ -> expr cx (constant cx e)
-  | Value_param _ | Trait_constant _ -> outside "a constant"
+  | Trait_constant (trait, name, self) ->
+      expr cx (Model_forms.trait_constant cx e trait name self)
+  | Value_param _ -> outside "a constant"
   | Callee (Function i, targs) when Model_fns.code cx (Function i) <> None ->
       Model_fns.value cx i targs
   | Callee (c, ts) -> eta_closure cx e (fun a r -> Tast.Call (c, ts, a, r))
@@ -142,8 +145,10 @@ and for_loop cx (e : Tast.expr) (p : Tast.pattern) it b =
     | Iter it when is_map it.ty -> (
         (* expressions.for-iterables: a map yields its pairs in insertion
            order, which are its entries (std.maps). *)
-        match norm it.ty with
-        | Con (_, [ k; v ]) ->
+        match (norm it.ty, Model_keys.keyed cx it.ty) with
+        | _, Some (k, v) ->
+            (Model_keys.entries cx k v (expr cx it), Types.Tuple [ k; v ])
+        | Con (_, [ k; v ]), None ->
             (map_op "entries" [ expr cx it ], Types.Tuple [ k; v ])
         | _ -> outside "an iteration over something other than a list")
     | Iter it -> (expr cx it, elem it.ty)
@@ -164,10 +169,10 @@ and for_loop cx (e : Tast.expr) (p : Tast.pattern) it b =
 
 and segment cx = function
   | Tast.Text s -> str_lit s
-  | Splice (x, None) -> Model_traits.shown cx x.ty (expr cx x)
+  | Splice (x, None) -> Model_impls.shown cx x.ty (expr cx x)
   | Splice (x, Some spec) ->
       let v = expr cx x in
-      formatted ~shown:(fun () -> Model_traits.shown cx x.ty v) x.ty spec v
+      formatted ~shown:(fun () -> Model_impls.shown cx x.ty v) x.ty spec v
 
 and call cx (e : Tast.expr) callee targs args =
   match (callee : Tast.callee) with
@@ -242,23 +247,23 @@ and trait_call cx (e : Tast.expr) (t : Hir.item) name self targs args =
   | Con (owner, _)
     when declared_record owner
          && Model_fns.code cx (Impl (t, owner, name)) <> None ->
-      code_call cx e (Impl (t, owner, name)) targs args
+      code_call ~self cx e (Impl (t, owner, name)) targs args
   | Con (owner, _)
     when declared_record owner
          && Env.trait_impl cx.env ~trait:t owner <> None
          && Model_fns.code cx (Default (t, owner, name)) <> None ->
       (* traits.impl-members: an impl that leaves out a method with a default has the
          default, its [Self] the impl's type. *)
-      code_call cx e (Default (t, owner, name)) targs args
+      code_call ~self cx e (Default (t, owner, name)) targs args
   | _ ->
       let values = List.map (fun (a : Tast.arg) -> expr cx a.value) args in
-      Model_traits.structural_call cx e t name self values
+      Model_impls.structural_call cx t name self values
 
 (* A call of a function with code, at the instance its type arguments and its
    arguments' types give. *)
-and code_call ?(maps = false) cx (e : Tast.expr) target targs args =
+and code_call ?(maps = false) ?self cx (e : Tast.expr) target targs args =
   let types = List.map (fun (a : Tast.arg) -> a.value.ty) args in
-  let inst = Model_fns.instance cx target targs types in
+  let inst = Model_fns.instance ?self cx target targs types in
   let f = tag "fnRef" [ Str inst.fkey; Arr []; Arr [] ] in
   let make passed = call_e cx f passed e.ty in
   (* projections.call-is-place: a call of a projection written for an access, a form of the

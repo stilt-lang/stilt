@@ -10,6 +10,17 @@ type store = Path of Model_json.t | Through of (Model_json.t -> Model_json.t)
 let write store w =
   match store with Path p -> tag "assign" [ p; w ] | Through f -> f w
 
+(* How a map's element is stored and read: by the calculus's own map, or as the export
+   writes a map whose keys have impls that the program writes (Model_keys). *)
+let element cx t read key =
+  match Model_keys.keyed cx t with
+  | Some (kt, v) ->
+      let at = Model_composed.at cx in
+      ( (fun w -> Model_keys.insert at cx kt v read key w),
+        Model_keys.index at cx kt v read key )
+  | None ->
+      ((fun w -> map_op "insert" [ read; key; w ]), map_op "index" [ read; key ])
+
 (* A place whose index expressions and keys are temporaries: their bindings,
    how a value is stored into it, and the expression that reads it. A place
    through a map's element stores the changed element back with [m[k] = …],
@@ -56,9 +67,10 @@ let rec receiver ~expr cx (e : Tast.expr) =
       let n = temp "key" k.loc in
       let lets, store, read = receiver ~expr cx b in
       let key = var_e n in
+      let insert, index = element cx b.ty read key in
       ( lets @ [ (n, ty cx k.ty, expr k) ],
-        Through (fun w -> write store (map_op "insert" [ read; key; w ])),
-        map_op "index" [ read; key ] )
+        Through (fun w -> write store (insert w)),
+        index )
   | Index (b, i) ->
       let n = Printf.sprintf "index/%d:%d" i.loc.line i.loc.col in
       let lets, store, read = receiver ~expr cx b in

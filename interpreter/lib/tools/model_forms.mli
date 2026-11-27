@@ -108,3 +108,9 @@ val eta :
 
 val constant : Model_types.cx -> Tast.expr -> Tast.expr
 (** A constant's read, as the expression its value is. *)
+
+val trait_constant :
+  Model_types.cx -> Tast.expr -> Hir.item -> string -> Types.ty -> Tast.expr
+(** [trait_constant cx e trait name self]: the read [e] of the constant [name]
+    of [trait] at the type [self], as the expression its value is, the impl's or
+    the trait's default (traits.trait-constants). *)

@@ -81,7 +81,7 @@ let structural_by cx name t =
         true
     | Con ({ home = "std.prelude"; name = "List" }, [ e ]) -> go seen e
     | Con ({ home = "std.prelude"; name = "Map" }, [ k; v ]) ->
-        (name = "Show" && go seen k && go seen v)
+        (name = "Show" && key cx k && go seen k && go seen v)
         || (name = "Eq" && key cx k && go seen v)
     | Con ({ home = "std.prelude"; name = "Set" }, [ e ]) ->
         (name = "Show" && go seen e) || (name = "Eq" && key cx e)
@@ -176,6 +176,45 @@ let constant cx (e : Tast.expr) : Tast.expr =
   | Member_constant (owner, m, _) ->
       code (List.assoc_opt (owner, m) cx.program.member_constants)
   | _ -> outside "a constant"
+
+(* traits.trait-constants: a trait constant's read at the type [self], as the expression of
+   its value: the impl's for [self]'s head, at [self]'s arguments, or the trait's default,
+   with [self] as its [Self] and the impl's arguments as the trait's parameters. Its value
+   is a constant expression, pure, so reading it where it is read gives the value a first
+   evaluation would (declarations.constant-evaluation). *)
+let trait_constant cx (_ : Tast.expr) trait name self : Tast.expr =
+  let code = function
+    | Some (Tast.Code x) -> x
+    | _ -> outside "a constant without code"
+  in
+  let at tenv x =
+    Check_zonk.map_expr ~ty:(Types.subst tenv []) ~row:(Types.subst_row tenv [])
+      x
+  in
+  let impl =
+    match norm self with
+    | Con (owner, args) -> (
+        match Env.trait_impl cx.env ~trait owner with
+        | Some impl
+          when List.exists (fun (m : Env.member) -> m.name = name) impl.members
+          ->
+            Some (owner, Env.impl_subst cx.env [] impl args)
+        | _ -> None)
+    | _ -> None
+  in
+  match (impl, Env.trait_info cx.env trait) with
+  | Some (owner, tenv), _ ->
+      at tenv
+        (code (List.assoc_opt (trait, owner, name) cx.program.impl_constants))
+  | None, Some info ->
+      let targs =
+        Option.value ~default:[] (Env.trait_args cx.env [] self trait)
+      in
+      if List.length targs <> List.length info.params then
+        outside "the default of a trait with parameters";
+      let tenv = (info.self_param, self) :: List.combine info.params targs in
+      at tenv (code (List.assoc_opt (trait, name) cx.program.default_constants))
+  | None, None -> outside "a constant"
 
 (* The name a constant is declared with in the model: its item's, or its owner's and
    its own. *)

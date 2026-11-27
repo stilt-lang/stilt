@@ -16,6 +16,61 @@ type callbacks = {
    one writes its result back to its receiver's place. *)
 let rec map_call (on : callbacks) cx (e : Tast.expr) name args =
   let values = List.map (fun (a : Tast.arg) -> on.expr a.value) args in
+  let map_ty =
+    match args with
+    | (a : Tast.arg) :: _ when is_map a.value.ty -> a.value.ty
+    | _ -> e.ty
+  in
+  match (name, args, Model_keys.keyed cx map_ty) with
+  | _, _, Some (k, v) -> keyed_call on cx e name args (k, v)
+  | _, _, None -> map_native on cx e name args values
+
+(* std.maps: a native of a map whose keys the calculus can't find, as the export writes
+   such a map (Model_keys). *)
+and keyed_call (on : callbacks) cx (e : Tast.expr) name args (k, v) =
+  let values = List.map (fun (a : Tast.arg) -> on.expr a.value) args in
+  let at = Model_composed.at cx in
+  let entries = Model_keys.entry_ty k v in
+  match (name, values) with
+  | "new", [] -> tag "list" [ ty cx entries; Arr [] ]
+  | "len", [ m ] -> op (tag "list" [ Str "len" ]) [ m ]
+  | "is_empty", [ m ] -> op (tag "list" [ Str "isEmpty" ]) [ m ]
+  | "contains", [ m; key ] -> Model_keys.contains at cx k v m key
+  | "get_or", [ m; key; d ] -> Model_keys.get_or at cx k v m key d
+  | "get", [ m; key ] -> Model_keys.get at cx k v m key
+  | "keys", [ m ] -> Model_keys.keys cx k v m
+  | "values", [ m ] -> Model_keys.values cx k v m
+  | "entries", [ m ] -> Model_keys.entries cx k v m
+  | "insert", _ -> (
+      match args with
+      | { value = receiver; _ } :: rest ->
+          on.stored receiver
+            (List.map (fun (a : Tast.arg) -> a.value) rest)
+            (fun read vs ->
+              match vs with
+              | [ key; x ] -> Model_keys.insert at cx k v read key x
+              | _ -> outside "the function Map.insert")
+      | [] -> outside "the function Map.insert")
+  | "remove", _ -> (
+      match args with
+      | [ m; key ] ->
+          let pair = temp "removed" e.loc in
+          let stored =
+            on.stored m.value [] (fun _ _ ->
+                tag "field" [ var_e pair; Str "0" ])
+          in
+          tag "letIn"
+            [
+              Str pair;
+              ty cx (Types.Tuple [ Model_keys.repr k v; e.ty ]);
+              Model_keys.remove at cx k v (on.expr m.value) (on.expr key.value);
+              tag "seq" [ stored; tag "field" [ var_e pair; Str "1" ] ];
+            ]
+      | _ -> outside "the function Map.remove")
+  | _ ->
+      outside "the function Map.%s of a map whose keys have written impls" name
+
+and map_native (on : callbacks) cx (e : Tast.expr) name args values =
   match (name, args) with
   | "get", [ m; k ] -> map_get on cx e m.value k.value
   | "remove", [ m; k ] -> map_remove on cx e m.value k.value
@@ -191,12 +246,13 @@ let pop (on : callbacks) cx (e : Tast.expr) receiver =
 (* The stable sort of the list [xs] by the keys [ks], both of the calculus,
    ascending or descending by [Ord.compare] on keys of type [k], whose [Ord]
    must be structural (std.lists). *)
-let by_keys cx ~descending k ks xs =
-  if not (structural_by cx "Ord" k) then
-    outside "a sort by keys whose Ord the program writes";
-  let pair (t, cs) = Arr [ Str t; Arr (List.map (fun c -> Str c) cs) ] in
-  let orders = Arr (List.map pair (ctor_orders cx k)) in
-  op (tag "sortedByKey" [ Bool descending; orders ]) [ ks; xs ]
+let by_keys cx ~descending k t ks xs =
+  if not (Model_impls.native_order cx k) then
+    Model_impls.sorted_by_keys cx ~descending k t ks xs
+  else
+    let pair (t, cs) = Arr [ Str t; Arr (List.map (fun c -> Str c) cs) ] in
+    let orders = Arr (List.map pair (ctor_orders cx k)) in
+    op (tag "sortedByKey" [ Bool descending; orders ]) [ ks; xs ]
 
 (* [xs.sorted_by(key)], the list [xs] and the function [key] of the calculus
    given: [key] called once for each element, in order, before the sort, each
@@ -216,7 +272,7 @@ let sorted_by cx (e : Tast.expr) ~descending (key_ty : Types.ty) xs key =
   in
   let loop = tag "for" [ Str x; ty cx t; var_e n; push ] in
   let keys = Types.Con (list_item, [ k ]) in
-  let sorted = by_keys cx ~descending k (var_e ks) (var_e n) in
+  let sorted = by_keys cx ~descending k t (var_e ks) (var_e n) in
   let collect =
     tag "varIn"
       [
@@ -255,7 +311,7 @@ let sort_call (on : callbacks) cx (e : Tast.expr) name (args : Tast.arg list) =
             Str x;
             ty cx receiver.ty;
             read;
-            by_keys cx ~descending t (var_e x) (var_e x);
+            by_keys cx ~descending t t (var_e x) (var_e x);
           ]
     | Some (k : Tast.expr), [ f ] ->
         sorted_by cx (result receiver) ~descending k.ty read f
