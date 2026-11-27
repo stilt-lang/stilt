@@ -45,7 +45,7 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .index he hi hfit, _, hη, θ => index_ok hs hη θ he hi hfit
   | _, _, _, _, .fnRef hd hlen hinst hres _ hpass htys, _, hη, θ =>
     fnRef_ok hη θ hD.wf hd hlen hinst hres hpass htys
-  | _, _, _, _, .method ht hm hc _ hf, _, hη, θ => method_ok hη θ hD.wf ht hm hc hf
+  | _, _, _, _, .method ht hm hc _ _ hf, _, hη, θ => method_ok hη θ hD.wf ht hm hc hf
   | _, _, _, _, .closure hnd _ _ hb hfit, _, hη, θ => closure_ok hη θ hnd hb hfit
   | _, _, _, _, .call hc ha hallow, _, hη, θ => apply_ok hs hη θ hD hc ha hallow
   | _, _, _, _, .letIn _ hi hfit hb, _, hη, θ => letIn_ok hs hη θ hi hfit hb

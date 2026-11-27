@@ -82,7 +82,9 @@ parameter's bounds there, in a scope that allows what the body's allows. -/
 structure TySubst.Fits (D : Decls) (scope scope' : RowScope) (s : TySubst) : Prop where
   ground : s.Ground
   viewable : ∀ p ∈ s, p.2.ViewsViewable
-  covers : ∀ p ∈ scope.types, ∃ σ, s.lookup p.name = some σ ∧ ∀ B ∈ p.bounds, Satisfies D scope' σ B
+  covers : ∀ p ∈ scope.types, ∃ σ, s.lookup p.name = some σ ∧ ∀ B ∈ p.bounds,
+    Satisfies D scope' σ B ∧
+      ∀ args, p.argsOf B = some args → TraitArgs D scope' σ B (args.map (Ty.substTys s))
   vars : ∀ v ∈ scope.vars, v ∈ scope'.vars
   pairs : ∀ v E, scope.pairs v E → scope'.pairs v E
   passOn : ∀ v E, scope.passOn v E → scope'.passOn v E
@@ -153,7 +155,7 @@ theorem Decls.ImplStep.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope')
     obtain ⟨σ, hl, hσ⟩ := hs.covers q hq
     show D.ImplStep scope' t S' ((s.lookup q.name).getD (.param q.name))
     rw [hl, Option.getD_some]
-    rcases hσ t.name hB with ⟨r, hr, rfl, hrB⟩ | ⟨hn, _⟩ | ⟨t', ht', hi⟩
+    rcases (hσ t.name hB).1 with ⟨r, hr, rfl, hrB⟩ | ⟨hn, _⟩ | ⟨t', ht', hi⟩
     · exact ⟨r, hr, rfl, hrB⟩
     · rw [PreludeTrait.ofName?_name] at hn
       cases hn
@@ -178,18 +180,80 @@ theorem TySubst.Fits.satisfies (hD : D.WellFormed) (hs : s.Fits D scope scope') 
     {B : Name} (h : Satisfies D scope τ B) : Satisfies D scope' (τ.substTys s) B := by
   rcases h with ⟨p, hp, rfl, hB⟩ | ⟨hn, h, hh, hi⟩ | ⟨t, ht, hi⟩
   · obtain ⟨σ, hl, hσ⟩ := hs.covers p hp
-    simpa [Ty.substTys, hl] using hσ B hB
+    simpa [Ty.substTys, hl] using (hσ B hB).1
   · rw [Ty.eq_of_head? hh, Head.substTys_type]
     exact .inr (.inl ⟨hn, h, by rw [← Ty.eq_of_head? hh]; exact hh, hi⟩)
   · exact .inr (.inr ⟨t, ht, hi.substTys hD hs⟩)
 
+/-- The arguments of an impl of a trait: one for each of the trait's parameters, each ground. -/
+theorem Decls.WellFormed.implArgs (hD : D.WellFormed) {B : Name} {h : Head} {i : TraitImpl}
+    (hi : D.traitImpl? B h = some i) :
+    ∃ t, D.trait? B = some t ∧ i.args.length = t.params.length ∧ ∀ a ∈ i.args, a.Ground := by
+  have hp := List.find?_some hi
+  simp only [Bool.and_eq_true, beq_iff_eq] at hp
+  obtain ⟨t, ht, hl, hg, -⟩ := hD.traitImpls i (List.mem_of_find?_eq_some hi)
+  exact ⟨t, hp.1 ▸ ht, hl, hg⟩
+
+/-- Ground arguments stay as they are in an instance. -/
+theorem substTys_map_of_ground {args : List Ty} (h : ∀ a ∈ args, a.Ground) (s : TySubst) :
+    args.map (Ty.substTys s) = args :=
+  (List.map_congr_left fun a ha => Ty.substTys_of_params (h a ha).2.1 s).trans (List.map_id _)
+
+/-- The arguments a type gives a trait, in an instance: a type parameter's through the type
+that the instantiation gives it, which meets the parameter's bound, and a type with a head
+its impl's, which are ground. -/
+theorem TraitArgs.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {τ : Ty} {B : Name}
+    {args : List Ty} (h : TraitArgs D scope τ B args) :
+    TraitArgs D scope' (τ.substTys s) B (args.map (Ty.substTys s)) := by
+  rcases h with ⟨q, hq, rfl, hB, ha⟩ | ⟨h, i, hh, hi, rfl⟩
+  · obtain ⟨σ, hl, hσ⟩ := hs.covers q hq
+    simpa [Ty.substTys, hl] using (hσ B hB).2 _ ha
+  · obtain ⟨-, -, -, hg⟩ := hD.implArgs hi
+    rw [Ty.eq_of_head? hh, Head.substTys_type, substTys_map_of_ground hg]
+    exact .inr ⟨h, i, by rw [← Ty.eq_of_head? hh]; exact hh, hi, rfl⟩
+
+/-- `Trait.m` at a type, in an instance: at a type parameter, the impl or the bound that the
+type the instantiation gives it has. -/
+theorem MethodAt.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {τ : Ty} {Tr : Name}
+    {args : List Ty} (h : MethodAt D scope τ Tr args) :
+    MethodAt D scope' (τ.substTys s) Tr (args.map (Ty.substTys s)) := by
+  rcases h with ⟨hn, q, hq, rfl, hB, ha | ⟨rfl, t, ht, htp⟩⟩ | ⟨h, i, hh, hi, rfl⟩
+  · obtain ⟨σ, hl, hσ⟩ := hs.covers q hq
+    have hsub : (Ty.param q.name).substTys s = σ := by simp [Ty.substTys, hl]
+    rw [hsub]
+    rcases (hσ Tr hB).2 _ ha with ⟨r, hr, rfl, hrB, hra⟩ | ⟨h, i, hh, hi, he⟩
+    · exact .inl ⟨hn, r, hr, rfl, hrB, .inl hra⟩
+    · exact .inr ⟨h, i, hh, hi, he⟩
+  · obtain ⟨σ, hl, hσ⟩ := hs.covers q hq
+    have hsub : (Ty.param q.name).substTys s = σ := by simp [Ty.substTys, hl]
+    rw [hsub, List.map_nil]
+    rcases (hσ Tr hB).1 with ⟨r, hr, rfl, hrB⟩ | ⟨-, h, hh, hi⟩ | ⟨_, ht', _⟩
+    · exact .inl ⟨hn, r, hr, rfl, hrB, .inr ⟨rfl, t, ht, htp⟩⟩
+    · obtain ⟨i, hi⟩ := Option.isSome_iff_exists.1 hi
+      obtain ⟨t', ht', hl', -⟩ := hD.implArgs hi
+      rw [ht] at ht'
+      cases ht'
+      rw [htp] at hl'
+      exact .inr ⟨h, i, hh, hi, List.eq_nil_of_length_eq_zero hl'⟩
+    · rw [hn] at ht'
+      exact nomatch ht'
+  · obtain ⟨-, -, -, hg⟩ := hD.implArgs hi
+    rw [Ty.eq_of_head? hh, Head.substTys_type, substTys_map_of_ground hg]
+    exact .inr ⟨h, i, by rw [← Ty.eq_of_head? hh]; exact hh, hi, rfl⟩
+
 theorem TySubst.Fits.typeArgs (hD : D.WellFormed) (hs : s.Fits D scope scope') {ps : List TypeParam} {τs : List Ty}
     (h : TypeArgsFit D scope ps τs) : TypeArgsFit D scope' ps (τs.map (Ty.substTys s)) := by
+  have hlen := h.length_eq
   unfold TypeArgsFit at h ⊢
-  induction h with
-  | nil => exact .nil
-  | cons hx _ ih =>
-    exact .cons ⟨hx.1.substTys hs.ground, hs.wellFormed hx.2.1, fun B hB => hs.satisfies hD (hx.2.2 B hB)⟩ ih
+  have hz : TySubst.then ((ps.map TypeParam.name).zip τs) s =
+      (ps.map TypeParam.name).zip (τs.map (Ty.substTys s)) := TySubst.then_zip _ _ _
+  refine Forall₂.imp_map (fun _ _ hx => ⟨hx.1.substTys hs.ground, hs.wellFormed hx.2.1, fun B hB =>
+    ⟨hs.satisfies hD (hx.2.2 B hB).1, fun args ha => ⟨((hx.2.2 B hB).2 args ha).1, ?_⟩⟩⟩) h
+  have h' := ((hx.2.2 B hB).2 args ha).2.substTys hD hs
+  rw [List.map_map] at h'
+  rwa [List.map_congr_left fun a hm => by
+    rw [Function.comp_apply, Ty.substTys_substTys _ _ _ fun T hT =>
+      List.lookup_zip_isSome (((hx.2.2 B hB).2 args ha).1 a hm T hT) (by simpa using hlen.symm), hz]] at h'
 
 theorem TySubst.Fits.callAllowed (hs : s.Fits D scope scope') {fx : Effects} {σ : Row}
     (h : CallAllowed scope fx σ) : CallAllowed scope' fx σ :=
@@ -364,10 +428,5 @@ theorem armRows_substTys (s : TySubst) : ∀ arms : List Arm,
     simp only [armRows] at ih ⊢
     cases g <;> cases hp : p.hasConst <;>
       simp [substArmTys, substGuardTys, Arm.counts, hp, ih]
-
-theorem Forall₂.length_eq {α β : Type} {R : α → β → Prop} :
-    ∀ {xs : List α} {ys : List β}, Forall₂ R xs ys → xs.length = ys.length
-  | _, _, .nil => rfl
-  | _, _, .cons _ h => by simp [Forall₂.length_eq h]
 
 end Stilt

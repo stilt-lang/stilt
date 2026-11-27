@@ -40,12 +40,12 @@ theorem Decls.WellFormed.implFn (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl
     (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ) {h : Head} {i : TraitImpl}
     (hi : D.traitImpl? Tr h = some i) :
     ∃ d, D.fn? (implName Tr h m) = some d ∧ d.typeParams = [] ∧ d.rowParams = [] ∧
-      d.type = σ.substTys [(selfParam, h.type)] := by
+      d.type = σ.substTys ((selfParam, h.type) :: t.params.zip i.args) := by
   have him := List.mem_of_find?_eq_some hi
   have hp := List.find?_some hi
   simp only [Bool.and_eq_true, beq_iff_eq] at hp
   obtain ⟨rfl, rfl⟩ := hp
-  obtain ⟨t', ht', hfns⟩ := hD.traitImpls i him
+  obtain ⟨t', ht', -, -, hfns⟩ := hD.traitImpls i him
   rw [ht] at ht'
   obtain rfl := Option.some.inj ht'
   obtain ⟨d, hd, rfl, htp, hrp, hty⟩ := hfns _ σ hm
@@ -64,26 +64,25 @@ include hη
 /-- `Trait.m` at a type of an instance is a function value of the method's
 type at that type. -/
 theorem method_ok (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
-    (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ) (hc : τ.Closed)
-    (hf : MethodAt D scope τ Tr) :
-    Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v ((σ.substTys [(selfParam, τ)]).close η))
+    {args : List Ty} (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ)
+    (hc : τ.Closed) (hf : MethodAt D scope τ Tr args) :
+    Eval.Ok D Γ η (fx.exits D η)
+      (fun v => Value.Typed D v ((σ.substTys ((selfParam, τ) :: t.params.zip args)).close η))
       (eval D Copy.memory (n + 1) ((Expr.method Tr m τ).substRows θ)) := by
-  obtain ⟨h, hh, hi⟩ : ∃ h, τ.head? = some h ∧ (D.traitImpl? Tr h).isSome := by
-    rcases hf with ⟨hp, ⟨p, hp', _⟩ | ⟨-, hi⟩ | ⟨_, ht', _⟩⟩ | hi
+  obtain ⟨h, i, hh, hi, rfl⟩ : ∃ h i, τ.head? = some h ∧ D.traitImpl? Tr h = some i ∧
+      i.args = args := by
+    rcases hf with ⟨-, p, hp', _⟩ | hi
     · rw [hη.types] at hp'
       exact nomatch hp'
     · exact hi
-    · rw [hp] at ht'
-      exact nomatch ht'
-    · exact hi
-  obtain ⟨i, hi⟩ := Option.isSome_iff_exists.1 hi
   obtain ⟨d, hd, htp, hrp, hty⟩ := hD.implFn ht hm hi
+  obtain ⟨-, -, -, hg⟩ := hD.implArgs hi
   obtain rfl := Ty.eq_of_head? hh
   have hsig := (hD.traits t (List.mem_of_find?_eq_some ht)).closed _ (mem_of_lookup hm)
   have hclosed : d.type.Closed := hty ▸ hsig.substTys fun q hq => by
-    simp only [List.mem_singleton] at hq
-    subst hq
-    exact h.ground_type
+    rcases List.mem_cons.1 hq with rfl | hq
+    · exact h.ground_type
+    · exact hg _ (List.of_mem_zip hq).2
   have hδ : (d.typeArgs []).Fits D d.scope d.scope.instantiated :=
     ⟨fun _ hq => by simp [FnDecl.typeArgs] at hq, fun _ hq => by simp [FnDecl.typeArgs] at hq,
       fun q hq => by simp [FnDecl.scope, htp] at hq,
@@ -93,7 +92,8 @@ theorem method_ok (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
     exact nomatch hv
   have hη' : η.Respects d.scope.instantiated :=
     ⟨fun v E hp => (hnone v E hp).elim, fun v E hp => (hnone v E hp).elim, rfl, hη.noResume⟩
-  have hv : Value.Typed D (Value.function (implName Tr h m) [] []) ((σ.substTys [(selfParam, h.type)]).close η) :=
+  have hv : Value.Typed D (Value.function (implName Tr h m) [] [])
+      ((σ.substTys ((selfParam, h.type) :: t.params.zip i.args)).close η) :=
     .function hd hδ hη' (by simp [FnDecl.typeArgs, hty]; exact .refl _)
   rw [show (Expr.method Tr m h.type).substRows θ = .method Tr m h.type by
     simp [Expr.substRows, Ty.substRows_of_closed θ _ hc]]

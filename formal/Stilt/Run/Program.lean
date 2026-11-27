@@ -23,7 +23,7 @@ namespace Stilt.Run
 open Lean (Json)
 
 def typeParam : Decoder TypeParam
-  | .arr #[n, bs] => return ⟨← str n, ← list str bs⟩
+  | .arr #[n, bs] => return ⟨← str n, ← list str bs, []⟩
   | j => throw s!"a type parameter, not {j.compress}"
 
 /-- Limits: an array of their names, `"panic"`, `"overflow"` and `"div"` (facts.without). -/
@@ -71,9 +71,9 @@ def decls (j : Json) : Except String Decls := do
       pure ⟨t, fs, []⟩)
     traits := ← get "traits" >>= list (fun t => do
       let (n, ms) ← pair str (list (pair str ty)) t
-      pure ⟨n, ms⟩)
+      pure ⟨n, ms, []⟩)
     traitImpls := ← get "traitImpls" >>= list (fun i => match i with
-      | .arr #[t, h, fs] => return ⟨← str t, ← head h, ← list fnDecl fs⟩
+      | .arr #[t, h, fs] => return ⟨← str t, ← head h, ← list fnDecl fs, []⟩
       | _ => throw s!"a trait impl, not {i.compress}")
     effects := ← (j.getObjVal? "effects").toOption.getD (.arr #[]) |> list (fun e => do
       let (n, ops) ← pair str (list (pair str (pair ty ty))) e

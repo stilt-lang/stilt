@@ -65,7 +65,7 @@ theorem HasType.weaken (Δ : Ctx) :
   | _, _, _, _, .elem he hf => .elem (HasType.weaken Δ he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.weaken Δ he) (HasType.weaken Δ hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
-  | _, _, _, _, .method ht hm hc hwf hf => .method ht hm hc hwf hf
+  | _, _, _, _, .method ht hm hc hwf hl hf => .method ht hm hc hwf hl hf
   | _, _, _, _, .closure hnd hpt hwf hb hfit =>
     .closure hnd hpt hwf
       (by rw [Ctx.freeze_append, Ctx.params_append]; exact HasType.weaken Δ.freeze hb) hfit
@@ -177,16 +177,20 @@ theorem Satisfies.of_le {τ : Ty} {B : Name} (h : Satisfies D s τ B) (hs : s.Le
   h.imp (fun ⟨p, hp, h⟩ => ⟨p, hs.types p hp, h⟩)
     (Or.imp id fun ⟨t, ht, hi⟩ => ⟨t, ht, hi.of_types hs.types⟩)
 
-theorem MethodAt.of_le {τ : Ty} {Tr : Name} (h : MethodAt D s τ Tr) (hs : s.Le s') :
-    MethodAt D s' τ Tr :=
-  h.imp (fun ⟨hp, hsat⟩ => ⟨hp, hsat.of_le hs⟩) id
+theorem MethodAt.of_le {τ : Ty} {Tr : Name} {args : List Ty} (h : MethodAt D s τ Tr args)
+    (hs : s.Le s') : MethodAt D s' τ Tr args :=
+  h.imp (fun ⟨hp, q, hq, h⟩ => ⟨hp, q, hs.types q hq, h⟩) id
+
+theorem TraitArgs.of_le {τ : Ty} {B : Name} {args : List Ty} (h : TraitArgs D s τ B args)
+    (hs : s.Le s') : TraitArgs D s' τ B args :=
+  h.imp (fun ⟨q, hq, h⟩ => ⟨q, hs.types q hq, h⟩) id
 
 theorem TypeArgsFit.of_le {ps : List TypeParam} {τs : List Ty} (h : TypeArgsFit D s ps τs)
     (hs : s.Le s') : TypeArgsFit D s' ps τs := by
   unfold TypeArgsFit at h ⊢
-  induction h with
-  | nil => exact .nil
-  | cons hx _ ih => exact .cons ⟨hx.1, hx.2.1.of_le hs, fun B hB => (hx.2.2 B hB).of_le hs⟩ ih
+  exact Forall₂.imp (fun hx => ⟨hx.1, hx.2.1.of_le hs, fun B hB =>
+    ⟨(hx.2.2 B hB).1.of_le hs, fun args ha =>
+      ⟨((hx.2.2 B hB).2 args ha).1, ((hx.2.2 B hB).2 args ha).2.of_le hs⟩⟩⟩) h
 
 /-- The scope without its type parameters grows with the scope. -/
 theorem RowScope.Le.withoutTypes (hs : s.Le s') :
@@ -212,7 +216,7 @@ theorem HasType.of_le (hs : s.Le s') :
   | _, _, _, _, .index he hi hfit => .index (HasType.of_le hs he) (HasType.of_le hs hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys =>
     .fnRef hf hlen hinst hres (hwf.of_le hs) (hpass.of_le hs) (htys.of_le hs)
-  | _, _, _, _, .method ht hm hc hwf hf => .method ht hm hc (hwf.of_le hs) (hf.of_le hs)
+  | _, _, _, _, .method ht hm hc hwf hl hf => .method ht hm hc (hwf.of_le hs) hl (hf.of_le hs)
   | _, _, _, _, .closure hnd hpt hwf hb hfit =>
     .closure hnd hpt (hwf.of_le hs) (HasType.of_le hs hb) hfit
   | _, _, _, _, .call hf has hcall =>

@@ -133,15 +133,16 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   of the trait without `self` is named on a type the same way, as `T.empty()` on a type
   parameter bounded by the trait and `i64.empty()` on a type with an impl, and `T.empty` is
   a function value (traits.functions-without-self); the calculus leaves out a trait's
-  constants and defaults. Of `Eq`,
+  constants and defaults. The trait's parameters are the arguments that the bound or the
+  impl gives them (traits.trait-arguments and traits.bound-arguments). Of `Eq`,
   `Ord` and `Show`, it names the impls that the program writes, which `==`, `<` and an
   interpolation at their types call (`MethodAt`); their built-in and structural impls are
   the calculus's operations. -/
-  | method {Γ fx Tr t m σ τ} :
+  | method {Γ fx Tr t m σ τ args} :
       D.trait? Tr = some t →
       t.methods.lookup m = some σ →
-      τ.Closed → τ.WellFormed scope → MethodAt D scope τ Tr →
-      HasType Γ fx (.method Tr m τ) (σ.substTys [(selfParam, τ)])
+      τ.Closed → τ.WellFormed scope → args.length = t.params.length → MethodAt D scope τ Tr args →
+      HasType Γ fx (.method Tr m τ) (σ.substTys ((selfParam, τ) :: t.params.zip args))
   /-- A closure's body sees copies of the variables in scope, which it can't
   modify (expressions.capture), and its effects fit the closure's own row, not the
   row around it (effects.missing-effects). Its parameters are never non-escaping

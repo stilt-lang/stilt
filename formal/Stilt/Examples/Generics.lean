@@ -15,7 +15,8 @@ types.no-type-arguments). Each program raises the value it shows, as in
 namespace Stilt.Examples.Generics
 
 /-- `trait Size { fn size(self) -> i64 }`. -/
-private def size : TraitDecl := ⟨"Size", [("size", .fn [(.let, .param selfParam)] .i64 Row.pure)]⟩
+private def size : TraitDecl :=
+  ⟨"Size", [("size", .fn [(.let, .param selfParam)] .i64 Row.pure)], []⟩
 
 /-- `type Point = { x: i64, y: i64 }`. -/
 private def point : RecordDecl := ⟨"Point", [("x", .i64), ("y", .i64)], []⟩
@@ -25,12 +26,12 @@ private def sizeFn (τ : Ty) (body : Expr) : FnDecl :=
   ⟨"size", [], [], [⟨.let, selfName, τ, none⟩], .i64, Row.pure, body, {}⟩
 
 /-- `impl Size for i64 { fn size(self) -> i64 { self } }`. -/
-private def sizeI64 : TraitImpl := ⟨"Size", .int .i64, [sizeFn .i64 (.var selfName)]⟩
+private def sizeI64 : TraitImpl := ⟨"Size", .int .i64, [sizeFn .i64 (.var selfName)], []⟩
 
 /-- `impl Size for Point { fn size(self) -> i64 { self.x + self.y } }`. -/
 private def sizePoint : TraitImpl :=
   ⟨"Size", .record "Point", [sizeFn (.record "Point" [])
-    (.op (.arith .add .i64) [.field (.var selfName) "x", .field (.var selfName) "y"])]⟩
+    (.op (.arith .add .i64) [.field (.var selfName) "x", .field (.var selfName) "y"])], []⟩
 
 /-- `e.size()` on a value of type `τ`, which calls `Size.size` at `τ`. -/
 private def sizeOf (τ : Ty) (e : Expr) (result : Ty :=
@@ -39,7 +40,7 @@ private def sizeOf (τ : Ty) (e : Expr) (result : Ty :=
 /-- `fn twice<T: Size>(v: T) -> i64 { v.size() + v.size() }`. The calls go
 through the bound (traits.method-resolution). -/
 private def twice : FnDecl :=
-  ⟨"twice", [⟨"T", ["Size"]⟩], [], [⟨.let, "v", .param "T", none⟩], .i64, Row.pure,
+  ⟨"twice", [⟨"T", ["Size"], []⟩], [], [⟨.let, "v", .param "T", none⟩], .i64, Row.pure,
     .op (.arith .add .i64) [sizeOf (.param "T") (.var "v"), sizeOf (.param "T") (.var "v")], {}⟩
 
 private def decls : Decls := ⟨[point], [], [twice], [], [size], [sizeI64, sizePoint], [], []⟩
@@ -80,11 +81,12 @@ example : twice.WellTyped decls twice.scope := by
     simp only [Ty.params, List.mem_singleton] at hT
     simp [hT, FnDecl.scope, twice]
   have hsat : Satisfies decls twice.scope (.param "T") "Size" :=
-    .inl ⟨⟨"T", ["Size"]⟩, by simp [FnDecl.scope, twice], rfl, by simp⟩
+    .inl ⟨⟨"T", ["Size"], []⟩, by simp [FnDecl.scope, twice], rfl, by simp⟩
   have hm : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (.method "Size" "size" (.param "T")) (.fn [(.let, .param "T")] .i64 Row.pure) :=
     .method (t := size) (m := "size") (σ := .fn [(.let, .param selfParam)] .i64 Row.pure) rfl rfl
-      (param_closed _) hT (.inl ⟨rfl, hsat⟩)
+      (param_closed _) hT rfl
+      (.inl ⟨rfl, ⟨"T", ["Size"], []⟩, by simp [FnDecl.scope, twice], rfl, by simp, .inr ⟨rfl, size, rfl, rfl⟩⟩)
   have hcall : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (sizeOf (.param "T") (.var "v")) .i64 :=
     .call hm (.value (by decide) (.var rfl) (.refl _) .nil)
@@ -109,7 +111,7 @@ example (s : RowScope) (Γ : Ctx) (fx : Effects) (τ : Ty) :
 
 /-- Without a bound, a body knows nothing of `T`: `fn bad<T>(v: T) -> i64 {
 v.size() }` can't call `size` (traits.unsatisfied-bounds). -/
-example : ¬Satisfies decls ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", []⟩]⟩ (.param "T") "Size" := by
+example : ¬Satisfies decls ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", [], []⟩]⟩ (.param "T") "Size" := by
   rintro (⟨p, hp, _, hB⟩ | ⟨_, _, hh, _⟩ | ⟨_, ht, _⟩)
   · simp only [List.mem_singleton] at hp
     subst hp

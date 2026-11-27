@@ -45,22 +45,55 @@ def Satisfies (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) : Prop :=
     (PreludeTrait.ofName? B = none ∧ ∃ h, τ.head? = some h ∧ (D.traitImpl? B h).isSome) ∨
     ∃ t, PreludeTrait.ofName? B = some t ∧ D.Implements scope t τ
 
-/-- `Trait.m` at `τ` names a method that the evaluator finds (traits.qualified-calls): the
-method of a trait other than `Eq`, `Ord` and `Show` at a type that meets the trait as a
-bound does, a type parameter through its bounds included, or the method of the impl that the
-program writes for `τ`'s head, an impl of `Eq`, `Ord` or `Show` among them, which replaces the
-structural one (traits.structural-impls). So `a == b` at a type whose `Eq` the program writes
-is `Eq.eq(a, b)`, a call of the impl's method, and `a < b` tests the `Ordering` that
-`Ord.compare(a, b)` gives (traits.operators). The built-in and structural impls of `Eq`, `Ord`
-and `Show` are the calculus's operations, which no `Trait.m` names. -/
-def MethodAt (D : Decls) (scope : RowScope) (τ : Ty) (Tr : Name) : Prop :=
-  (PreludeTrait.ofName? Tr = none ∧ Satisfies D scope τ Tr) ∨
-    ∃ h, τ.head? = some h ∧ (D.traitImpl? Tr h).isSome
+/-- The arguments `args` that `τ` gives the parameters of the trait `B`, as far as a body
+whose type parameters `scope` describes knows: a type parameter through a bound of `B` that
+writes them, and a type with a head through the program's impl of `B` for it, whose type fixes
+them (traits.trait-arguments and traits.bound-arguments). A type meets a bound that writes
+arguments when it gives the trait those. -/
+def TraitArgs (D : Decls) (scope : RowScope) (τ : Ty) (B : Name) (args : List Ty) : Prop :=
+  (∃ p ∈ scope.types, τ = .param p.name ∧ B ∈ p.bounds ∧ p.argsOf B = some args) ∨
+    ∃ h i, τ.head? = some h ∧ D.traitImpl? B h = some i ∧ i.args = args
+
+/-- `Trait.m` at `τ` names a function that the evaluator finds (traits.qualified-calls), at
+the arguments `args` of the trait's parameters: the function of a trait other than `Eq`, `Ord`,
+`Show` and `Hash` at a type parameter bounded by the trait, whose bound gives the arguments,
+none for a trait without parameters, or the function of the impl that the program writes
+for `τ`'s head, at the arguments the impl gives, an impl of a prelude trait among them, which
+replaces the structural one (traits.structural-impls). So `a == b` at a type whose `Eq` the
+program writes is `Eq.eq(a, b)`, a call of the impl's method, and `a < b` tests the `Ordering`
+that `Ord.compare(a, b)` gives (traits.operators). The built-in and structural impls of the
+prelude traits are the calculus's operations, which no `Trait.m` names. -/
+def MethodAt (D : Decls) (scope : RowScope) (τ : Ty) (Tr : Name) (args : List Ty) : Prop :=
+  (PreludeTrait.ofName? Tr = none ∧ ∃ p ∈ scope.types, τ = .param p.name ∧ Tr ∈ p.bounds ∧
+      (p.argsOf Tr = some args ∨ args = [] ∧ ∃ t, D.trait? Tr = some t ∧ t.params = [])) ∨
+    ∃ h i, τ.head? = some h ∧ D.traitImpl? Tr h = some i ∧ i.args = args
+
+/-- A relation that pairs two lists pairs them under a weaker one. -/
+theorem Forall₂.imp {α β : Type} {R R' : α → β → Prop} (h : ∀ {x y}, R x y → R' x y) :
+    ∀ {xs : List α} {ys : List β}, Forall₂ R xs ys → Forall₂ R' xs ys
+  | _, _, .nil => .nil
+  | _, _, .cons hxy hs => .cons (h hxy) (Forall₂.imp h hs)
+
+/-- A relation that pairs two lists pairs the first with the second's images under a relation
+that pairs each element with its image. -/
+theorem Forall₂.imp_map {α β γ : Type} {R : α → β → Prop} {R' : α → γ → Prop} {f : β → γ}
+    (h : ∀ x y, R x y → R' x (f y)) :
+    ∀ {xs : List α} {ys : List β}, Forall₂ R xs ys → Forall₂ R' xs (ys.map f)
+  | _, _, .nil => .nil
+  | _, _, .cons hxy hs => .cons (h _ _ hxy) (Forall₂.imp_map h hs)
+
+theorem Forall₂.length_eq {α β : Type} {R : α → β → Prop} :
+    ∀ {xs : List α} {ys : List β}, Forall₂ R xs ys → xs.length = ys.length
+  | _, _, .nil => rfl
+  | _, _, .cons _ h => by simp [Forall₂.length_eq h]
 
 /-- The type arguments of a use of a function, one for each of its type
 parameters: closed, well formed where the use is, and meeting the parameter's
-bounds (traits.unsatisfied-bounds). -/
+bounds (traits.unsatisfied-bounds), a bound that writes its trait's arguments at the use's
+type arguments, which its arguments may name (traits.bound-arguments). -/
 def TypeArgsFit (D : Decls) (scope : RowScope) (ps : List TypeParam) (τs : List Ty) : Prop :=
-  Forall₂ (fun p τ => τ.Closed ∧ τ.WellFormed scope ∧ ∀ B ∈ p.bounds, Satisfies D scope τ B) ps τs
+  Forall₂ (fun p τ => τ.Closed ∧ τ.WellFormed scope ∧ ∀ B ∈ p.bounds, Satisfies D scope τ B ∧
+      ∀ args, p.argsOf B = some args → (∀ a ∈ args, ∀ T ∈ a.params, T ∈ ps.map TypeParam.name) ∧
+        TraitArgs D scope τ B (args.map (Ty.substTys ((ps.map TypeParam.name).zip τs)))) ps τs
 
 end Stilt

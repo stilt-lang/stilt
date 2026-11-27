@@ -38,17 +38,22 @@ theorem fnRefType_substTys (hD : D.WellFormed) (hs : s.Ground) {f : Name} {d : F
   rw [← Ty.substTys_substRows hs, Ty.substTys_substTys _ _ _ hcov, FnDecl.typeArgs,
     TySubst.then_zip, FnDecl.typeArgs]
 
-/-- The type of `Trait.m` at an instance is the method's type at the instance. -/
+/-- The type of `Trait.m` at an instance is the method's type at the instance, with the
+trait's arguments instantiated. -/
 theorem methodType_substTys (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
-    (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ) (s : TySubst) :
-    (σ.substTys [(selfParam, τ)]).substTys s = σ.substTys [(selfParam, τ.substTys s)] := by
+    {args : List Ty} (ht : D.trait? Tr = some t) (hm : t.methods.lookup m = some σ)
+    (hl : args.length = t.params.length) (s : TySubst) :
+    (σ.substTys ((selfParam, τ) :: t.params.zip args)).substTys s =
+      σ.substTys ((selfParam, τ.substTys s) :: t.params.zip (args.map (Ty.substTys s))) := by
   have hsig := (hD.traits t (List.mem_of_find?_eq_some ht)).signatures _ (mem_of_lookup hm)
-  rw [Ty.substTys_substTys _ _ _ fun T hT => ?_]
-  · rfl
+  have hz := TySubst.then_zip (selfParam :: t.params) (τ :: args) s
+  simp only [List.zip_cons_cons, List.map_cons] at hz
+  rw [Ty.substTys_substTys _ _ _ fun T hT => ?_, hz]
   have := hsig.2.1 T hT
-  simp only [TraitDecl.scope, List.map_cons, List.map_nil, List.mem_singleton] at this
-  subst this
-  rfl
+  simp only [TraitDecl.scope, List.map_cons, List.map_map] at this
+  have hT' : T ∈ selfParam :: t.params := by simpa [Function.comp_def] using this
+  have := List.lookup_zip_isSome hT' (bs := τ :: args) (by simp [hl])
+  simpa only [List.zip_cons_cons] using this
 
 /-- Where an expression sits, in an instance: a `return`'s result type
 instantiated, the rest as it is. -/
@@ -88,15 +93,12 @@ theorem HasType.fnRef_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') 
 theorem HasType.method_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {Γ : Ctx}
     {fx : Effects} {Tr m : Name} {t : TraitDecl} {σ τ : Ty} (ht : D.trait? Tr = some t)
     (hm : t.methods.lookup m = some σ) (hc : τ.Closed) (hwf : τ.WellFormed scope)
-    (hf : MethodAt D scope τ Tr) :
+    {args : List Ty} (hl : args.length = t.params.length) (hf : MethodAt D scope τ Tr args) :
     HasType D scope' (Γ.substTys s) fx ((Expr.method Tr m τ).substTys s)
-      ((σ.substTys [(selfParam, τ)]).substTys s) := by
-  rw [methodType_substTys hD ht hm s]
-  refine .method ht hm (hc.substTys hs.ground) (hs.wellFormed hwf) ?_
-  rcases hf with ⟨hp, hsat⟩ | ⟨h, hh, hi⟩
-  · exact .inl ⟨hp, hs.satisfies hD hsat⟩
-  · rw [Ty.eq_of_head? hh, Head.substTys_type]
-    exact .inr ⟨h, by rw [← Ty.eq_of_head? hh]; exact hh, hi⟩
+      ((σ.substTys ((selfParam, τ) :: t.params.zip args)).substTys s) := by
+  rw [methodType_substTys hD ht hm hl s]
+  exact .method ht hm (hc.substTys hs.ground) (hs.wellFormed hwf) (by simpa using hl)
+    (hf.substTys hD hs)
 
 /-- A closure literal, instantiated, from its instantiated body. -/
 theorem HasType.closure_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : Effects}
@@ -244,7 +246,7 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     .index (HasType.substTys hD hs he hfx) (HasType.substTys hD hs hi hfx) (hfit.substTys s)
   | _, _, _, _, .fnRef hd hlen hinst hres hwf hpass htys, _ =>
     HasType.fnRef_substTys hD hs hd hlen hinst hres hwf hpass htys
-  | _, _, _, _, .method ht hm hc hwf hf, _ => HasType.method_substTys hD hs ht hm hc hwf hf
+  | _, _, _, _, .method ht hm hc hwf hl hf, _ => HasType.method_substTys hD hs ht hm hc hwf hl hf
   | _, _, _, _, .closure (ρ := ρ) hnd hpt hwf hb hfit, _ => by
     have h := HasType.substTys hD hs hb (hwf.2.2.1 ρ (by simp [Ty.rows, Row.mem_rows_self]))
     rw [Ctx.params_substTys, Ctx.freeze_substTys] at h
@@ -438,21 +440,31 @@ theorem TypeArgsFit.fits (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) {sc
     obtain ⟨_, _, _, hw, _⟩ := Forall₂.exists_of_mem_right h hτ
     exact hw.2.2.2
   · obtain ⟨τ, hl, _, _, hb⟩ := Forall₂.lookup_zip h (hD.typeParams d hd) hp
-    refine ⟨τ, hl, fun B hB => ?_⟩
-    rcases hb B hB with ⟨q, hq, _⟩ | hi
-    · rw [hscope] at hq
-      exact nomatch hq
-    · exact .inr (hi.imp id fun ⟨t, ht, h⟩ => ⟨t, ht, h.of_types fun q hq => by
-        rw [hscope] at hq
-        exact nomatch hq⟩)
+    refine ⟨τ, hl, fun B hB => ⟨?_, fun args ha => ?_⟩⟩
+    · rcases (hb B hB).1 with ⟨q, hq, _⟩ | hi
+      · rw [hscope] at hq
+        exact nomatch hq
+      · exact .inr (hi.imp id fun ⟨t, ht, h⟩ => ⟨t, ht, h.of_types fun q hq => by
+          rw [hscope] at hq
+          exact nomatch hq⟩)
+    · rcases ((hb B hB).2 args ha).2 with ⟨q, hq, _⟩ | hi
+      · rw [hscope] at hq
+        exact nomatch hq
+      · exact .inr hi
 
 /-- Closed type arguments have no row variable for an instantiation to replace. -/
 theorem TypeArgsFit.substRows {scope : RowScope} {ps : List TypeParam} {τs : List Ty}
     (h : TypeArgsFit D scope ps τs) (θ : RowSubst) : substTysRows θ τs = τs := by
   unfold TypeArgsFit at h
-  induction h with
+  have hc : ∀ τ ∈ τs, τ.Closed := fun τ hτ =>
+    let ⟨_, _, hx⟩ := Forall₂.exists_of_mem_right h hτ
+    hx.1
+  clear h
+  induction τs with
   | nil => rfl
-  | cons hx _ ih => rw [substTysRows, Ty.substRows_of_closed θ _ hx.1, ih]
+  | cons τ τs ih =>
+    rw [substTysRows, Ty.substRows_of_closed θ _ (hc τ List.mem_cons_self),
+      ih fun τ' h' => hc τ' (List.mem_cons_of_mem _ h')]
 
 /-- A function's row names no type parameter. -/
 theorem Decls.WellFormed.rowParamFree (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) :

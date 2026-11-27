@@ -146,25 +146,40 @@ theorem Decls.receivers_of_nil {D : Decls} (himpls : D.impls = [])
     (hself : ∀ d ∈ D.functions, ∀ p ∈ d.params, p.name ≠ selfName) : D.Receivers :=
   ⟨by simp [himpls], hself, by simp [himpls], by simp [himpls]⟩
 
-/-- The scope of a trait's signatures: `Self` alone, and no row variable. -/
-def TraitDecl.scope : RowScope := ⟨[], fun _ _ => False, fun _ _ => False, [⟨selfParam, []⟩]⟩
+/-- The scope of a trait's signatures: `Self` and the trait's own parameters, without bounds,
+and no row variable (traits.trait-parameters). -/
+def TraitDecl.scope (t : TraitDecl) : RowScope :=
+  ⟨[], fun _ _ => False, fun _ _ => False, ⟨selfParam, [], []⟩ :: t.params.map (⟨·, [], []⟩)⟩
 
 /-- A trait's functions are methods, which take `self` first, of type `Self`, and functions
 without `self` (traits.functions-without-self), and their signatures name no row variable
-and no type parameter but `Self` (traits.declaring-trait). Generic methods, defaults,
-constants and a trait's own parameters are outside the calculus. -/
+and no type parameter but `Self` and the trait's parameters, which are distinct
+(traits.declaring-trait and traits.trait-parameters). Generic methods, defaults and
+constants are outside the calculus. -/
 structure TraitDecl.WellFormed (t : TraitDecl) : Prop where
   functions : ∀ mσ ∈ t.methods, ∃ ps r ρ, mσ.2 = .fn ps r ρ
   closed : ∀ mσ ∈ t.methods, mσ.2.Closed
-  signatures : ∀ mσ ∈ t.methods, mσ.2.WellFormed TraitDecl.scope
+  signatures : ∀ mσ ∈ t.methods, mσ.2.WellFormed t.scope
+  params : (selfParam :: t.params).Nodup
 
 /-- An impl gives each method of its trait a function with no type parameters
 or row variables, whose signature is the trait's with `Self` replaced by the
-impl's type (traits.impl-members and traits.impl-signatures). -/
+impl's type and each trait parameter by the impl's argument for it (traits.impl-members and
+traits.impl-signatures). It gives one argument for each of the trait's parameters, or it is
+E0300, each a ground type, since an impl has no parameters of its own in the calculus
+(traits.trait-arguments). -/
 def TraitImpl.Implements (D : Decls) (i : TraitImpl) : Prop :=
-  ∃ t, D.trait? i.trait = some t ∧ ∀ m σ, t.methods.lookup m = some σ →
+  ∃ t, D.trait? i.trait = some t ∧ i.args.length = t.params.length ∧ (∀ a ∈ i.args, a.Ground) ∧
+    ∀ m σ, t.methods.lookup m = some σ →
     ∃ d ∈ i.fns, d.name = m ∧ d.typeParams = [] ∧ d.rowParams = [] ∧
-      d.type = σ.substTys [(selfParam, i.type.type)]
+      d.type = σ.substTys ((selfParam, i.type.type) :: t.params.zip i.args)
+
+/-- A bound that writes its trait's arguments writes one for each of the trait's parameters,
+or it is E0300, and they name only the function's type parameters (traits.bound-arguments). -/
+def Decls.BoundArgs (D : Decls) : Prop :=
+  ∀ d ∈ D.fns, ∀ p ∈ d.typeParams, ∀ B args, p.argsOf B = some args →
+    B ∈ p.bounds ∧ (∃ t, D.trait? B = some t ∧ args.length = t.params.length) ∧
+      ∀ a ∈ args, ∀ T ∈ a.params, T ∈ d.typeParams.map TypeParam.name
 
 /-- The constants declared before a constant, as the bindings its value reads: each of its
 type, and immutable. -/
@@ -226,7 +241,7 @@ def Decls.traitFns (D : Decls) (Tr : Name) : List Name :=
 generic type when it would with every type parameter implementing `t` (traits.name-clashes). -/
 def Decls.StructurallyImplements (D : Decls) (T : Name) (t : PreludeTrait) : Prop :=
   ∃ τ ps, D.ownType? T = some (τ, ps) ∧
-    D.Implements ⟨[], fun _ _ => False, fun _ _ => False, ps.map (⟨·, [t.name]⟩)⟩ t τ
+    D.Implements ⟨[], fun _ _ => False, fun _ _ => False, ps.map (⟨·, [t.name], []⟩)⟩ t τ
 
 /-- No inherent function of a type has the name of a function of a trait that the type
 implements, through an impl that the program writes or through a structural impl: either is
@@ -295,6 +310,9 @@ structure Decls.WellFormed (D : Decls) : Prop where
   /-- No inherent function hides a function of a trait that its type implements (E0308,
   traits.name-clashes). -/
   nameClashes : D.NoNameClashes
+  /-- A bound's arguments are one for each of its trait's parameters (E0300,
+  traits.bound-arguments). -/
+  boundArgs : D.BoundArgs
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`

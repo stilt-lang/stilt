@@ -30,6 +30,13 @@ types it stands for implement (declarations.function-declarations and traits.bou
 structure TypeParam where
   name : Name
   bounds : List Name
+  /-- The arguments that a bound gives its trait's parameters, as `C: Collection<i64>`, for
+  each bound that writes them; a bound without them, as `C: Collection`, leaves them open
+  (traits.bound-arguments). They may name the function's type parameters. -/
+  args : List (Name × List Ty) := []
+
+/-- The arguments a bound of a type parameter gives the trait `B`, if it writes them. -/
+def TypeParam.argsOf (p : TypeParam) (B : Name) : Option (List Ty) := p.args.lookup B
 
 /-- The limits of a `without` clause that the calculus reads, `panic`, `overflow` and
 `div`, each a promise that the code it covers holds no site of the fact: those a function's
@@ -155,20 +162,27 @@ def Ty.head? : Ty → Option Head
 /-- `Self`, the type parameter of a trait's signatures (traits.declaring-trait). -/
 def selfParam : Name := "Self"
 
-/-- `trait Name { fn m(self, …) -> R; … }`: its functions, each with its type, a function
-type in which `Self` is the type parameter `Self`: its methods, whose first parameter is
-the receiver (traits.declaring-trait), and its functions without `self`
-(traits.functions-without-self). -/
+/-- `trait Name<P, …> { fn m(self, …) -> R; … }`: its functions, each with its type, a
+function type in which `Self` is the type parameter `Self`: its methods, whose first
+parameter is the receiver (traits.declaring-trait), and its functions without `self`
+(traits.functions-without-self). Its own parameters, `P, …`, without bounds, each name a type
+throughout its functions' types, where they are type parameters too (traits.trait-parameters). -/
 structure TraitDecl where
   name : Name
   methods : List (Name × Ty)
+  /-- The trait's own parameters. -/
+  params : List Name := []
 
-/-- `impl Trait for Type { fn … }`, for a type with no type parameters
-(traits.implementing-trait). -/
+/-- `impl Trait<T, …> for Type { fn … }`, for a type with no type parameters
+(traits.implementing-trait), with an argument for each of the trait's parameters
+(traits.trait-arguments). -/
 structure TraitImpl where
   trait : Name
   type : Head
   fns : List FnDecl
+  /-- The types it gives the trait's parameters, which the impl's type fixes: a trait has one
+  impl per type, whatever its arguments (traits.coherence). -/
+  args : List Ty := []
 
 /-- The name of an integer type (numbers.numeric-types). -/
 def IntTy.name : IntTy → Name
@@ -442,11 +456,11 @@ theorem Decls.mapFns_eq_self {f : FnDecl → FnDecl}
       (List.mem_flatMap.2 ⟨⟨T, fns, ps⟩, hi, List.mem_map_of_mem hd⟩))))
   have htrait : (traitImpls.map fun i => { i with fns := i.fns.map f }) = traitImpls := by
     refine (List.map_congr_left fun i hi => ?_).trans (List.map_id _)
-    obtain ⟨Tr, H, fns⟩ := i
+    obtain ⟨Tr, H, fns, args⟩ := i
     suffices fns.map f = fns by simp [this]
     refine (List.map_congr_left fun d hd => ?_).trans (List.map_id _)
     exact hq [] _ d (h _ (List.mem_append_right _ (List.mem_flatMap.2
-      ⟨⟨Tr, H, fns⟩, hi, List.mem_map_of_mem hd⟩)))
+      ⟨⟨Tr, H, fns, args⟩, hi, List.mem_map_of_mem hd⟩)))
   simp [Decls.mapFns, hfun, himpl, htrait]
 
 end Stilt

@@ -119,11 +119,11 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       TypeArgsFit D scope d.typeParams types →
       HasType N Γ fx (.fnRef f types rows)
         ((d.type.substTys (d.typeArgs types)).substRows (d.rowParams.zip rows))
-  | method {N Γ fx Tr t m σ τ} :
+  | method {N Γ fx Tr t m σ τ args} :
       D.trait? Tr = some t →
       t.methods.lookup m = some σ →
-      τ.Closed → τ.WellFormed scope → MethodAt D scope τ Tr →
-      HasType N Γ fx (.method Tr m τ) (σ.substTys [(selfParam, τ)])
+      τ.Closed → τ.WellFormed scope → args.length = t.params.length → MethodAt D scope τ Tr args →
+      HasType N Γ fx (.method Tr m τ) (σ.substTys ((selfParam, τ) :: t.params.zip args))
   /-- A closure's parameters hide the parameters of `N` with their names. -/
   | closure {N Γ fx ps result ρ body σ} :
       (ps.map Param.name).Nodup →
