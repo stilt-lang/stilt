@@ -1,5 +1,6 @@
 import Stilt.Modes.Uniqueness
 import Stilt.Modes.Traverse
+import Stilt.Modes.Threads
 
 /-!
 # The modes of a program's bindings
@@ -19,8 +20,9 @@ whose modes are `local` and `unique` (`Modes.reuses`), or a capture of a closure
 modes are `once`, which its body owns (`Modes.runsOnce`, modes.once-closures and
 modes.once-parameters). `Stilt.Modes.Agreement` reads the last of these, so the modes on
 locality, uniqueness and once are what the soundness theorem's reuse reads. Their points on
-the thread axes are the defaults there, and each fact sets them from the binding's type
-(`Modes.threads`): no reuse reads portability or contention.
+the thread axes are the defaults there, and each fact sets them from the binding's type and a
+closure literal's captures (`Modes.threads`, `Stilt.Modes.Threads`): no reuse reads portability or
+contention.
 -/
 
 namespace Stilt
@@ -82,15 +84,16 @@ def cowOf (τ : Option Ty) : Bool := M.decls.cow (τ.getD .str)
 /-- The bindings of a body with parameters `ps` that the inference calls shared
 (modes.shared-writes): a `var` or an `inout` parameter of a copy-on-write type with a shared
 modification, which the walk of the binding finds, or whose value is a copy of a part of
-another binding that it reads after the modification, which that binding's walk finds. Each
-binding's walk reads the body from its start (`walk`). -/
+another binding that it reads after the modification, which that binding's walk finds; and any
+binding whose value `Shared.new` takes while it might still read it, which its walk finds. A
+`when`'s names are `var` bindings. Each binding's walk reads the body from its start (`walk`). -/
 def bodyShared (ps : List Param) (body : Expr) : List Name :=
   let bs := binders ps body
   let modifiable := fun z => bs.any fun (y, τ, m) => y == z && m && M.cowOf τ
   bs.flatMap fun (x, τ, m) =>
     if M.cowOf τ then
-      let w := walk M.decls M.consumed (inoutNames ps) x (τ.getD .str) body
-      (if m && w.shared then [x] else []) ++ w.mirrored.filter modifiable
+      let w := walk M.decls M.consumed (inoutNames ps) x (τ.getD .str) body (ps.map (·.name))
+      (if m && w.shared then [x] else []) ++ w.mirrored.filter fun z => z == x || modifiable z
     else []
 
 /-- The modes of a `let` or `var` binding `y` of type `τ`, in the context `k`:
@@ -229,20 +232,40 @@ namespace ModeEnv
 
 variable (M : ModeEnv)
 
+/-- The context of an expression for its facts: the context of its modes, and what each thread
+axis knows of the bindings in scope, portability's and contention's. -/
+abbrev FactCtx := ModeCtx × AxisScope × AxisScope
+
+/-- The context of the part at position `n` of an expression. -/
+def factChild (k : FactCtx) (e : Expr) (n : Nat) : FactCtx :=
+  (M.child k.1 e n, axisChild M.decls.fixedTy k.2.1 e n, axisChild M.decls.contended k.2.2 e n)
+
+/-- The modes `m` of a binding of type `τ` whose initializer is `init`, with its points on the
+thread axes from its type, or from its captures when it binds a closure literal. -/
+def boundThreads (k : FactCtx) (m : Modes) (τ : Ty) (init : Expr) : Modes :=
+  m.threads (bindingAxis M.decls.fixedTy k.2.1 τ init) (bindingAxis M.decls.contended k.2.2 τ init)
+
 /-- The facts that an expression in the context `k` gives of itself: those of
-the binding it makes, if it makes one, with its thread axes from its type. -/
-def visit (k : ModeCtx) : Expr → List Fact
-  | .letIn y τ init body => [⟨.let y, (M.bindingModes k y τ false init body).threads τ []⟩]
-  | .varIn y τ init body => [⟨.var y, (M.bindingModes k y τ true init body).threads τ []⟩]
-  | .closure ps r ρ _ =>
-    if k.bound then [] else [⟨.closure, (closureModes k).threads (.fn (ps.map Param.sig) r ρ) []⟩]
+the binding it makes, if it makes one, with its thread axes from its type and its captures. -/
+def visit (k : FactCtx) : Expr → List Fact
+  | .letIn y τ init body => [⟨.let y, M.boundThreads k (M.bindingModes k.1 y τ false init body) τ init⟩]
+  | .varIn y τ init body => [⟨.var y, M.boundThreads k (M.bindingModes k.1 y τ true init body) τ init⟩]
+  | .closure ps r ρ body =>
+    if k.1.bound then [] else
+      [⟨.closure, (closureModes k.1).threads (closureAxis M.decls.fixedTy k.2.1 ps r ρ body)
+        (closureAxis M.decls.contended k.2.2 ps r ρ body)⟩]
   | _ => []
+
+/-- What the axis `has` knows of the parameters `ps` at the start of their body. -/
+def paramAxes (has : Ty → Bool) (ps : List Param) : AxisScope := ps.map fun p => (p.name, has p.type)
 
 /-- The facts of a body with parameters `ps`: its parameters', then its
 bindings', in source order, closure literals' bodies among them. -/
 def bodyFacts (ps : List Param) (body : Expr) : List Fact :=
-  ps.map (fun p => ⟨.param p.name, (M.paramModes ps body p).threads p.type []⟩) ++
-    body.gather M.child M.visit (M.start ps body)
+  ps.map (fun p => ⟨.param p.name, (M.paramModes ps body p).threads (M.decls.fixedTy p.type)
+      (M.decls.contended p.type)⟩) ++
+    body.gather M.factChild M.visit
+      (M.start ps body, paramAxes M.decls.fixedTy ps, paramAxes M.decls.contended ps)
 
 end ModeEnv
 
@@ -251,48 +274,14 @@ def Program.facts (p : Program) : List (Name × List Fact) :=
   p.decls.fns.map (fun d => (d.name, p.modeEnv.bodyFacts d.params d.body)) ++
     [("main", p.modeEnv.bodyFacts [] p.main)]
 
-/-- **The model finds no binding contended** (modes.contended-values and
-modes.mode-crossing), as no binding of a core module is, though the calculus has `Shared<T>`
-(`Ty.contended`), and only a binding of a view type is fixed (modes.fixed-values and
-views.fixed): every fact of every body is `calm`, and `portable` unless its binding has
-a view type. -/
-theorem ModeEnv.bodyFacts_calm (M : ModeEnv) (ps : List Param) (body : Expr) :
-    ∀ f ∈ M.bodyFacts ps body, f.modes.contention = .calm ∧
-      (f.modes.portability = .fixed → ∃ τ σ, τ = .view σ ∧ f.modes.portability = portabilityOf τ []) := by
-  intro f hf
-  rcases List.mem_append.1 hf with h | h
-  · obtain ⟨p, -, rfl⟩ := List.mem_map.1 h
-    refine ⟨calm p.type [], fun hfix => ?_⟩
-    obtain ⟨σ, hσ⟩ := (portabilityOf_fixed_iff _).1 hfix
-    exact ⟨p.type, σ, hσ, rfl⟩
-  · refine Expr.gather_all M.child M.visit
-      (fun f : Fact => f.modes.contention = .calm ∧ (f.modes.portability = .fixed →
-        ∃ τ σ, τ = .view σ ∧ f.modes.portability = portabilityOf τ []))
-      (fun k e f hf => ?_) body _ f h
-    cases e <;> simp only [ModeEnv.visit, List.not_mem_nil] at hf
-    case letIn y τ _ _ | varIn y τ _ _ =>
-      rw [List.mem_singleton.1 hf]
-      refine ⟨calm τ [], fun hfix => ?_⟩
-      obtain ⟨σ, hσ⟩ := (portabilityOf_fixed_iff _).1 hfix
-      exact ⟨τ, σ, hσ, rfl⟩
-    case closure ps r ρ _ =>
-      split at hf
-      · exact absurd hf List.not_mem_nil
-      · rw [List.mem_singleton.1 hf]
-        refine ⟨calm (.fn (ps.map Param.sig) r ρ) [], fun hfix => ?_⟩
-        obtain ⟨σ, hσ⟩ := (portabilityOf_fixed_iff (.fn (ps.map Param.sig) r ρ)).1 hfix
-        cases hσ
-
-/-- Every binding of a program prints no `contended`, and prints `fixed` only when it
-has a view type (modes.facts-suite, Required tests). -/
-theorem Program.facts_calm (p : Program) :
-    ∀ nf ∈ p.facts, ∀ f ∈ nf.2, f.modes.contention = .calm ∧
-      (f.modes.portability = .fixed → ∃ τ σ, τ = .view σ ∧ f.modes.portability = portabilityOf τ []) := by
-  intro nf hnf f hf
-  rcases List.mem_append.1 hnf with h | h
-  · obtain ⟨d, -, rfl⟩ := List.mem_map.1 h
-    exact p.modeEnv.bodyFacts_calm _ _ f hf
-  · rw [List.mem_singleton.1 h] at hf
-    exact p.modeEnv.bodyFacts_calm _ _ f hf
+/-- **A parameter's thread points are its type's** (modes.fixed-values, modes.contended-values
+and modes.mode-crossing): it is `contended` exactly when its type holds a `Shared<T>`, and
+`fixed` exactly when its type holds a view. -/
+theorem ModeEnv.bodyFacts_param (M : ModeEnv) (ps : List Param) (body : Expr) (p : Param)
+    (hp : p ∈ ps) : ∃ f ∈ M.bodyFacts ps body, f.binder = .param p.name ∧
+      (f.modes.contention = .contended ↔ M.decls.contended p.type = true) ∧
+      (f.modes.portability = .fixed ↔ M.decls.fixedTy p.type = true) := by
+  refine ⟨_, List.mem_append_left _ (List.mem_map_of_mem hp), rfl, ?_, ?_⟩ <;>
+    simp only [Modes.threads] <;> split <;> simp_all
 
 end Stilt

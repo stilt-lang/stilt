@@ -74,6 +74,15 @@ def Leaving.stores (L : Leaving) (y : Name) (path : List Projection) : Bool :=
   L.inouts.contains y || (y != L.name && !path.isEmpty) ||
     path.any fun p => (Projection.fieldName? p).isNone
 
+/-- An operation whose value holds no part of a copy-on-write type: a length, a count, a test or
+a comparison. Its operands are read, and stored nowhere. -/
+def Op.givesNoPart : Op → Bool
+  | .len | .isEmpty | .charCount | .count | .search _ | .scompare _ | .strClass _ | .parses _
+  | .parsed _ | .fparses _ | .fparsed _ | .structural .. | .sameCell
+  | .list .len | .list .isEmpty | .map .len | .map .isEmpty | .map .contains | .map .equal
+  | .set .len | .set .isEmpty | .set .contains | .set (.relate _) => true
+  | _ => false
+
 mutual
 
 /-- Whether the binding `L.name` leaves the function in `e`, when the part
@@ -82,7 +91,8 @@ def Expr.leaves (L : Leaving) (out : Option (List Sel)) : Expr → Bool
   | .var y | .move y => y == L.name && out.any L.counts
   | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _ | .method _ _ _ => false
   | .record _ _ fields => fieldsLeave L fields
-  | .variant _ _ _ es | .list _ es | .op _ es | .view es => exprsLeave L es
+  | .op o es => if o.givesNoPart then exprsRead L es else exprsLeave L es
+  | .variant _ _ _ es | .list _ es | .view es => exprsLeave L es
   | .field e f => e.leaves L (out.map (.field f :: ·))
   | .index e i => e.leaves L (out.map (.elem :: ·)) || i.leaves L none
   | .closure ps _ _ body =>
@@ -118,6 +128,12 @@ stored in a value. -/
 def exprsLeave (L : Leaving) : List Expr → Bool
   | [] => false
   | e :: es => e.leaves L (some []) || exprsLeave L es
+
+/-- Whether the binding leaves in expressions whose values are read and kept nowhere: the
+operands of an operation whose value holds no part of them. -/
+def exprsRead (L : Leaving) : List Expr → Bool
+  | [] => false
+  | e :: es => e.leaves L none || exprsRead L es
 
 /-- Whether the binding leaves in the fields of a record literal, which store
 their values in it. -/

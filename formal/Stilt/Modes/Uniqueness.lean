@@ -8,12 +8,16 @@ The shared writes of a `var` binding or an `inout` parameter `x` (modes.copy-on-
 
 A **copy** of `x` is made where its value, or a part of it with a
 copy-on-write type, is bound by a `let`, a `var` or a pattern, assigned to the
-whole of another local, captured by a closure literal, stored in a value, or
-passed to a consumed parameter of a call after which `x` is used again or to
-which it is passed twice (modes.copies). A copy of a copy is a copy of `x`, held by
+whole of another local, captured by a closure literal, stored in a value,
+passed to a call that may store it, which the call's types decide (modes.call-stores,
+`Writes.callStores`), or passed to a consumed parameter of a call after which `x` is used
+again or to which it is passed twice (modes.copies). A copy passed to a call lasts as the
+call's result does, and as each binding that an `inout` argument of the call is a part of
+(`Writes.keptIn`). A copy of a copy is a copy of `x`, held by
 whatever holds it, so binding, storing or capturing a binding that holds a
 part of `x` copies that part again. Each copy lasts until the scope that holds
-it ends (`Stilt.Modes.Copies`). A **modification** of `x` (modes.kinds-of-access) is
+it ends (`Stilt.Modes.Copies`): every way a value leaves its binding is a holder the walk
+follows, a result, a stored value, a call's result or `inout` arguments. A **modification** of `x` (modes.kinds-of-access) is
 shared when a copy of the modified part may still last, or when it is inside
 a loop whose body, or a `while`'s condition, makes one. An assignment of the whole binding
 replaces its value: it is no shared write, and copies made before it, and the
@@ -29,6 +33,18 @@ overlapping part, is used after it, which `later` says of every binding: an `ino
 parameter is used after every point, by the caller its value goes back to. `x`'s scope holds
 every use of `x` after the copy, so the walk sees them all. The bindings it
 finds are named, so in a scope that binds one name twice both count.
+
+A `when`'s names are `var` bindings (modes.shared-when-names). The names of one `when` whose
+values have the same type may be one place, so in the walk of one of them a write of another is
+a write of it that replaces nothing, and a point that names another names it. The end of a
+`when` writes each of its names (modes.handles): it is shared when a copy of a part of the name
+lasts past the `when`, the `when`'s value among them, and when the name holds a copy of a part
+of a binding that may still read it (`Writes.heldIn`). What a name holds lasts on, held by the
+handle, for the rest of the function. `Shared.new` gives its value to a handle in the same way
+(`Writes.handOver`): a copy that lasts for the rest of the function, and a shared write of a
+binding that may still read it after the call, as a parameter's caller may. An operation whose
+value holds no part of a copy-on-write type, a length, a count, a test or a comparison, copies
+nothing of its operands.
 
 The traversal returns, with the state, the parts of `x` that the value of the
 expression holds: they become copies where that value is bound or stored. A
@@ -68,7 +84,7 @@ def Writes.modifyArgs (W : Writes) (later : Name → Bool) (s : Copies) (args : 
   args.foldl (init := s) fun s a =>
     match a with
     | .inout ⟨y, path⟩ =>
-      if y == W.x then W.modify s (path.filterMap Projection.fieldName?)
+      if y == W.x || W.alike.contains y then W.modify s (path.filterMap Projection.fieldName?)
       else W.mirror later s y (path.map Projection.sel) false
     | .value _ => s
 
@@ -150,7 +166,10 @@ part of `x` keeps the copies made before it. -/
 def Writes.assignOf (W : Writes) (d : Nat) (later : Name → Bool) (y : Name)
     (path : List Projection) (r : Copies × List Part) : Copies × List Part :=
   let sels := path.map Projection.sel
+  let fields := path.filterMap Projection.fieldName?
   ((if y == W.x then (if path.isEmpty && !r.2.isEmpty then r.1.reshape else W.assign r.1 path)
+    else if W.alike.contains y then
+      (if r.2.isEmpty then W.modify r.1 fields else (W.modify r.1 fields).reshape)
     else W.assignTo (if path.isEmpty then r.1 else W.mirror later r.1 y sels true) y path r.2).close
       (d + 1), [])
 
@@ -182,6 +201,72 @@ def Writes.withIn (W : Writes) (d : Nat) (r : Copies × List Part)
   ({ r'.1.land .esc with pending := s.pending ++ (r'.1.land .esc).pending ++ esc },
     r'.2 ++ r.2.map (Part.stored none))
 
+/-- Whether a call of `f` with arguments `args` and result type `τ` may store the argument at
+position `n`, by the call's types alone: a part of it may become a part of the result or of a
+value written through an `inout` parameter. A callee that names no declared function, whose
+parameters' types the call doesn't carry, may store any argument when its result has a part or
+an argument is `inout`. -/
+def Writes.callStores (W : Writes) (f : Expr) (args : List Arg) (τ : Ty) (n : Nat) : Bool :=
+  match f with
+  | .fnRef g types _ =>
+    match W.decls.fn? g with
+    | some d =>
+      let ts := (d.typeParams.map (·.name)).zip types
+      let inouts := (d.params.filter (·.mode == .inout)).map (·.type.substTys ts)
+      match d.params[n]? with
+      | some p => p.mode != .inout && W.decls.mayStore (p.type.substTys ts) (τ :: inouts)
+      | none => true
+    | none => true
+  | _ => !(W.decls.parts τ).isEmpty || args.any fun | .inout _ => true | .value _ => false
+
+/-- The parts that a call's arguments pass on and the call may keep, `kept`, in the call's
+`inout` arguments: each binding that one is a part of holds them, as long as its scope, inside
+its value. -/
+def Writes.keptIn (W : Writes) (s : Copies) (args : List Arg) (kept : List Part) : Copies :=
+  args.foldl (init := s) fun s a =>
+    match a with
+    | .inout ⟨y, _⟩ =>
+      let s := W.holdAll (W.holderOf y) s kept
+      if y == W.x || W.alike.contains y then s
+      else s.give y (s.depthOf y) (kept.map (Part.stored none))
+    | .value _ => s
+
+/-- `Shared.new` gives a value that holds `parts` to a handle, which holds them on, where a
+`when` in any function may write them: each is a copy that lasts for the rest of the function,
+and the call is a shared write of `x` when `x` might still read its value after it, as a
+parameter's caller may. -/
+def Writes.handOver (W : Writes) (later : Name → Bool) (s : Copies) (parts : List Part) :
+    Copies :=
+  let s' := W.holdAll 0 s parts
+  if (W.laterX later || W.params.contains W.x) && parts.any (W.decls.cowPart W.τ ·.sels) then
+    { s' with mirrored := W.x :: s'.mirrored }
+  else s'
+
+/-- The end of a `when` that binds `n`, other than `x`, gives `n`'s value back to its handle,
+where a `when` in any function may write it: a write of each part of `x` that `n` holds a copy
+of, shared while `x`, or another binding that holds a part of `x`, might still read it. -/
+def Writes.handBack (W : Writes) (later : Name → Bool) (s : Copies) (n : Name) : Copies :=
+  let other := s.holders.any fun w => w != n && later w && !(s.partsOf w).isEmpty
+  if n != W.x && (s.partsOf n).any (·.copied) && (W.laterX later || other) then
+    { s with mirrored := n :: s.mirrored }
+  else s
+
+/-- The block of a `when` whose names `ns` hold the values of their handles, walked by `block`
+from the state `s`. When `x` is one of them, the block starts its scope, the names of `x`'s
+type may be one place with it, and the `when`'s end writes `x`: shared when a copy of a part of
+it lasts past the `when`, the `when`'s value among them. Otherwise the end gives back each name,
+which `handBack` reads. -/
+def Writes.heldIn (W : Writes) (d : Nat) (later : Name → Bool) (ns : List (Name × Ty))
+    (s : Copies) (block : Writes → Copies → Copies × List Part) : Copies × List Part :=
+  match ns.lookup W.x with
+  | some τ =>
+    let W' := { W.own with alike := (ns.filter fun (y, σ) => y != W.x && σ == τ).map Prod.fst }
+    let r := block W' s.fresh
+    ((W'.modify (W.holdAll (d + 1) r.1 r.2) []).close (d + 1), r.2)
+  | none =>
+    let r := block W s
+    (ns.foldl (fun s (y, _) => W.handBack later s y) r.1, r.2)
+
 /-- The walks of two alternative branches, joined. -/
 def Copies.either (a b : Copies × List Part) : Copies × List Part :=
   (a.1.join b.1, a.2 ++ b.2)
@@ -194,14 +279,20 @@ the state after `e`, and the parts of `x` that `e`'s value holds. Each case
 follows the order of evaluation of values.left-to-right. -/
 def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
     Expr → Copies × List Part
-  | .var y | .move y => (s, if y == W.x then [Part.whole] else s.partsOf y)
+  | .var y | .move y => (s, if y == W.x || W.alike.contains y then [Part.whole] else s.partsOf y)
   | .int _ | .bool _ | .unit | .fnRef _ _ _ | .method _ _ _ => (s, [])
   | .break => (s.leave .brk, [])
   | .continue => (s.leave .cont, [])
   | .record _ _ fields => fieldsCopies W d h later s fields
   | .list _ es => exprsCopies W d h later (fun _ => some .elem) 0 s es
   | .op .tuple es => exprsCopies W d h later (fun n => some (.field (tupleField n))) 0 s es
-  | .variant _ _ _ es | .op _ es | .view es => exprsCopies W d h later (fun _ => none) 0 s es
+  | .op (.world (.sharedNew _)) es =>
+    let r := exprsCopies W d h later (fun _ => none) 0 s es
+    (W.handOver later r.1 r.2, [])
+  | .op o es =>
+    if o.givesNoPart then (readsCopies W (d + 1) later s es |>.close (d + 1), [])
+    else exprsCopies W d h later (fun _ => none) 0 s es
+  | .variant _ _ _ es | .view es => exprsCopies W d h later (fun _ => none) 0 s es
   | .field e f => let r := e.copies W d h later s; (r.1, Part.into (some (.field f)) r.2)
   | .index e i =>
     let r := e.copies W d h (thenUses later i) s
@@ -209,18 +300,19 @@ def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
   | .closure ps _ _ body =>
     let parts := W.captured s ps body
     (W.holdAll h s parts, parts.map (Part.stored none))
-  | .call f args _ =>
+  | .call f args τ =>
     let r := f.copies W (d + 1) (d + 1) (fun y => later y || args.any (·.occurs y)) s
-    let r := argsCopies W (d + 1) h later (fun n => later W.x || otherArgs W.x args n)
-      (consumesArg W.consumed f) 0 r.1 args
-    (W.escape ((W.modifyArgs later r.1 args).close (d + 1)), r.2.map (Part.stored none))
-  | .letIn y τ init body | .varIn y τ init body =>
-    let hy := W.scopeOf (d + 1) h y τ body
-    W.bindIn y d hy (init.copies W (d + 1) hy (fun z => later z || (y != z && body.occurs z)) s)
+    let r := argsCopies W (d + 1) h later (fun n => W.laterX later || otherArgs W.x args n)
+      (consumesArg W.consumed f) (W.callStores f args τ) 0 r.1 args
+    (W.escape ((W.keptIn (W.modifyArgs later r.1 args) args r.2).close (d + 1)),
+      r.2.map (Part.stored none))
+  | .letIn y _ init body | .varIn y _ init body =>
+    W.bindIn y d (d + 1) (init.copies W (d + 1) (d + 1) (fun z => later z || (y != z && body.occurs z)) s)
       fun W s => body.copies W (d + 1) h later s
   | .assign ⟨y, path⟩ v =>
     let s := (pathCopies W (d + 1) (fun z => later z || y == z || v.occurs z) s path).close (d + 1)
-    W.assignOf d later y path (v.copies W (d + 1) (if y == W.x then d + 1 else W.holderOf y)
+    W.assignOf d later y path (v.copies W (d + 1)
+      (if y == W.x || W.alike.contains y then d + 1 else W.holderOf y)
       (fun z => if z == y then !path.isEmpty else later z) s)
   | .seq a b =>
     let r := a.copies W (d + 1) (d + 1) (thenUses later b) s
@@ -261,7 +353,7 @@ def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
     W.withIn d (hd.copies W (d + 1) (d + 1) (thenUses later b) s) fun W s => b.copies W d h later s
   | .held ns hs body =>
     let s := (exprsCopies W (d + 1) (d + 1) (thenUses later body) (fun _ => none) 0 s hs).1.close (d + 1)
-    if ns.any (·.1 == W.x) then body.copies W.own d h later s.fresh else body.copies W d h later s
+    W.heldIn d later ns s fun W s => body.copies W d h later s
 
 /-- Walks expressions whose values are stored in a value, which the scope at
 depth `h` holds, from the one at position `n`: each part of `x` they hold is a
@@ -274,6 +366,13 @@ def exprsCopies (W : Writes) (d h : Nat) (later : Name → Bool) (step : Nat →
     let r := e.copies W d h (fun y => later y || es.any (·.occurs y)) s
     let rs := exprsCopies W d h later step (n + 1) (W.holdAll h r.1 r.2) es
     (rs.1, r.2.map (Part.stored (step n)) ++ rs.2)
+
+/-- Walks expressions whose values are read and kept nowhere, the operands of an operation whose
+value holds no part of them: they copy nothing. -/
+def readsCopies (W : Writes) (d : Nat) (later : Name → Bool) (s : Copies) : List Expr → Copies
+  | [] => s
+  | e :: es =>
+    readsCopies W d later (e.copies W d d (fun y => later y || es.any (·.occurs y)) s).1 es
 
 /-- Walks the fields of a record literal, which store their values in it. -/
 def fieldsCopies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
@@ -288,19 +387,21 @@ def fieldsCopies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
 gives the parts that the call's result may hold. What an argument to a
 consumed parameter holds lasts as the call's result does, at depth `h`, and so
 does a part it passes that is a copy already, or a part of `x` whose reuse
-`lost n` says is lost; what any other argument holds lasts for the call
-(modes.copies). -/
-def argsCopies (W : Writes) (d h : Nat) (later : Name → Bool) (lost consumed : Nat → Bool)
+`lost n` says is lost, and what an argument holds that the call may store, as `stores n` says
+by the call's types; what any other argument holds lasts for the call. A binding passed at its
+last use to a consumed parameter passes on the copies it holds, and is no copy itself. -/
+def argsCopies (W : Writes) (d h : Nat) (later : Name → Bool) (lost consumed stores : Nat → Bool)
     (n : Nat) (s : Copies) : List Arg → Copies × List Part
   | [] => (s, [])
   | .value e :: args =>
-    let r := e.copies W d (if consumed n then h else d)
+    let r := e.copies W d (if consumed n || stores n then h else d)
       (fun y => later y || args.any (·.occurs y)) s
-    let kept := if consumed n then r.2.filter fun p => lost n || p.copied else []
-    let rs := argsCopies W d h later lost consumed (n + 1) (W.holdAll h r.1 kept) args
+    let kept := if consumed n then r.2.filter fun p => lost n || p.copied
+      else if stores n then r.2 else []
+    let rs := argsCopies W d h later lost consumed stores (n + 1) (W.holdAll h r.1 kept) args
     (rs.1, kept ++ rs.2)
   | .inout ⟨_, path⟩ :: args =>
-    argsCopies W d h later lost consumed (n + 1)
+    argsCopies W d h later lost consumed stores (n + 1)
       (pathCopies W d (fun y => later y || args.any (·.occurs y)) s path) args
 
 /-- Walks the indexes of a place, whose values the scope at depth `d` holds. -/
@@ -340,9 +441,10 @@ end
 a binding of `x` starts its scope, and after the scope ends the walk goes on, since the bindings
 outside it may hold copies of its parts. The `inout` parameters `inouts` are used after it, when
 their values go back to the caller (modes.shared-writes). -/
-def walk (D : Decls) (C : Consumed) (inouts : List Name) (x : Name) (τ : Ty) (body : Expr) :
-    Copies :=
-  (body.copies ⟨D, C, inouts, x, τ, [], [], false⟩ 1 0 inouts.contains ⟨[], [], false, [], [], []⟩).1
+def walk (D : Decls) (C : Consumed) (inouts : List Name) (x : Name) (τ : Ty) (body : Expr)
+    (params : List Name := []) : Copies :=
+  (body.copies ⟨D, C, inouts, x, τ, [], [], false, [], params⟩ 1 0 inouts.contains
+    ⟨[], [], false, [], [], []⟩).1
 
 /-- The bindings that a body makes, outside its closure literals, which are bodies of their own:
 each with its type, when the core gives one (a `match` arm's binders carry none), and whether
@@ -352,7 +454,7 @@ def Expr.bodyBinders (body : Expr) : List (Name × Option Ty × Bool) :=
     if inside then [] else match e with
     | .letIn y τ _ _ | .for y τ _ _ | .tryCatch _ τ y _ _ => [(y, some τ, false)]
     | .varIn y τ _ _ => [(y, some τ, true)]
-    | .held ns _ _ => ns.map fun (y, τ) => (y, some τ, false)
+    | .held ns _ _ => ns.map fun (y, τ) => (y, some τ, true)
     | .match _ _ arms => arms.flatMap fun a => a.binders.map fun y => (y, none, false)
     | _ => []) false
 

@@ -11,6 +11,11 @@ locality and uniqueness are facts (modes.escaping and modes.copy-on-write-types)
 type, a recursive type (facts.allocation), or a record, tuple or variant type
 with a field, element or payload of one.
 
+The parts of a value of a type, which a call may store (modes.call-stores), are the type
+itself, when it is copy-on-write, and the parts of what it holds, read from the declarations
+(`Decls.parts`); a part may become a part of another value when their types are the same, or
+one of them may stand for any type (`Decls.mayStore`).
+
 A part of a binding is reached by fields, tuple fields among them, and list
 elements (`Sel`); modes.escaping and modes.copies count a part when its type is copy-on-write. Its shape is the place it
 is, with every index removed (modes.overlap), which is what a copy and a
@@ -105,6 +110,70 @@ def cowPart (D : Decls) (τ : Ty) (sels : List Sel) : Bool :=
   match D.partType τ sels with
   | some σ => D.cow σ
   | none => true
+
+mutual
+
+/-- The parts of a value of type `τ`: `τ` itself when it is a copy-on-write type, and the parts
+of what it holds, a list's and a set's elements, a map's keys and values, a tuple's elements, a
+record's fields and a variant's payloads at its type arguments, and for a function type the
+values its calls give back and those they write through its `inout` parameters. `step` answers
+for the fields and payloads, and a record or variant type on the way, in `seen`, adds nothing:
+it holds the type again, at whatever arguments. -/
+def partsStep (D : Decls) (step : List Name → Ty → List Ty) (seen : List Name) (τ : Ty) :
+    List Ty :=
+  (if D.cow τ then [τ] else []) ++ match τ with
+    | .list e | .set e => D.partsStep step seen e
+    | .map κ σ => D.partsStep step seen κ ++ D.partsStep step seen σ
+    | .tuple τs => D.partsSteps step seen τs
+    | .fn ps r _ => D.partsParams step seen ps ++ D.partsStep step seen r
+    | .record R args =>
+      if seen.contains R then [] else
+        match D.record? R with
+        | some r => (r.fieldsAt args).flatMap fun (_, σ) => step (R :: seen) σ
+        | none => []
+    | .variant T args =>
+      if seen.contains T then [] else
+        match D.variant? T with
+        | some t => (t.ctorsAt args).flatMap fun (_, σs) => σs.flatMap (step (T :: seen))
+        | none => []
+    | _ => []
+
+/-- The parts of the values of a list of types. -/
+def partsSteps (D : Decls) (step : List Name → Ty → List Ty) (seen : List Name) :
+    List Ty → List Ty
+  | [] => []
+  | τ :: τs => D.partsStep step seen τ ++ D.partsSteps step seen τs
+
+/-- The parts of what a function's calls write through its `inout` parameters. -/
+def partsParams (D : Decls) (step : List Name → Ty → List Ty) (seen : List Name) :
+    List (Mode × Ty) → List Ty
+  | [] => []
+  | (m, τ) :: ps => (if m == .inout then D.partsStep step seen τ else []) ++ D.partsParams step seen ps
+
+end
+
+/-- The parts of a value of type `τ`, with `fuel` for the record and variant types on the way;
+when it runs out, a type parameter, which may stand for any part. -/
+def partsIn (D : Decls) : Nat → List Name → Ty → List Ty
+  | 0, _, _ => [.param "_"]
+  | n + 1, seen, τ => D.partsStep (D.partsIn n) seen τ
+
+/-- The parts of a value of type `τ`. -/
+def parts (D : Decls) (τ : Ty) : List Ty := D.partsIn (D.records.length + D.variants.length + 1) [] τ
+
+/-- Whether a part of type `a` may become a part of type `b`: they are the same type, or
+instances of one record or variant type, either is a type parameter, which may stand for any
+type, or `b` is a function type, whose closures may capture any value. -/
+def mayBecome (a b : Ty) : Bool :=
+  a == b || match a, b with
+    | .param _, _ | _, .param _ | _, .fn .. => true
+    | .record R _, .record S _ | .variant R _, .variant S _ => R == S
+    | _, _ => false
+
+/-- Whether a part of a value of type `τ` may become a part of a value of one of the types
+`targets`. -/
+def mayStore (D : Decls) (τ : Ty) (targets : List Ty) : Bool :=
+  (D.parts τ).any fun a => targets.any fun t => (D.parts t).any (mayBecome a)
 
 end Decls
 

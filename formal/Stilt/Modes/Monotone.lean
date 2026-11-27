@@ -76,8 +76,14 @@ theorem Expr.leaves_mono : ∀ (e : Expr) (L : Leaving) (C' : Consumed) (o o' : 
   | .break, _, _, _, _, _, _, h | .continue, _, _, _, _, _, _, h
   | .fnRef .., _, _, _, _, _, _, h => by simp [Expr.leaves] at h
   | .record _ _ fs, L, C', _, _, hC, _, h => fieldsLeave_mono fs L C' hC h
-  | .variant _ _ _ es, L, C', _, _, hC, _, h | .list _ es, L, C', _, _, hC, _, h | .op _ es, L, C', _, _, hC, _, h | .view es, L, C', _, _, hC, _, h =>
-    exprsLeave_mono es L C' hC h
+  | .variant _ _ _ es, L, C', _, _, hC, _, h | .list _ es, L, C', _, _, hC, _, h
+  | .view es, L, C', _, _, hC, _, h => exprsLeave_mono es L C' hC h
+  | .op o es, L, C', _, _, hC, _, h => by
+    by_cases ho : o.givesNoPart = true
+    · simp only [Expr.leaves, ho, ↓reduceIte] at h ⊢
+      exact exprsRead_mono es L C' hC h
+    · simp only [Expr.leaves, ho, Bool.false_eq_true, ↓reduceIte] at h ⊢
+      exact exprsLeave_mono es L C' hC h
   | .field e f, L, C', o, o', hC, ho, h => Expr.leaves_mono e L C' _ _ hC (ho.map _) h
   | .index e i, L, C', o, o', hC, ho, h => by
     simp only [Expr.leaves, Bool.or_eq_true] at h ⊢
@@ -141,6 +147,13 @@ theorem exprsLeave_mono : ∀ (es : List Expr) (L : Leaving) (C' : Consumed),
   | e :: es, L, C', hC, h => by
     simp only [exprsLeave, Bool.or_eq_true] at h ⊢
     exact h.imp (Expr.leaves_mono e L C' _ _ hC (OutLe.refl _)) (exprsLeave_mono es L C' hC)
+
+theorem exprsRead_mono : ∀ (es : List Expr) (L : Leaving) (C' : Consumed),
+    ParamSet.Le L.consumed C' → exprsRead L es = true → exprsRead (L.with C') es = true
+  | [], _, _, _, h => by simp [exprsRead] at h
+  | e :: es, L, C', hC, h => by
+    simp only [exprsRead, Bool.or_eq_true] at h ⊢
+    exact h.imp (Expr.leaves_mono e L C' _ _ hC (OutLe.refl _)) (exprsRead_mono es L C' hC)
 
 theorem fieldsLeave_mono : ∀ (fs : List (Name × Expr)) (L : Leaving) (C' : Consumed),
     ParamSet.Le L.consumed C' → fieldsLeave L fs = true → fieldsLeave (L.with C') fs = true

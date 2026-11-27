@@ -1,4 +1,5 @@
 import Stilt.Modes.Facts
+import Stilt.Modes.Demands
 import Stilt.Rows
 
 /-!
@@ -430,11 +431,57 @@ example : (M.bodyFacts [param "xs"] grownBody).all
     (fun f => f.modes.portability == .portable && f.modes.contention == .calm) = true := by decide
 
 /-- `grown` prints `consumes xs` for its parameter and `escapes` for `out`, its
-result, and nothing else. -/
-example : (M.bodyFacts [param "xs", param "x" .i64] grownBody).map Fact.words =
+result, and nothing else: one word for each mode other than the default, as the annotations of
+the facts suite give them (modes.facts-suite), and neither `fixed` nor `contended`, as no binding
+of a core module is. -/
+theorem grown_words : (M.bodyFacts [param "xs", param "x" .i64] grownBody).map Fact.words =
     [["consumes"], [], ["escapes"]] := by decide
 
 /-- A closure called where it is written prints `once` alone. -/
 example : (M.bodyFacts [] (.call (lam (.int 1)) [] .i64)).map Fact.words = [["once"]] := by decide
+
+/-- `type Box = { cell: Shared<i64> }` and `type Tree = { kids: List<Tree> }`: a record whose
+field is a `Shared<T>` holds one, and a recursive type that holds none is no reason. -/
+private def threadDecls : Decls :=
+  ⟨[⟨"Box", [("cell", .shared .i64)], []⟩, ⟨"Tree", [("kids", .list (.record "Tree" []))], []⟩],
+    [], [], [], [], [], [], []⟩
+
+private def TM : ModeEnv := ⟨threadDecls, threadDecls.consumed, threadDecls.onceParams⟩
+
+example : (threadDecls.contended (.record "Box" []), threadDecls.contended (.record "Tree" []),
+    threadDecls.contended (.list (.tuple [.i64, .shared .str])),
+    threadDecls.contended (.fn [(.let, .shared .i64)] .i64 Row.pure),
+    threadDecls.contended (.fn [(.inout, .shared .i64)] .i64 Row.pure)) =
+    (true, false, true, false, true) := by decide
+
+/-- A parameter of a type that holds a `Shared<T>` is `contended`, and so is a closure literal
+that captures one, bound or not; one that captures nothing is `calm`, and so is a binding of a
+value read from the handle (modes.contended-values). -/
+example : (TM.bodyFacts [param "b" (.record "Box" [])]
+    (.letIn "f" thunk (lam (.field (v "b") "cell"))
+      (.seq (.call (lam (.int 1)) [] .i64) (.call (lam (v "b")) [] .i64)))).map Fact.words =
+    [["contended"], ["contended"], ["once"], ["once", "contended"]] := by decide
+
+/-- A closure literal that captures a view is `fixed` (modes.fixed-values and views.fixed). -/
+example : (TM.bodyFacts [param "w" (.view lst)] (.call (lam (v "w")) [] .i64)).map Fact.words =
+    [["fixed"], ["once", "fixed"]] := by decide
+
+/-- `Shared.new` demands a `portable` value (modes.demands, E0432): a view is none, nor is a
+closure literal that captures one, bound or not; a closure that captures a list is, and so is a
+handle, since `Shared<T>` is `portable`. -/
+example : ((Expr.op (.world (.sharedNew (.view lst))) [v "w"]).demandsMet D [param "w" (.view lst)],
+    (Expr.op (.world (.sharedNew thunk)) [lam (v "w")]).demandsMet D [param "w" (.view lst)],
+    (Expr.letIn "f" thunk (lam (v "w")) (.op (.world (.sharedNew thunk)) [v "f"])).demandsMet D
+      [param "w" (.view lst)],
+    (Expr.op (.world (.sharedNew thunk)) [lam (v "xs")]).demandsMet D [param "xs"],
+    (Expr.op (.world (.sharedNew (.shared .i64))) [v "a"]).demandsMet D [param "a" (.shared .i64)]) =
+    (false, false, false, true, true) := by decide
+
+/-- A `match` arm's binder holds what the matched value holds: a closure that captures one of
+a calm value's is calm, and one of a contended value's contended. -/
+example : (TM.bodyFacts [param "b" (.record "Box" []), param "t" (.record "Tree" [])]
+    (.seq (.match (v "t") .i64 [⟨.bind "s", ["s"], none, .call (lam (v "s")) [] .i64⟩])
+      (.match (v "b") .i64 [⟨.bind "c", ["c"], none, .call (lam (v "c")) [] .i64⟩]))).map
+    Fact.words = [["contended"], [], ["once"], ["once", "contended"]] := by decide
 
 end Stilt.ModesExamples

@@ -16,10 +16,8 @@ and a closure literal gives its captures up at its call when it is `once`: the l
 of their axes (`Modes.reuses`, `Modes.runsOnce`), which `Program.markModes` reads, and so
 the soundness theorem.
 
-The thread axes are settled here, from a binding's type (modes.fixed-values,
-modes.contended-values and modes.mode-crossing): `View<T>` is the one fixed type of the
-calculus, and the model finds no type contended, though the calculus has `Shared<T>`, so
-every binding is `calm`. No reuse reads either axis.
+The thread axes read a binding's type and a closure literal's captures
+(`Stilt.Modes.Threads`). No reuse reads either axis.
 -/
 
 namespace Stilt
@@ -118,15 +116,13 @@ inductive Once where
   | many
   deriving DecidableEq, Repr
 
-/-- Portability: may the value go to another task (modes.bindings-and-axes)? `portabilityOf`
-gives a binding its point. -/
+/-- Portability: may the value go to another task (modes.bindings-and-axes)? -/
 inductive Portability where
   | portable
   | fixed
   deriving DecidableEq, Repr
 
-/-- Contention: may several tasks reach the value at once (modes.bindings-and-axes)?
-`contentionOf` gives a binding its point. -/
+/-- Contention: may several tasks reach the value at once (modes.bindings-and-axes)? -/
 inductive Contention where
   | calm
   | contended
@@ -179,44 +175,5 @@ def reuses (m : Modes) : Bool := m.locality == Axis.least && m.uniqueness == Axi
 def runsOnce (m : Modes) : Bool := m.once == some Axis.least
 
 end Modes
-
-/-! ## The thread axes -/
-
-/-- Whether a type is fixed (modes.fixed-values): `View<T>` is (views.fixed), and no
-core type is. No other type of the calculus holds a view (views.view-types). -/
-def Ty.fixed : Ty → Bool
-  | .view _ => true
-  | _ => false
-
-/-- Whether a type holds `Shared<T>` (modes.contended-values). The model finds none so,
-though the calculus has `Shared<T>` (`Ty.shared`): every binding is `calm`, as every
-binding of a core module is, and nothing reads contention. -/
-def Ty.contended (_ : Ty) : Bool := false
-
-/-- A binding of type `τ` is `fixed` when its type holds a fixed type, or when
-it is a closure literal that captures a binding of a fixed type (modes.fixed-values and modes.mode-crossing). -/
-def portabilityOf (τ : Ty) (captured : List Ty) : Portability :=
-  if τ.fixed || captured.any Ty.fixed then .fixed else .portable
-
-/-- A binding of type `τ` is `contended` when its type holds `Shared<T>`, or
-when it is a closure literal that captures a contended binding (modes.contended-values and modes.mode-crossing). -/
-def contentionOf (τ : Ty) (captured : List Ty) : Contention :=
-  if τ.contended || captured.any Ty.contended then .contended else .calm
-
-/-- These modes with the points on the thread axes of a binding of type `τ` that captures
-bindings of types `captured` (modes.fixed-values and modes.contended-values). The facts set them
-so; no reuse reads them. -/
-def Modes.threads (m : Modes) (τ : Ty) (captured : List Ty) : Modes :=
-  { m with portability := portabilityOf τ captured, contention := contentionOf τ captured }
-
-/-- Every binding of the calculus is `calm` (modes.contended-values and modes.mode-crossing). -/
-theorem calm (τ : Ty) (captured : List Ty) : contentionOf τ captured = .calm := by
-  simp [contentionOf, Ty.contended]
-
-/-- A binding that captures nothing is `fixed` exactly when its type is a view type
-(modes.fixed-values and views.fixed). -/
-theorem portabilityOf_fixed_iff (τ : Ty) :
-    portabilityOf τ [] = .fixed ↔ ∃ σ, τ = .view σ := by
-  cases τ <;> simp [portabilityOf, Ty.fixed]
 
 end Stilt

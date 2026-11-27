@@ -231,8 +231,10 @@ end Copies
 declarations and consumption, the `inout` parameters in scope, the shapes
 copied in the bodies of the loops around the current point, the depth of
 the scope that holds what is stored in each binding made inside `x`'s
-scope, and whether a `catch` or a `with` around the current point may take a raise or a
-performance that leaves it. -/
+scope, whether a `catch` or a `with` around the current point may take a raise or a
+performance that leaves it, inside a `when` that binds `x`, its other names of `x`'s type,
+which may be one place with it, and the parameters of the body, whose caller may still read
+them. -/
 structure Writes where
   decls : Decls
   consumed : Consumed
@@ -242,8 +244,14 @@ structure Writes where
   loop : List (List Name)
   scopes : List (Name × Nat)
   catching : Bool
+  alike : List Name := []
+  params : List Name := []
 
 namespace Writes
+
+/-- Whether `later` says `x` is used after a point: by its name, or by a name that may be one
+place with it. -/
+def laterX (W : Writes) (later : Name → Bool) : Bool := later W.x || W.alike.any later
 
 /-- The part `p` of `x` is copied, held by the scope at depth `h`, if its type
 is copy-on-write (modes.copies). -/
@@ -277,7 +285,7 @@ def mirror (W : Writes) (later : Name → Bool) (s : Copies) (z : Name) (path : 
     Sel.shape (p.sels ++ path.drop ((p.place.map List.length).getD 0))
   let other := s.holders.any fun w => w != z && later w &&
     (s.partsOf w).any fun q => reached.any (hit (Sel.shape q.sels))
-  if z != W.x && !reached.isEmpty && (later W.x || other) then
+  if z != W.x && !reached.isEmpty && (W.laterX later || other) then
     { s with mirrored := z :: s.mirrored }
   else s
 
@@ -290,17 +298,11 @@ def assign (W : Writes) (s : Copies) (path : List Projection) : Copies :=
 own, or the rest of the function if `y` was bound outside `x`'s scope. -/
 def holderOf (W : Writes) (y : Name) : Nat := (W.scopes.lookup y).getD 0
 
-/-- The depth of the scope that holds what a binding `y` made at depth `k`
-holds, whose scope is `body`: the rest of the function when `y` escapes there
-(modes.copies). -/
-def scopeOf (W : Writes) (k h : Nat) (y : Name) (τ : Ty) (body : Expr) : Nat :=
-  if localityOf W.decls W.consumed W.inouts y τ (if h == 0 then some [] else none) body == .escapes
-  then 0 else k
-
 /-- `W` inside the scope of a binding `y` whose copies the scope at depth `hy`
 holds. -/
 def enter (W : Writes) (y : Name) (hy : Nat) : Writes :=
-  { W with scopes := (y, hy) :: W.scopes, inouts := W.inouts.filter (· != y) }
+  { W with scopes := (y, hy) :: W.scopes, inouts := W.inouts.filter (· != y),
+           alike := W.alike.filter (· != y) }
 
 /-- An assignment of a value holding `parts` to the binding `y`, other than
 `x`: a copy held by `y`'s scope, of a whole local or stored in a value

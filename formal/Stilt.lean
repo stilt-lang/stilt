@@ -257,6 +257,8 @@ import Stilt.Moves.Oracle
 import Stilt.Moves.Theorem
 import Stilt.Modes.Lattice
 import Stilt.Modes.Types
+import Stilt.Modes.Threads
+import Stilt.Modes.Demands
 import Stilt.Modes.Uses
 import Stilt.Modes.Escape
 import Stilt.Modes.Copies
@@ -461,6 +463,7 @@ import Stilt.Sharing.Call
 import Stilt.Sharing.Agreement
 import Stilt.Examples.SharedWrites
 import Stilt.Examples.SharedWritesFlow
+import Stilt.Examples.SharedHandles
 
 /-!
 # Stilt

@@ -14,6 +14,7 @@ import Stilt.Handling.Unseen
 import Stilt.Alloc.Theorem
 import Stilt.Quiet.Theorem
 import Stilt.Writable
+import Stilt.Modes.Demands
 
 /-!
 # Accepted programs and their soundness
@@ -28,8 +29,9 @@ the law of exclusivity (modes.law), the names of one `when` of one type as one b
 lives (views.change-while-viewed) and keeps every view inside its sources' scopes
 (views.escaping), reaches nothing that a writable binding writes while it writes it
 (projections.reaching-written-source), resumes a continuation at most once on each path
-(handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), and keeps the
-rules of projections (projections.once-on-every-path).
+(handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), keeps the
+rules of projections (projections.once-on-every-path), and puts no `fixed` value in a
+`Shared<T>` (modes.demands).
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -134,6 +136,10 @@ structure Program.Accepted (p : Program) : Prop where
   under which that copy is the compiler's reach-through: a scope that reaches no source reads, by
   copy, what the compiler reads in place. -/
   viewsWrite : p.ViewsWrite
+  /-- The demands the calculus writes: no value that `Shared.new` takes is `fixed`, by its type
+  or, for a closure literal or a binding of one, by what it captures (modes.demands and
+  shared.tasks-and-modes, E0432). -/
+  demands : p.Demands
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
