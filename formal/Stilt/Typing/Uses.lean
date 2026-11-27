@@ -35,8 +35,7 @@ def PassesOnPairs (scope : RowScope) (d : FnDecl) (s : RowSubst) : Prop :=
 /-- `τ` implements the trait `B`, as far as a body whose type parameters `scope` describes
 knows: a type parameter through its bounds, which are all the body knows of it; a type
 with a head through the program's impl of `B` for that head, whose parameters' bounds the
-type's arguments meet (traits.unsatisfied-bounds, traits.implementing-trait and
-traits.bounded-blocks); and for `Eq`, `Ord`, `Show` and `Hash`, a type that implements them
+type's arguments meet (traits.unsatisfied-bounds and traits.implementing-trait); and for `Eq`, `Ord`, `Show` and `Hash`, a type that implements them
 through the built-in and structural impls, which the calculus's operations compute
 (traits.built-in-impls and traits.structural-impls). A bound of a prelude trait is met only
 through those: an impl of one of them that the program writes is reached through
@@ -61,7 +60,8 @@ theorem Satisfies.of_types {D : Decls} {s s' : RowScope} (hs : ∀ p ∈ s.types
   | prelude ht hi => exact .prelude ht (hi.of_types hs)
 
 /-- The impl of a trait for a type's head applies to the type: one argument for each of the
-impl's parameters, each meeting its bounds (traits.implementing-trait). -/
+impl's parameters, each meeting its bounds (traits.implementing-trait), and each with views
+of viewable types alone, as a type argument has. -/
 def ImplApplies (D : Decls) (scope : RowScope) (i : TraitImpl) (τ : Ty) : Prop :=
   i.typeParams.length = τ.args.length ∧ (∀ a ∈ τ.args, a.ViewsViewable) ∧
     ∀ pa ∈ i.typeParams.zip τ.args, ∀ B ∈ pa.1.bounds, Satisfies D scope pa.2 B
