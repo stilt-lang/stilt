@@ -312,6 +312,32 @@ theorem Expr.after_substRows (e : Expr) : (e.substRows s).after = e.after := by
   case assign t _ => obtain ⟨_, _⟩ := t; rfl
   all_goals rfl
 
+theorem Expr.nonnegIn_substRows : ∀ (G : List Known) (e : Expr), (e.substRows s).nonnegIn G = e.nonnegIn G
+  | _, .op o [] => by cases o <;> rfl
+  | _, .op o [a] => by cases o <;> rfl
+  | G, .op o [a, b] => by
+    cases o
+    case arith o k =>
+      simp [Expr.substRows, substExprRows, Expr.nonnegIn, Expr.nonnegIn_substRows G a,
+        Expr.writes_substRows s a, Expr.nonnegIn_substRows (withoutNames G a.writes) b]
+    all_goals rfl
+  | _, .op o (_ :: _ :: _ :: _) => by cases o <;> rfl
+  | _, .assign ⟨_, _⟩ _ => rfl
+  | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue
+  | _, .fnRef .. | _, .method .. | _, .record .. | _, .variant .. | _, .list .. | _, .field ..
+  | _, .index .. | _, .closure .. | _, .call .. | _, .letIn .. | _, .varIn .. | _, .seq ..
+  | _, .if .. | _, .match .. | _, .for .. | _, .raise .. | _, .try .. | _, .form .. | _, .tryCatch ..
+  | _, .while .. | _, .loop .. | _, .return .. | _, .perform .. | _, .withH .. | _, .view ..
+  | _, .held .. => rfl
+
+theorem Expr.bindFacts_substRows (G : List Known) (x : Name) (e : Expr) :
+    (e.substRows s).bindFacts G x = e.bindFacts G x := by
+  unfold Expr.bindFacts
+  rw [Expr.nonnegIn_substRows]
+  cases e
+  case assign t _ => obtain ⟨_, _⟩ := t; rfl
+  all_goals rfl
+
 theorem literalDivisor_substRows : ∀ es : List Expr, literalDivisor (substExprRows s es) = literalDivisor es
   | [] => rfl
   | [_] => by simp [substExprRows, literalDivisor]
@@ -387,7 +413,8 @@ theorem Expr.panicFree_substRows : ∀ (G : List Known) (e : Expr), (e.substRows
       Expr.panicFree_substRows (withoutWrites G a.writes a.resizes ++ a.after) b]
   | G, .letIn x _ a b | G, .varIn x _ a b => by
     simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows G a, Expr.writes_substRows s a,
-      Expr.panicFree_substRows (withoutNames (withoutNames G a.writes) [x]) b]
+      Expr.bindFacts_substRows s G x a,
+      Expr.panicFree_substRows (withoutNames (withoutNames G a.writes) [x] ++ a.bindFacts G x) b]
   | G, .for x _ a b => by
     simp [Expr.substRows, Expr.panicFreeIn, Expr.panicFree_substRows G a, Expr.writes_substRows s a,
       Expr.writes_substRows s b, Expr.rangeFacts_substRows s G x b a,

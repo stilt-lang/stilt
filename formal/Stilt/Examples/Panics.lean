@@ -106,6 +106,19 @@ example : (Expr.if (.if (test .ge (.var "i") (.int 0)) .bool (test .lt (.var "i"
 example : (Expr.if (test .lt (.var "i") (len "xs")) .i64 at_ (.int 0)).panicFree Limited.all = false := rfl
 example : (Expr.if (test .ge (.var "i") (.int 0)) .i64 at_ (.int 0)).panicFree Limited.all = false := rfl
 
+/-- `let i = e; if i < xs.len() { xs[i] } else { 0 }`: a binding whose initial value is
+known non-negative, a literal, a `len()`, a `+` or a `*` of those, is known non-negative too,
+so a test of the upper bound alone proves the index (facts.known-signs and facts.guards); not
+when the value is `ys.len() - 1` or `-1`. -/
+private def bound (init : Expr) : Expr :=
+  .letIn "i" .i64 init (.if (test .lt (.var "i") (len "xs")) .i64 at_ (.int 0))
+
+example : (bound (.int 0)).panicFree Limited.all = true := rfl
+example : (bound (.op (.arith .add .i64) [len "ys", .op (.arith .mul .i64) [.int 2, .int 3]])).panicFree
+    Limited.all = true := rfl
+example : (bound (.op (.arith .sub .i64) [len "ys", .int 1])).panicFree Limited.all = false := rfl
+example : (bound (.int (-1))).panicFree Limited.all = false := rfl
+
 /-- `for i in a..xs.len() { xs[i] }` reads within the bounds of `xs` when `a` isn't
 negative (facts.range-loops); not up to `xs.len()` included, nor when the body
 writes `xs`. -/
@@ -168,6 +181,10 @@ example : (Expr.if (contains (.var "k")) .i64
     (.seq (.assign ⟨"m", []⟩ (.op (.map .remove) [.var "m", .var "k"])) (get (.var "k"))) (.int 0)).panicFree Limited.all =
     false := rfl
 example : (get (.var "k")).panicFree Limited.all = false := rfl
+/-- `if m.contains(k) { let t = k; m[t] }`: a binding of the key is a key the map has, as the
+export binds a key before it stores. -/
+example : (Expr.if (contains (.var "k")) .i64 (.letIn "t" .str (.var "k") (get (.var "t"))) (.int 0)).panicFree
+    Limited.all = true := rfl
 
 /-- The functions that a limit on `f` alone covers, with overflow or without. -/
 private def onlyF (overflows : Bool) : Limited := ⟨(· == "f"), fun _ _ => false, overflows⟩

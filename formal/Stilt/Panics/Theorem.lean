@@ -2,6 +2,7 @@ import Stilt.Panics.After
 import Stilt.Panics.Stores
 import Stilt.Panics.Handling
 import Stilt.Panics.Holding
+import Stilt.Panics.SignsHold
 import Stilt.InPlace.Agreement
 
 /-!
@@ -180,10 +181,8 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
     case call callee as _ =>
       exact bind (ih G callee he.1) (keep callee) fun _ hf =>
         bind (args ih hk as he.2) (Eval.Keeps.args hk as (List.Subset.refl _) (List.Subset.refl _)) fun _ hp => callAs w hD ih false hf hp
-    case letIn x τ init body =>
-      exact bind (ih G init he.1) (keep init) fun _ hv => withInit w hv (ih _ body he.2)
-    case varIn x τ init body =>
-      exact bind (ih G init he.1) (keep init) fun _ hv => withInit w hv (ih _ body he.2)
+    case letIn x τ init body => exact bindInit (ih G init he.1) (ih _ body he.2)
+    case varIn x τ init body => exact bindInit (ih G init he.1) (ih _ body he.2)
     case assign p value =>
       obtain ⟨x, ps⟩ := p
       have hor := he.1

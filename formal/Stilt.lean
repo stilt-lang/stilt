@@ -295,6 +295,7 @@ import Stilt.Counterexamples.Writes
 import Stilt.Panics.Ops
 import Stilt.Panics.Writes
 import Stilt.Panics.Guards
+import Stilt.Panics.Signs
 import Stilt.Panics.Syntax
 import Stilt.Panics.Instances
 import Stilt.Panics.RowInstances
@@ -314,6 +315,7 @@ import Stilt.Panics.Ranges
 import Stilt.Panics.Stores
 import Stilt.Panics.Handling
 import Stilt.Panics.Holding
+import Stilt.Panics.SignsHold
 import Stilt.Panics.Theorem
 import Stilt.Ends.Counting
 import Stilt.Ends.Syntax

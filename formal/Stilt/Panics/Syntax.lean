@@ -1,5 +1,5 @@
 import Stilt.Panics.Overflow
-import Stilt.Panics.Guards
+import Stilt.Panics.Signs
 import Stilt.Places
 
 /-!
@@ -17,7 +17,9 @@ a `for` over a range from a positive literal, which is known positive
 (facts.known-signs), or when it is a variable `d` that a test guards, with nothing between them writing `d` (facts.divisors):
 `G` holds the variables that the tests around the code guard, the code after
 an `if` whose then-branch always jumps counting on the negation of its test, and code drops
-each of them that it writes, or that a binding hides, before the code after it.
+each of them that it writes, or that a binding hides, before the code after it. A `let` or a
+`var` whose initial value is known non-negative gives its name that fact (`Expr.bindFacts`,
+facts.known-signs), which code drops once it writes the binding too.
 Naming a function, to call it or as a value, adds `panic` unless it is one of the
 functions `lim` covers, which are without `panic` wherever they are named
 (effects.without-panic): `Decls.PanicCover` says that they are, and a program is
@@ -96,9 +98,10 @@ def Expr.isLow : Expr → Bool
 /-- The facts that the start of a range gives the loop's variable `x`: from a literal
 `a`, that it isn't zero, from a positive start, isn't negative, from one that isn't,
 and is no less than `a`; from a variable that the facts `G` before the loop know not
-negative, that it isn't negative either (facts.known-signs). The model knows signs from
-these alone: not from constants, `len()`, `+` and `*` of known signs, accumulators or
-bindings known positive, which facts.known-signs gives too. -/
+negative, that it isn't negative either (facts.known-signs). A literal constant is its
+literal in the calculus. A start known non-negative by `len()`, `+` or `*`, which
+facts.known-signs gives too, gives nothing here, unless a binding holds it first
+(`Expr.bindFacts`). -/
 def Expr.lowFacts (G : List Known) (x : Name) : Expr → List Known
   | .int a => (if 0 < a then [.nonzero x] else []) ++ (if 0 ≤ a then [.nonneg x] else []) ++ [.atLeast x a]
   | .var a => if Known.nonneg a ∈ G then [.nonneg x] else []
@@ -135,7 +138,14 @@ def Projection.byVar : Projection → Bool
   | .field _ => true
   | .index i => i.isVar
 
-/-- Whether an operation on the operands `es` can't panic, but with `overflow`. -/
+/-- Whether an operation on the operands `es` can't panic, but with `overflow`: one that
+`Op.panicFree` keeps, `m[k]` of a key that the facts `G` know the map has (facts.keys), and
+`/`, `%` and an integer method by a divisor proved not zero (facts.divisors): an integer
+literal other than zero, which a literal constant is in the calculus (`literalDivisor`), or a
+variable that `G` knows not zero, which a test that gives `d != 0`, `d > 0` or `d < 0`, or
+the mirror of one, gives, as the negation of `d == 0` does, and which the variable of a `for`
+over a range from a positive literal, known positive, is (`guardedDivisor`), with nothing
+between them writing it. -/
 def Op.panicFreeOn (G : List Known) (o : Op) (es : List Expr) : Bool :=
   o.panicFree || (o.byDivisor && (literalDivisor es || guardedDivisor G es)) ||
     (o == .map .index && guardedKey G es)
@@ -175,9 +185,11 @@ def Expr.panicFreeIn : List Known → Expr → Bool
   | G, .call callee args _ =>
     callee.panicFreeIn G && argsPanicFree (withoutNames G callee.writes) args
   | G, .letIn x _ init body =>
-    init.panicFreeIn G && body.panicFreeIn (withoutNames (withoutNames G init.writes) [x])
+    init.panicFreeIn G &&
+      body.panicFreeIn (withoutNames (withoutNames G init.writes) [x] ++ init.bindFacts G x)
   | G, .varIn x _ init body =>
-    init.panicFreeIn G && body.panicFreeIn (withoutNames (withoutNames G init.writes) [x])
+    init.panicFreeIn G &&
+      body.panicFreeIn (withoutNames (withoutNames G init.writes) [x] ++ init.bindFacts G x)
   | G, .assign p value =>
     (p.indexFree || guardedStore G p value && (lim.overflows || p.path.all Projection.byVar)) &&
       value.panicFreeIn G
