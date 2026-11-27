@@ -11,7 +11,7 @@ import Stilt.HeldNames.Unmerge
 import Stilt.Limits
 import Stilt.Projections.Theorem
 import Stilt.Handling.Unseen
-import Stilt.Alloc.Limits
+import Stilt.Alloc.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -69,7 +69,11 @@ rules of projections (projections.once-on-every-path).
   call of one limited by `without div`, on arguments whose values at its non-escaping
   parameters are function values that halt, halts; and so does a run whose `main` is limited
   (`Program.PanicKeptBy.kept`, `Program.DivLimited.kept`, effects.without-panic,
-  effects.without-overflow and facts.without-div).
+  effects.without-overflow and facts.without-div);
+* a call of a function limited by `without alloc`, on arguments that allocate nothing when
+  called, and a run whose `main` is limited, count no allocation: the counting evaluator runs them
+  as the reference interpreter does, with the count where it started (`Program.AllocLimited.kept`,
+  facts.without-alloc). `without copy` is checked, and its promise left out.
 -/
 
 namespace Stilt
@@ -222,6 +226,10 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   may call with no `div` of its own (facts.div), and a run whose `main` is limited, halts
   (`Program.HaltsKept`). -/
   halts : p.HaltsKept input
+  /-- facts.without-alloc: a call of a function limited by `without alloc`, on arguments that
+  allocate nothing when called, and a run whose `main` is limited, run in the counting evaluator
+  as the reference interpreter runs them, with no allocation counted (`Program.AllocsKept`). -/
+  allocs : p.AllocsKept fuel input
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -245,6 +253,6 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun _ control c v w => callAs_unseen p.decls _ control c v w,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
     Program.PanicKeptBy.kept h.overflowLimits h.wellTyped h.exclusive fuel input,
-    h.divLimits.kept h.wellTyped h.exclusive input⟩
+    h.divLimits.kept h.wellTyped h.exclusive input, h.allocLimits.kept fuel input⟩
 
 end Stilt

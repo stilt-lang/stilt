@@ -349,6 +349,13 @@ import Stilt.Limits
 import Stilt.Alloc.Sites
 import Stilt.Alloc.Storage
 import Stilt.Alloc.Limits
+import Stilt.Alloc.Count
+import Stilt.Alloc.Values
+import Stilt.Alloc.Steps
+import Stilt.Alloc.Instances
+import Stilt.Alloc.Calls
+import Stilt.Alloc.Runs
+import Stilt.Alloc.Theorem
 import Stilt.Counterexamples.Ends
 import Stilt.Guards.Syntax
 import Stilt.Guards.Match
