@@ -70,6 +70,9 @@ type cx = {
   mutable writable : int list;
       (** The bindings of a view type that write their sources, [var]s and
           [inout] parameters (projections.writable-bindings), by their ids. *)
+  mutable consts : (string * Tast.expr) list;
+      (** The constants met in patterns, newest first, each with its value
+          (patterns.constants). *)
 }
 
 val item_name : Hir.item -> string

@@ -148,6 +148,73 @@ let option_pattern cx t payload =
   tag "variant"
     [ Str (declared cx option_item (args_of t)); Str "Some"; Arr payload ]
 
+(* A constant's read, as the expression its value is: the constant expression it is
+   declared with (declarations.constant-expressions), an integer type's [MIN] or [MAX] as
+   the literal of its value, and [NAN] and [INFINITY] as the quotients IEEE 754 gives, a
+   quiet NaN and positive infinity (std.floats and numbers.ieee-754); every NaN orders
+   alike (traits.floats). *)
+let constant cx (e : Tast.expr) : Tast.expr =
+  let code = function
+    | Some (Tast.Code x) -> x
+    | _ -> outside "a constant without code"
+  in
+  match e.desc with
+  | Constant i -> code (List.assoc_opt i cx.program.constants)
+  | Member_constant
+      ({ home = "std.prelude"; name = k }, (("MIN" | "MAX") as m), _)
+    when Ints.of_name k <> None ->
+      let kind = Option.get (Ints.of_name k) in
+      let v = if m = "MIN" then Ints.min_value kind else Ints.max_value kind in
+      { e with desc = Int (Ints.to_string kind v) }
+  | Member_constant
+      ( { home = "std.prelude"; name = "f32" | "f64" },
+        (("NAN" | "INFINITY") as m),
+        _ ) ->
+      let lit x = { e with desc = Float x } in
+      let top = if m = "NAN" then "0.0" else "1.0" in
+      { e with desc = Binary (Div, lit top, lit "0.0") }
+  | Member_constant (owner, m, _) ->
+      code (List.assoc_opt (owner, m) cx.program.member_constants)
+  | _ -> outside "a constant"
+
+(* The name a constant is declared with in the model: its item's, or its owner's and
+   its own. *)
+let const_name (e : Tast.expr) =
+  match e.desc with
+  | Constant i -> i.home ^ "." ^ i.name
+  | Member_constant (owner, m, _) -> owner.home ^ "." ^ owner.name ^ "." ^ m
+  | _ -> outside "a constant"
+
+(* patterns.constants: the literal pattern that matches the values equal to a constant's
+   value [e], when its value is a literal of a type the model's patterns write: an
+   integer, possibly negated (numbers.negative-literals), a Boolean, a string, [()] or a
+   tuple of those. *)
+let rec literal_pattern (e : Tast.expr) =
+  let int t text ~negated =
+    match int_kind t with
+    | Some kind ->
+        let v = literal_value kind text in
+        let v =
+          if (not negated) || String.starts_with ~prefix:"-" v || v = "0" then v
+          else "-" ^ v
+        in
+        Some (tag "int" [ Str v ])
+    | None -> None
+  in
+  match e.desc with
+  | Int text -> int e.ty text ~negated:false
+  | Unary (Neg, { desc = Int text; ty; _ }) -> int ty text ~negated:true
+  | Bool b -> Some (tag "bool" [ Bool b ])
+  | Str s -> Some (tag "str" [ Str s ])
+  | Tuple [] -> Some (Str "unit")
+  | Tuple es ->
+      let ps = List.filter_map literal_pattern es in
+      if List.length ps = List.length es then Some (tag "tuple" [ Arr ps ])
+      else None
+  | _ -> None
+
+let const_literal cx c = literal_pattern (constant cx c)
+
 let rec pattern cx (p : Tast.pattern) =
   match p.pat with
   | P_wild -> Str "wild"
@@ -186,6 +253,16 @@ let rec pattern cx (p : Tast.pattern) =
       List.fold_left
         (fun acc q -> tag "or" [ acc; pattern cx q ])
         (pattern cx q) qs
+  | P_const c -> (
+      (* The constant, declared in the model with its value, and the literal pattern of
+         its value (patterns.constants). *)
+      match const_literal cx c with
+      | Some v ->
+          let name = const_name c in
+          if not (List.mem_assoc name cx.consts) then
+            cx.consts <- (name, constant cx c) :: cx.consts;
+          tag "const" [ Str name; v ]
+      | None -> outside "a constant pattern whose value is no literal")
   | _ -> outside "a pattern the model lacks"
 
 let rec binders (p : Tast.pattern) =
@@ -226,6 +303,9 @@ let block_ty (stmts : Tast.block) =
 
 let arm cx p body = Arr [ pattern cx p; Arr (binders p); body ]
 
+let guarded_arm cx p guard body =
+  Arr [ pattern cx p; Arr (binders p); Option.value guard ~default:Null; body ]
+
 (* A function or a constructor as a value [e] of type [fn(...) -> R / r], as the closure
    that calls it with its parameters, [|a, b| f(a, b)], which a run can't tell from it:
    a function value has no identity of its own (types.function-types). [make] gives the
@@ -247,32 +327,3 @@ let eta (e : Tast.expr) make =
       ( List.map2 pattern vars ps,
         ({ desc = call; ty = result; loc = e.loc } : Tast.expr) )
   | _ -> outside "a function value of a type the model lacks"
-
-(* A constant's read, as the expression its value is: the constant expression it is
-   declared with (declarations.constant-expressions), an integer type's [MIN] or [MAX] as
-   the literal of its value, and [NAN] and [INFINITY] as the quotients IEEE 754 gives, a
-   quiet NaN and positive infinity (std.floats and numbers.ieee-754); every NaN orders
-   alike (traits.floats). *)
-let constant cx (e : Tast.expr) : Tast.expr =
-  let code = function
-    | Some (Tast.Code x) -> x
-    | _ -> outside "a constant without code"
-  in
-  match e.desc with
-  | Constant i -> code (List.assoc_opt i cx.program.constants)
-  | Member_constant
-      ({ home = "std.prelude"; name = k }, (("MIN" | "MAX") as m), _)
-    when Ints.of_name k <> None ->
-      let kind = Option.get (Ints.of_name k) in
-      let v = if m = "MIN" then Ints.min_value kind else Ints.max_value kind in
-      { e with desc = Int (Ints.to_string kind v) }
-  | Member_constant
-      ( { home = "std.prelude"; name = "f32" | "f64" },
-        (("NAN" | "INFINITY") as m),
-        _ ) ->
-      let lit x = { e with desc = Float x } in
-      let top = if m = "NAN" then "0.0" else "1.0" in
-      { e with desc = Binary (Div, lit top, lit "0.0") }
-  | Member_constant (owner, m, _) ->
-      code (List.assoc_opt (owner, m) cx.program.member_constants)
-  | _ -> outside "a constant"

@@ -172,6 +172,7 @@ let written env program =
       projections = [];
       yielding = None;
       writable = [];
+      consts = [];
     }
   in
   let main = Model_fns.instance cx (Function main_item) [] [] in
@@ -181,6 +182,11 @@ let written env program =
   if cx.lazy_met && cx.when_met then
     outside "a lazy value in a program with a when";
   (cx, fns, records, variants, main_row, main)
+
+(* A constant a pattern names, declared with its type and the expression of its value
+   (declarations.constants). *)
+let const_decl cx (name, (value : Tast.expr)) =
+  Arr [ Str name; ty cx value.ty; Model_exprs.expr cx value ]
 
 let export ?(erroneous = false) env (program : Tast.program) =
   if Env.function_sig env main_item = None then Ok nothing_to_run
@@ -198,6 +204,7 @@ let export ?(erroneous = false) env (program : Tast.program) =
             ("traits", Arr []);
             ("traitImpls", Arr []);
             ("effects", Arr (List.rev_map snd cx.effects));
+            ("consts", Arr (List.rev_map (const_decl cx) cx.consts));
           ]
       in
       (* The input the run reads, which the model's world starts with (std.io). *)

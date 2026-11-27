@@ -55,6 +55,7 @@ type cx = {
   mutable yielding : access option;
       (* The access of the projection whose body is being written. *)
   mutable writable : int list;
+  mutable consts : (string * Tast.expr) list;
       (* The bindings of a view type that write their sources: [var]s and [inout]
          parameters (projections.writable-bindings). *)
 }

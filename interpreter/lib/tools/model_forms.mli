@@ -87,6 +87,18 @@ val block_ty : Tast.block -> Types.ty
 val arm : Model_types.cx -> Tast.pattern -> Model_json.t -> Model_json.t
 (** A [match]'s arm of a pattern and a body. *)
 
+val guarded_arm :
+  Model_types.cx ->
+  Tast.pattern ->
+  Model_json.t option ->
+  Model_json.t ->
+  Model_json.t
+(** A [match]'s arm of a pattern, a guard if it has one, and a body. *)
+
+val const_literal : Model_types.cx -> Tast.expr -> Model_json.t option
+(** The literal pattern of a constant's value, when its value is one the model's
+    patterns write (patterns.constants). *)
+
 val eta :
   Tast.expr ->
   (Tast.arg list -> Types.row -> Tast.expr_desc) ->
