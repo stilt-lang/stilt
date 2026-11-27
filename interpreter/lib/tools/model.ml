@@ -14,8 +14,7 @@ let yielding cx access body =
     (fun () ->
       match access with
       | None -> body ()
-      | Some a ->
-          tag "projection" [ Str a.res; ty cx a.result; body () ])
+      | Some a -> tag "projection" [ Str a.res; ty cx a.result; body () ])
 
 (* A function at one instantiation: [name, typeParams, rowParams, params,
    result, row, body]. *)
