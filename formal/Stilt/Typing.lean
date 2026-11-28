@@ -111,7 +111,10 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx e (.tuple τs) →
       (positions τs).lookup f = some τ →
       HasType Γ fx (.field e f) τ
-  /-- `xs[i]` takes an `i64` index (std.lists). -/
+  /-- `xs[i]` takes an `i64` index (std.lists). Only a list is indexed so, and a map through
+  `MapOp.index` at its key type; an array is a list in the calculus. Nothing else has an index
+  rule (expressions.indexing, E0317), a view of a list included, which the Reference indexes and
+  the calculus doesn't, as README's departures say. -/
   | index {Γ fx e i τ σ} :
       HasType Γ fx e (.list τ) →
       HasType Γ fx i σ → Fits σ .i64 →
