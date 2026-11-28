@@ -110,6 +110,8 @@ impl Resolver<'_> {
 
     /// The written type of a receiver (traits.receiver-types): a constructor trait's methods, and
     /// its impls', write it, as `self: Self<A>`, and no other receiver does, its type being `Self`.
+    /// A constructor trait's or impl's receiver with E0338 has the error type, since its `Self` is
+    /// no type, so nothing that reads it reports another error.
     pub(super) fn receiver_type(&mut self, ctx: &Ctx, s: &ast::SelfParam) -> Option<Ty> {
         let keyword = s
             .self_token()
@@ -135,7 +137,7 @@ impl Resolver<'_> {
                 receiver_example(ctx)
             );
             self.error(codes::E0338, keyword, message);
-            return None;
+            return Some(Ty::Error);
         };
         let at = self.at(t.syntax());
         let ty = self.ty(ctx, Some(t));
@@ -147,7 +149,7 @@ impl Resolver<'_> {
                 receiver_example(ctx)
             );
             self.error(codes::E0338, at, message);
-            return None;
+            return Some(Ty::Error);
         }
         Some(ty)
     }

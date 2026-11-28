@@ -27,7 +27,9 @@ impl State<'_> {
 
     /// What `Self` is in a method of `trait_item` called on `receiver`: the receiver's type, or for
     /// a constructor trait the constructor at its head (traits.constructor-traits and
-    /// traits.constructor-parameters), a variable when it isn't known yet.
+    /// traits.constructor-parameters), a variable when it isn't known yet. A constructor
+    /// parameter, or the trait's own `Self`, named alone, as in `F.N`, is that constructor
+    /// (traits.functions-without-self).
     pub(super) fn self_for(&mut self, trait_item: &Item, receiver: &Ty, at: TextRange) -> Ty {
         if self.arity(trait_item) == 0 {
             return receiver.clone();
@@ -35,6 +37,7 @@ impl State<'_> {
         match self.table.shape(receiver) {
             Ty::Con(item, _) => Ty::Con(item, Vec::new()),
             Ty::App(head, _) => *head,
+            head @ (Ty::Param(_) | Ty::SelfTy) => head,
             Ty::Error => Ty::Error,
             _ => self.fresh(at),
         }
