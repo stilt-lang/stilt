@@ -280,7 +280,7 @@ def Decls.StructurallyImplements (D : Decls) (T : Name) (t : PreludeTrait) : Pro
 
 /-- No inherent function of a type has the name of a function of a trait that the type
 implements, through an impl that the program writes or through a structural impl: either is
-E0308 (traits.name-clashes). The calculus has no constants, so no constant of a trait
+E0308 (traits.name-clashes). The calculus has no trait constants, so no constant of a trait
 clashes. -/
 def Decls.NoNameClashes (D : Decls) : Prop :=
   ∀ i ∈ D.impls, ∀ d ∈ i.fns,

@@ -41,7 +41,12 @@ variable {σ : Type}
 raise, a `return` and a panic leave the call, writing its `inout` arguments
 back (values.inout-arguments). A performance leaves it as a raise does, for a
 handler that ends the `with` (handlers.call-that-handler-ends), and its rest,
-once resumed, leaves it when it ends. -/
+once resumed, leaves it when it ends. A projection's call is a call whose body calls the access
+at its `yield` (`Expr.yieldOperand?`), so an access that raises leaves the projection's body as
+any raise leaves a call, its `inout` arguments written back holding what was written before
+the `yield` and through the place (projections.raising-during-access), and an access whose
+performance a handler ends leaves each call the same way, the place holding what the access
+wrote before the performance (handlers.ended-projections). -/
 def _root_.Stilt.Outcome.leaveCall (M : Memory σ) (bound : List (Name × Passed)) (s : σ) :
     Outcome σ Value → Outcome σ Value
   | .done v s' =>

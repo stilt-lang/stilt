@@ -78,20 +78,25 @@ inductive Expr.ThroughOption (f : Name) : Expr → Expr → Prop
   | through {e m : Expr} {U : Ty} {x : Name} : Expr.ThroughOption f (.var x) m →
       Expr.ThroughOption f e (e.throughOption U x (.form .optionField m))
 
-/-- A field of an update's record: a written one, read from the temporary that holds its value,
-or another, read from the temporary `b` that holds the base (records.update). -/
-def Expr.UpdateField (ts : List Name) (b : Name) (fe : Name × Expr) : Prop :=
-  (∃ t ∈ ts, fe.2 = .var t) ∨ fe.2 = .field (.var b) fe.1
+/-- A field of an update's record: a written one, named in `ws`, read from the temporary of `ts`
+paired with it, or another, read from the temporary `b` that holds the base (records.update). -/
+def Expr.UpdateField (ws ts : List Name) (b : Name) (fe : Name × Expr) : Prop :=
+  (∃ t, (fe.1, t) ∈ ws.zip ts ∧ fe.2 = .var t) ∨ (fe.1 ∉ ws ∧ fe.2 = .field (.var b) fe.1)
 
 /-- `{ ..base, f: e }` and `Name { ..base, f: e }` as they run (records.update-fields): `base` is
 evaluated first, into `b`, then the fields written, in written order, into the temporaries `ts`;
 the record of `base`'s type, `R` at `args`, is then built from them, each field written from its
 temporary and every other copied from `b`. So the update's type is `base`'s, it adds and removes
-no field, and with no field written it is a copy of `base` (records.update). -/
+no field, and with no field written it is a copy of `base` (records.update). The names written,
+`ws`, are distinct and each is a field of the record built, read from its own temporary, so the
+record's typing types each written value at its field's type: a field written twice, a field the
+type lacks, or a value of another type has no such form (E0316, E0313, E0311). -/
 inductive Expr.Update : Expr → Prop
   | mk {b R : Name} {args : List Ty} {base : Expr} {ts : List (Name × Ty × Expr)}
-      {fields : List (Name × Expr)} :
-      (∀ fe ∈ fields, Expr.UpdateField (ts.map (·.1)) b fe) →
+      {fields : List (Name × Expr)} {ws : List Name} :
+      ws.Nodup → ws.length = ts.length →
+      (∀ p ∈ ws.zip (ts.map (·.1)), (p.1, Expr.var p.2) ∈ fields) →
+      (∀ fe ∈ fields, Expr.UpdateField ws (ts.map (·.1)) b fe) →
       Expr.Update (.letIn b (.record R args) base (Expr.lets ts (.record R args fields)))
 
 /-- How an assignment through a map's element stores what it writes, `T w` writing `w`, and
@@ -226,18 +231,29 @@ theorem mem_substFieldTys (s : TySubst) : ∀ {fields : List (Name × Expr)} {fe
     · obtain ⟨g, hg, he⟩ := mem_substFieldTys s h
       exact ⟨g, .tail _ hg, he⟩
 
+theorem subst_mem_substFieldTys (s : TySubst) : ∀ {fields : List (Name × Expr)} {g : Name × Expr},
+    g ∈ fields → (g.1, g.2.substTys s) ∈ substFieldTys s fields
+  | (f, e) :: fields, g, h => by
+    simp only [substFieldTys, List.mem_cons] at h ⊢
+    rcases h with rfl | h
+    · exact .inl rfl
+    · exact .inr (subst_mem_substFieldTys s h)
+
 theorem Expr.Update.substTys (s : TySubst) {m : Expr} (h : m.Update) : (m.substTys s).Update := by
   cases h with
-  | @mk b R args base ts fields hf =>
+  | @mk b R args base ts fields ws hn hl hw hf =>
     simp only [Expr.substTys]
     rw [Expr.lets_substTys]
     simp only [Expr.substTys]
-    refine .mk fun fe hfe => ?_
-    obtain ⟨⟨f, e⟩, hg, rfl⟩ := mem_substFieldTys s hfe
-    rw [names_map]
-    rcases hf (f, e) hg with ⟨t, ht, he⟩ | he
-    · exact .inl ⟨t, ht, by simp only at he ⊢; rw [he]; rfl⟩
-    · exact .inr (by simp only at he ⊢; rw [he]; rfl)
+    refine .mk hn (by simpa using hl) (fun p hp => ?_) (fun fe hfe => ?_)
+    · rw [names_map] at hp
+      have := subst_mem_substFieldTys s (hw p hp)
+      simpa [Expr.substTys] using this
+    · obtain ⟨⟨f, e⟩, hg, rfl⟩ := mem_substFieldTys s hfe
+      rw [names_map]
+      rcases hf (f, e) hg with ⟨t, ht, he⟩ | ⟨hnot, he⟩
+      · exact .inl ⟨t, ht, by simp only at he ⊢; rw [he]; rfl⟩
+      · exact .inr ⟨hnot, by simp only at he ⊢; rw [he]; rfl⟩
 
 theorem Expr.ThroughEntry.substTys (s : TySubst) {ts : List Name} :
     ∀ {T : Expr → Expr} {r : Expr}, Expr.ThroughEntry ts T r →

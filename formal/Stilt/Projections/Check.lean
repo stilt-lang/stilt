@@ -163,11 +163,9 @@ and runs to its end, when the call writes its `inout` arguments back
 (projections.when-projection-runs). The access is a call in the body: one that raises leaves the
 body as a raise leaves any call, the statements after the `yield` not run and no `catch` of the
 body's seeing the error, and the projection's `inout` arguments are written back holding what
-was written before the `yield` and through the place (projections.raising-during-access). So
-does a performance in the access whose handler ends it: the statements after the `yield` are in
-the performance's rest, which the handler never resumes, and the place it yielded holds what
-the access wrote before the performance, written back as the performance left each call
-(handlers.ended-projections, `Outcome.leaveCall`). The model doesn't state that a `without`
+was written before the `yield` and through the place, as `Outcome.leaveCall` states. So does a
+performance in the access whose handler ends it: the statements after the `yield` are in the
+performance's rest, which the handler never resumes. The model doesn't state that a `without`
 on the projection leaves the access's effects out of what it limits. -/
 def Expr.yieldOperand? (res : Name) : Expr → Option Expr
   | .assign ⟨x, []⟩ (.op (.list .push) [.var y, .try a]) => if x == res && y == res then some a else none

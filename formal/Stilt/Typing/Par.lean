@@ -72,7 +72,7 @@ def Expr.foldTreeBody : Expr :=
 /-- The function the export declares for `par.fold`, generic over the element type `T`, whose
 function parameter is `escaping` with an empty row (par.what-runs-in-parallel). -/
 def FnDecl.foldTree : FnDecl :=
-  ⟨foldTreeName, [⟨"T", [], []⟩], [],
+  ⟨foldTreeName, [⟨"T", [], [], []⟩], [],
     [⟨.let, "xs", .list (.param "T"), none⟩, ⟨.let, "f", Ty.parFoldFn (.param "T"), none⟩],
     .param "T", Row.pure, Expr.foldTreeBody, {}⟩
 
