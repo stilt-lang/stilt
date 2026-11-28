@@ -17,6 +17,8 @@ covers `f` alone, a call of `f` adds nothing and one of `g` adds `panic`; under
 and `xs.len()` count as overflowing, and `i +% 1`, `n / 2`, `u / d` on an unsigned type,
 `x >> 1` and `a.min(b)` don't (effects.overflow-effect). A store `m = m.insert(k, 1)`, and
 `if !m.contains(k)` whose branch stores, give the code after them the key `k` (facts.keys).
+A compound assignment, `xs[i] += 1` in a range loop over `xs` and `x /= 2`, is proved through
+the temporaries the export binds for it.
 -/
 
 namespace Stilt.Examples.Panics
@@ -169,6 +171,22 @@ example : (overList 0 false (.seq (store (.var "i") (.int 0)) at_)).panicFree Li
 example : (overList 0 false (store (lit .add "i" 1) (.int 0))).panicFree Limited.all = false := rfl
 example : (overList 0 false (store (.var "i") (.seq (.assign ⟨"xs", []⟩ (.list .i64 [])) (.int 0)))).panicFree Limited.all =
     false := rfl
+
+/-- `for i in 0..xs.len() { xs[i] += 1 }` and `x /= 2`, as the export writes a compound
+assignment, binding the index and the operand to temporaries (values.compound-assignment-order):
+the temporaries carry the facts of what they bind, so both are proved; `x /= d` isn't. -/
+private def addAt : Expr :=
+  .letIn "t" .i64 (.var "i") (.letIn "v" .i64 (.int 1)
+    (.assign ⟨"xs", [.index (.var "t")]⟩
+      (.op (.arith .add .i64) [.index (.var "xs") (.var "t"), .var "v"])))
+private def divBy (e : Expr) : Expr :=
+  .letIn "v" .i64 e (.assign ⟨"x", []⟩ (div (.var "x") (.var "v")))
+
+example : (overList 0 false addAt).panicFree Limited.all = true := rfl
+example : (divBy (.int 2)).panicFree Limited.all = true := rfl
+example : (divBy (.var "d")).panicFree Limited.all = false := rfl
+example : (Expr.if (test .ne (.var "d") (.int 0)) .unit (divBy (.var "d")) .unit).panicFree Limited.all = true :=
+  rfl
 
 /-- `if m.contains(k) { m[k] } else { 0 }` reads a key the map has (facts.keys), and
 so does the else-branch of `!m.contains(1)`; a test of another key, or a write

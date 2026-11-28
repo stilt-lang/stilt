@@ -131,6 +131,10 @@ theorem bindFacts_holds {G : List Known} {x : Name} {init : Expr} {n : Nat} {s s
       obtain ⟨rfl, hl⟩ := eval_var_reaches h
       intro f hf
       obtain ⟨g, hg, hfg⟩ := List.mem_flatMap.1 hf
+      have hx : ((x, v) :: s'.1).lookup x = some v := by simp [List.lookup]
+      have hy : ∀ (y : Name), y ≠ x → ((x, v) :: s'.1).lookup y = s'.1.lookup y := fun y hne => by
+        simp [List.lookup, show (y == x) = false by simpa using hne]
+      have hg' := hz _ hg
       cases g with
       | has m kt =>
         cases kt with
@@ -140,7 +144,7 @@ theorem bindFacts_holds {G : List Known} {x : Name} {init : Expr} {n : Nat} {s s
           · rename_i hk
             obtain ⟨rfl, hmx⟩ := hk
             obtain rfl := List.mem_singleton.1 hfg
-            obtain ⟨mv, u, es, d, hm, hu, hmap, hhas⟩ := hz _ hg
+            obtain ⟨mv, u, es, d, hm, hu, hmap, hhas⟩ := hg'
             simp only [KeyTerm.value] at hu
             rw [hl] at hu
             cases hu
@@ -148,7 +152,60 @@ theorem bindFacts_holds {G : List Known} {x : Name} {init : Expr} {n : Nat} {s s
             exact ⟨mv, v, es, d, by simp [List.lookup, hne, hm], by simp [KeyTerm.value], hmap, hhas⟩
           · cases hfg
         | _ => simp [Known.alias] at hfg
-      | _ => simp [Known.alias] at hfg
+      | nonzero y =>
+        simp only [Known.alias] at hfg
+        split at hfg
+        · rename_i hya; subst hya
+          obtain rfl := List.mem_singleton.1 hfg
+          obtain ⟨k, hk, hk0⟩ := hg'
+          rw [hl] at hk; cases hk
+          exact ⟨k, hx, hk0⟩
+        · cases hfg
+      | nonneg y =>
+        simp only [Known.alias] at hfg
+        split at hfg
+        · rename_i hya; subst hya
+          obtain rfl := List.mem_singleton.1 hfg
+          obtain ⟨k, hk, hk0⟩ := hg'
+          rw [hl] at hk; cases hk
+          exact ⟨k, hx, hk0⟩
+        · cases hfg
+      | atLeast y c =>
+        simp only [Known.alias] at hfg
+        split at hfg
+        · rename_i hya; subst hya
+          obtain rfl := List.mem_singleton.1 hfg
+          obtain ⟨k, hk, hk0⟩ := hg'
+          rw [hl] at hk; cases hk
+          exact ⟨k, hx, hk0⟩
+        · cases hfg
+      | below y xs =>
+        simp only [Known.alias] at hfg
+        split at hfg
+        · rename_i hya; obtain ⟨rfl, hxs⟩ := hya
+          obtain rfl := List.mem_singleton.1 hfg
+          obtain ⟨k, vs, hk, hv, hlt⟩ := hg'
+          rw [hl] at hk; cases hk
+          exact ⟨k, vs, hx, by rw [hy _ hxs]; exact hv, hlt⟩
+        · cases hfg
+      | belowBy y xs c =>
+        simp only [Known.alias] at hfg
+        split at hfg
+        · rename_i hya; obtain ⟨rfl, hxs⟩ := hya
+          obtain rfl := List.mem_singleton.1 hfg
+          obtain ⟨k, vs, hk, hv, hlt⟩ := hg'
+          rw [hl] at hk; cases hk
+          exact ⟨k, vs, hx, by rw [hy _ hxs]; exact hv, hlt⟩
+        · cases hfg
+      | longer _ _ => simp [Known.alias] at hfg
+    · rename_i k
+      obtain ⟨rfl, rfl⟩ := eval_int_reaches h
+      split
+      · rename_i hk
+        intro f hf
+        obtain rfl := List.mem_singleton.1 hf
+        exact ⟨k, by simp [List.lookup], hk⟩
+      · exact Frame.Meets.nil _
     · exact Frame.Meets.nil _
 
 /-- A `let` or a `var`, whose body counts on the facts its binding gives its name. -/

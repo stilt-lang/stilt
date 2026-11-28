@@ -7,11 +7,14 @@ The rules of acceptance know some integer expressions not to be negative
 (facts.known-signs): a non-negative literal, a call of `len()`, a variable the facts around
 it know not negative, and a `+` or a `*` of such expressions (`Expr.nonnegIn`). A literal
 constant is its literal in the calculus, which the export writes where the constant is read.
-A `let` or a `var` whose initial value is known non-negative gives its name that fact, until
+A `let` or a `var` whose initial value is known non-negative gives its name that fact, and one
+whose initial value is an integer literal other than zero, that its name isn't zero, until
 code writes the binding (`Expr.bindFacts`). A binding of a variable gives its name the facts
-of keys that the variable's value is (facts.keys): the export binds the key of `m[k] = v`,
-and of `m[k] += v`, to a temporary before it stores, as it binds an operand, so the key the
-store reads is the variable's.
+the variable has (`Known.alias`): its sign, its bounds against a list's length, and the keys
+that its value is (facts.keys). The export binds the key of `m[k] = v`, and the index and the
+operand of a compound assignment, `xs[i] += v` and `x /= 2`, to temporaries before it stores
+(`Expr.Compound`), so the index, the divisor and the key the store reads are those the
+temporaries have.
 -/
 
 namespace Stilt
@@ -34,20 +37,27 @@ def Expr.nonnegIn : List Known → Expr → Bool
   | _, .op o [_] => o.givesLen
   | _, _ => false
 
-/-- The fact that a key a map has gives the name `x` of a binding of the variable `a`: the
-map has `x`'s value too. -/
+/-- The fact about the variable `a` that it gives the name `x` of a binding of `a`, which holds
+`a`'s value: a map that has `a`'s value as a key has `x`'s, and `x` has `a`'s sign and its bounds
+against a list's length, when the binding doesn't hide the map or the list. -/
 def Known.alias (a x : Name) : Known → List Known
   | .has m (.var k) => if k = a ∧ m ≠ x then [.has m (.var x)] else []
+  | .nonzero y => if y = a then [.nonzero x] else []
+  | .nonneg y => if y = a then [.nonneg x] else []
+  | .atLeast y c => if y = a then [.atLeast x c] else []
+  | .below y xs => if y = a ∧ xs ≠ x then [.below x xs] else []
+  | .belowBy y xs c => if y = a ∧ xs ≠ x then [.belowBy x xs c] else []
   | _ => []
 
 /-- The facts that binding `x` to the value of `init` gives the code in its scope, where the
 facts `G` held before `init` ran: that `x` isn't negative when `init` is known non-negative
-(facts.known-signs), and, when `init` is a variable, that each map that has the variable's
-value as a key has `x`'s (facts.keys). -/
+(facts.known-signs), that it isn't zero when `init` is an integer literal other than zero, and,
+when `init` is a variable, the variable's facts (`Known.alias`, facts.keys). -/
 def Expr.bindFacts (G : List Known) (x : Name) (init : Expr) : List Known :=
   (if init.nonnegIn G then [.nonneg x] else []) ++
     match init with
     | .var a => G.flatMap (Known.alias a x)
+    | .int k => if k ≠ 0 then [.nonzero x] else []
     | _ => []
 
 end Stilt
