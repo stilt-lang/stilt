@@ -21,6 +21,7 @@ import Stilt.Capabilities
 import Stilt.Tasks.Scopes
 import Stilt.Tasks.Lazy
 import Stilt.Tasks.Unobservable
+import Stilt.Anonymous
 
 /-!
 # Accepted programs and their soundness
@@ -39,8 +40,9 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
 rules of projections (projections.once-on-every-path), puts no `fixed` value in a
 `Shared<T>` (modes.demands), gives `std.par` only `calm` and `portable` functions
 (par.what-runs-in-parallel), lets no scope escape (tasks.scope-that-escapes), gives
-`Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing) and keeps the limits of
-capabilities (facts.capabilities).
+`Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing), keeps the limits of
+capabilities (facts.capabilities) and declares each anonymous record type once, with no home
+(`Decls.AnonymousRecords`).
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -180,6 +182,9 @@ structure Program.Accepted (p : Program) : Prop where
   /-- No function given to `Lazy.new` holds a site of `locks`
   (polymorphism.lazy-waits-for-nothing, E0435). -/
   lazyLocks : p.LazyLocks
+  /-- Anonymous record types are records named by their own text, of one field or more, one
+  declaration for one set of fields, with no home module (`Decls.AnonymousRecords`). -/
+  anonymous : p.decls.AnonymousRecords
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where

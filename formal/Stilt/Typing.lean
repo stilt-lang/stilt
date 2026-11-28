@@ -62,7 +62,11 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   | unit {Γ fx} : HasType Γ fx .unit .unit
   /-- Every field is given exactly once (expressions.struct-literal-fields), each checked
   against its declared type at the literal's type arguments, one for each of the record's
-  type parameters (declarations.type-parameters and declarations.type-arguments). -/
+  type parameters (declarations.type-parameters and declarations.type-arguments). A literal of an
+  anonymous record type is one of its declaration (`Decls.AnonymousRecords`), its fields evaluated
+  in written order, each checked against the field's type, to which `Never` converts; it is
+  never a declared record, which has another name, even where one is expected (E0311,
+  records.anonymous-literals). -/
   | record {Γ fx R args r fields} :
       D.record? R = some r →
       args.length = r.typeParams.length → (∀ τ ∈ args, τ.WellFormed scope) →
