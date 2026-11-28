@@ -210,14 +210,14 @@ Checked by: the facts suite, whose core programs print no `FIXED`, and whose `te
 <a id="modes.contended-values"></a>
 A binding is `contended` when its type holds `Shared<T>` ([shared.std-sync](14-tasks.md#shared.std-sync)), or when it is a closure literal that captures a contended binding. No core type is contended, so every binding of a core module is `calm`. `Shared<T>` is `portable`.
 
-Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt).
+Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/function_types_hold_nothing.lt](../conformance/par/function_types_hold_nothing.lt), [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt).
 
 Checked by: the facts suite, whose core programs print no `CONTENDED`, which `just facts` checks; the conformance tests of [shared.tasks-and-modes](14-tasks.md#shared.tasks-and-modes) and [par.what-runs-in-parallel](14-tasks.md#par.what-runs-in-parallel) check the demands that read it.
 
 <a id="modes.mode-crossing"></a>
 A type without mutable heap state of its own is neither fixed nor contended, whatever its contents. Every core type is such a type, since a value appears to change only through a `var` or an `inout` ([values.value-semantics](05-values.md#values.value-semantics)). So the thread axes read a type's declaration once, and never its values' history. The one way to be contended is to hold a `Shared<T>`, and the one way to be fixed is to hold a fixed type.
 
-Tests: [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt).
+Tests: [par/function_types_hold_nothing.lt](../conformance/par/function_types_hold_nothing.lt), [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt).
 
 Checked by: the facts suite, which `just facts` checks; the conformance tests of [shared.tasks-and-modes](14-tasks.md#shared.tasks-and-modes) and [par.what-runs-in-parallel](14-tasks.md#par.what-runs-in-parallel) check the types that hold a fixed or contended one.
 

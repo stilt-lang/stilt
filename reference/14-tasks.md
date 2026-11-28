@@ -183,7 +183,7 @@ Each parameter of a function of `std.par` that takes a function is `escaping` wi
 
 The argument must also be `calm` and `portable` ([modes.demands](13-modes.md#modes.demands)). One that reaches a `Shared<T>` or a view is a closure that can't run in parallel (E0431), at the argument. The error has one note, at the binding that gave it the mode ([modes.diagnostic-shape](13-modes.md#modes.diagnostic-shape)). So no program can tell how many threads ran a call.
 
-Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt), [par/rows.lt](../conformance/par/rows.lt).
+Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/function_types_hold_nothing.lt](../conformance/par/function_types_hold_nothing.lt), [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt), [par/rows.lt](../conformance/par/rows.lt).
 
 <a id="par.sequential-meaning"></a>
 Each function of `std.par` means its sequential run: `map` and `each` call `f` on the elements from the first to the last, and `both` calls `f`, then `g`.
@@ -270,7 +270,7 @@ Checked by: no test, since when a value is freed is what no program can observe.
 <a id="cycles.can-form-cycle"></a>
 A declared type **can form a cycle** when one of its fields or variants holds a `Shared<U>` that can reach itself.
 
-- **Holding.** A type holds itself and the types of its fields and variants. It holds the types of its elements and its type arguments, with a declared type's arguments put where its declaration places them. It also holds the `U` of a `Shared<U>` and of a `Task<U>`, and what each of those holds.
+- **Holding.** A type holds itself and the types of its fields and variants. It holds the types of its elements and its type arguments, with a declared type's arguments put where its declaration places them. It also holds the `U` of a `Shared<U>` and of a `Task<U>`, and what each of those holds. A function type holds only itself: what its parameters and result name, a value of it takes or gives when it is called and holds none of.
 - **Reaching itself.** A `Shared<U>` can reach itself when `U` holds one of these:
   - that same `Shared<U>`;
   - a function or handler type;

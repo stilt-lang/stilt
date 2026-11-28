@@ -1,0 +1,37 @@
+//~ tier: advanced
+//~ rule: modes.contended-values, modes.mode-crossing, par.what-runs-in-parallel
+//~ run-output: "1 2 3 4 5"
+
+// A function type holds nothing (cycles.can-form-cycle): a value of it may take or give a
+// `Shared<T>` when it is called, and holds none itself. What a closure holds is what it
+// captures, read from the closure literal (modes.contended-values). So a closure that captures
+// a function value whose parameter or result is a `Shared<T>`, or a record whose field is one,
+// reaches no `Shared<T>`, and runs in parallel.
+
+use std.par
+use std.sync
+
+type Maker = { make: fn() -> sync.Shared<i64> }
+
+fn passed(escaping f: fn(sync.Shared<i64>) -> i64) -> (i64, i64) {
+  par.both(|| { let g = f; 1 }, || 2)
+}
+
+fn kept(m: Maker) -> (i64, i64) {
+  par.both(|| { let k = m; 3 }, || 4)
+}
+
+fn read(s: sync.Shared<i64>) -> i64 {
+  when s { s }
+}
+
+fn fresh() -> sync.Shared<i64> {
+  sync.Shared.new(5)
+}
+
+fn main() / {io} {
+  let (a, b) = passed(read)
+  let m = Maker { make: fresh }
+  let (c, d) = kept(m)
+  print("{a} {b} {c} {d} {read(m.make())}")
+}

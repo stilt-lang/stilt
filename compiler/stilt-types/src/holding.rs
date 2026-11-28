@@ -25,8 +25,8 @@ pub(crate) fn declared(decls: &dyn Lookup, item: &Item, args: &[Ty]) -> Vec<Ty> 
     }
 }
 
-/// Whether a type holds a type that `p` accepts, at any depth. It also reads the parameters and
-/// the result of a function type. A declared type met again inside itself adds only what its
+/// Whether a type holds a type that `p` accepts, at any depth. A function type holds nothing,
+/// though `p` may accept it. A declared type met again inside itself adds only what its
 /// arguments hold, so the walk of a recursive type ends, as the interpreter's does.
 pub(crate) fn holds(decls: &dyn Lookup, ty: &Ty, p: &dyn Fn(&Ty) -> bool) -> bool {
     let mut walk = Walk {
@@ -65,12 +65,14 @@ impl Walk<'_> {
             Ty::Tuple(ts) => self.any(ts, inside),
             Ty::App(head, ts) => self.holds(head, inside) || self.any(ts, inside),
             Ty::Spread(s) => self.holds(&s.elem, inside),
-            Ty::Fn(f) => {
-                f.params.iter().any(|(_, t)| self.holds(t, inside)) || self.holds(&f.ret, inside)
-            }
-            Ty::Param(_) | Ty::SelfTy | Ty::Handler(_) | Ty::Var(_) | Ty::Value(_) | Ty::Error => {
-                false
-            }
+            // A function type holds nothing: what a closure holds is what it captures.
+            Ty::Param(_)
+            | Ty::Fn(_)
+            | Ty::SelfTy
+            | Ty::Handler(_)
+            | Ty::Var(_)
+            | Ty::Value(_)
+            | Ty::Error => false,
         };
         if !found {
             self.none.insert(key);

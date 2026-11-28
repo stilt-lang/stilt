@@ -48,9 +48,8 @@ let declared env item args =
   | _ -> args
 
 (* Whether a type holds a type that [p] accepts, at any depth: its elements,
-   its arguments, a declared type's fields and payloads at its arguments
-   (modes.mode-crossing, cycles.can-form-cycle), and the parameters and result
-   of a function type. A declared type met again inside itself adds only what
+   its arguments, and a declared type's fields and payloads at its arguments
+   (modes.mode-crossing, cycles.can-form-cycle); a function type holds nothing. A declared type met again inside itself adds only what
    its arguments hold, so the walk of a recursive type ends. *)
 let holds env p ty =
   let rec holds inside ty =
@@ -64,9 +63,8 @@ let holds env p ty =
     | Tuple ts | App (_, ts) -> List.exists (holds inside) ts
     | Record fields -> List.exists (fun (_, t) -> holds inside t) fields
     | Spread (_, t) -> holds inside t
-    | Fn (ps, r, _) ->
-        List.exists (fun (_, t) -> holds inside t) ps || holds inside r
-    | Forall f -> holds inside f.body
+    (* A function type holds nothing: what a closure holds is what it captures. *)
+    | Fn _ | Forall _ -> false
     | Handler _ | Param _ | Var _ | Value _ | Error -> false
   in
   holds [] ty
