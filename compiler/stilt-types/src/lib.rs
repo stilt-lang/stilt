@@ -20,6 +20,7 @@ mod cow;
 pub mod cycles;
 pub mod facts;
 pub mod generable;
+mod holding;
 pub mod holes;
 mod implements;
 mod infer;

@@ -3,18 +3,22 @@
 //! must be `portable` (shared.tasks-and-modes and shared.std-sync), E0432, and a closure that
 //! `std.par` runs must be `calm` and `portable` (par.what-runs-in-parallel), E0431. A value is
 //! fixed when its type holds a view, or it is a closure that captures one, and contended when its
-//! type holds a `Shared<T>`; a closure literal is either when a binding it captures is.
+//! type holds a `Shared<T>`; a closure literal is either when a binding it captures is. A type
+//! holds its fields' and its variants' types as its elements and arguments
+//! ([`crate::holding`]).
 
 use std::collections::{HashMap, HashSet};
 
 use stilt_diag::{Diagnostic, codes};
+use stilt_hir::decls::{Lookup, TypeDefInfo};
 use stilt_hir::hir::{LocalId, Name};
 use stilt_syntax::TextRange;
 
 use super::views::Sources;
+use crate::holding::holds;
 use crate::tast::walk;
 use crate::tast::{Block, Callee, Expr, ExprKind, PatKind, StmtKind};
-use crate::ty::{Ty, is_shared};
+use crate::ty::{Ty, instantiate, is_shared};
 
 /// What an argument must be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -56,31 +60,54 @@ pub(crate) fn demanded(callee: &Callee, index: usize) -> bool {
     demands(callee).iter().any(|(i, _)| *i == index)
 }
 
-/// Whether a type holds a type that `p` accepts, at any depth.
-pub(crate) fn holds(ty: &Ty, p: &dyn Fn(&Ty) -> bool) -> bool {
-    p(ty)
-        || match ty {
-            Ty::Con(_, ts) | Ty::Tuple(ts) => ts.iter().any(|t| holds(t, p)),
-            Ty::App(head, ts) => holds(head, p) || ts.iter().any(|t| holds(t, p)),
-            Ty::Spread(s) => holds(&s.elem, p),
-            Ty::Fn(f) => f.params.iter().any(|(_, t)| holds(t, p)) || holds(&f.ret, p),
-            Ty::Param(_) | Ty::SelfTy | Ty::Handler(_) | Ty::Var(_) | Ty::Value(_) | Ty::Error => {
-                false
-            }
-        }
-}
-
 /// modes.fixed-values, and views.fixed: a type that holds a view.
-fn fixed_type(ty: &Ty) -> bool {
-    holds(ty, &Ty::is_view)
+fn fixed_type(decls: &dyn Lookup, ty: &Ty) -> bool {
+    holds(decls, ty, &Ty::is_view)
 }
 
-/// modes.contended-values: a type that holds a `Shared<T>`.
-fn contended_type(ty: &Ty) -> bool {
-    holds(ty, &|t| matches!(t, Ty::Con(item, _) if is_shared(item)))
+/// modes.contended-values: whether a type is a `Shared<T>`, which a contended type holds.
+fn is_shared_ty(ty: &Ty) -> bool {
+    matches!(ty, Ty::Con(item, _) if is_shared(item))
+}
+
+/// How a captured binding's type holds what `p` accepts, `what`, for a message and for its note:
+/// it is one, which `why` explains, a field or a variant of its declared type holds one, or it
+/// holds one otherwise, as an element or a type argument does (modes.mode-crossing). The two
+/// last leave `why` out, so that the message stays short (modes.diagnostic-shape).
+fn held_how(
+    decls: &dyn Lookup,
+    ty: &Ty,
+    p: &dyn Fn(&Ty) -> bool,
+    what: &str,
+    why: &str,
+) -> (String, String) {
+    if p(ty) {
+        return (format!("{what}, {why}"), format!("is {what}"));
+    }
+    let held = format!("holds {what}");
+    let part = match ty {
+        Ty::Con(item, args) => decls.type_info(item).and_then(|info| {
+            let at = |t| instantiate(t, &info.params, args);
+            match &info.def {
+                TypeDefInfo::Record(fields) => fields
+                    .iter()
+                    .find(|(_, t)| holds(decls, &at(t), p))
+                    .map(|(f, _)| format!("whose field `{f}`")),
+                TypeDefInfo::Variants(vs) => vs
+                    .iter()
+                    .find(|(_, ts)| ts.iter().any(|t| holds(decls, &at(t), p)))
+                    .map(|(v, _)| format!("whose variant `{v}`")),
+                TypeDefInfo::Builtin => None,
+            }
+        }),
+        _ => None,
+    };
+    let part = part.unwrap_or_else(|| "which".to_owned());
+    (format!("{part} {held}"), held)
 }
 
 struct Demands<'a> {
+    decls: &'a dyn Lookup,
     locals: &'a [Name],
     /// Where each parameter is declared.
     params: &'a [(LocalId, TextRange)],
@@ -92,12 +119,14 @@ struct Demands<'a> {
 
 /// The errors of the demands of every call in a body.
 pub(crate) fn errors(
+    decls: &dyn Lookup,
     locals: &[Name],
     params: &[(LocalId, TextRange)],
     sources: &Sources,
     block: &Block,
 ) -> Vec<Diagnostic> {
     let mut d = Demands {
+        decls,
         locals,
         params,
         sources,
@@ -141,7 +170,7 @@ impl<'a> Demands<'a> {
     /// Whether a captured binding's use is fixed: of a type that holds a view, or a closure
     /// that captures one.
     fn fixed(&self, use_: &Expr) -> bool {
-        fixed_type(&use_.ty) || !self.sources.sources(use_).is_empty()
+        fixed_type(self.decls, &use_.ty) || !self.sources.sources(use_).is_empty()
     }
 
     fn check(&mut self, callee: &Callee, demand: Demand, a: &'a Expr) {
@@ -157,7 +186,7 @@ impl<'a> Demands<'a> {
                      task"
                 );
                 let d = Diagnostic::new(codes::E0432, use_.at, message);
-                let d = self.noted(d, v, "a view");
+                let d = self.noted(d, v, "is a view");
                 self.errors.push(d);
             }
             (Demand::Portable, None) if self.fixed(a) => {
@@ -176,31 +205,35 @@ impl<'a> Demands<'a> {
 
     /// E0431 at a closure given to `std.par` that reaches a `Shared<T>` or a view.
     fn calm_portable(&mut self, a: &Expr, closure: &Expr) {
+        let decls = self.decls;
+        let thread = "which can't leave its source's thread";
         let reached = captures(closure).into_iter().find_map(|(v, use_)| {
-            if contended_type(&use_.ty) {
-                Some((
-                    v,
-                    "a `Shared<T>`, which only a `when` reads",
-                    "a `Shared<T>`",
-                ))
+            let ty = &use_.ty;
+            if holds(decls, ty, &is_shared_ty) {
+                let why = "which only a `when` reads";
+                let (how, note) = held_how(decls, ty, &is_shared_ty, "a `Shared<T>`", why);
+                Some((v, how, note))
+            } else if fixed_type(decls, ty) {
+                let (how, note) = held_how(decls, ty, &Ty::is_view, "a view", thread);
+                Some((v, how, note))
             } else if self.fixed(use_) {
-                Some((v, "a view, which can't leave its source's thread", "a view"))
+                Some((v, format!("a view, {thread}"), "is a view".to_owned()))
             } else {
                 None
             }
         });
-        if let Some((v, why, what)) = reached {
+        if let Some((v, why, note)) = reached {
             let name = self.locals[v.0 as usize];
             let message = format!("this closure can't run in parallel: it reaches `{name}`, {why}");
             let d = Diagnostic::new(codes::E0431, a.at, message);
-            let d = self.noted(d, v, what);
+            let d = self.noted(d, v, &note);
             self.errors.push(d);
         }
     }
 
     /// modes.diagnostic-shape: one note at the binding that gave `v` its mode, when it is a
-    /// parameter or a binding of a view.
-    fn noted(&self, d: Diagnostic, v: LocalId, what: &str) -> Diagnostic {
+    /// parameter or a binding of a view, which says what `note` says of it.
+    fn noted(&self, d: Diagnostic, v: LocalId, note: &str) -> Diagnostic {
         let at = self
             .params
             .iter()
@@ -210,7 +243,7 @@ impl<'a> Demands<'a> {
         match at {
             Some(at) => {
                 let name = self.locals[v.0 as usize];
-                d.with_note(at, format!("`{name}` is {what} from here"))
+                d.with_note(at, format!("`{name}` {note} from here"))
             }
             None => d,
         }

@@ -126,7 +126,7 @@ A value that reaches another task must be `portable` ([modes.fixed-values](13-mo
 
 A `fixed` value given to `Shared.new`, as a view is, is a value that can't reach another task (E0432), at the value. So is a task's function that captures a `fixed` binding, at the capture. Each has one note, at the binding that gave it the mode ([modes.diagnostic-shape](13-modes.md#modes.diagnostic-shape)). A `Shared<T>` is `portable` and `contended` ([modes.contended-values](13-modes.md#modes.contended-values)), so a task captures handles freely.
 
-Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [shared/errors.lt](../conformance/shared/errors.lt).
+Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt), [shared/errors.lt](../conformance/shared/errors.lt).
 
 ## Holding shared values
 
@@ -183,7 +183,7 @@ Each parameter of a function of `std.par` that takes a function is `escaping` wi
 
 The argument must also be `calm` and `portable` ([modes.demands](13-modes.md#modes.demands)). One that reaches a `Shared<T>` or a view is a closure that can't run in parallel (E0431), at the argument. The error has one note, at the binding that gave it the mode ([modes.diagnostic-shape](13-modes.md#modes.diagnostic-shape)). So no program can tell how many threads ran a call.
 
-Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/rows.lt](../conformance/par/rows.lt).
+Tests: [par/demanded_arguments.lt](../conformance/par/demanded_arguments.lt), [par/held_through_declarations.lt](../conformance/par/held_through_declarations.lt), [par/held_through_declarations_accepted.lt](../conformance/par/held_through_declarations_accepted.lt), [par/rows.lt](../conformance/par/rows.lt).
 
 <a id="par.sequential-meaning"></a>
 Each function of `std.par` means its sequential run: `map` and `each` call `f` on the elements from the first to the last, and `both` calls `f`, then `g`.

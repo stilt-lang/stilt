@@ -1,0 +1,75 @@
+//~ tier: advanced
+//~ rule: modes.contended-values, modes.fixed-values, modes.mode-crossing, par.what-runs-in-parallel
+
+// A type holds the types of its fields and variants, with its arguments put where its
+// declaration places them (cycles.can-form-cycle), and the thread axes read that declaration
+// (modes.mode-crossing). So a closure given to `std.par` that captures a record, a variant type
+// or a generic type whose fields or payloads hold a `Shared<T>` reaches it and can't run in
+// parallel, however deep the field and whether or not the type is recursive, as one that
+// captures the handle itself can't. An `Option` of a view holds the view in its payload.
+
+use std.par
+use std.sync
+use std.task
+use std.view
+
+type Box = { s: sync.Shared<i64> }
+
+type Outer = { n: i64, inner: Box }
+
+type Slot = | Empty | Full(sync.Shared<i64>)
+
+type Holder<T> = { x: T }
+
+type Chain = | End | Link(sync.Shared<i64>, Chain)
+
+type Tree<T> = | Leaf(T) | Node(Tree<T>, Tree<T>)
+
+type Pending = { t: task.Task<sync.Shared<i64>> }
+
+fn direct(a: sync.Shared<i64>) -> (i64, i64) {
+  par.both(|| { let c = a; 1 }, || 1) //~ ERROR E0431
+}
+
+fn boxed(b: Box) -> (i64, i64) {
+  par.both(|| { let c = b; 1 }, || 1) //~ ERROR E0431
+}
+
+fn nested(o: Outer) -> (i64, i64) {
+  par.both(|| 1, || { let c = o; 1 }) //~ ERROR E0431
+}
+
+fn slotted(s: Slot) -> List<i64> {
+  par.map([1, 2], |x| { let c = s; x }) //~ ERROR E0431
+}
+
+fn held(h: Holder<sync.Shared<i64>>) -> (i64, i64) {
+  par.both(|| { let c = h; 1 }, || 1) //~ ERROR E0431
+}
+
+fn chained(c: Chain) -> i64 {
+  par.fold([1, 2], 0, |a, x| { let d = c; a + x }) //~ ERROR E0431
+}
+
+fn grown(t: Tree<sync.Shared<i64>>) -> (i64, i64) {
+  par.both(|| { let c = t; 1 }, || 1) //~ ERROR E0431
+}
+
+fn pending(p: Pending) -> (i64, i64) {
+  par.both(|| { let c = p; 1 }, || 1) //~ ERROR E0431
+}
+
+fn paired(p: (Box, i64)) -> (i64, i64) {
+  par.both(|| { let c = p; 1 }, || 1) //~ ERROR E0431
+}
+
+fn listed(xs: List<Slot>) -> (i64, i64) {
+  par.both(|| { let c = xs; 1 }, || 1) //~ ERROR E0431
+}
+
+fn viewed(xs: List<i64>) -> (i64, i64) {
+  let o = Some(view.View.all(xs))
+  par.both(|| { let c = o; 1 }, || 1) //~ ERROR E0431
+}
+
+fn main() {}

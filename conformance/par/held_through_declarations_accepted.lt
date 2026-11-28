@@ -1,0 +1,63 @@
+//~ tier: advanced
+//~ rule: modes.contended-values, modes.mode-crossing, par.what-runs-in-parallel, shared.tasks-and-modes
+//~ run-output: "1 2 3 4 5 6 7 8"
+
+// A type holds only what its declaration places in its fields and variants (cycles.can-form-cycle),
+// so an argument that no field names holds nothing: `Tag<Shared<i64>>` holds no `Shared<T>`,
+// and a closure that captures one runs in parallel. Neither do a generic type at an argument
+// that holds none, a recursive type, two types that hold each other, nor one that grows as it
+// holds itself. A `Shared<T>` is portable, so a task's function captures a record that holds
+// one.
+
+use std.par
+use std.sync
+use std.task
+
+type Tag<T> = { n: i64 }
+
+type Holder<T> = { x: T }
+
+type Tree<T> = | Leaf(T) | Node(Tree<T>, Tree<T>)
+
+type Nat = | Zero | Succ(Nat)
+
+type Even = | Nil | Next(Odd)
+
+type Odd = | Step(Even)
+
+type Grow<T> = | Stop | More(Grow<List<T>>)
+
+type Box = { s: sync.Shared<i64> }
+
+fn tagged(t: Tag<sync.Shared<i64>>) -> (i64, i64) {
+  par.both(|| t.n, || 2)
+}
+
+fn held(h: Holder<i64>) -> (i64, i64) {
+  par.both(|| { let c = h; 3 }, || h.x)
+}
+
+fn recursive(t: Tree<i64>, n: Nat) -> (i64, i64) {
+  par.both(|| { let c = t; 5 }, || { let m = n; 6 })
+}
+
+fn mutual(e: Even, g: Grow<i64>) -> (i64, i64) {
+  par.both(|| { let c = e; 7 }, || { let d = g; 0 })
+}
+
+fn counted(b: Box) / async {
+  let t = task.spawn(|| { let s = b.s; when s { s += 8 } })
+  t.await()
+}
+
+fn main() / {io, async} {
+  let (a, b) = tagged(Tag { n: 1 })
+  let (c, d) = held(Holder { x: 4 })
+  let (e, f) = recursive(Node(Leaf(1), Leaf(2)), Succ(Zero))
+  let (g, _) = mutual(Next(Step(Nil)), More(Stop))
+  let box = Box { s: sync.Shared.new(0) }
+  counted(box)
+  let s = box.s
+  let h = when s { s }
+  print("{a} {b} {c} {d} {e} {f} {g} {h}")
+}

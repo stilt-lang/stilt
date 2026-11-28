@@ -34,3 +34,13 @@ fn chained(t: task.Task<i64>, f: fn() -> i64) -> i64 / {io, async} {
 fn waited(t: task.Task<i64>) -> i64 / async {
   t.await() //~ ALLOC
 }
+
+// A record holds the types of its fields (cycles.can-form-cycle), so a task whose closure
+// captures one with a task's handle in a field may reach that handle, as one that captures the
+// handle does (par.atomic-sites).
+type Pending = { t: task.Task<i64> }
+
+fn pending(p: Pending) -> i64 / async {
+  let u = task.spawn(|| p.t.await() + 1) //~ OVERFLOW CONSUMES p DIV SPAWN ALLOC ATOMIC
+  u.await() //~ ALLOC
+}

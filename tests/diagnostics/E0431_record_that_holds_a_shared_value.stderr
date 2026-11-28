@@ -1,0 +1,12 @@
+── CLOSURE THAT CAN'T RUN IN PARALLEL ── E0431_record_that_holds_a_shared_value.lt:7:15  [E0431]
+
+This closure can't run in parallel: it reaches `scale`, whose field `factor`
+holds a `Shared<T>`:
+
+  6 │ fn scaled(scale: Scale, xs: List<i64>) -> List<i64> {
+    │           ───── `scale` holds a `Shared<T>` from here
+  7 │   par.map(xs, |x| x * scale.name.len())
+    │               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+`std.par` runs the closure on other threads, so it can't reach a `Shared` value.
+Read the shared value once before the call, and capture the copy.

@@ -1,0 +1,10 @@
+use std.par
+use std.sync
+
+type Scale = { factor: sync.Shared<i64>, name: str }
+
+fn scaled(scale: Scale, xs: List<i64>) -> List<i64> {
+  par.map(xs, |x| x * scale.name.len())
+}
+
+fn main() {}

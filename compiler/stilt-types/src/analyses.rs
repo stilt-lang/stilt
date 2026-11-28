@@ -90,7 +90,13 @@ pub(crate) fn check(
         .map(|(_, v)| *v)
         .zip(sig.params.iter().map(|(_, at)| *at))
         .collect();
-    errors.extend(demands::errors(&body.locals, &params, &sources, block));
+    errors.extend(demands::errors(
+        decls,
+        &body.locals,
+        &params,
+        &sources,
+        block,
+    ));
     let exclusivity = modes::Body {
         locals: &body.locals,
         params: &body.params,

@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use stilt_hir::decls::{Lookup, TypeDefInfo};
 use stilt_hir::hir::{Item, Name};
 
+use crate::holding::declared;
 use crate::ty::{Ty, instantiate};
 
 /// The most types a walk looks at, past which it takes the type to hold any type: a type that
@@ -89,20 +90,8 @@ fn held(decls: &dyn Lookup, ty: &Ty) -> Held {
 /// and `Lazy<T>`, whose value is a function's until it is computed (polymorphism.lazy-values).
 fn parts(decls: &dyn Lookup, ty: &Ty) -> Option<Vec<Ty>> {
     match ty {
-        Ty::Con(item, args) => {
-            let Some(info) = decls.type_info(item) else {
-                return Some(args.clone());
-            };
-            let at = |t| instantiate(t, &info.params, args);
-            Some(match &info.def {
-                TypeDefInfo::Record(fields) => fields.iter().map(|(_, t)| at(t)).collect(),
-                TypeDefInfo::Variants(vs) => {
-                    vs.iter().flat_map(|(_, ts)| ts.iter().map(at)).collect()
-                }
-                TypeDefInfo::Builtin if &*item.home == "std.lazy" => return None,
-                TypeDefInfo::Builtin => args.clone(),
-            })
-        }
+        Ty::Con(item, _) if &*item.home == "std.lazy" => None,
+        Ty::Con(item, args) => Some(declared(decls, item, args)),
         Ty::Tuple(types) => Some(types.clone()),
         Ty::Fn(_) | Ty::Handler(_) | Ty::Param(_) | Ty::SelfTy | Ty::App(..) | Ty::Spread(_) => {
             None

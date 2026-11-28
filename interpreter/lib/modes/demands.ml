@@ -1,8 +1,10 @@
-(* The demands on the thread axes of modes (modes.fixed-values, modes.contended-values and modes.demands and
-   14): a value put in a [Shared<T>], and a task's function, must be
-   [portable] (shared.tasks-and-modes), and a closure that [std.par] runs
-   must be [calm] and [portable] (par.what-runs-in-parallel). A value is fixed when its
-   type holds a view, and contended when it holds a [Shared<T>]; a closure
+(* The demands on the thread axes of modes (modes.fixed-values,
+   modes.contended-values and modes.demands): a value put in a [Shared<T>], and
+   a task's function, must be [portable] (shared.tasks-and-modes), and a
+   closure that [std.par] runs must be [calm] and [portable]
+   (par.what-runs-in-parallel). A value is fixed when its type holds a view,
+   and contended when it holds a [Shared<T>], through its declaration's fields
+   and variants as through its arguments (modes.mode-crossing); a closure
    literal is either when a binding it captures is. *)
 
 open Tast
@@ -30,26 +32,52 @@ let demands : callee -> (int * demand) list = function
 
 let demanded callee i = List.mem_assoc i (demands callee)
 
-(* Whether a type holds a type that [p] accepts, at any depth. *)
-let rec holds p ty =
-  let ty = T.resolve ty in
-  p ty
-  ||
-  match ty with
-  | Con (_, ts) | Tuple ts | App (_, ts) -> List.exists (holds p) ts
-  | Record fields -> List.exists (fun (_, t) -> holds p t) fields
-  | Spread (_, t) -> holds p t
-  | Fn (ps, r, _) -> List.exists (fun (_, t) -> holds p t) ps || holds p r
-  | Forall f -> holds p f.body
-  | Handler _ | Param _ | Var _ | Value _ | Error -> false
+(* The types that a type constructor applied to [args] holds directly: a
+   declared type's fields' and payloads' types at [args], and the arguments of
+   any other (cycles.can-form-cycle). *)
+let declared env item args =
+  match Env.type_info env item with
+  | Some { params; def = Record fields; _ }
+    when List.length params = List.length args ->
+      let sub = T.subst (List.combine params args) [] in
+      List.map (fun (_, t) -> sub t) fields
+  | Some { params; def = Variants variants; _ }
+    when List.length params = List.length args ->
+      let sub = T.subst (List.combine params args) [] in
+      List.concat_map (fun (_, payload) -> List.map sub payload) variants
+  | _ -> args
+
+(* Whether a type holds a type that [p] accepts, at any depth: its elements,
+   its arguments, a declared type's fields and payloads at its arguments
+   (modes.mode-crossing, cycles.can-form-cycle), and the parameters and result
+   of a function type. A declared type met again inside itself adds only what
+   its arguments hold, so the walk of a recursive type ends. *)
+let holds env p ty =
+  let rec holds inside ty =
+    let ty = T.resolve ty in
+    p ty
+    ||
+    match ty with
+    | Con (item, ts) when List.mem item inside -> List.exists (holds inside) ts
+    | Con (item, ts) ->
+        List.exists (holds (item :: inside)) (declared env item ts)
+    | Tuple ts | App (_, ts) -> List.exists (holds inside) ts
+    | Record fields -> List.exists (fun (_, t) -> holds inside t) fields
+    | Spread (_, t) -> holds inside t
+    | Fn (ps, r, _) ->
+        List.exists (fun (_, t) -> holds inside t) ps || holds inside r
+    | Forall f -> holds inside f.body
+    | Handler _ | Param _ | Var _ | Value _ | Error -> false
+  in
+  holds [] ty
 
 (* modes.fixed-values, and views.fixed *)
-let fixed_type =
-  holds (function Con (item, _) -> V.is_view_con item | _ -> false)
+let fixed_type env =
+  holds env (function Con (item, _) -> V.is_view_con item | _ -> false)
 
 (* modes.contended-values *)
-let contended_type =
-  holds (function Con (item, _) -> item = shared_item | _ -> false)
+let contended_type env =
+  holds env (function Con (item, _) -> item = shared_item | _ -> false)
 
 (* The closure literals that [let] binds to a name, by the name's id. *)
 let closures block =
@@ -79,6 +107,7 @@ let captures (body : expr) =
   List.rev !found
 
 type ctx = {
+  env : Env.t;
   sources : S.t;
   closures : (int, expr) Hashtbl.t;
   report : Code.t -> Ast.loc -> string -> unit;
@@ -98,7 +127,7 @@ let literal ctx (a : expr) =
 (* A captured binding that is fixed: of a type that holds a view, or a
    closure that captures one (views.fixed). *)
 let fixed ctx ((_ : Hir.var), (use : expr)) =
-  fixed_type use.ty || S.carries ctx.sources use
+  fixed_type ctx.env use.ty || S.carries ctx.sources use
 
 let check_portable ctx (a : expr) =
   match literal ctx a with
@@ -112,7 +141,7 @@ let check_portable ctx (a : expr) =
                v.name)
       | None -> ())
   | None ->
-      if fixed_type a.ty || S.carries ctx.sources a then
+      if fixed_type ctx.env a.ty || S.carries ctx.sources a then
         ctx.report Code.e0432 a.loc
           "this value holds a view, which can't be put in a `Shared<T>`"
 
@@ -122,7 +151,7 @@ let check_calm_portable ctx (a : expr) =
     | Some body ->
         List.find_map
           (fun ((v : Hir.var), (use : expr)) ->
-            if contended_type use.ty then Some (v.name, "contended")
+            if contended_type ctx.env use.ty then Some (v.name, "contended")
             else if fixed ctx (v, use) then Some (v.name, "fixed: a view")
             else None)
           (captures body)
@@ -136,12 +165,14 @@ let check_calm_portable ctx (a : expr) =
            name why))
     reached
 
-let errors _env ~file block =
+let errors env ~file block =
   let found = ref [] in
   let report code loc message =
     found := Diagnostic.at ~file code loc message :: !found
   in
-  let ctx = { sources = S.collect block; closures = closures block; report } in
+  let ctx =
+    { env; sources = S.collect block; closures = closures block; report }
+  in
   Walk.iter_block
     (fun (e : expr) ->
       match e.desc with

@@ -6,17 +6,19 @@
 
 use stilt_db::{Db, Program, SourceFile};
 use stilt_hir::body_starts;
+use stilt_hir::decls::{Lookup, Queried};
 use stilt_syntax::TextRange;
 
-use crate::analyses::demands::{captures, holds, is_scope};
+use crate::analyses::demands::{captures, is_scope};
+use crate::holding::holds;
 use crate::queries::infer_body;
 use crate::tast::walk::{iter, iter_block};
 use crate::tast::{Arg, Callee, Code, Definition, Expr, ExprKind};
 use crate::ty::{Ty, is_shared};
 
 /// Whether a type holds a task's handle, or a function, which may capture one.
-fn may_reach_a_task(ty: &Ty) -> bool {
-    holds(ty, &|t| match t {
+fn may_reach_a_task(decls: &dyn Lookup, ty: &Ty) -> bool {
+    holds(decls, ty, &|t| match t {
         Ty::Con(item, _) => (&*item.home, &*item.name) == ("std.task", "Task"),
         Ty::Fn(_) => true,
         _ => false,
@@ -27,14 +29,16 @@ fn may_reach_a_task(ty: &Ty) -> bool {
 /// the call then marks shared, with the task's value (): a
 /// closure literal that captures a value of a type that holds one or a function, and any other
 /// function value.
-fn spawns_handles(f: Option<&Arg>) -> bool {
+fn spawns_handles(decls: &dyn Lookup, f: Option<&Arg>) -> bool {
     match f.map(|a| &a.value) {
         Some(
             e @ Expr {
                 kind: ExprKind::Closure(..),
                 ..
             },
-        ) => captures(e).iter().any(|(_, x)| may_reach_a_task(&x.ty)),
+        ) => captures(e)
+            .iter()
+            .any(|(_, x)| may_reach_a_task(decls, &x.ty)),
         Some(_) => true,
         None => false,
     }
@@ -47,7 +51,7 @@ const SPAWN: &str = "`spawn` makes the counts of the task handles its function r
 const SCOPE: &str = "`task.scope` makes the counts of the task handles its function reaches atomic";
 
 /// What the operation `e` shares between threads, if it may share anything (par.atomic-sites).
-fn shares(e: &Expr, names: &dyn Fn(&Expr) -> Option<String>) -> Option<String> {
+fn shares(decls: &dyn Lookup, e: &Expr, names: &dyn Fn(&Expr) -> Option<String>) -> Option<String> {
     match &e.kind {
         ExprKind::Call(Callee::Function(item), ..) if &*item.home == "std.par" => {
             Some(match &*item.name {
@@ -64,12 +68,12 @@ fn shares(e: &Expr, names: &dyn Fn(&Expr) -> Option<String>) -> Option<String> {
         ExprKind::Call(Callee::Function(item), _, args, _)
             if &*item.home == "std.task"
                 && matches!(&*item.name, "spawn" | "scope")
-                && spawns_handles(args.first()) =>
+                && spawns_handles(decls, args.first()) =>
         {
             Some(if &*item.name == "scope" { SCOPE } else { SPAWN }.to_owned())
         }
         ExprKind::Call(Callee::Member(owner, name), _, args, _)
-            if is_scope(owner) && &**name == "spawn" && spawns_handles(args.get(1)) =>
+            if is_scope(owner) && &**name == "spawn" && spawns_handles(decls, args.get(1)) =>
         {
             Some(SPAWN.to_owned())
         }
@@ -99,13 +103,14 @@ pub fn atomic_causes(
         return Vec::new();
     };
     let start = body_starts(db, program, file)[index as usize];
+    let decls = Queried { db, program };
     let names = |h: &Expr| match h.kind {
         ExprKind::Local(v) => typed.locals.get(v.0 as usize).map(|n| format!("`{n}`")),
         _ => None,
     };
     let mut found = Vec::new();
     let mut each = |e: &Expr| {
-        if let Some(says) = shares(e, &names) {
+        if let Some(says) = shares(&decls, e, &names) {
             found.push((e.at + start, says));
         }
     };
