@@ -396,7 +396,16 @@ and type_params cx inst =
 (* A type argument as an instance's name writes it: a type as the calculus has it, and a
    value argument as written (generics.value-parameters). *)
 and type_arg cx a =
-  match norm a with Value text -> text | a -> Model_json.to_string (ty cx a)
+  match norm a with
+  | Value text -> text
+  (* traits.constructor-parameters: a constructor, as a constructor parameter's argument. *)
+  | Con (i, []) when is_ctor cx i -> item_name i
+  | a -> Model_json.to_string (ty cx a)
+
+and is_ctor cx i =
+  match Env.type_info cx.env i with
+  | Some { params = _ :: _; _ } -> true
+  | _ -> false
 
 and row cx r =
   let io, raise = flat r in

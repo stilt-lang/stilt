@@ -1,7 +1,6 @@
 conformance/builds/unfused_multiply_add.lt
 conformance/capabilities/accepted.lt
 conformance/capabilities/grants
-conformance/cycles/kept.lt
 conformance/declarations/never.lt
 conformance/effects/catch_all_uses_error.lt
 conformance/effects/closure_in_catch_operand.lt
@@ -38,8 +37,6 @@ conformance/numerics/division_signs.lt
 conformance/numerics/literal_typing.lt
 conformance/packages/ungranted_run
 conformance/par/panics.lt
-conformance/parameters/constructors.lt
-conformance/parameters/constructors_several.lt
 conformance/patterns/broken_module_in_pattern.lt
 conformance/patterns/shadowed_prelude_name_in_pattern.lt
 conformance/polymorphism/arguments.lt
@@ -52,9 +49,7 @@ conformance/polymorphism/outer_parameters.lt
 conformance/polymorphism/receiver_past_caps.lt
 conformance/polymorphism/recursion.lt
 conformance/polymorphism/recursion_past_caps.lt
-conformance/ported/ackermann.lt
 conformance/ported/hamming_numbers.lt
-conformance/ported/knapsack.lt
 conformance/ported/perfect_numbers.lt
 conformance/ported/roman_numerals.lt
 conformance/ported/swift_writeback.lt
@@ -112,7 +107,6 @@ conformance/reflection/static.lt
 conformance/reflection/tier
 conformance/reflection/trait_parameter_name.lt
 conformance/reflection/visibility
-conformance/regex/errors.lt
 conformance/regex/matching.lt
 conformance/std/argument_edges.lt
 conformance/std/arguments.lt
