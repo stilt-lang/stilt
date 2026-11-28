@@ -1,8 +1,8 @@
 //~ tier: systems
 //~ rule: c.foreign-functions, c.types-c-takes
 
-// A foreign function takes no generic, no receiver, no `inout` or `escaping` parameter and no
-// effect but `io`, and only the types that C takes.
+// A foreign function takes no generic, no receiver, no `inout` or `escaping` parameter, has no
+// result that writes and no effect but `io`, and takes only the types that C takes.
 
 use std.c
 
@@ -23,6 +23,8 @@ extern fn raises(x: i32) / {io, raise<str>} //~ ERROR E0353
 extern fn strings(p: c.Ptr<str>) -> c.Ptr<()> //~ ERROR E0353
 
 extern fn nothing(u: ()) -> bool //~ ERROR E0353
+
+extern fn yields(p: c.Ptr<u8>) -> inout c.Ptr<u8> //~ ERROR E0353
 
 extern fn fine(p: c.Ptr<c.Ptr<u8>>, s: c.Str, x: f32) -> c.Ptr<()> / io
 

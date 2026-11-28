@@ -55,7 +55,7 @@ let signature ~file (f : fn_decl) (h : Hir.fn_decl option) =
   in
   let result =
     match (f.ret, Option.bind h (fun h -> h.ret)) with
-    | Some t, Some r when not (c_takes ~result:true r) ->
+    | Some t, Some r when f.projection || not (c_takes ~result:true r) ->
         [
           error ~file t.loc
             "C can't give this type: use an integer, a float, `bool`, a \
