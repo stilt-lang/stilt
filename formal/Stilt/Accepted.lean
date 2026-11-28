@@ -22,6 +22,7 @@ import Stilt.Tasks.Scopes
 import Stilt.Tasks.Lazy
 import Stilt.Tasks.Unobservable
 import Stilt.Anonymous
+import Stilt.Arrays
 
 /-!
 # Accepted programs and their soundness
@@ -41,8 +42,9 @@ rules of projections (projections.once-on-every-path), puts no `fixed` value in 
 `Shared<T>` (modes.demands), gives `std.par` only `calm` and `portable` functions
 (par.what-runs-in-parallel), lets no scope escape (tasks.scope-that-escapes), gives
 `Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing), keeps the limits of
-capabilities (facts.capabilities) and declares each anonymous record type once, with no home
-(`Decls.AnonymousRecords`).
+capabilities (facts.capabilities), declares each anonymous record type once, with no home
+(`Decls.AnonymousRecords`), and declares arrays as the records of their elements, each literal
+of the array's size (`Decls.Arrays`).
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -185,6 +187,11 @@ structure Program.Accepted (p : Program) : Prop where
   /-- Anonymous record types are records named by their own text, of one field or more, one
   declaration for one set of fields, with no home module (`Decls.AnonymousRecords`). -/
   anonymous : p.decls.AnonymousRecords
+  /-- An array type is the record of its elements' list, with no home (`Decls.Arrays`). -/
+  arrays : p.decls.Arrays
+  /-- A list literal that makes an array has as many elements as its size (E0311,
+  `Program.ArrayLiterals`). -/
+  arrayLiterals : p.ArrayLiterals
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where

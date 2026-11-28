@@ -30,6 +30,13 @@ let rec expr cx (e : Tast.expr) =
       let t, targs, name = ctor_args cx c e.ty in
       tag "variant"
         ((Str t :: targs) @ [ Str name; Arr (List.map (expr cx) args) ])
+  | List es when is_array e.ty ->
+      (* generics.array-literals: the record of the array, of the literal's list. *)
+      let elems =
+        tag "list" [ ty cx (elem e.ty); Arr (List.map (expr cx) es) ]
+      in
+      tag "record"
+        [ Str (record_name cx e.ty); Arr [ Arr [ Str array_field; elems ] ] ]
   | List es -> tag "list" [ ty cx (elem e.ty); Arr (List.map (expr cx) es) ]
   | Field (b, f) -> tag "field" [ expr cx b; Str f ]
   | Tuple_field (b, i) -> tag "field" [ expr cx b; Str (string_of_int i) ]
@@ -39,6 +46,9 @@ let rec expr cx (e : Tast.expr) =
   | Index (b, k) when is_map b.ty -> map_op "index" [ expr cx b; expr cx k ]
   | Index (b, i) when Model_views.viewed b.ty <> None ->
       Model_views.index (expr cx b) (expr cx i)
+  | Index (b, i) when is_array b.ty ->
+      (* generics.array-elements: the element of the array's list. *)
+      tag "index" [ tag "field" [ expr cx b; Str array_field ]; expr cx i ]
   | Index (b, i) -> tag "index" [ expr cx b; expr cx i ]
   | Call (callee, targs, args, _) -> call cx e callee targs args
   | Call_value (f, args) -> call_value cx f args e.ty
@@ -172,12 +182,16 @@ and call cx (e : Tast.expr) callee targs args =
   | Member (owner, name)
     when owner = map_item && List.mem name Model_lists.map_natives ->
       Model_lists.map_call (callbacks cx) cx e name args
-  | Member ({ home = "std.array"; name = "Array" }, "len") ->
-      Model_lists.list_call (callbacks cx) cx e "len" args
+  | Member ({ home = "std.array"; name = "Array" }, "len") -> (
+      match args with
+      | [ a ] ->
+          op (tag "list" [ Str "len" ])
+            [ tag "field" [ expr cx a.value; Str array_field ] ]
+      | _ -> outside "the function std.array.Array.len")
   | Member ({ home = "std.array"; name = "Array" }, "to_list") -> (
       (* generics.arrays: the elements in order, which the array's list is. *)
       match args with
-      | [ a ] -> expr cx a.value
+      | [ a ] -> tag "field" [ expr cx a.value; Str array_field ]
       | _ -> outside "the function std.array.Array.to_list")
   | Member (owner, name)
     when owner = list_item && List.mem name Model_lists.natives ->
@@ -319,6 +333,12 @@ and place cx (e : Tast.expr) =
   | Field (b, f) -> extend b (tag "field" [ Str f ])
   | Tuple_field (b, i) -> extend b (tag "field" [ Str (string_of_int i) ])
   | Index (b, _) when is_map b.ty -> outside "a place through a map's element"
+  | Index (b, i) when is_array b.ty -> (
+      match place cx b with
+      | Arr [ root; Arr steps ] ->
+          let step = tag "index" [ expr cx i ] in
+          Arr [ root; Arr (steps @ [ tag "field" [ Str array_field ]; step ]) ]
+      | p -> p)
   | Index (b, i) -> extend b (tag "index" [ expr cx i ])
   | _ -> outside "a place the model lacks"
 

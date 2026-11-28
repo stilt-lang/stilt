@@ -127,6 +127,17 @@ val var_name : Hir.var -> string
 val norm : Types.ty -> Types.ty
 (** The type a solved variable stands for. *)
 
+val array_item : Hir.item
+(** [Array] of std.array, which the calculus declares, at each list of
+    arguments, as a record named by the type's own text, of one field, the list
+    of its elements (generics.arrays). *)
+
+val array_field : string
+(** The field of an array's record that holds its elements. *)
+
+val is_array : Types.ty -> bool
+(** Whether the type is an array type. *)
+
 val declared_record : Hir.item -> bool
 (** Whether the calculus declares the record [i] as the program writes it: every
     record but the library's [Set], which the calculus has as a type of its own
@@ -145,7 +156,7 @@ val float_kind : Types.ty -> string option
 (** The float type's name, for a float type. *)
 
 val elem : Types.ty -> Types.ty
-(** The element type of a list type. *)
+(** The element type of a list type or an array type. *)
 
 val flat : Types.row -> bool * Types.ty option
 (** Whether the calculus's row holds [io], the row holding [io] or an effect,

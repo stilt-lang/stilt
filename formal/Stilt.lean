@@ -253,6 +253,7 @@ import Stilt.Modes.Agreement
 import Stilt.Modes.Examples
 import Stilt.Accepted
 import Stilt.Anonymous
+import Stilt.Arrays
 import Stilt.Views.Syntax
 import Stilt.Views.Reads
 import Stilt.Views.Semantics

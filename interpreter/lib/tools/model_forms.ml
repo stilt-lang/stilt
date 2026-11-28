@@ -80,6 +80,8 @@ let structural_by cx name t =
            || List.mem name [ "f32"; "f64"; "bool"; "str" ] ->
         true
     | Con ({ home = "std.prelude"; name = "List" }, [ e ]) -> go seen e
+    (* generics.array-traits: an array has the structural impls when its elements do. *)
+    | Con (i, [ e; _ ]) when i = array_item -> go seen e
     | Con ({ home = "std.prelude"; name = "Map" }, [ k; v ]) ->
         (name = "Show" && key cx k && go seen k && go seen v)
         || (name = "Eq" && key cx k && go seen v)
@@ -115,6 +117,7 @@ let ctor_orders cx t =
     match norm t with
     | Types.Con ({ home = "std.prelude"; name = "List" }, [ e ]) ->
         go (seen, acc) e
+    | Types.Con (i, [ e; _ ]) when i = array_item -> go (seen, acc) e
     | Tuple ts -> List.fold_left go (seen, acc) ts
     | Con (i, args) when not (List.mem (i, args) seen) -> (
         let seen = (i, args) :: seen in
@@ -287,7 +290,11 @@ let rec pattern cx (p : Tast.pattern) =
         | Rest -> Str "any"
         | Rest_bind v -> tag "bind" [ Str (var_name v) ]
       in
-      tag "list" [ Arr (List.map (pattern cx) ps); rest ]
+      let list = tag "list" [ Arr (List.map (pattern cx) ps); rest ] in
+      if is_array p.pty then
+        tag "record"
+          [ Str (record_name cx p.pty); Arr [ Arr [ Str array_field; list ] ] ]
+      else list
   | P_or (q :: qs) ->
       List.fold_left
         (fun acc q -> tag "or" [ acc; pattern cx q ])

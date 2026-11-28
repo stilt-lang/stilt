@@ -122,9 +122,9 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       p.fields.lookup f = some τ →
       HasType Γ fx (.field e f) τ
   /-- `xs[i]` takes an `i64` index (std.lists). Only a list is indexed so, and a map through
-  `MapOp.index` at its key type; an array is a list in the calculus. Nothing else has an index
-  rule (expressions.indexing, E0317): `v[i]` on a view of a list is a form, the index of the
-  view's `copy` (`Form.Shaped`). -/
+  `MapOp.index` at its key type; an array is indexed through its record's list
+  (`Decls.Arrays`). Nothing else has an index rule (expressions.indexing, E0317): `v[i]` on a
+  view of a list is a form, the index of the view's `copy` (`Form.Shaped`). -/
   | index {Γ fx e i τ σ} :
       HasType Γ fx e (.list τ) →
       HasType Γ fx i σ → Fits σ .i64 →

@@ -16,16 +16,19 @@ let var_name (v : Hir.var) =
   let v = Option.value (List.assoc_opt v.id !aliases) ~default:v in
   v.name ^ "/" ^ string_of_int v.id
 
-(* A type resolved, an array read as the list of its elements: a run can tell
-   them apart by no value, index, order or text (generics.array-elements,
-   generics.array-iteration and generics.array-traits), and the size an array
-   type adds is checked before the run, as the interpreter runs an array as a
-   list too. *)
-let norm t =
-  match Types.resolve t with
-  | Con ({ home = "std.array"; name = "Array" }, [ e; _ ]) ->
-      Types.Con ({ home = "std.prelude"; name = "List" }, [ e ])
-  | t -> t
+(* A type resolved. *)
+let norm t = Types.resolve t
+
+(* The native type [Array<T, n>] of std.array, which the calculus declares as a record named
+   by its own text, of one field, [[]], the list of its elements (formal/Stilt/Arrays.lean,
+   generics.arrays). *)
+let array_item = { Hir.home = "std.array"; name = "Array" }
+
+(* The field of an array's record that holds its elements, a name no field written has. *)
+let array_field = "[]"
+
+let is_array t =
+  match norm t with Con (i, [ _; _ ]) -> i = array_item | _ -> false
 
 (* A record the calculus declares as the program writes it: the program's own, and the
    library's but [Set], which the calculus has as a type of its own (std.sets). *)
@@ -48,6 +51,7 @@ let float_kind t =
 let elem t =
   match norm t with
   | Con ({ home = "std.prelude"; name = "List" }, [ e ]) -> e
+  | Con ({ home = "std.array"; name = "Array" }, [ e; _ ]) -> e
   | _ -> outside "an iteration over something other than a list"
 
 (* Whether the calculus's row holds [io], and its error type: code that performs [io], or

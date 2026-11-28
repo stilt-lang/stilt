@@ -50,6 +50,10 @@ def unqualified (n : Name) : String :=
 declaration can be named (records.field-order). -/
 def anonymousName (R : Name) : Bool := R.startsWith "{ "
 
+/-- Whether a record's name is an array type's, `std.array.Array<T, n>`, the record of one
+field, the list of its elements, which the calculus declares for the type (`Decls.Arrays`). -/
+def arrayName (R : Name) : Bool := R.startsWith "std.array.Array<"
+
 /-- Texts joined by `, `. -/
 def commaJoin : List String → String
   | [] => ""
@@ -58,7 +62,8 @@ def commaJoin : List String → String
 
 mutual
 
-/-- A value's text, nested in another value or not. -/
+/-- A value's text, nested in another value or not. An array's record is written as the list
+of its elements, as `[1, 2, 3]` (generics.array-traits). -/
 def Value.shown (nested : Bool) : Value → String
   | .int n => toString n
   | .float x => x.text
@@ -71,6 +76,7 @@ def Value.shown (nested : Bool) : Value → String
     else if R = mapName then "{" ++ commaJoin (shownEntries fields) ++ "}"
     else if R = setName then "Set([" ++ commaJoin (shownElements fields) ++ "])"
     else if anonymousName R then "{ " ++ commaJoin (shownNamed fields) ++ " }"
+    else if arrayName R then "[" ++ commaJoin (shownElements fields) ++ "]"
     else if fields.isEmpty then unqualified R ++ " {}"
     else unqualified R ++ " { " ++ commaJoin (shownNamed fields) ++ " }"
   | .variant _ C [] => C

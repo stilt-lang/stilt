@@ -142,6 +142,15 @@ let rec receiver ~expr cx (e : Tast.expr) =
   | Index (b, i) ->
       let n = Printf.sprintf "index/%d:%d" i.loc.line i.loc.col in
       let lets, store, read = receiver ~expr cx b in
+      let lets, store, read =
+        if is_array b.ty then (
+          (match store with
+          | Through _ -> outside "an array's element through a map's element"
+          | Path _ -> ());
+          extend (lets, store, read) b (tag "field" [ Str array_field ])
+            (fun r -> tag "field" [ r; Str array_field ]))
+        else (lets, store, read)
+      in
       let var = tag "var" [ Str n ] in
       extend
         (lets @ [ (n, ty cx i.ty, expr i) ], store, read)

@@ -86,6 +86,9 @@ let type_decl cx inst =
   let params = if inst.generic then [ type_params cx inst ] else [] in
   let ty t = ty cx (instantiated cx inst t) in
   match (inst.args, Env.type_info cx.env inst.item) with
+  | [ e; _ ], _ when inst.item = array_item ->
+      let field = Arr [ Str array_field; tag "list" [ Model_types.ty cx e ] ] in
+      `Record (Arr [ Str inst.key; Arr [ field ] ])
   | [ Record fields ], _ when inst.item = Types.anonymous ->
       let field (f, t) = Arr [ Str f; Model_types.ty cx t ] in
       `Record (Arr [ Str inst.key; Arr (List.map field fields) ])

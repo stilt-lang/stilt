@@ -101,6 +101,7 @@ let key cx t =
     | Con ({ home = "std.prelude"; name }, []) ->
         List.mem name Types.integer_types || name = "bool" || name = "str"
     | Con ({ home = "std.prelude"; name = "List" }, [ e ]) -> go seen e
+    | Con (i, [ e; _ ]) when i = array_item -> go seen e
     | Tuple ts -> List.for_all (go seen) ts
     | Record fields -> List.for_all (fun (_, t) -> go seen t) fields
     | Con (i, _) when List.mem i seen -> true
@@ -176,6 +177,8 @@ let rec ty cx (t : Types.ty) =
       tag "shared" [ ty cx t ]
   | Handler h when h.eff = async_item -> Str "unit"
   | Record fields -> tag "record" [ Str (anonymous cx fields) ]
+  | Con (i, args) when i = array_item ->
+      tag "record" [ Str (array_record cx args) ]
   | Handler h -> tag "record" [ Str (handler_record cx h) ]
   | Con (i, args) -> (
       let named kind =
@@ -335,10 +338,23 @@ and anonymous cx fields =
       :: cx.types;
   key
 
-(* The record the calculus declares for a record type: a declared record's instance, or
-   an anonymous record type's own. *)
+(* An array type, which the calculus declares as a record named by the type's own text,
+   [std.array.Array<T, n>], of one field, the list of its elements (generics.arrays). *)
+and array_record cx args =
+  let key =
+    item_name array_item ^ "<"
+    ^ String.concat ", " (List.map (type_arg cx) args)
+    ^ ">"
+  in
+  if not (List.exists (fun inst -> inst.key = key) cx.types) then
+    cx.types <- { key; item = array_item; args; generic = false } :: cx.types;
+  key
+
+(* The record the calculus declares for a record type: a declared record's instance, an
+   anonymous record type's own, or an array's. *)
 and record_name cx t =
   match norm t with
+  | Con (i, args) when i = array_item -> array_record cx args
   | Con (i, args) when declared_record i -> declared cx i args
   | Record fields -> anonymous cx fields
   | _ -> outside "a record of a type the model lacks"

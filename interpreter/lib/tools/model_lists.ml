@@ -376,7 +376,7 @@ let array_length (t : Types.ty) =
       | _ -> None)
   | _ -> None
 
-(* [array.fill(x)] at [Array<T, n>]: [n] copies of [x], as the list of them, or after
+(* [array.fill(x)] at [Array<T, n>]: [n] copies of [x], as the array of them, or after
    [x] a panic of the kind [bounds] when [n] is negative (generics.arrays). *)
 let array_fill (on : callbacks) cx (e : Tast.expr) (x : Tast.expr) =
   match array_length e.ty with
@@ -388,7 +388,19 @@ let array_fill (on : callbacks) cx (e : Tast.expr) (x : Tast.expr) =
           Str v;
           ty cx x.ty;
           on.expr x;
-          tag "list" [ ty cx x.ty; Arr (List.init n (fun _ -> var_e v)) ];
+          tag "record"
+            [
+              Str (record_name cx e.ty);
+              Arr
+                [
+                  Arr
+                    [
+                      Str array_field;
+                      tag "list"
+                        [ ty cx x.ty; Arr (List.init n (fun _ -> var_e v)) ];
+                    ];
+                ];
+            ];
         ]
   | _ -> outside "an array of a length the model doesn't hold"
 
@@ -408,7 +420,14 @@ let array_from_list (on : callbacks) cx (e : Tast.expr) (l : Tast.expr) =
           [
             fits;
             ty cx e.ty;
-            option cx e.ty "Some" [ var_e xs ];
+            option cx e.ty "Some"
+              [
+                tag "record"
+                  [
+                    Str (record_name cx (option_payload e.ty));
+                    Arr [ Arr [ Str array_field; var_e xs ] ];
+                  ];
+              ];
             option cx e.ty "None" [];
           ]
       in
