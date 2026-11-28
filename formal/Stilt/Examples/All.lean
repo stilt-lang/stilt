@@ -10,6 +10,7 @@ import Stilt.Examples.Loops
 import Stilt.Examples.LastUses
 import Stilt.Examples.Structural
 import Stilt.Examples.Panics
+import Stilt.Examples.Analysis
 import Stilt.Examples.Ends
 import Stilt.Examples.FormatSpecs
 import Stilt.Examples.Parsing
