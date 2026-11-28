@@ -32,9 +32,9 @@ fn main() {
             .collect();
         let kept: Vec<Item> = boosted.into_iter().filter(|it| it.score % 3 != 0).collect();
         total += kept.iter().fold(0, |acc, it| (acc + it.score * it.group) % 1000000007);
-        let mut sorted = kept.clone();
-        sorted.sort_by_key(|it| std::cmp::Reverse(it.score));
-        let best: Vec<i64> = sorted.iter().take(5).map(|it| it.id).collect();
+        let mut kept = kept;
+        kept.sort_by_key(|it| std::cmp::Reverse(it.score));
+        let best: Vec<i64> = kept.iter().take(5).map(|it| it.id).collect();
         total += best.iter().fold(0, |acc, id| acc + id);
     }
     let mut groups: HashMap<i64, i64> = HashMap::new();

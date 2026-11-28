@@ -3,21 +3,21 @@
 
 enum Tree {
     Leaf,
-    Node(Box<Tree>, Box<Tree>),
+    Node(Box<(Tree, Tree)>),
 }
 
 fn make(depth: i64) -> Tree {
     if depth == 0 {
-        Tree::Node(Box::new(Tree::Leaf), Box::new(Tree::Leaf))
+        Tree::Node(Box::new((Tree::Leaf, Tree::Leaf)))
     } else {
-        Tree::Node(Box::new(make(depth - 1)), Box::new(make(depth - 1)))
+        Tree::Node(Box::new((make(depth - 1), make(depth - 1))))
     }
 }
 
 fn check(tree: &Tree) -> i64 {
     match tree {
         Tree::Leaf => 0,
-        Tree::Node(left, right) => 1 + check(left) + check(right),
+        Tree::Node(children) => 1 + check(&children.0) + check(&children.1),
     }
 }
 
