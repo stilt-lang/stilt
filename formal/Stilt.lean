@@ -496,6 +496,5 @@ the tree fixed by the list's length, and the four interactions of handlers.call-
 tasks.continuations-stay-in-task: calls a handler ends and `when`s whose names may reach one value
 leave the same store copied or written in place, operations given values
 write nothing of the code they suspend, no value is held by two running
-`when`s, and no continuation leaves its task.
-`README.md` describes what it covers.
+`when`s, and no continuation leaves its task. `README.md` describes what it covers.
 -/

@@ -87,18 +87,7 @@ and control cx (e : Tast.expr) =
   | For (p, it, b) -> for_loop cx e p it b
   | Raise x -> tag "raise" [ expr cx x ]
   | Try (x, None) -> tag "try" [ expr cx x ]
-  | Try (x, Some c) ->
-      let error = { Hir.id = -1; name = "error"; loc = e.loc } in
-      let operand () =
-        allowing cx { cx.allowed with raise = Some c.error } (fun () ->
-            expr cx x)
-      in
-      let scrutinee = tag "var" [ Str (var_name error) ] in
-      let handler =
-        Model_match.guarded ~expr:(expr cx) cx e.ty scrutinee c.arms
-      in
-      tag "tryCatch"
-        [ operand (); ty cx c.error; Str (var_name error); handler; ty cx e.ty ]
+  | Try (x, Some c) -> try_catch cx e x c
   | While (c, b) -> tag "while" [ expr cx c; block cx b ]
   | Loop b -> tag "loop" [ block cx b ]
   | Break -> Str "break"
@@ -137,6 +126,18 @@ and control cx (e : Tast.expr) =
   | Hole -> (* declarations.running-holes *) op (tag "panic" [ Str "hole" ]) []
   | Reflect _ | Quote _ -> outside "reflection or a quote"
   | _ -> outside "an expression the model lacks"
+
+(* [try x catch { arms }]: [x] run where its raises are the catch's errors, and
+   the arms matched on the error it raises. *)
+and try_catch cx (e : Tast.expr) x c =
+  let error = { Hir.id = -1; name = "error"; loc = e.loc } in
+  let operand () =
+    allowing cx { cx.allowed with raise = Some c.error } (fun () -> expr cx x)
+  in
+  let scrutinee = tag "var" [ Str (var_name error) ] in
+  let handler = Model_match.guarded ~expr:(expr cx) cx e.ty scrutinee c.arms in
+  tag "tryCatch"
+    [ operand (); ty cx c.error; Str (var_name error); handler; ty cx e.ty ]
 
 (* A constant's value, a constant expression of literals, tuples, lists,
    records and variants (declarations.constant-expressions), stands where it is
