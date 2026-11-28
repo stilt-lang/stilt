@@ -4,7 +4,7 @@ The extensions that bring Stilt to editors. Each highlights `.lt` files and runs
 
 | Folder | Editor |
 | --- | --- |
-| [`vscode/`](vscode/) | Visual Studio Code: the language server's diagnostics, completion, hovers that explain every keyword and effect, navigation, formatting, inferred types and facts with the lines that cause them, and semantic highlighting that the grammar matches before the server answers; the views of `stilt show` and the explanations of diagnostics; the Test Explorer's tests; running and debugging programs; tasks; and the schema of `stilt.toml` |
+| [`vscode/`](vscode/) | Visual Studio Code: `stilt` found wherever it is installed, and installed or updated on a click when it is missing or too old; the language server's diagnostics, completion, hovers that explain every keyword and effect, navigation, formatting, inferred types and facts with the lines that cause them, and semantic highlighting that the grammar matches before the server answers; the views of `stilt show` and the explanations of diagnostics; the Test Explorer's tests; running and debugging programs; tasks; and the schema of `stilt.toml` |
 | [`tree-sitter/`](tree-sitter/) | The grammar for tree-sitter, which Neovim, Helix, Zed and other editors read, generated from the Reference |
 | [`zed/`](zed/) | Zed: the language server's diagnostics, completion, hovers, navigation, formatting, semantic tokens and inlay hints, the inferred facts among them; highlighting, brackets, indentation and an outline by the tree-sitter grammar |
 

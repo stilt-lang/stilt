@@ -12,10 +12,18 @@ const path = require("path");
 const vscode = require("vscode");
 const lc = require("vscode-languageclient/node");
 const { middleware } = require("./middleware");
+const { toolchain, binary } = require("./toolchain");
 
 /**
  * A program: the directory that holds it, its name, and the workspace folder it is in.
  * @typedef {{ uri: vscode.Uri, name: string, folder: vscode.WorkspaceFolder | undefined }} Program
+ */
+
+/**
+ * The state of a program's server: waiting for the lookup of `stilt`, starting, running,
+ * stopped after a failure, switched off by `stilt.server.enable`, or not started because no
+ * `stilt` that runs was found.
+ * @typedef {"looking" | "starting" | "running" | "stopped" | "off" | "unusable"} State
  */
 
 /** The files whose change on disk the server hears of, so that it checks the program again. */
@@ -47,17 +55,21 @@ function programOf(uri) {
   }
 }
 
+/** Whether `stilt.server.enable` lets the language servers run. */
+function enabled() {
+  return vscode.workspace.getConfiguration("stilt").get("server.enable", true);
+}
+
 /**
- * The `stilt` binary that the settings name for a program.
- * @param {vscode.Uri} [scope]
+ * Why a server failed to start. The language client may reject with no error at all, having
+ * logged the reason to the output itself.
+ * @param {unknown} error
  */
-function binary(scope) {
-  const named = vscode.workspace.getConfiguration("stilt", scope).get("path", "stilt") || "stilt";
-  if (path.isAbsolute(named) || !named.includes(path.sep)) {
-    return named;
+function reason(error) {
+  if (error && typeof error === "object" && "message" in error && error.message) {
+    return String(error.message);
   }
-  const folder = scope && vscode.workspace.getWorkspaceFolder(scope);
-  return folder ? path.join(folder.uri.fsPath, named) : named;
+  return error ? String(error) : "the reason is in the Stilt output";
 }
 
 /** The language servers of the programs whose files are open, and the events of their states. */
@@ -67,6 +79,15 @@ class Programs {
     this.log = log;
     /** @type {Map<string, { client: lc.LanguageClient, program: Program, watcher: vscode.FileSystemWatcher }>} */
     this.servers = new Map();
+    /** The programs whose servers wait for the lookup of `stilt`. @type {Set<string>} */
+    this.pending = new Set();
+    /** Counts the restarts, so that a start that waited across one gives up. */
+    this.generation = 0;
+    /** Whether a failure to start was shown since the last restart, so it shows once. */
+    this.reported = false;
+    /** What to offer when `stilt` can't be used, which ./install.js sets.
+     * @type {(found: import("./locate").Found) => void} */
+    this.offer = () => {};
     this.changed = new vscode.EventEmitter();
     /** Fires when a server starts, stops or fails, with the program it serves. */
     this.onDidChange = this.changed.event;
@@ -86,20 +107,27 @@ class Programs {
   /**
    * The state of the server of the program that holds a document.
    * @param {vscode.TextDocument} document
-   * @returns {{ program: Program, state: "starting" | "running" | "stopped", version?: string } | undefined}
+   * @returns {{ program: Program, state: State } | undefined}
    */
   state(document) {
     const program = programOf(document.uri);
     if (!program) {
       return undefined;
     }
-    const server = this.servers.get(program.uri.toString());
-    if (!server) {
-      return { program, state: "stopped" };
+    const key = program.uri.toString();
+    const server = this.servers.get(key);
+    if (server) {
+      const states = { [lc.State.Starting]: "starting", [lc.State.Running]: "running", [lc.State.Stopped]: "stopped" };
+      return { program, state: /** @type {State} */ (states[server.client.state]) };
     }
-    const states = { [lc.State.Starting]: "starting", [lc.State.Running]: "running", [lc.State.Stopped]: "stopped" };
-    const version = server.client.initializeResult?.serverInfo?.version;
-    return { program, state: /** @type {any} */ (states[server.client.state]), version };
+    const found = toolchain.current(program.uri);
+    if (!enabled()) {
+      return { program, state: "off" };
+    }
+    if (this.pending.has(key) || !found) {
+      return { program, state: "looking" };
+    }
+    return { program, state: found.kind === "missing" || found.kind === "broken" ? "unusable" : "stopped" };
   }
 
   /**
@@ -123,14 +151,42 @@ class Programs {
     vscode.workspace.textDocuments.forEach((d) => this.open(d));
   }
 
-  /** @param {Program} program */
-  start(program) {
+  /**
+   * Starts the server of a program once `stilt` is found, unless `stilt.server.enable` is off or
+   * no `stilt` that runs is found, which ./install.js then offers to install.
+   * @param {Program} program
+   */
+  async start(program) {
     const key = program.uri.toString();
-    if (this.servers.has(key)) {
+    if (this.servers.has(key) || this.pending.has(key) || !enabled()) {
       return;
     }
-    const command = binary(program.uri);
-    const run = { command, args: ["lsp"], options: { cwd: program.uri.fsPath } };
+    const generation = this.generation;
+    this.pending.add(key);
+    this.changed.fire(program);
+    const found = await toolchain.resolve(program.uri);
+    this.pending.delete(key);
+    if (generation !== this.generation || this.servers.has(key)) {
+      return;
+    }
+    if (found.kind !== "found" && found.kind !== "outdated") {
+      this.changed.fire(program);
+      this.offer(found);
+      return;
+    }
+    if (found.kind === "outdated") {
+      this.offer(found);
+    }
+    this.launch(program, found.path);
+  }
+
+  /**
+   * @param {Program} program
+   * @param {string} command the `stilt` found
+   */
+  launch(program, command) {
+    const key = program.uri.toString();
+    const run = { command, args: ["lsp"], options: { cwd: program.uri.fsPath, env: toolchain.env(program.uri) } };
     const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(program.uri, WATCHED));
     const client = new lc.LanguageClient("stilt", `Stilt (${program.name})`, { run, debug: run }, {
       documentSelector: [{ scheme: "file", language: "stilt", pattern: `${program.uri.fsPath}/**/*` }],
@@ -147,7 +203,7 @@ class Programs {
     this.log.info(`starting \`${command} lsp\` for ${program.uri.fsPath}`);
     client.start().then(
       () => this.changed.fire(program),
-      (/** @type {Error} */ error) => this.failed(program, command, error),
+      (/** @type {unknown} */ error) => this.failed(program, command, error),
     );
   }
 
@@ -182,28 +238,20 @@ class Programs {
   }
 
   /**
+   * Logs a server that can't start, and says so once until the next restart.
    * @param {Program} program
    * @param {string} command
-   * @param {Error} error
+   * @param {unknown} error
    */
   async failed(program, command, error) {
-    this.servers.get(program.uri.toString())?.watcher.dispose();
+    const server = this.servers.get(program.uri.toString());
     this.servers.delete(program.uri.toString());
+    server?.watcher.dispose();
     this.changed.fire(program);
-    this.log.error(`cannot start \`${command} lsp\` for ${program.name}: ${error.message}`);
-    const locate = "Locate stilt…";
-    const choice = await vscode.window.showErrorMessage(
-      `Stilt: cannot start \`${command} lsp\`: ${error.message}. Set \`stilt.path\` to the stilt binary.`,
-      locate,
-      "Open Settings",
-    );
-    if (choice === locate) {
-      const picked = await vscode.window.showOpenDialog({ canSelectMany: false, openLabel: "Use this stilt" });
-      if (picked && picked[0]) {
-        await vscode.workspace.getConfiguration("stilt").update("path", picked[0].fsPath, vscode.ConfigurationTarget.Global);
-      }
-    } else if (choice === "Open Settings") {
-      await vscode.commands.executeCommand("workbench.action.openSettings", "stilt.path");
+    this.log.error(`cannot start \`${command} lsp\` for ${program.name}: ${reason(error)}`);
+    if (!this.reported) {
+      this.reported = true;
+      await this.offerRestart(`Stilt: the language server of ${program.name} can't start: ${reason(error)}`);
     }
   }
 
@@ -229,8 +277,12 @@ class Programs {
     this.changed.fire(program);
   }
 
-  /** Restarts every server, after a rebuild of `stilt` for example. */
+  /** Restarts every server, after a rebuild of `stilt` for example, looking for it again. */
   async restart() {
+    this.generation += 1;
+    this.pending.clear();
+    this.reported = false;
+    toolchain.forget();
     const running = [...this.servers.values()].map((s) => s.program);
     await Promise.all(running.map((p) => this.stop(p)));
     running.forEach((p) => this.start(p));

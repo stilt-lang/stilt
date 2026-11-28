@@ -9,7 +9,8 @@
 const childProcess = require("child_process");
 const os = require("os");
 const vscode = require("vscode");
-const { binary, programOf } = require("./programs");
+const { programOf } = require("./programs");
+const { binary, toolchain } = require("./toolchain");
 const { SHOW, explanation } = require("./middleware");
 
 /** How long the program must stay unchanged before the open documents are shown again. */
@@ -25,7 +26,7 @@ const SETTLE = 400;
  */
 function stilt(scope, args, cwd, token) {
   return new Promise((resolve) => {
-    const child = childProcess.execFile(binary(scope), args, { cwd, maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
+    const child = childProcess.execFile(binary(scope), args, { cwd, env: toolchain.env(scope), maxBuffer: 64 * 1024 * 1024 }, (error, stdout, stderr) => {
       const code = error && typeof error.code === "number" ? error.code : 0;
       resolve({ stdout, stderr: stderr || (error && !stdout ? error.message : ""), status: error ? code || 1 : 0 });
     });

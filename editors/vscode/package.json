@@ -21,8 +21,8 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "In a workspace you don't trust, the language server runs the `stilt` that your user settings name, and the extension runs no program, test or build.",
-      "restrictedConfigurations": ["stilt.path"]
+      "description": "In a workspace you don't trust, the language server runs the `stilt` that your user settings name or that the extension finds, with the environment of your user settings, and the extension runs no program, test or build.",
+      "restrictedConfigurations": ["stilt.path", "stilt.env"]
     },
     "virtualWorkspaces": { "supported": false, "description": "The language server reads a program's files from the disk." }
   },
@@ -96,60 +96,139 @@
         }
       }
     ],
-    "configuration": {
-      "title": "Stilt",
-      "properties": {
-        "stilt.path": {
-          "type": "string",
-          "default": "stilt",
-          "scope": "machine-overridable",
-          "markdownDescription": "The `stilt` binary that runs the language server, the commands, the tasks, the tests and the debugger's builds: a name found on the `PATH`, or a path, such as `target/release/stilt` of a build of Stilt's repository."
-        },
-        "stilt.inlayHints.types": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Show the inferred type of each `let`, `var` and closure parameter that writes none."
-        },
-        "stilt.inlayHints.facts": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Show each function's inferred facts before its body, as `stilt show` writes them, such as `[consumes xs, panic, alloc]`. Hover over a fact for what it means and the lines that cause it, and Cmd- or Ctrl-click it to go to the first."
-        },
-        "stilt.inlayHints.causes": {
-          "type": "string",
-          "enum": ["cursorLine", "everyLine", "off"],
-          "enumDescriptions": [
-            "At the end of the line that holds the cursor",
-            "At the end of every line that causes a fact",
-            "Nowhere"
-          ],
-          "default": "cursorLine",
-          "markdownDescription": "Where to show what a line does that causes its function's facts, as `stilt show` writes it in a comment, such as `// an interpolated string allocates`."
-        },
-        "stilt.codeLens.enable": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Show **Run** and **Debug** above each program's `main`."
-        },
-        "stilt.debug.engine": {
-          "type": "string",
-          "enum": ["auto", "lldb-dap", "codelldb"],
-          "enumDescriptions": [
-            "LLDB DAP if it is installed, and CodeLLDB otherwise",
-            "LLDB DAP, the LLVM project's extension (llvm-vs-code-extensions.lldb-dap)",
-            "CodeLLDB (vadimcn.vscode-lldb)"
-          ],
-          "default": "auto",
-          "markdownDescription": "The debugger extension that runs a Stilt program built with `stilt build`, whose executables carry DWARF debug information."
-        },
-        "stilt.trace.server": {
-          "type": "string",
-          "enum": ["off", "messages", "verbose"],
-          "default": "off",
-          "markdownDescription": "Write the messages between the editor and the language server to the **Stilt** output, to report a bug."
+    "configuration": [
+      {
+        "title": "Toolchain",
+        "properties": {
+          "stilt.path": {
+            "type": "string",
+            "default": "",
+            "scope": "machine-overridable",
+            "order": 0,
+            "markdownDescription": "The `stilt` that runs the language server, the commands, the tasks, the tests and the debugger's builds. Empty, the extension looks in `$STILT_HOME/bin`, `~/.stilt/bin`, the `PATH`, the directories of Homebrew and Nix, and last the `PATH` of your login shell. A path may start with `~` or `${workspaceFolder}`, and a relative one is read from the workspace folder, such as `target/release/stilt` of a build of Stilt's repository."
+          },
+          "stilt.env": {
+            "type": "object",
+            "additionalProperties": { "type": ["string", "null"] },
+            "default": {},
+            "scope": "machine-overridable",
+            "order": 1,
+            "markdownDescription": "Environment variables for every `stilt` the extension runs, set over the editor's own, such as `{ \"STILT_HOME\": \"/opt/stilt\" }`. A variable set to `null` is removed. A change restarts the language servers."
+          },
+          "stilt.installPrompt": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "order": 2,
+            "markdownDescription": "Offer to install Stilt when it can't be found, and to update it when it is older than the extension needs, once a session. The language status offers both either way."
+          }
+        }
+      },
+      {
+        "title": "Language Server",
+        "properties": {
+          "stilt.server.enable": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "order": 10,
+            "markdownDescription": "Run `stilt lsp` for each program whose files are open. Off, Stilt files keep their highlighting, and lose the diagnostics, completion, formatting and the rest."
+          },
+          "stilt.trace.server": {
+            "type": "string",
+            "enum": ["off", "messages", "verbose"],
+            "default": "off",
+            "scope": "window",
+            "order": 11,
+            "markdownDescription": "Write the messages between the editor and the language server to the **Stilt** output, to report a bug."
+          }
+        }
+      },
+      {
+        "title": "Inlay Hints",
+        "properties": {
+          "stilt.inlayHints.types": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "order": 20,
+            "markdownDescription": "Show the inferred type of each `let`, `var` and closure parameter that writes none."
+          },
+          "stilt.inlayHints.facts": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "order": 21,
+            "markdownDescription": "Show each function's inferred facts before its body, as `stilt show` writes them, such as `[consumes xs, panic, alloc]`. Hover over a fact for what it means and the lines that cause it, and Cmd- or Ctrl-click it to go to the first."
+          },
+          "stilt.inlayHints.causes": {
+            "type": "string",
+            "enum": ["cursorLine", "everyLine", "off"],
+            "enumDescriptions": [
+              "At the end of the line that holds the cursor",
+              "At the end of every line that causes a fact",
+              "Nowhere"
+            ],
+            "default": "cursorLine",
+            "scope": "resource",
+            "order": 22,
+            "markdownDescription": "Where to show what a line does that causes its function's facts, as `stilt show` writes it in a comment, such as `// an interpolated string allocates`."
+          }
+        }
+      },
+      {
+        "title": "Code Lens",
+        "properties": {
+          "stilt.codeLens.enable": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "order": 30,
+            "markdownDescription": "Show code lenses above each program's `main`: **Run** and **Debug**, as the next two settings choose."
+          },
+          "stilt.codeLens.run": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "order": 31,
+            "markdownDescription": "Show **Run** above `main`."
+          },
+          "stilt.codeLens.debug": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "order": 32,
+            "markdownDescription": "Show **Debug** above `main`."
+          }
+        }
+      },
+      {
+        "title": "Run and Debug",
+        "properties": {
+          "stilt.run.arguments": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "scope": "resource",
+            "order": 40,
+            "markdownDescription": "The arguments that **Stilt: Run Program** and **Run** above `main` pass to the program, as `stilt run . ARGS` does."
+          },
+          "stilt.debug.engine": {
+            "type": "string",
+            "enum": ["auto", "lldb-dap", "codelldb"],
+            "enumDescriptions": [
+              "LLDB DAP if it is installed, and CodeLLDB otherwise",
+              "LLDB DAP, the LLVM project's extension (llvm-vs-code-extensions.lldb-dap)",
+              "CodeLLDB (vadimcn.vscode-lldb)"
+            ],
+            "default": "auto",
+            "scope": "window",
+            "order": 41,
+            "markdownDescription": "The debugger extension that runs a Stilt program built with `stilt build`, whose executables carry DWARF debug information."
+          }
         }
       }
-    },
+    ],
     "configurationDefaults": {
       "[stilt]": {
         "editor.tabSize": 2,
@@ -176,7 +255,16 @@
       { "command": "stilt.explain", "title": "Explain Diagnostic Code…", "category": "Stilt", "icon": "$(question)" },
       { "command": "stilt.openManifest", "title": "Open Program's Manifest", "category": "Stilt" },
       { "command": "stilt.restart", "title": "Restart Language Servers", "category": "Stilt", "icon": "$(debug-restart)" },
-      { "command": "stilt.showLogs", "title": "Show Logs", "category": "Stilt", "icon": "$(output)" }
+      { "command": "stilt.toggleServer", "title": "Turn Language Servers On or Off", "category": "Stilt" },
+      { "command": "stilt.showLogs", "title": "Show Logs", "category": "Stilt", "icon": "$(output)" },
+      { "command": "stilt.menu", "title": "Show Menu", "category": "Stilt" },
+      { "command": "stilt.newProject", "title": "New Project…", "category": "Stilt", "icon": "$(new-folder)" },
+      { "command": "stilt.install", "title": "Install or Update Stilt", "category": "Stilt", "icon": "$(cloud-download)" },
+      { "command": "stilt.checkForUpdates", "title": "Check for Updates", "category": "Stilt" },
+      { "command": "stilt.locate", "title": "Locate stilt…", "category": "Stilt" },
+      { "command": "stilt.openSettings", "title": "Open Settings", "category": "Stilt", "icon": "$(gear)" },
+      { "command": "stilt.openWalkthrough", "title": "Get Started", "category": "Stilt" },
+      { "command": "stilt.reportIssue", "title": "Report an Issue", "category": "Stilt" }
     ],
     "submenus": [{ "id": "stilt.editor", "label": "Stilt" }],
     "menus": {
@@ -187,7 +275,13 @@
         { "command": "stilt.showExpansion", "when": "editorLangId == stilt && stilt:inProgram" },
         { "command": "stilt.showRelease", "when": "editorLangId == stilt && stilt:inProgram" },
         { "command": "stilt.showModule", "when": "editorLangId == stilt && stilt:inProgram" },
-        { "command": "stilt.openManifest", "when": "stilt:inProgram" }
+        { "command": "stilt.openManifest", "when": "stilt:inProgram" },
+        { "command": "stilt.restart", "when": "stilt:activated" },
+        { "command": "stilt.toggleServer", "when": "stilt:activated" },
+        { "command": "stilt.showLogs", "when": "stilt:activated" },
+        { "command": "stilt.menu", "when": "stilt:activated" },
+        { "command": "stilt.checkForUpdates", "when": "stilt:activated" },
+        { "command": "stilt.reportIssue", "when": "stilt:activated" }
       ],
       "editor/context": [{ "submenu": "stilt.editor", "group": "navigation@100", "when": "editorLangId == stilt && stilt:inProgram" }],
       "stilt.editor": [
@@ -217,7 +311,8 @@
             "type": "string",
             "description": "The program's directory or file. Defaults to the task's workspace folder."
           },
-          "args": { "type": "array", "items": { "type": "string" }, "description": "More arguments for the command, such as `--release`." }
+          "args": { "type": "array", "items": { "type": "string" }, "description": "More arguments for the command, such as `--release`." },
+          "arguments": { "type": "array", "items": { "type": "string" }, "description": "The program's arguments, after its path: for `run`." }
         }
       }
     ],
@@ -300,10 +395,56 @@
         ]
       }
     ],
-    "tomlValidation": [{ "fileMatch": "stilt.toml", "url": "./schemas/stilt.toml.json" }]
+    "tomlValidation": [{ "fileMatch": "stilt.toml", "url": "./schemas/stilt.toml.json" }],
+    "walkthroughs": [
+      {
+        "id": "stilt.start",
+        "title": "Get Started with Stilt",
+        "description": "Install the toolchain, start a program, and read what the compiler infers about it.",
+        "when": "stilt:activated",
+        "steps": [
+          {
+            "id": "install",
+            "title": "Install Stilt",
+            "description": "The language server, the tests and the debugger run `stilt`. Install its latest release, or point at the one you have.\n[Install Stilt](command:stilt.install)\n[Locate stilt](command:stilt.locate)",
+            "media": { "markdown": "walkthroughs/install.md" },
+            "completionEvents": ["onContext:stilt:toolchain == found"]
+          },
+          {
+            "id": "project",
+            "title": "Start a program",
+            "description": "`stilt new` writes a program with a test. Any folder that holds a `stilt.toml` or a `main.lt` is a program too.\n[New Project](command:stilt.newProject)",
+            "media": { "markdown": "walkthroughs/project.md" },
+            "completionEvents": ["onCommand:stilt.newProject", "onContext:stilt:inProgram"]
+          },
+          {
+            "id": "facts",
+            "title": "Read what the compiler infers",
+            "description": "Each function shows its inferred facts before its body. Hover over a fact for the lines that cause it.\n[Show Function with Its Facts](command:stilt.showFacts)",
+            "media": { "markdown": "walkthroughs/facts.md" },
+            "completionEvents": ["onCommand:stilt.showFacts"]
+          },
+          {
+            "id": "run",
+            "title": "Run, test and debug",
+            "description": "**Run** and **Debug** sit above `main`, and the Test Explorer lists every test, doc example and property.\n[Run Program](command:stilt.run)\n[Open the Test Explorer](command:workbench.view.testing.focus)",
+            "media": { "markdown": "walkthroughs/run.md" },
+            "completionEvents": ["onCommand:stilt.run", "onCommand:stilt.debug"]
+          },
+          {
+            "id": "settings",
+            "title": "Make it yours",
+            "description": "Choose which hints and lenses show, which `stilt` runs, and the arguments of a run.\n[Open Stilt Settings](command:stilt.openSettings)",
+            "media": { "markdown": "walkthroughs/settings.md" },
+            "completionEvents": ["onCommand:stilt.openSettings"]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "check": "tsc --project jsconfig.json",
+    "test": "node --test test/*.test.js",
     "package": "vsce package"
   },
   "dependencies": {

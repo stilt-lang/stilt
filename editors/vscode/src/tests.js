@@ -240,8 +240,9 @@ class Tests {
 
 /**
  * @param {vscode.ExtensionContext} context
+ * @param {import("./install").Installer} installer
  */
-function register(context) {
+function register(context, installer) {
   const controller = vscode.tests.createTestController("stilt", "Stilt");
   const tests = new Tests(controller);
   controller.resolveHandler = async (item) => (item ? tests.files(item) : tests.discover());
@@ -249,10 +250,15 @@ function register(context) {
     controller.items.replace([]);
     await tests.discover();
   };
-  const runHandler = (/** @type {vscode.TestRunRequest} */ request, /** @type {vscode.CancellationToken} */ token) => {
+  const runHandler = async (/** @type {vscode.TestRunRequest} */ request, /** @type {vscode.CancellationToken} */ token) => {
     if (!vscode.workspace.isTrusted) {
       vscode.window.showWarningMessage("Stilt: trust this workspace to run its tests.");
       return Promise.resolve();
+    }
+    const first = request.include?.[0]?.uri;
+    const ready = await installer.ready(first && programOf(first)?.uri);
+    if (!ready) {
+      return undefined;
     }
     return request.continuous ? watch(tests, request, token) : tests.run(request, token);
   };

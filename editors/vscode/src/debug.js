@@ -65,9 +65,10 @@ async function built(context, root, token) {
 
 /**
  * @param {vscode.ExtensionContext} context
+ * @param {import("./install").Installer} installer
  * @returns {vscode.DebugConfigurationProvider}
  */
-function resolver(context) {
+function resolver(context, installer) {
   return {
     provideDebugConfigurations(folder) {
       return [{ type: "stilt", request: "launch", name: "Debug the program", program: folder ? folder.uri.fsPath : "${workspaceFolder}" }];
@@ -80,6 +81,9 @@ function resolver(context) {
       const root = rootOf(config.program);
       if (!root) {
         vscode.window.showWarningMessage("Stilt: open a file of a program, or name it with `program`, to debug it.");
+        return undefined;
+      }
+      if (!(await installer.ready(vscode.Uri.file(root)))) {
         return undefined;
       }
       const chosen = engine();
@@ -122,9 +126,12 @@ async function debugProgram(root) {
   await vscode.debug.startDebugging(folder, { type: "stilt", request: "launch", name: `Debug ${path.basename(program)}`, program });
 }
 
-/** @param {vscode.ExtensionContext} context */
-function register(context) {
-  const provider = resolver(context);
+/**
+ * @param {vscode.ExtensionContext} context
+ * @param {import("./install").Installer} installer
+ */
+function register(context, installer) {
+  const provider = resolver(context, installer);
   /** @type {vscode.DebugConfigurationProvider} */
   const dynamic = {
     provideDebugConfigurations() {
