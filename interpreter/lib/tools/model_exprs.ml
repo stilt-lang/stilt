@@ -441,7 +441,11 @@ and assign cx o (p : Tast.expr) (v : Tast.expr) =
   | None when not (Model_places.through_map p) ->
       tag "assign" [ place cx p; expr cx v ]
   | None ->
-      stored cx p [ v ] (fun _ vs -> match vs with [ x ] -> x | _ -> unit_e)
+      let m =
+        stored cx p [ v ] (fun _ vs -> match vs with [ x ] -> x | _ -> unit_e)
+      in
+      (* std.map-element-places: the calculus's form of [m[k].f = v]. *)
+      if Model_places.element_place cx p then tag "element" [ m ] else m
   | Some b ->
       let m =
         stored cx p [ v ] (fun read vs ->
@@ -450,7 +454,9 @@ and assign cx o (p : Tast.expr) (v : Tast.expr) =
             | _ -> read)
       in
       (* values.compound-assignment-order: the calculus's form of [p op= e]. *)
-      if Model_places.compound_place cx p then tag "compound" [ m ] else m
+      if Model_places.compound_place cx p then tag "compound" [ m ]
+      else if Model_places.element_place cx p then tag "element" [ m ]
+      else m
 
 (* A store into a place that also reads it, as [p op= e] and a call with an
    [inout self] receiver are: the place's index expressions are evaluated once,

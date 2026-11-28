@@ -215,7 +215,8 @@ theorem eval_yielding : ∀ fuel, YieldingRun (eval D Copy.memory fuel)
             exact yield_yielding D (by simpa using hy.1.1.2) hy.1.2 fuel
           · exact absurd rfl hr
         · exact absurd rfl hr
-      case letElse | orElse | compound | intFloat | optionField | update | spawn | await | scope | scopeSpawn
+      case letElse | orElse | compound | intFloat | optionField | update | element
+          | spawn | await | scope | scopeSpawn
           | async | lazyNew | lazyGet =>
         exact ih m res k caught n N hn hr
       case project | writes | through => exact kept_yielding D (fuel + 1) rfl hn hr

@@ -17,6 +17,11 @@ val through : Model_types.writable -> string -> Model_json.t -> Model_json.t
 val through_map : Tast.expr -> bool
 (** Whether a place goes through a map's element (std.map-element-places). *)
 
+val element_place : Model_types.cx -> Tast.expr -> bool
+(** Whether an assignment to the place is the calculus's form of one through a
+    map's element: through exactly one element of a map the calculus holds,
+    followed by a field or an index. *)
+
 val compound_place : Model_types.cx -> Tast.expr -> bool
 (** Whether the calculus has [p op= e] at the place [p] as its form
     (values.compound-assignment-order): at a place that [p = e] stores, or at

@@ -411,6 +411,8 @@ partial def expr (j : Json) : Except String Expr := do
   | "optionField" => .form .optionField <$> (f 0 >>= expr)
   -- `["update", m]`: `{ ..base, f: e }`, written as the bindings and record it means.
   | "update" => .form .update <$> (f 0 >>= expr)
+  -- `["element", m]`: an assignment through a map's element, written as the store it means.
+  | "element" => .form .element <$> (f 0 >>= expr)
   -- `["projection", res, type, body]`: a projection's body written for an access whose value
   -- has `type`, which keeps the access's values in `res` (`Expr.projectionBody`).
   | "projection" => return .projectionBody (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)

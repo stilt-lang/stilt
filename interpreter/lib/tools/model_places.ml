@@ -51,6 +51,29 @@ let rec through_writable_root cx (e : Tast.expr) =
       through_writable_root cx b
   | _ -> false
 
+(* Whether an assignment to [p] is the calculus's form of one through a map's element
+   (std.map-element-places): its root is a binding of its own, and it goes through exactly one
+   element of a map that the calculus holds, followed by at least one field or list index. *)
+let element_place cx (p : Tast.expr) =
+  let rec steps (e : Tast.expr) =
+    match e.desc with
+    | Local v -> if writable_of cx v = None then Some [] else None
+    | Field (b, _) | Tuple_field (b, _) ->
+        Option.map (fun s -> s @ [ None ]) (steps b)
+    | Index (b, _) ->
+        Option.map
+          (fun s -> s @ [ (if is_map b.ty then Some b.ty else None) ])
+          (steps b)
+    | _ -> None
+  in
+  match steps p with
+  | Some s -> (
+      match List.filter_map Fun.id s with
+      | [ m ] ->
+          Model_keys.keyed cx m = None && List.nth s (List.length s - 1) = None
+      | _ -> false)
+  | None -> false
+
 (* Whether the calculus has [p op= e] as its form (values.compound-assignment-order):
    at a place that [p = e] stores, or at the last key of a map that the calculus holds,
    neither through a writable binding. *)

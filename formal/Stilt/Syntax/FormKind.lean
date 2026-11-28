@@ -42,6 +42,9 @@ inductive Form where
   | compound | intFloat | optionField
   /-- `{ ..base, f: e }`, a record update (`Expr.Update`). -/
   | update
+  /-- `m[k].f = v` or `m[k].f op= e`, an assignment through a map's element
+  (`Expr.ThroughElement`). -/
+  | element
   /-- `task.spawn(f)`, which runs the task's function to its end (`Expr.spawnOf`). -/
   | spawn
   /-- `t.await()`, the value the task ended with (`Expr.awaitOf`). -/

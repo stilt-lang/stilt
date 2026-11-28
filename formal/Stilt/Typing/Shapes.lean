@@ -94,16 +94,50 @@ inductive Expr.Update : Expr → Prop
       (∀ fe ∈ fields, Expr.UpdateField (ts.map (·.1)) b fe) →
       Expr.Update (.letIn b (.record R args) base (Expr.lets ts (.record R args fields)))
 
+/-- How an assignment through a map's element stores what it writes, `T w` writing `w`, and
+reads the part it writes, `r` (std.map-element-places): at the element of the map at the place
+`P`, at the key `k`, `w` is stored back with `insert`, and the part is read as `m[k]` reads it, so
+it panics with `missing-key` when `k` is absent and the map has no default, and starts from the
+default otherwise; a field or a list index after it is written into a `var` copy of the part
+before it, which is then stored back. The indexes are the variables `ts`. -/
+inductive Expr.ThroughEntry (ts : List Name) : (Expr → Expr) → Expr → Prop
+  | entry {P : Place} {k : Name} :
+      (∀ q ∈ P.path, q.IndexedBy ts) → k ∈ ts →
+      Expr.ThroughEntry ts (fun w => .assign P (.op (.map .insert) [P.read, .var k, w]))
+        (.op (.map .index) [P.read, .var k])
+  | step {T : Expr → Expr} {r : Expr} {n : Name} {τ : Ty} {q : Projection} :
+      Expr.ThroughEntry ts T r → q.IndexedBy ts →
+      Expr.ThroughEntry ts (fun w => T (.varIn n τ r (.seq (.assign ⟨n, [q]⟩ w) (.var n))))
+        (Expr.readPath r [q])
+
+/-- `m[k].f = v` and `m[k].f op= e` as they run (std.map-element-places and
+facts.map-element-places): the place's indexes and the map's key are evaluated once, in order,
+into the temporaries `ts`, then the value, into `v`; the element is read as `m[k]` reads it, the
+part changed in a copy, and the copy stored back with `insert`. So the assignment adds `panic` as
+the read of `m[k]` does, which `without panic` counts as indexing, and `alloc`, as the `insert`
+that stores it back does. -/
+inductive Expr.ThroughElement : Expr → Prop
+  | assign {ts : List (Name × Ty × Expr)} {T : Expr → Expr} {r : Expr} {v : Name} {σ : Ty}
+      {e : Expr} :
+      Expr.ThroughEntry (ts.map (·.1)) T r →
+      Expr.ThroughElement (Expr.lets ts (.letIn v σ e (T (.var v))))
+  | compound {ts : List (Name × Ty × Expr)} {T : Expr → Expr} {r : Expr} {v : Name} {σ : Ty}
+      {e : Expr} {o : Op} :
+      Expr.ThroughEntry (ts.map (·.1)) T r →
+      Expr.ThroughElement (Expr.lets ts (.letIn v σ e (T (.op o [r, .var v]))))
+
 /-- The meaning that each form typed by `HasType.shaped` must have. A compound assignment is
 `Expr.Compound`. An integer literal at a float type is the float literal of its value, which
 the type must represent exactly, so `9007199254740993` can't be an `f64`
 (numbers.integer-literals); a negative one is that literal negated
-(numbers.negative-literals). A record update is `Expr.Update`. -/
+(numbers.negative-literals). A record update is `Expr.Update`, and an assignment through a map's
+element `Expr.ThroughElement`. -/
 def Form.Shaped : Form → Expr → Prop
   | .compound, m => m.Compound
   | .intFloat, m => ∃ k n, m = .op (.float k n false 0) [] ∧ k.Represents n
   | .optionField, m => ∃ f e, m.ThroughOption f e
   | .update, m => m.Update
+  | .element, m => m.ThroughElement
   | _, _ => False
 
 /-- What a form of a written body, before any instance replaces its type parameters, asks of
@@ -197,11 +231,57 @@ theorem Expr.Update.substTys (s : TySubst) {m : Expr} (h : m.Update) : (m.substT
     · exact .inl ⟨t, ht, by simp only at he ⊢; rw [he]; rfl⟩
     · exact .inr (by simp only at he ⊢; rw [he]; rfl)
 
+theorem Expr.ThroughEntry.substTys (s : TySubst) {ts : List Name} :
+    ∀ {T : Expr → Expr} {r : Expr}, Expr.ThroughEntry ts T r →
+      ∃ T' : Expr → Expr, Expr.ThroughEntry ts T' (r.substTys s) ∧
+        ∀ w, (T w).substTys s = T' (w.substTys s)
+  | _, _, @entry _ P k hP hk => by
+    obtain ⟨x, path⟩ := P
+    have hr := Expr.readPath_substTys s ts path (.var x) hP
+    have hp := substPathTys_indexed s ts path hP
+    refine ⟨fun w => .assign ⟨x, path⟩ (.op (.map .insert) [Place.read ⟨x, path⟩, .var k, w]),
+      ?_, fun w => ?_⟩
+    · have hi : (Expr.op (.map .index) [Place.read ⟨x, path⟩, .var k]).substTys s =
+          .op (.map .index) [Place.read ⟨x, path⟩, .var k] := by
+        simp only [Expr.substTys, substExprTys, Place.read] at hr ⊢
+        rw [hr]; rfl
+      rw [hi]; exact .entry hP hk
+    · simp only [Expr.substTys, substExprTys, Place.read] at hr ⊢
+      rw [hp, hr]; try rfl
+  | _, _, @step _ T r n τ q hT hq => by
+    obtain ⟨T', hT', hw⟩ := hT.substTys s
+    have hp := substPathTys_indexed s ts [q] fun q' hq' => by
+      simp only [List.mem_singleton] at hq'; exact hq' ▸ hq
+    have hr := Expr.readPath_substTys s ts [q] r fun q' hq' => by
+      simp only [List.mem_singleton] at hq'; exact hq' ▸ hq
+    refine ⟨fun w => T' (.varIn n (τ.substTys s) (r.substTys s) (.seq (.assign ⟨n, [q]⟩ w) (.var n))),
+      ?_, fun w => ?_⟩
+    · rw [hr]; exact .step hT' hq
+    · rw [hw]; simp only [Expr.substTys]; rw [hp]
+
+theorem Expr.ThroughElement.substTys (s : TySubst) {m : Expr} (h : m.ThroughElement) :
+    (m.substTys s).ThroughElement := by
+  cases h with
+  | @assign ts T r v σ e hT =>
+    obtain ⟨T', hT', hw⟩ := hT.substTys s
+    rw [Expr.lets_substTys]
+    simp only [Expr.substTys]
+    rw [hw]
+    exact .assign (by rw [names_map]; exact hT')
+  | @compound ts T r v σ e o hT =>
+    obtain ⟨T', hT', hw⟩ := hT.substTys s
+    rw [Expr.lets_substTys]
+    simp only [Expr.substTys]
+    rw [hw]
+    simp only [Expr.substTys, substExprTys]
+    exact .compound (by rw [names_map]; exact hT')
+
 theorem Form.Shaped.substTys (s : TySubst) : ∀ {k : Form} {m : Expr},
     k.Shaped m → k.Shaped (m.substTys s)
   | .compound, _, h => Expr.Compound.substTys s h
   | .intFloat, _, ⟨k, n, hm, hn⟩ => ⟨k, n, by rw [hm]; rfl, hn⟩
   | .optionField, _, ⟨f, e, h⟩ => ⟨f, e.substTys s, h.substTys s⟩
   | .update, _, h => Expr.Update.substTys s h
+  | .element, _, h => Expr.ThroughElement.substTys s h
 
 end Stilt
