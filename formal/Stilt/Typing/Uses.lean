@@ -92,6 +92,17 @@ def MethodAt (D : Decls) (scope : RowScope) (τ : Ty) (Tr : Name) (args : List T
     ∃ h i, τ.head? = some h ∧ D.traitImpl? Tr h = some i ∧ ImplApplies D scope i τ ∧
       i.args.map (Ty.substTys (i.typeArgs τ.args)) = args
 
+/-- `τ` has the field `f`, of type `T`, as far as a body whose type parameters `scope` describes
+knows: a declared or anonymous record that has the field, with exactly that type once the
+record's type arguments are substituted, or a type parameter whose record bound names it with
+that type. A type meets a record bound when it has each field the bound names so; any other
+type, and a record that lacks a field or has it with another type, is E0318
+(records.record-bounds). -/
+def FieldOf (D : Decls) (scope : RowScope) (τ : Ty) (f : Name) (T : Ty) : Prop :=
+  (∃ R args r, τ = .record R args ∧ D.record? R = some r ∧ args.length = r.typeParams.length ∧
+      (r.fieldsAt args).lookup f = some T) ∨
+    ∃ p ∈ scope.types, τ = .param p.name ∧ p.fields.lookup f = some T
+
 /-- A relation that pairs two lists pairs them under a weaker one. -/
 theorem Forall₂.imp {α β : Type} {R R' : α → β → Prop} (h : ∀ {x y}, R x y → R' x y) :
     ∀ {xs : List α} {ys : List β}, Forall₂ R xs ys → Forall₂ R' xs ys
@@ -114,10 +125,13 @@ theorem Forall₂.length_eq {α β : Type} {R : α → β → Prop} :
 /-- The type arguments of a use of a function, one for each of its type
 parameters: closed, well formed where the use is, and meeting the parameter's
 bounds (traits.unsatisfied-bounds), a bound that writes its trait's arguments at the use's
-type arguments, which its arguments may name (traits.bound-arguments). -/
+type arguments, which its arguments may name (traits.bound-arguments), and a record bound with
+each field it names at the use's type arguments (`FieldOf`, records.record-bounds). -/
 def TypeArgsFit (D : Decls) (scope : RowScope) (ps : List TypeParam) (τs : List Ty) : Prop :=
-  Forall₂ (fun p τ => τ.Closed ∧ τ.WellFormed scope ∧ ∀ B ∈ p.bounds, Satisfies D scope τ B ∧
+  Forall₂ (fun p τ => τ.Closed ∧ τ.WellFormed scope ∧ (∀ B ∈ p.bounds, Satisfies D scope τ B ∧
       ∀ args, p.argsOf B = some args → (∀ a ∈ args, ∀ T ∈ a.params, T ∈ ps.map TypeParam.name) ∧
-        TraitArgs D scope τ B (args.map (Ty.substTys ((ps.map TypeParam.name).zip τs)))) ps τs
+        TraitArgs D scope τ B (args.map (Ty.substTys ((ps.map TypeParam.name).zip τs)))) ∧
+      ∀ fT ∈ p.fields, (∀ T ∈ fT.2.params, T ∈ ps.map TypeParam.name) ∧
+        FieldOf D scope τ fT.1 (fT.2.substTys ((ps.map TypeParam.name).zip τs))) ps τs
 
 end Stilt

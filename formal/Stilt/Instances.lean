@@ -1,4 +1,4 @@
-import Stilt.Instances.Patterns
+import Stilt.Instances.Fields
 
 /-!
 # Instances of generic bodies
@@ -139,13 +139,6 @@ theorem HasType.tryCatch_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : 
   rw [hE]
   exact .tryCatch (hs.withoutTypes hwfE) (hs.wellFormed hwf) he (hfe.substTys s) hh (hfh.substTys s)
 
-/-- A tuple's element, instantiated. -/
-theorem HasType.elem_substTys {Γ : Ctx} {fx : Effects} {e : Expr} {τs : List Ty} {f : Name}
-    {τ : Ty} (h : HasType D scope' Γ fx e ((Ty.tuple τs).substTys s))
-    (hf : (positions τs).lookup f = some τ) : HasType D scope' Γ fx (.field e f) (τ.substTys s) := by
-  simp only [Ty.substTys, substTyList_eq_map] at h
-  exact .elem h (by unfold positions at hf ⊢; rw [lookup_positionsFrom_map, hf]; rfl)
-
 /-- A variant literal, instantiated, from its instantiated payload, whose types are the
 payload's at the arguments' instances. -/
 theorem HasType.variant_substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {Γ : Ctx}
@@ -186,15 +179,6 @@ theorem HasType.list_substTys (hs : s.Fits D scope scope') {Γ : Ctx} {fx : Effe
     HasType D scope' Γ fx ((Expr.list τ es).substTys s) ((Ty.list τ).substTys s) := by
   rw [List.map_replicate, ← length_substExprTys s] at h
   exact .list (hs.wellFormed hwf) h
-
-/-- A field read, instantiated: the field's type at the arguments' instances. -/
-theorem HasType.field_substTys (hD : D.WellFormed) {Γ : Ctx} {fx : Effects} {e : Expr} {R f : Name}
-    {args : List Ty} {r : RecordDecl} {τ : Ty}
-    (h : HasType D scope' Γ fx e ((Ty.record R args).substTys s)) (hR : D.record? R = some r)
-    (hlen : args.length = r.typeParams.length) (hf : (r.fieldsAt args).lookup f = some τ) :
-    HasType D scope' Γ fx (.field e f) (τ.substTys s) := by
-  simp only [Ty.substTys, substTyList_eq_map] at h
-  exact .field h hR (by rw [List.length_map]; exact hlen) (hD.lookup_fieldsAt_substTys s hR hlen hf)
 
 /-- A `raise`, instantiated; the row's error type names no type parameter. -/
 theorem HasType.raise_substTys {Γ : Ctx} {fx : Effects} {e : Expr} {E σ : Ty}
@@ -248,6 +232,8 @@ theorem HasType.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
   | _, _, _, _, .field he hR hlen hf, hfx =>
     HasType.field_substTys hD (HasType.substTys hD hs he hfx) hR hlen hf
   | _, _, _, _, .elem he hf, hfx => HasType.elem_substTys (HasType.substTys hD hs he hfx) hf
+  | _, _, _, _, .boundField hp he hf, hfx =>
+    HasType.boundField_substTys hs hp (HasType.substTys hD hs he hfx) hf
   | _, _, _, _, .index he hi hfit, hfx =>
     .index (HasType.substTys hD hs he hfx) (HasType.substTys hD hs hi hfx) (hfit.substTys s)
   | _, _, _, _, .fnRef hd hlen hinst hres hwf hpass htys, _ =>
@@ -377,6 +363,8 @@ theorem PathFits.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     show PathFits D scope' _ _ (.tuple (substTyList s τs)) _ _
     rw [substTyList_eq_map]
     exact .elem (by unfold positions at hf ⊢; rw [lookup_positionsFrom_map, hf]; rfl) h
+  | _, _, _, _, _, .boundField hq hf hp, hfx =>
+    PathFits.boundField_substTys hs hq hf (PathFits.substTys hD hs hp hfx)
 
 theorem ArmsFit.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') :
     ∀ {Γ fx arms σ τ}, ArmsFit D scope Γ fx arms σ τ → fx.row.ParamFree →
@@ -441,7 +429,7 @@ theorem TypeArgsFit.fits (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) {sc
     (hscope : scope.types = []) {types : List Ty} (h : TypeArgsFit D scope d.typeParams types) :
     (d.typeArgs types).Fits D d.scope d.scope.instantiated := by
   refine ⟨fun p hp => ?_, fun p hp => ?_, fun p hp => ?_, fun _ h => h, fun _ _ h => h,
-    fun _ _ h => h⟩
+    fun _ _ h => h, fun p hp σ hl fT hfT => ?_⟩
   · obtain ⟨-, hτ⟩ := List.of_mem_zip hp
     obtain ⟨_, _, hc, hw, _⟩ := Forall₂.exists_of_mem_right h hτ
     exact Ty.ground_of_wellFormed hc hw hscope
@@ -450,13 +438,21 @@ theorem TypeArgsFit.fits (hD : D.WellFormed) {d : FnDecl} (hd : d ∈ D.fns) {sc
     exact hw.2.2.2
   · obtain ⟨τ, hl, _, _, hb⟩ := Forall₂.lookup_zip h (hD.typeParams d hd) hp
     refine ⟨τ, hl, fun B hB => ⟨?_, fun args ha => ?_⟩⟩
-    · exact (hb B hB).1.of_types fun q hq => by
+    · exact (hb.1 B hB).1.of_types fun q hq => by
         rw [hscope] at hq
         exact nomatch hq
-    · rcases ((hb B hB).2 args ha).2 with ⟨q, hq, _⟩ | hi
+    · rcases ((hb.1 B hB).2 args ha).2 with ⟨q, hq, _⟩ | hi
       · rw [hscope] at hq
         exact nomatch hq
       · exact .inr hi
+  · obtain ⟨τ, hl', _, _, hb⟩ := Forall₂.lookup_zip h (hD.typeParams d hd) hp
+    rw [FnDecl.typeArgs] at hl
+    rw [hl] at hl'
+    cases hl'
+    rcases (hb.2 fT hfT).2 with hr | ⟨q, hq, _⟩
+    · exact .inl hr
+    · rw [hscope] at hq
+      exact nomatch hq
 
 /-- Closed type arguments have no row variable for an instantiation to replace. -/
 theorem TypeArgsFit.substRows {scope : RowScope} {ps : List TypeParam} {τs : List Ty}

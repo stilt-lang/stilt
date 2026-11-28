@@ -63,6 +63,7 @@ theorem HasType.weaken (Δ : Ctx) :
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.weaken Δ hes)
   | _, _, _, _, .field he hr hl hf => .field (HasType.weaken Δ he) hr hl hf
   | _, _, _, _, .elem he hf => .elem (HasType.weaken Δ he) hf
+  | _, _, _, _, .boundField hp he hf => .boundField hp (HasType.weaken Δ he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.weaken Δ he) (HasType.weaken Δ hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
   | _, _, _, _, .method ht hm hc hwf hl hf => .method ht hm hc hwf hl hf
@@ -135,6 +136,7 @@ theorem PathFits.weaken (Δ : Ctx) :
   | _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, .field hr hl hf hp => .field hr hl hf (PathFits.weaken Δ hp)
   | _, _, _, _, _, .elem hf hp => .elem hf (PathFits.weaken Δ hp)
+  | _, _, _, _, _, .boundField hq hf hp => .boundField hq hf (PathFits.weaken Δ hp)
   | _, _, _, _, _, .index hi hfit hp =>
     .index (HasType.weaken Δ hi) hfit (PathFits.weaken Δ hp)
 
@@ -189,12 +191,17 @@ theorem TraitArgs.of_le {τ : Ty} {B : Name} {args : List Ty} (h : TraitArgs D s
     (hs : s.Le s') : TraitArgs D s' τ B args :=
   h.imp (fun ⟨q, hq, h⟩ => ⟨q, hs.types q hq, h⟩) id
 
+theorem FieldOf.of_le {τ T : Ty} {f : Name} (h : FieldOf D s τ f T) (hs : s.Le s') :
+    FieldOf D s' τ f T :=
+  h.imp id fun ⟨q, hq, h⟩ => ⟨q, hs.types q hq, h⟩
+
 theorem TypeArgsFit.of_le {ps : List TypeParam} {τs : List Ty} (h : TypeArgsFit D s ps τs)
     (hs : s.Le s') : TypeArgsFit D s' ps τs := by
   unfold TypeArgsFit at h ⊢
   exact Forall₂.imp (fun hx => ⟨hx.1, hx.2.1.of_le hs, fun B hB =>
-    ⟨(hx.2.2 B hB).1.of_le hs, fun args ha =>
-      ⟨((hx.2.2 B hB).2 args ha).1, ((hx.2.2 B hB).2 args ha).2.of_le hs⟩⟩⟩) h
+    ⟨(hx.2.2.1 B hB).1.of_le hs, fun args ha =>
+      ⟨((hx.2.2.1 B hB).2 args ha).1, ((hx.2.2.1 B hB).2 args ha).2.of_le hs⟩⟩,
+    fun fT hfT => ⟨(hx.2.2.2 fT hfT).1, (hx.2.2.2 fT hfT).2.of_le hs⟩⟩) h
 
 /-- The scope without its type parameters grows with the scope. -/
 theorem RowScope.Le.withoutTypes (hs : s.Le s') :
@@ -217,6 +224,7 @@ theorem HasType.of_le (hs : s.Le s') :
   | _, _, _, _, .view ho hes => .view ho (ExprsFit.of_le hs hes)
   | _, _, _, _, .field he hr hl hf => .field (HasType.of_le hs he) hr hl hf
   | _, _, _, _, .elem he hf => .elem (HasType.of_le hs he) hf
+  | _, _, _, _, .boundField hp he hf => .boundField (hs.types _ hp) (HasType.of_le hs he) hf
   | _, _, _, _, .index he hi hfit => .index (HasType.of_le hs he) (HasType.of_le hs hi) hfit
   | _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys =>
     .fnRef hf hlen hinst hres (hwf.of_le hs) (hpass.of_le hs) (htys.of_le hs)
@@ -293,6 +301,7 @@ theorem PathFits.of_le (hs : s.Le s') :
   | _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, .field hr hl hf hp => .field hr hl hf (PathFits.of_le hs hp)
   | _, _, _, _, _, .elem hf hp => .elem hf (PathFits.of_le hs hp)
+  | _, _, _, _, _, .boundField hq hf hp => .boundField (hs.types _ hq) hf (PathFits.of_le hs hp)
   | _, _, _, _, _, .index hi hfit hp => .index (HasType.of_le hs hi) hfit (PathFits.of_le hs hp)
 
 theorem ArmsFit.of_le (hs : s.Le s') :

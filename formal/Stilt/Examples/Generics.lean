@@ -40,7 +40,7 @@ private def sizeOf (τ : Ty) (e : Expr) (result : Ty :=
 /-- `fn twice<T: Size>(v: T) -> i64 { v.size() + v.size() }`. The calls go
 through the bound (traits.method-resolution). -/
 private def twice : FnDecl :=
-  ⟨"twice", [⟨"T", ["Size"], []⟩], [], [⟨.let, "v", .param "T", none⟩], .i64, Row.pure,
+  ⟨"twice", [⟨"T", ["Size"], [], []⟩], [], [⟨.let, "v", .param "T", none⟩], .i64, Row.pure,
     .op (.arith .add .i64) [sizeOf (.param "T") (.var "v"), sizeOf (.param "T") (.var "v")], {}⟩
 
 private def decls : Decls := ⟨[point], [], [twice], [], [size], [sizeI64, sizePoint], [], []⟩
@@ -84,7 +84,7 @@ example : twice.WellTyped decls twice.scope := by
       (.method "Size" "size" (.param "T")) (.fn [(.let, .param "T")] .i64 Row.pure) :=
     .method (t := size) (m := "size") (σ := .fn [(.let, .param selfParam)] .i64 Row.pure) rfl rfl
       (param_closed _) hT rfl
-      (.inl ⟨rfl, ⟨"T", ["Size"], []⟩, by simp [FnDecl.scope, twice], rfl, by simp, .inr ⟨rfl, size, rfl, rfl⟩⟩)
+      (.inl ⟨rfl, ⟨"T", ["Size"], [], []⟩, by simp [FnDecl.scope, twice], rfl, by simp, .inr ⟨rfl, size, rfl, rfl⟩⟩)
   have hcall : HasType decls twice.scope (Ctx.params [] twice.params) ⟨Row.pure, false, false, .i64, false, false⟩
       (sizeOf (.param "T") (.var "v")) .i64 :=
     .call hm (.value (by decide) (.var rfl) (.refl _) .nil)
@@ -101,7 +101,7 @@ example (s : RowScope) (Γ : Ctx) (fx : Effects) (τ : Ty) :
     obtain rfl : twice = _ := Option.some.inj (Eq.trans rfl hd)
     cases htys with
     | cons hx _ =>
-      cases (hx.2.2 "Size" (by simp)).1 with
+      cases (hx.2.2.1 "Size" (by simp)).1 with
       | impl _ hh hi =>
         simp only [Ty.head?, Option.some.injEq] at hh
         subst hh
@@ -110,7 +110,7 @@ example (s : RowScope) (Γ : Ctx) (fx : Effects) (τ : Ty) :
 
 /-- Without a bound, a body knows nothing of `T`: `fn bad<T>(v: T) -> i64 {
 v.size() }` can't call `size` (traits.unsatisfied-bounds). -/
-example : ¬Satisfies decls ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", [], []⟩]⟩ (.param "T") "Size" := by
+example : ¬Satisfies decls ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", [], [], []⟩]⟩ (.param "T") "Size" := by
   intro h
   generalize hτ : Ty.param "T" = τ at h
   cases h with

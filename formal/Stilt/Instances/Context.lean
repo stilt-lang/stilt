@@ -88,6 +88,10 @@ structure TySubst.Fits (D : Decls) (scope scope' : RowScope) (s : TySubst) : Pro
   vars : ∀ v ∈ scope.vars, v ∈ scope'.vars
   pairs : ∀ v E, scope.pairs v E → scope'.pairs v E
   passOn : ∀ v E, scope.passOn v E → scope'.passOn v E
+  /-- Each parameter's instance has the fields its record bound names, at their instances
+  (records.record-bounds). -/
+  records : ∀ p ∈ scope.types, ∀ σ, s.lookup p.name = some σ → ∀ fT ∈ p.fields,
+    FieldOf D scope' σ fT.1 (fT.2.substTys s)
 
 section
 
@@ -290,20 +294,6 @@ theorem MethodAt.substTys (hD : D.WellFormed) (hs : s.Fits D scope scope') {τ :
   · refine .inr ⟨h, i, Ty.head?_substTys hh s, hi, happ.substTys hD hs hh, ?_⟩
     rw [Ty.args_substTys hh]
     exact (TraitImpl.args_substTys hD hi happ.1 s).symm
-
-theorem TySubst.Fits.typeArgs (hD : D.WellFormed) (hs : s.Fits D scope scope') {ps : List TypeParam} {τs : List Ty}
-    (h : TypeArgsFit D scope ps τs) : TypeArgsFit D scope' ps (τs.map (Ty.substTys s)) := by
-  have hlen := h.length_eq
-  unfold TypeArgsFit at h ⊢
-  have hz : TySubst.then ((ps.map TypeParam.name).zip τs) s =
-      (ps.map TypeParam.name).zip (τs.map (Ty.substTys s)) := TySubst.then_zip _ _ _
-  refine Forall₂.imp_map (fun _ _ hx => ⟨hx.1.substTys hs.ground, hs.wellFormed hx.2.1, fun B hB =>
-    ⟨hs.satisfies hD (hx.2.2 B hB).1, fun args ha => ⟨((hx.2.2 B hB).2 args ha).1, ?_⟩⟩⟩) h
-  have h' := ((hx.2.2 B hB).2 args ha).2.substTys hD hs
-  rw [List.map_map] at h'
-  rwa [List.map_congr_left fun a hm => by
-    rw [Function.comp_apply, Ty.substTys_substTys _ _ _ fun T hT =>
-      List.lookup_zip_isSome (((hx.2.2 B hB).2 args ha).1 a hm T hT) (by simpa using hlen.symm), hz]] at h'
 
 theorem TySubst.Fits.callAllowed (hs : s.Fits D scope scope') {fx : Effects} {σ : Row}
     (h : CallAllowed scope fx σ) : CallAllowed scope' fx σ :=

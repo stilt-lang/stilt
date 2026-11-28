@@ -102,7 +102,8 @@ theorem HasType.erase_eq : ∀ {Γ fx e τ}, HasType D s Γ fx e τ → e.erase 
   | _, _, _, _, .variant _ _ _ _ h | _, _, _, _, .list _ h | _, _, _, _, .op _ h _ _ _
   | _, _, _, _, .view _ h => by
     simp [Expr.erase, ExprsFit.erase_eq h]
-  | _, _, _, _, .field h _ _ _ | _, _, _, _, .elem h _ | _, _, _, _, .raise _ h _
+  | _, _, _, _, .field h _ _ _ | _, _, _, _, .elem h _ | _, _, _, _, .boundField _ h _
+  | _, _, _, _, .raise _ h _
   | _, _, _, _, .try h | _, _, _, _, .loopBreaks h _ | _, _, _, _, .loopForever h _
   | _, _, _, _, .return h _ | _, _, _, _, .perform _ _ _ _ _ h _
   | _, _, _, _, .resume _ _ _ h _ => by
@@ -147,7 +148,7 @@ theorem PlaceFits.erase_eq : ∀ {Γ fx p τ}, PlaceFits D s Γ fx p τ → eras
 
 theorem PathFits.erase_eq : ∀ {Γ fx σ path τ}, PathFits D s Γ fx σ path τ → erasePath path = path
   | _, _, _, _, _, .nil => rfl
-  | _, _, _, _, _, .field _ _ _ h | _, _, _, _, _, .elem _ h => by
+  | _, _, _, _, _, .field _ _ _ h | _, _, _, _, _, .elem _ h | _, _, _, _, _, .boundField _ _ h => by
     simp [erasePath, PathFits.erase_eq h]
   | _, _, _, _, _, .index h₁ _ h₂ => by simp [erasePath, HasType.erase_eq h₁, PathFits.erase_eq h₂]
 

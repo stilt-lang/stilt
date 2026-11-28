@@ -182,6 +182,7 @@ theorem decls_wellFormed : (decls ss a b extra).WellFormed where
     exact .nil
   traits := fun _ h => nomatch h
   traitImpls := fun _ h => nomatch h
+  implFields := fun _ h => nomatch h
   typeNames := by simpa [Decls.typeNames, decls] using nodup_recNames _
   effectOps := fun _ h => nomatch h
   coherent := .nil

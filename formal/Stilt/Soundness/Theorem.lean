@@ -42,6 +42,7 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .view ho hes, _, hη, θ => view_ok hs hη θ ho hes
   | _, _, _, _, .field he hR _ hf, _, hη, θ => field_ok hs hη θ hD.wf he hR hf
   | _, _, _, _, .elem he hf, _, hη, θ => elem_ok hs hη θ he hf
+  | _, _, _, _, .boundField hp _ _, _, hη, _ => by rw [hη.types] at hp; exact nomatch hp
   | _, _, _, _, .index he hi hfit, _, hη, θ => index_ok hs hη θ he hi hfit
   | _, _, _, _, .fnRef hd hlen hinst hres _ hpass htys, _, hη, θ =>
     fnRef_ok hη θ hD.wf hd hlen hinst hres hpass htys

@@ -107,6 +107,10 @@ inductive HasType : List Name → Ctx → Effects → Expr → Ty → Prop
       HasType N Γ fx e (.tuple τs) →
       (positions τs).lookup f = some τ →
       HasType N Γ fx (.field e f) τ
+  | boundField {N Γ fx e p f τ} :
+      p ∈ scope.types → HasType N Γ fx e (.param p.name) →
+      p.fields.lookup f = some τ →
+      HasType N Γ fx (.field e f) τ
   | index {N Γ fx e i τ σ} :
       HasType N Γ fx e (.list τ) →
       HasType N Γ fx i σ → LenientFits vs N i σ .i64 →
@@ -320,6 +324,10 @@ inductive PathFits : List Name → Ctx → Effects → Ty → List Projection �
       (positions τs).lookup f = some τ →
       PathFits N Γ fx τ path τ' →
       PathFits N Γ fx (.tuple τs) (.field f :: path) τ'
+  | boundField {N Γ fx p f path τ τ'} :
+      p ∈ scope.types → p.fields.lookup f = some τ →
+      PathFits N Γ fx τ path τ' →
+      PathFits N Γ fx (.param p.name) (.field f :: path) τ'
 
 /-- Each arm, whose binders hide the parameters of `N` with their names, is
 checked against the type of the `match`. -/

@@ -35,6 +35,12 @@ structure TypeParam where
   each bound that writes them; a bound without them, as `C: Collection`, leaves them open
   (traits.bound-arguments). They may name the function's type parameters. -/
   args : List (Name × List Ty) := []
+  /-- Its record bound, `P: { f: T, .. }`, the fields it names with their types, which may name
+  the function's type parameters; none when it has none (records.record-bounds). A record bound
+  is always open, as one written without its `..` is read (records.bound-fields), and a parameter
+  of an open record type, `p: { f: T, .. }`, is elaborated as a type parameter of its own with that
+  bound, the calculus having no open record type anywhere else (records.open-parameter-types). -/
+  fields : List (Name × Ty) := []
 
 /-- The arguments a bound of a type parameter gives the trait `B`, if it writes them. -/
 def TypeParam.argsOf (p : TypeParam) (B : Name) : Option (List Ty) := p.args.lookup B

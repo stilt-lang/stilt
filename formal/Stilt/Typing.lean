@@ -115,6 +115,12 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx e (.tuple τs) →
       (positions τs).lookup f = some τ →
       HasType Γ fx (.field e f) τ
+  /-- `e.f` on a type parameter whose record bound names `f`: the bound's type of the field, as a
+  record's field is read (records.bound-fields). -/
+  | boundField {Γ fx e p f τ} :
+      p ∈ scope.types → HasType Γ fx e (.param p.name) →
+      p.fields.lookup f = some τ →
+      HasType Γ fx (.field e f) τ
   /-- `xs[i]` takes an `i64` index (std.lists). Only a list is indexed so, and a map through
   `MapOp.index` at its key type; an array is a list in the calculus. Nothing else has an index
   rule (expressions.indexing, E0317): `v[i]` on a view of a list is a form, the index of the
@@ -414,6 +420,12 @@ inductive PathFits : Ctx → Effects → Ty → List Projection → Ty → Prop
       (positions τs).lookup f = some τ →
       PathFits Γ fx τ path τ' →
       PathFits Γ fx (.tuple τs) (.field f :: path) τ'
+  /-- A field that a type parameter's record bound names, written through an `inout` or `var`
+  place as a record's field is (records.bound-fields). -/
+  | boundField {Γ fx p f path τ τ'} :
+      p ∈ scope.types → p.fields.lookup f = some τ →
+      PathFits Γ fx τ path τ' →
+      PathFits Γ fx (.param p.name) (.field f :: path) τ'
 
 /-- Each arm's pattern fits the scrutinee's type `σ`, its distinct names
 are bound immutably (patterns.pattern-types and patterns.var-bindings), its guard and its

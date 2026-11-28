@@ -187,7 +187,10 @@ theorem method_ok (hD : D.WellFormed) {Tr m : Name} {t : TraitDecl} {σ τ : Ty}
   have hδ : (d.typeArgs τ.args).Fits D d.scope d.scope.instantiated := by
     refine ⟨fun p hp => hg.args _ (List.of_mem_zip hp).2,
       fun p hp => happ.2.1 _ (List.of_mem_zip hp).2, fun p hp => ?_,
-      fun _ h => h, fun _ _ h => h, fun _ _ h => h⟩
+      fun _ h => h, fun _ _ h => h, fun _ _ h => h, fun p hp _ _ fT hfT => by
+        have hp' : p ∈ i.typeParams := by simpa [FnDecl.scope, htp] using hp
+        rw [hD.implFields i (List.mem_of_find?_eq_some hi) p hp'] at hfT
+        exact nomatch hfT⟩
     have hp' : p ∈ i.typeParams := by simpa [FnDecl.scope, htp] using hp
     obtain ⟨σ', hl', hm'⟩ := lookup_zip_mem hnd happ.1 hp'
     refine ⟨σ', by simpa [FnDecl.typeArgs, htp] using hl', fun B hB => ⟨?_, fun as has => ?_⟩⟩

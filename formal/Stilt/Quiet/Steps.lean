@@ -79,6 +79,7 @@ theorem PathFits.keeps :
   | _, _, _, _, _, .elem _ hrest, hio =>
     Eval.KeepsIo.bind (PathFits.ok hs hD hη θ hrest) (PathFits.keeps hrest hio) fun _ _ =>
       Eval.KeepsIo.pure
+  | _, _, _, _, _, .boundField hq _ _, _ => by rw [hη.types] at hq; exact nomatch hq
 
 theorem ArgsFit.keeps :
     ∀ {Γ : Ctx} {fx : Effects} {args : List Arg} {ps : List (Mode × Ty)},

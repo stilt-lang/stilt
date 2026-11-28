@@ -108,6 +108,7 @@ theorem HasType.distinctParams :
   | _, _, _, _, .view _ hes => ExprsFit.distinctParams hes
   | _, _, _, _, .field he _ _ _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
   | _, _, _, _, .elem he _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
+  | _, _, _, _, .boundField _ he _ => by simpa [Expr.distinctParams] using HasType.distinctParams he
   | _, _, _, _, .index he hi _ => by
     simp [Expr.distinctParams, HasType.distinctParams he, HasType.distinctParams hi]
   | _, _, _, _, .fnRef .. | _, _, _, _, .method .. => rfl
@@ -183,6 +184,8 @@ theorem PathFits.distinctParams :
   | _, _, _, _, _, .index hi _ hp => by
     simp [pathDistinctParams, HasType.distinctParams hi, PathFits.distinctParams hp]
   | _, _, _, _, _, .elem _ hp => by
+    simpa [pathDistinctParams] using PathFits.distinctParams hp
+  | _, _, _, _, _, .boundField _ _ hp => by
     simpa [pathDistinctParams] using PathFits.distinctParams hp
 
 theorem ArmsFit.distinctParams :

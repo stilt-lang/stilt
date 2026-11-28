@@ -164,6 +164,7 @@ theorem HasType.strengthen :
   | _, _, _, _, .view ho hes, _, h => .view ho (ExprsFit.strengthen hes (part h))
   | _, _, _, _, .field he hr hl hf, _, h => .field (HasType.strengthen he (part h)) hr hl hf
   | _, _, _, _, .elem he hf, _, h => .elem (HasType.strengthen he (part h)) hf
+  | _, _, _, _, .boundField hp he hf, _, h => .boundField hp (HasType.strengthen he (part h)) hf
   | _, _, _, _, .index he hi hfit, _, h =>
     .index (HasType.strengthen he (part h)) (HasType.strengthen hi (part h)) hfit
   | _, _, _, _, .fnRef hf hl hi hr hwf hp ht, _, _ => .fnRef hf hl hi hr hwf hp ht
@@ -261,6 +262,7 @@ theorem PathFits.strengthen :
   | _, _, _, _, _, .nil, _, _ => .nil
   | _, _, _, _, _, .field hr hl hf hp, _, h => .field hr hl hf (PathFits.strengthen hp (part h))
   | _, _, _, _, _, .elem hf hp, _, h => .elem hf (PathFits.strengthen hp (part h))
+  | _, _, _, _, _, .boundField hq hf hp, _, h => .boundField hq hf (PathFits.strengthen hp (part h))
   | _, _, _, _, _, .index hi hfit hp, _, h => .index (HasType.strengthen hi (part h)) hfit
       (PathFits.strengthen hp (part h))
 

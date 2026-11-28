@@ -149,7 +149,7 @@ theorem Decls.receivers_of_nil {D : Decls} (himpls : D.impls = [])
 /-- The scope of a trait's signatures: `Self` and the trait's own parameters, without bounds,
 and no row variable (traits.trait-parameters). -/
 def TraitDecl.scope (t : TraitDecl) : RowScope :=
-  ⟨[], fun _ _ => False, fun _ _ => False, ⟨selfParam, [], []⟩ :: t.params.map (⟨·, [], []⟩)⟩
+  ⟨[], fun _ _ => False, fun _ _ => False, ⟨selfParam, [], [], []⟩ :: t.params.map (⟨·, [], [], []⟩)⟩
 
 /-- A trait's functions are methods, which take `self` first, of type `Self`, and functions
 without `self` (traits.functions-without-self), and their signatures name no row variable
@@ -276,7 +276,7 @@ def Decls.traitFns (D : Decls) (Tr : Name) : List Name :=
 generic type when it would with every type parameter implementing `t` (traits.name-clashes). -/
 def Decls.StructurallyImplements (D : Decls) (T : Name) (t : PreludeTrait) : Prop :=
   ∃ τ ps, D.ownType? T = some (τ, ps) ∧
-    D.Implements ⟨[], fun _ _ => False, fun _ _ => False, ps.map (⟨·, [t.name], []⟩)⟩ t τ
+    D.Implements ⟨[], fun _ _ => False, fun _ _ => False, ps.map (⟨·, [t.name], [], []⟩)⟩ t τ
 
 /-- No inherent function of a type has the name of a function of a trait that the type
 implements, through an impl that the program writes or through a structural impl: either is
@@ -350,6 +350,9 @@ structure Decls.WellFormed (D : Decls) : Prop where
   boundArgs : D.BoundArgs
   /-- Each member type names something (E0334, E0335, traits.member-types). -/
   memberTypes : D.MemberTypes
+  /-- The parameters of a trait impl carry no record bound: the calculus has record bounds on the
+  type parameters of functions and of `impl` blocks of a type alone (records.record-bounds). -/
+  implFields : ∀ i ∈ D.traitImpls, ∀ p ∈ i.typeParams, p.fields = []
 
 /-- A program is typed when its declarations are well formed, every
 function's body checks with every row checked in the scope that `scopeOf`

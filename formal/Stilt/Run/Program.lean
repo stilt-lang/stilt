@@ -23,7 +23,7 @@ namespace Stilt.Run
 open Lean (Json)
 
 def typeParam : Decoder TypeParam
-  | .arr #[n, bs] => return ⟨← str n, ← list str bs, []⟩
+  | .arr #[n, bs] => return ⟨← str n, ← list str bs, [], []⟩
   | j => throw s!"a type parameter, not {j.compress}"
 
 /-- Limits: an array of their names, `"panic"`, `"overflow"`, `"div"`, `"alloc"` and `"copy"`,

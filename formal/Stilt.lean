@@ -34,6 +34,7 @@ import Stilt.WellTyped
 import Stilt.Instances.Context
 import Stilt.Instances
 import Stilt.Instances.Patterns
+import Stilt.Instances.Fields
 import Stilt.Values
 import Stilt.World
 import Stilt.Numbers
@@ -362,7 +363,6 @@ import Stilt.Counterexamples.Traits
 import Stilt.Poly.Rigid
 import Stilt.Poly.Fresh
 import Stilt.Counterexamples.Rigid
-import Stilt.Poly.Records
 import Stilt.Poly.Packs
 import Stilt.Counterexamples.Packs
 import Stilt.Macros.Hygiene

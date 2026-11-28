@@ -45,8 +45,8 @@ theorem Quiet.step (hq : Quiet D n) (hs : Sound D n) (hD : D.Typed) {scope : Row
   | _, _, _, _, .op _ hes _ _ hoio, _, hη, hio, θ => op_keeps hq hs hη θ hio hes hoio
   | _, _, _, _, .view _ hes, _, hη, hio, θ =>
     Eval.KeepsIo.bindAny (ExprsFit.keeps hq hs hη θ hes hio) fun _ _ => Outcome.KeepsIo.ofExcept_any
-  | _, _, _, _, .field he _ _ _, _, hη, hio, θ | _, _, _, _, .elem he _, _, hη, hio, θ =>
-    field_keeps hq hη θ hio he
+  | _, _, _, _, .field he _ _ _, _, hη, hio, θ | _, _, _, _, .elem he _, _, hη, hio, θ
+  | _, _, _, _, .boundField _ he _, _, hη, hio, θ => field_keeps hq hη θ hio he
   | _, _, _, _, .index he hi hfit, _, hη, hio, θ => index_keeps hq hs hη θ hio he hi hfit
   | _, _, _, _, .fnRef .., _, _, _, _ => Eval.KeepsIo.pure
   | _, _, _, _, .method .., _, _, _, _ => fun _ _ => Outcome.KeepsIo.method

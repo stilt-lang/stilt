@@ -111,6 +111,7 @@ theorem HasType.not_move {D : Decls} {scope : RowScope} :
   | _, _, _, _, .var _, _ | _, _, _, _, .int _, _ | _, _, _, _, .bool, _ | _, _, _, _, .unit, _
   | _, _, _, _, .record .., _ | _, _, _, _, .variant .., _ | _, _, _, _, .list .., _
   | _, _, _, _, .op .., _ | _, _, _, _, .view .., _ | _, _, _, _, .elem .., _
+  | _, _, _, _, .boundField .., _
   | _, _, _, _, .field .., _ | _, _, _, _, .index .., _ | _, _, _, _, .fnRef .., _
   | _, _, _, _, .method .., _
   | _, _, _, _, .closure .., _ | _, _, _, _, .call .., _ | _, _, _, _, .letIn .., _
@@ -160,6 +161,7 @@ theorem PathFits.ok :
       Eval.Ok.bind (PathFits.ok hrest) fun _ hp => Eval.Ok.pure (.index hp)
   | _, _, _, _, _, .elem hf hrest =>
     Eval.Ok.bind (PathFits.ok hrest) fun _ hp => Eval.Ok.pure (.elem (closeTys_lookup η hf) hp)
+  | _, _, _, _, _, .boundField hq _ _ => by rw [hη.types] at hq; exact nomatch hq
 
 include hD in
 theorem ArgsFit.ok :

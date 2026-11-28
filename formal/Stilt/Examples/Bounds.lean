@@ -17,7 +17,7 @@ private def decls : Decls := ⟨[], [], [], [], [], [], [], []⟩
 
 /-- The scope of `fn f<T: …>`, with the bounds of `T`. -/
 private def scopeWith (bounds : List Name) : RowScope :=
-  ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", bounds, []⟩]⟩
+  ⟨[], fun _ _ => False, fun _ _ => False, [⟨"T", bounds, [], []⟩]⟩
 
 /-- `a` and `b` of the type `τ`. -/
 private def ctx (τ : Ty) : Ctx := [("a", ⟨τ, false⟩), ("b", ⟨τ, false⟩)]
@@ -32,7 +32,7 @@ example (fx : Effects) : HasType decls (scopeWith ["Eq"]) (ctx (.param "T")) fx 
       subst hp
       exact ⟨fun τ => τ = .param "T", rfl, by
         rintro _ rfl
-        exact ⟨⟨"T", ["Eq"], []⟩, List.mem_singleton_self _, rfl, List.mem_singleton_self _⟩⟩) (Op.noIo rfl)
+        exact ⟨⟨"T", ["Eq"], [], []⟩, List.mem_singleton_self _, rfl, List.mem_singleton_self _⟩⟩) (Op.noIo rfl)
 
 /-- An operand of `==` has the type of the variable it reads, or one with a larger row. -/
 private theorem eq_operand {s : RowScope} {σ : Ty} {fx : Effects} {τ : Ty}

@@ -73,6 +73,7 @@ theorem Lenient.HasType.strict :
   | _, _, _, _, _, _, .view ho hes, hne => .view ho (Lenient.ExprsFit.strict hes hne)
   | _, _, _, _, _, _, .field he hr hl hf, hne => .field (Lenient.HasType.strict he hne) hr hl hf
   | _, _, _, _, _, _, .elem he hf, hne => .elem (Lenient.HasType.strict he hne) hf
+  | _, _, _, _, _, _, .boundField hp he hf, hne => .boundField hp (Lenient.HasType.strict he hne) hf
   | _, _, _, _, _, _, .index he hi hfit, hne =>
     have h := both hne
     .index (Lenient.HasType.strict he h.1) (Lenient.HasType.strict hi h.2) (strictFits hfit h.2)
@@ -198,6 +199,7 @@ theorem Lenient.PathFits.strict :
   | _, _, _, _, _, _, .nil, _ => .nil
   | _, _, _, _, _, _, .field hr hl hf hp, hne => .field hr hl hf (Lenient.PathFits.strict hp hne)
   | _, _, _, _, _, _, .elem hf hp, hne => .elem hf (Lenient.PathFits.strict hp hne)
+  | _, _, _, _, _, _, .boundField hq hf hp, hne => .boundField hq hf (Lenient.PathFits.strict hp hne)
   | _, _, _, _, _, _, .index hi hfit hp, hne =>
     have h := both hne
     .index (Lenient.HasType.strict hi h.1) (strictFits hfit h.1) (Lenient.PathFits.strict hp h.2)
@@ -238,6 +240,7 @@ theorem HasType.lenient :
   | _, _, _, _, _, .view ho hes => .view ho (ExprsFit.lenient hes)
   | _, _, _, _, _, .field he hr hl hf => .field (HasType.lenient he) hr hl hf
   | _, _, _, _, _, .elem he hf => .elem (HasType.lenient he) hf
+  | _, _, _, _, _, .boundField hp he hf => .boundField hp (HasType.lenient he) hf
   | _, _, _, _, _, .index he hi hfit => .index (HasType.lenient he) (HasType.lenient hi) (.inl hfit)
   | _, _, _, _, _, .fnRef hf hlen hinst hres hwf hpass htys => .fnRef hf hlen hinst hres hwf hpass htys
   | _, _, _, _, _, .method ht hm hc hwf hl hf => .method ht hm hc hwf hl hf
@@ -319,6 +322,7 @@ theorem PathFits.lenient :
   | _, _, _, _, _, _, .nil => .nil
   | _, _, _, _, _, _, .field hr hl hf hp => .field hr hl hf (PathFits.lenient hp)
   | _, _, _, _, _, _, .elem hf hp => .elem hf (PathFits.lenient hp)
+  | _, _, _, _, _, _, .boundField hq hf hp => .boundField hq hf (PathFits.lenient hp)
   | _, _, _, _, _, _, .index hi hfit hp =>
     .index (HasType.lenient hi) (.inl hfit) (PathFits.lenient hp)
 
