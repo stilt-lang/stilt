@@ -23,11 +23,6 @@ theorem KeysOrdered.of_cmp {α : Type} {cmp : α → α → Ordering} [Std.Trans
     rw [hf a ha c hc]
     exact Std.TransCmp.isLE_trans hab hbc
 
-/-- An integer's value, and 0 for any other value. -/
-def Value.intOr : Value → Int
-  | .int n => n
-  | _ => 0
-
 /-- A Boolean's value, and `false` for any other value. -/
 def Value.boolOr : Value → Bool
   | .bool b => b

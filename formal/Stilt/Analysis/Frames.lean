@@ -17,11 +17,6 @@ expression's outcome: the facts at its end, where it is true and where it is fal
 
 namespace Stilt
 
-/-- A value as an integer: itself when it is one, and 0 otherwise. -/
-def Value.intOr : Value → Int
-  | .int n => n
-  | _ => 0
-
 /-- A value's length: its number of elements when it is a list, and 0 otherwise. -/
 def Value.lenOr : Value → Int
   | .list vs => vs.length

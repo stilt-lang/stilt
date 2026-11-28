@@ -66,6 +66,11 @@ def tupleName : Name := "(,)"
 (types.field-access). -/
 def Value.tuple (vs : List Value) : Value := .record tupleName (positions vs)
 
+/-- A value as an integer: itself when it is one, and 0 otherwise. -/
+def Value.intOr : Value → Int
+  | .int n => n
+  | _ => 0
+
 theorem mem_positionsFrom {α : Type} {i : Nat} :
     ∀ {xs : List α} {p : Name × α}, p ∈ positionsFrom i xs → p.2 ∈ xs
   | [], _, h => nomatch h
