@@ -446,6 +446,22 @@ partial def expr (j : Json) : Except String Expr := do
   | "asyncWith" => return .asyncWith (← f 0 >>= expr) (← f 1 >>= expr)
   | "lazyNew" => return .lazyNewOf lazyName (← f 0 >>= ty) (← f 1 >>= expr)
   | "lazyGet" => return .lazyGetOf lazyName (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)
+  -- The functions of `std.par` (`Stilt.Typing.Par`): `["parMap", n, g, acc, x, T, U, xs, f]`,
+  -- `["parEach", g, i, T, place, f]`, `["parBoth", a, b, A, B, f, g]` and `["parFold", n, d, g, T,
+  -- xs, empty, f]`, the names those of the temporaries their code binds, and the types those of
+  -- the elements and of the functions' results.
+  | "parMap" =>
+    return .parMapOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= str) (← f 3 >>= str)
+      (← f 4 >>= ty) (← f 5 >>= ty) (← f 6 >>= expr) (← f 7 >>= expr)
+  | "parEach" =>
+    return .parEachOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= ty) (← f 3 >>= place)
+      (← f 4 >>= expr)
+  | "parBoth" =>
+    return .parBothOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= ty) (← f 3 >>= ty)
+      (← f 4 >>= expr) (← f 5 >>= expr)
+  | "parFold" =>
+    return .parFoldOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= str) (← f 3 >>= ty)
+      (← f 4 >>= expr) (← f 5 >>= expr) (← f 6 >>= expr)
   | _ => throw s!"no expression is named {tag}"
 
 partial def arg (j : Json) : Except String Arg := do

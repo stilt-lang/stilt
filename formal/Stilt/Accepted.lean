@@ -16,6 +16,7 @@ import Stilt.Alloc.Theorem
 import Stilt.Quiet.Theorem
 import Stilt.Writable
 import Stilt.Modes.Demands
+import Stilt.Modes.ParDemands
 import Stilt.Tasks.Scopes
 import Stilt.Tasks.Lazy
 
@@ -34,7 +35,8 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
 (projections.reaching-written-source), resumes a continuation at most once on each path
 (handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), keeps the
 rules of projections (projections.once-on-every-path), puts no `fixed` value in a
-`Shared<T>` (modes.demands), lets no scope escape (tasks.scope-that-escapes) and gives
+`Shared<T>` (modes.demands), gives `std.par` only `calm` and `portable` functions
+(par.what-runs-in-parallel), lets no scope escape (tasks.scope-that-escapes) and gives
 `Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing).
 `soundness` says what that gives every run, at every fuel and on every input:
 
@@ -154,6 +156,10 @@ structure Program.Accepted (p : Program) : Prop where
   or, for a closure literal or a binding of one, by what it captures (modes.demands and
   shared.tasks-and-modes, E0432). -/
   demands : p.Demands
+  /-- The demands of `std.par`: every function given to `par.map`, `par.each`, `par.both` or
+  `par.fold` is `portable` and `calm`, by its type or, for a closure literal or a binding of one,
+  by what it captures (par.what-runs-in-parallel, E0431). -/
+  parDemands : p.ParDemands
   /-- Each form is what the written body's own types make it: a field read through an `Option`
   adds a level only at a field whose type is no `Option` (types.option-field-known). -/
   formsKnown : p.FormsKnown

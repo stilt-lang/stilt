@@ -1,9 +1,10 @@
 import Stilt.Generics.Commute
+import Stilt.Typing.Par
 
 /-!
 # Tasks, scopes and lazy values
 
-The forms of `std.task` and `std.lazy` as `Expr.form` keeps them, each with the code it means
+The forms of `std.task`, `std.lazy` and `std.par` (`Stilt.Typing.Par`) as `Expr.form` keeps them, each with the code it means
 in the sequential run, which gives a program with tasks its one meaning
 (tasks.sequential-run), and the rules that typing asks of each beside that code's
 (`TaskForm`, read by `HasType.task`). A task's handle, a scope and a lazy value are records of
@@ -140,6 +141,47 @@ inductive TaskForm (D : Decls) : Form → Expr → Ty → Prop
   is left out (the record of the function allocates nothing). -/
   | lazyGet {L h τ l} : D.IsLazy L →
       TaskForm D .lazyGet (.letIn h (.record L [τ]) l (.call (.field (.var h) "get") [] τ)) τ
+  /-- par.std-par and par.sequential-meaning: `par.map(xs, f)` takes a `List<T>` and a function
+  of type `fn(T) -> U`, and gives the `List<U>` of `f` of each element, in order: the code binds
+  the list, then the function, then calls it on the elements from the first to the last, pushing
+  each value. par.what-runs-in-parallel: the function's type has an empty row, so a closure
+  literal whose body prints or raises doesn't fit it (E0502), nor a named function whose row
+  isn't empty (E0311); that it is `calm` and `portable` is `Program.ParDemands`' (E0431). The
+  parameter is `escaping`, which the model writes as that row alone; the allocation of the native
+  is left out. -/
+  | parMap {n g acc x T U xs f} :
+      TaskForm D .parMap (.letIn n (.list T) xs (.letIn g (Ty.parMapFn T U) f
+        (.varIn acc (.list U) (.list U [])
+          (.seq (.for x T (.var n) (.assign ⟨acc, []⟩
+            (.op (.list .push) [.var acc, .call (.var g) [.value (.var x)] U]))) (.var acc)))))
+        (.list U)
+  /-- par.std-par, par.sequential-meaning and par.writes-in-place: `par.each(inout xs, f)` takes
+  a list at a place `P` and a function of type `fn(inout T)`, with an empty row, and calls it on
+  each element of the list in place, from the first index to the last: each call takes the place
+  `P[i]` `inout`, so it writes that element and no other, into the storage of `xs` in the model
+  of in-place mutation. The model has the form for a place of fields alone, `P` read once for its
+  length; the parallel run of `view.split`'s parts with `par.both` is the run of two calls that
+  take writable bindings, which the model doesn't state apart. -/
+  | parEach {g i T f} {P : Place} : (∀ q ∈ P.path, q.IndexedBy []) →
+      TaskForm D .parEach (.letIn g (Ty.parEachFn T) f
+        (.for i .i64 (.op (.list (.range false)) [.int 0, .op (.list .len) [P.read]])
+          (.call (.var g) [.inout ⟨P.root, P.path ++ [.index (.var i)]⟩] .unit))) .unit
+  /-- par.std-par and par.sequential-meaning: `par.both(f, g)` takes two functions that take
+  nothing, with empty rows, and gives the pair of their values: the code binds `f`, then `g`, then
+  calls `f`, then `g`. -/
+  | parBoth {a b A B f g} :
+      TaskForm D .parBoth (.letIn a (.fn [] A Row.pure) f (.letIn b (.fn [] B Row.pure) g
+        (.op .tuple [.call (.var a) [] A, .call (.var b) [] B]))) (.tuple [A, B])
+  /-- par.std-par and par.fold-tree: `par.fold(xs, empty, f)` takes a `List<T>`, a `T` and a
+  function of type `fn(T, T) -> T`, with an empty row, binds them in order, gives `empty` for an
+  empty list, and otherwise calls the function the program declares as `FnDecl.foldTree`: a list
+  of one element is itself, and a longer one of `n` elements its first `n / 2` folded, combined
+  by `f` with the rest folded, a tree that depends on `n` alone. The two halves are folded one
+  after the other, the left first, the order par.panics reports in. -/
+  | parFold {n d g T xs e f} : D.fn? foldTreeName = some FnDecl.foldTree →
+      TaskForm D .parFold (.letIn n (.list T) xs (.letIn d T e (.letIn g (Ty.parFoldFn T) f
+        (.if (.op (.compare .eq .i64) [.op (.list .len) [.var n], .int 0]) T (.var d)
+          (Expr.foldTreeCall T (.var n) (.var g)))))) T
 
 /-- A task's row keeps its shape once its type parameters are replaced, which leaves rows as
 they are. -/
@@ -152,5 +194,23 @@ theorem TaskForm.substTys {D : Decls} (s : TySubst) :
   | _, _, _, .async => .async
   | _, _, _, .lazyNew hL => .lazyNew hL
   | _, _, _, .lazyGet hL => .lazyGet hL
+  | _, _, _, .parMap => .parMap
+  | _, _, _, @TaskForm.parEach _ g i T f ⟨x, path⟩ hP => by
+    have hr := Expr.readPath_substTys s [] path (.var x) hP
+    have hp := substPathTys_indexed s [] path hP
+    have hi : substPathTys s (path ++ [.index (.var i)]) = path ++ [.index (.var i)] :=
+      substPathTys_indexed s [i] _ fun q hq => by
+        rcases List.mem_append.1 hq with hq | hq
+        · rcases hP q hq with h | ⟨t, ht, _⟩
+          · exact .inl h
+          · cases ht
+        · rcases List.mem_singleton.1 hq with rfl
+          exact .inr ⟨i, List.mem_singleton_self _, rfl⟩
+    simp only [Expr.substTys, substExprTys, substArgTys, Place.read, Ty.parEachFn, Ty.substTys,
+      substParamTys, Op.substTys] at hr ⊢
+    rw [hr, hi]
+    exact .parEach hP
+  | _, _, _, .parBoth => .parBoth
+  | _, _, _, .parFold hF => .parFold hF
 
 end Stilt

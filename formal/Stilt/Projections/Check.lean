@@ -206,7 +206,8 @@ def Expr.once (res k : Name) (caught : Bool) (n : Nat) : Expr → Yields
       | some a => if n == 0 && a.yieldOperand res k caught then some (some 1) else none
       | none => none
     | .letElse | .orElse | .compound | .intFloat | .optionField | .update | .element
-    | .spawn | .await | .scope | .scopeSpawn | .async | .lazyNew | .lazyGet =>
+    | .spawn | .await | .scope | .scopeSpawn | .async | .lazyNew | .lazyGet
+    | .parMap | .parEach | .parBoth | .parFold =>
       m.once res k caught n
     | .project | .writes | .through => Yields.kept n ((Expr.form f m).keeps res k caught n)
     | .yielded | .projection => none

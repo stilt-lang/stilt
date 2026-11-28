@@ -3,7 +3,7 @@
 
 The forms of the Reference that the calculus keeps with the code they mean (`Expr.form`): those
 whose typing has rules of its own, those of projections (`Stilt.Projections`), those of
-writable views (`Stilt.Writable`) and those of tasks, scopes and lazy values
+writable views (`Stilt.Writable`) and those of tasks, scopes, lazy values and `std.par`
 (`Stilt.Typing.Tasks`), and those whose meaning has a shape of its own (`Form.Shaped`).
 -/
 
@@ -59,6 +59,10 @@ inductive Form where
   | lazyNew
   /-- `l.get()`, the value of the function a lazy value keeps (`Expr.lazyGetOf`). -/
   | lazyGet
+  /-- `par.map(xs, f)`, `par.each(inout xs, f)`, `par.both(f, g)` and `par.fold(xs, empty, f)`,
+  each its sequential run (`Expr.parMapOf`, `Expr.parEachOf`, `Expr.parBothOf` and
+  `Expr.parFoldOf`). -/
+  | parMap | parEach | parBoth | parFold
   deriving DecidableEq, Repr
 
 end Stilt

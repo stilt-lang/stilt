@@ -2,8 +2,8 @@
    them. A program's meaning is its sequential run (tasks.sequential-run), in which a
    shared value is a cell of the world, which every task reaches, and a handle names it;
    a [when] holds the cells it names, binds each name to its cell's value, runs its block
-   and puts the values back however the block ends (shared.when). Tasks, scopes and
-   [std.par] are calls in that run. *)
+   and puts the values back however the block ends (shared.when). Tasks, scopes, lazy
+   values and [std.par] are forms whose code is their run. *)
 
 open Model_json
 open Model_types
@@ -16,18 +16,11 @@ type callbacks = {
   place : Tast.expr -> Model_json.t;
 }
 
-let i64 = prelude_ty "i64"
-let zero = tag "int" [ Str "0" ]
-let list_op name operands = op (tag "list" [ Str name ]) operands
-
 (* The payload [T] of a [Shared<T>]. *)
 let payload t =
   match norm t with
   | Types.Con (_, [ p ]) -> p
   | _ -> outside "a when on something that isn't shared"
-
-(* A call of the function value [f], of the function type [t]. *)
-let call_with cx f t args = call_e cx f args (fn_result t)
 
 (* [Shared.new(v)]: a new cell of the world holding [v], and its handle
    (shared.std-sync). *)
@@ -149,28 +142,20 @@ let lazy_call (cb : callbacks) cx (e : Tast.expr) name (args : Tast.arg list) =
 (* Whether a type's functions are of std.sync or std.task. *)
 let owns (owner : Hir.item) = owner.home = "std.sync" || owner.home = "std.task"
 
-(* par.sequential-meaning: [par.map(xs, f)] calls [f] on the elements from the first to the
-   last, and gives the list of their values. *)
-let par_map cx (e : Tast.expr) (xs : Tast.expr) (f : Tast.expr) xs_e f_e =
-  let n = temp "par-list" e.loc and g = temp "par-function" e.loc in
-  let acc = temp "par-values" e.loc and x = temp "par-element" e.loc in
-  let call = call_with cx (var_e g) f.ty [ tag "value" [ var_e x ] ] in
-  let push =
-    tag "assign" [ Arr [ Str acc; Arr [] ]; list_op "push" [ var_e acc; call ] ]
-  in
-  let loop = tag "for" [ Str x; ty cx (elem xs.ty); var_e n; push ] in
-  let collect =
-    tag "varIn"
-      [
-        Str acc;
-        ty cx e.ty;
-        tag "list" [ ty cx (elem e.ty); Arr [] ];
-        tag "seq" [ loop; var_e acc ];
-      ]
-  in
-  tag "letIn"
+(* par.sequential-meaning: [par.map(xs, f)], the form that binds the list and [f], then calls
+   [f] on the elements from the first to the last and gives the list of their values
+   (formal/Stilt/Typing/Par.lean). *)
+let par_map cx (e : Tast.expr) (xs : Tast.expr) xs_e f_e =
+  tag "parMap"
     [
-      Str n; ty cx xs.ty; xs_e; tag "letIn" [ Str g; ty cx f.ty; f_e; collect ];
+      Str (temp "par-list" e.loc);
+      Str (temp "par-function" e.loc);
+      Str (temp "par-values" e.loc);
+      Str (temp "par-element" e.loc);
+      ty cx (elem xs.ty);
+      ty cx (elem e.ty);
+      xs_e;
+      f_e;
     ]
 
 (* Whether a place is a variable followed by fields, whose evaluation reads nothing. *)
@@ -180,147 +165,49 @@ let rec plain (e : Tast.expr) =
   | Field (b, _) | Tuple_field (b, _) -> plain b
   | _ -> false
 
-(* [par.each(inout xs, f)]: [f] called on each element of [xs] in place, from the first to
-   the last (par.sequential-meaning). *)
+(* [par.each(inout xs, f)]: the form that binds [f], then calls it on each element of [xs] in
+   place, from the first to the last (par.sequential-meaning and par.writes-in-place). *)
 let par_each (cb : callbacks) cx (e : Tast.expr) (xs : Tast.expr)
     (f : Tast.expr) =
   if not (plain xs) then outside "a par.each over a place with an index";
-  let g = temp "par-function" e.loc and i = temp "par-index" e.loc in
-  let root, steps =
-    match cb.place xs with
-    | Arr [ root; Arr steps ] -> (root, steps)
-    | _ -> outside "a place the model lacks"
-  in
-  let elem = Arr [ root; Arr (steps @ [ tag "index" [ var_e i ] ]) ] in
-  let call = call_with cx (var_e g) f.ty [ tag "inout" [ elem ] ] in
-  let range =
-    op
-      (tag "list" [ tag "range" [ Bool false ] ])
-      [ zero; list_op "len" [ cb.expr xs ] ]
-  in
-  tag "letIn"
+  tag "parEach"
     [
-      Str g; ty cx f.ty; cb.expr f; tag "for" [ Str i; ty cx i64; range; call ];
+      Str (temp "par-function" e.loc);
+      Str (temp "par-index" e.loc);
+      ty cx (elem xs.ty);
+      cb.place xs;
+      cb.expr f;
     ]
 
-(* [par.both(f, g)]: [f] called, then [g], and the pair of their values
-   (par.sequential-meaning). *)
+(* [par.both(f, g)]: the form that binds [f] and [g], calls [f], then [g], and gives the pair of
+   their values (par.sequential-meaning). *)
 let par_both cx (e : Tast.expr) (f : Tast.expr) (g : Tast.expr) f_e g_e =
-  let a = temp "par-first" e.loc and b = temp "par-second" e.loc in
-  let pair =
-    op (Str "tuple")
-      [ call_with cx (var_e a) f.ty []; call_with cx (var_e b) g.ty [] ]
-  in
-  tag "letIn"
-    [ Str a; ty cx f.ty; f_e; tag "letIn" [ Str b; ty cx g.ty; g_e; pair ] ]
-
-(* The body of the [par.fold] helper [key] at [t]: [xs] itself when it has one element,
-   and otherwise its halves folded by calls of [key], combined by [f] (par.fold-tree). *)
-let fold_body cx key (t : Types.ty) (fty : Types.ty) =
-  let self xs =
-    call_e cx
-      (tag "fnRef" [ Str key; Arr []; Arr [] ])
-      [ tag "value" [ xs ]; tag "value" [ var_e "f" ] ]
-      t
-  in
-  let len = list_op "len" [ var_e "xs" ] and one = tag "int" [ Str "1" ] in
-  let half = binary Div i64 i64 (var_e "n") (tag "int" [ Str "2" ]) in
-  let combined =
-    tag "letIn"
-      [
-        Str "h";
-        ty cx i64;
-        half;
-        tag "letIn"
-          [
-            Str "l";
-            ty cx t;
-            self (list_op "slice" [ var_e "xs"; zero; var_e "h" ]);
-            tag "letIn"
-              [
-                Str "r";
-                ty cx t;
-                self (list_op "slice" [ var_e "xs"; var_e "h"; var_e "n" ]);
-                call_with cx (var_e "f") fty
-                  [ tag "value" [ var_e "l" ]; tag "value" [ var_e "r" ] ];
-              ];
-          ];
-      ]
-  in
-  let first = tag "index" [ var_e "xs"; zero ] in
-  let body =
-    tag "letIn"
-      [
-        Str "n";
-        ty cx i64;
-        len;
-        tag "if" [ binary Eq i64 i64 (var_e "n") one; ty cx t; first; combined ];
-      ]
-  in
-  body
-
-(* The function the export writes for [par.fold] at a type: a list of one element is it,
-   and a longer one its first [n / 2] elements folded, combined by [f] with the rest
-   folded (par.fold-tree). *)
-let fold_helper cx (t : Types.ty) (fty : Types.ty) =
-  let key =
-    "std.par.fold<" ^ to_string (ty cx t) ^ ", " ^ to_string (ty cx fty) ^ ">"
-  in
-  (if not (List.mem_assoc key cx.helpers) then
-     let frow =
-       match norm fty with Types.Fn (_, _, r) -> r | _ -> Types.empty_row
-     in
-     let body = fold_body cx key t fty in
-     let param name t = Arr [ Str "let"; Str name; ty cx t; Null ] in
-     let list = Types.Con (list_item, [ t ]) in
-     let decl =
-       Arr
-         [
-           Str key;
-           Arr [];
-           Arr [];
-           Arr [ param "xs" list; param "f" fty ];
-           ty cx t;
-           row cx frow;
-           body;
-         ]
-     in
-     cx.helpers <- (key, decl) :: cx.helpers);
-  key
-
-(* [par.fold(xs, empty, f)]: [empty] for an empty list, and the tree of par.fold-tree
-   otherwise, its arguments evaluated in order first. *)
-let par_fold cx (e : Tast.expr) (f : Tast.expr) xs_e empty_e f_e =
-  let key = fold_helper cx e.ty f.ty in
-  let n = temp "fold-list" e.loc
-  and d = temp "fold-empty" e.loc
-  and g = temp "fold-function" e.loc in
-  let fold =
-    call_e cx
-      (tag "fnRef" [ Str key; Arr []; Arr [] ])
-      [ tag "value" [ var_e n ]; tag "value" [ var_e g ] ]
-      e.ty
-  in
-  let empty = binary Eq i64 i64 (list_op "len" [ var_e n ]) zero in
-  let list = Types.Con (list_item, [ e.ty ]) in
-  tag "letIn"
+  tag "parBoth"
     [
-      Str n;
-      ty cx list;
+      Str (temp "par-first" e.loc);
+      Str (temp "par-second" e.loc);
+      ty cx (fn_result f.ty);
+      ty cx (fn_result g.ty);
+      f_e;
+      g_e;
+    ]
+
+(* [par.fold(xs, empty, f)]: the form that binds its arguments in order, gives [empty] for an
+   empty list, and otherwise calls the function of par.fold-tree, which the program declares
+   once, as the model writes it ([FnDecl.foldTree]). *)
+let par_fold cx (e : Tast.expr) xs_e empty_e f_e =
+  let key = "std.par.fold" in
+  if not (List.mem_assoc key cx.helpers) then
+    cx.helpers <- (key, Str "foldTree") :: cx.helpers;
+  tag "parFold"
+    [
+      Str (temp "fold-list" e.loc);
+      Str (temp "fold-empty" e.loc);
+      Str (temp "fold-function" e.loc);
+      ty cx e.ty;
       xs_e;
-      tag "letIn"
-        [
-          Str d;
-          ty cx e.ty;
-          empty_e;
-          tag "letIn"
-            [
-              Str g;
-              ty cx f.ty;
-              f_e;
-              tag "if" [ empty; ty cx e.ty; var_e d; fold ];
-            ];
-        ];
+      empty_e;
+      f_e;
     ]
 
 (* A call of a function of std.task or std.par by its name. *)
@@ -337,8 +224,8 @@ let std_call (cb : callbacks) cx (e : Tast.expr) (i : Hir.item)
           declares cx s;
           tag "scope" [ ty cx (arg_of s); v f; ty cx e.ty ]
       | _ -> outside "a scope's function of a type the model lacks")
-  | "std.par", "map", [ xs; f ] -> par_map cx e xs.value f.value (v xs) (v f)
+  | "std.par", "map", [ xs; f ] -> par_map cx e xs.value (v xs) (v f)
   | "std.par", "each", [ xs; f ] -> par_each cb cx e xs.value f.value
   | "std.par", "both", [ f; g ] -> par_both cx e f.value g.value (v f) (v g)
-  | "std.par", "fold", [ xs; d; f ] -> par_fold cx e f.value (v xs) (v d) (v f)
+  | "std.par", "fold", [ xs; d; f ] -> par_fold cx e (v xs) (v d) (v f)
   | _ -> outside "the function %s" (item_name i)

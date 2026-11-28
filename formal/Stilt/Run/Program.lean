@@ -38,9 +38,12 @@ def limits (j : Json) : Except String Limits := do
     | _ => throw s!"a limit, not {n}"
 
 /-- A function: `[name, typeParams, rowParams, params, result, row, body]`, and after
-them the limits its body keeps, none when they are left out. -/
+them the limits its body keeps, none when they are left out; or `"foldTree"`, the function of
+`par.fold`. -/
 def fnDecl (j : Json) : Except String FnDecl :=
   match j with
+  -- `"foldTree"`: the function the export declares for `par.fold` (`FnDecl.foldTree`).
+  | .str "foldTree" => return FnDecl.foldTree
   | .arr #[n, tps, rps, ps, r, rw, b] => decode n tps rps ps r rw b (.arr #[])
   | .arr #[n, tps, rps, ps, r, rw, b, ls] => decode n tps rps ps r rw b ls
   | j => throw s!"a function, not {j.compress}"

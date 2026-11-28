@@ -217,7 +217,7 @@ theorem eval_yielding : ∀ fuel, YieldingRun (eval D Copy.memory fuel)
         · exact absurd rfl hr
       case letElse | orElse | compound | intFloat | optionField | update | element
           | spawn | await | scope | scopeSpawn
-          | async | lazyNew | lazyGet =>
+          | async | lazyNew | lazyGet | parMap | parEach | parBoth | parFold =>
         exact ih m res k caught n N hn hr
       case project | writes | through => exact kept_yielding D (fuel + 1) rfl hn hr
       case yielded | projection => exact absurd rfl hr

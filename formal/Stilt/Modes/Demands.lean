@@ -12,10 +12,9 @@ be `portable` (shared.tasks-and-modes, E0432): `Shared.new(v)`, and a task's fun
 view, or when it is a closure literal, or a binding of one, that captures a binding that is
 `fixed` (`Stilt.Modes.Threads`).
 
-The export writes the functions of `std.par` as loops and calls of their closures
-(par.sequential-meaning), so the calculus has no site for their demands, which ask for `calm` and
-`portable` closures (E0431). No promise reads the demand: the calculus runs one
-task at a time, so a value that one task reaches at the time another does has nothing to be
+The demands of `std.par`'s functions, which ask for `calm` and `portable` closures (E0431), are
+`Program.ParDemands`' (`Stilt.Modes.ParDemands`). No promise reads the demand: the calculus runs
+one task at a time, so a value that one task reaches at the time another does has nothing to be
 stated on.
 -/
 
