@@ -1,0 +1,10 @@
+//~ rule: std.clamp-and-sum
+//~ stdout:
+//~ | nan nan nan 1
+
+// `clamp` is `self.max(lo).min(hi)`: a NaN anywhere gives NaN, and `hi` wins when `lo > hi`.
+
+fn main() / io {
+  let nan = 0.0 / 0.0
+  print("{1.0.clamp(nan, 2.0)} {1.0.clamp(0.0, nan)} {nan.clamp(0.0, 2.0)} {5.clamp(3, 1)}")
+}

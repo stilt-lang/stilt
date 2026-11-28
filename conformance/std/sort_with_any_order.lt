@@ -1,0 +1,21 @@
+//~ rule: std.list-sorting
+//~ stdout:
+//~ | 4 [1, 1, 2, 3]
+
+// An `Ord` whose `compare` isn't a total preorder leaves the order unspecified, but the sort still
+// gives every element exactly once.
+
+type W = { v: i64 }
+
+impl Ord for W {
+  fn compare(self, other: W) -> Ordering { Less }
+}
+
+impl Eq for W {
+  fn eq(self, other: W) -> bool { self.v == other.v }
+}
+
+fn main() / io {
+  let s = [W { v: 3 }, W { v: 1 }, W { v: 2 }, W { v: 1 }].sorted()
+  print("{s.len()} {s.map(|w| w.v).sorted()}")
+}

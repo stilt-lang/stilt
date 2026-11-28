@@ -383,9 +383,11 @@ Nothing runs when an iterator is made or adapted. A consumer asks for elements o
 - `zip` asks `self` and then `other` for each pair, and ends with the first that ends;
 - `chain` asks `other` once `self` ends.
 
+A negative `n` counts as 0: `take(n)` then gives no element and asks its source for none, and `skip(n)` drops none.
+
 An iterator is a value: every consumer starts from its first element, and an iterator that no consumer reads runs nothing.
 
-Tests: [views/laziness.lt](../conformance/views/laziness.lt).
+Tests: [views/iterator_negative_counts.lt](../conformance/views/iterator_negative_counts.lt), [views/laziness.lt](../conformance/views/laziness.lt).
 
 <a id="views.consumers"></a>
 The **consumers** are native, and are in `impl<T> Iter<T>` unless the list says otherwise. Each reads every element it needs, in order, and calls its callback as the list methods do ([std.callbacks](17-std.md#std.callbacks)). So the callback's effects pass through ([effects.non-escaping-parameters](12-effects.md#effects.non-escaping-parameters)). The consumers are these:
@@ -397,9 +399,11 @@ The **consumers** are native, and are in `impl<T> Iter<T>` unless the list says 
 - `find(self, p: fn(T) -> bool) -> Option<T>`, `first(self) -> Option<T>`, `last(self) -> Option<T>` and `nth(self, n: i64) -> Option<T>`;
 - in `impl<T: Ord> Iter<T>`: `max(self) -> Option<T>` and `min(self) -> Option<T>`, the first of equal elements.
 
+`nth(n)` with a negative `n` is `None`, and reads no element.
+
 A consumer's result is an owned value, so an element of a view type can't be consumed into a `List`: `collect` on an `Iter<View<str>>` is E0421.
 
-Tests: [views/consumer_callback_raises.lt](../conformance/views/consumer_callback_raises.lt), [views/iterators.lt](../conformance/views/iterators.lt), [views/stored.lt](../conformance/views/stored.lt).
+Tests: [views/consumer_callback_raises.lt](../conformance/views/consumer_callback_raises.lt), [views/iterator_negative_counts.lt](../conformance/views/iterator_negative_counts.lt), [views/iterators.lt](../conformance/views/iterators.lt), [views/stored.lt](../conformance/views/stored.lt).
 
 <a id="views.iterator-traits"></a>
 `Iter<T>` has none of the structural traits ([traits.structural-impls](11-traits.md#traits.structural-impls)): two iterators can't be compared, and one can't be shown (E0318).

@@ -1,0 +1,3 @@
+kind: library
+
+The Reference now says what the standard library already does in a few corners: a negative count to an iterator's `take`, `skip` or `nth` counts as 0; `clamp` with a NaN bound gives NaN; a written `Ord` that isn't a total order leaves a sort's order unspecified but keeps every element once; `List.enumerate` panics with `overflow` past `i64.MAX`; `Set.remove` returns `()`; and a `Heap` compares its elements by `Ord.compare` where a `Deque` compares them with `==`, which differ on NaN and on `-0.0`. `first`, `last`, `concat`, `List.flatten` and `List.unzip` are described too. No program's behaviour changes.

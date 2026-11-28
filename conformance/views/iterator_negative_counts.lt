@@ -1,0 +1,14 @@
+//~ rule: views.laziness, views.consumers
+//~ stdout:
+//~ | [] [1, 2, 3] None
+
+// A negative count counts as 0: `take` gives nothing and `skip` drops nothing, and `nth` of a
+// negative index is `None`.
+
+use std.view
+
+fn main() / io {
+  let xs = [1, 2, 3]
+  let it = view.Iter.of(xs)
+  print("{it.take(-1).collect()} {it.skip(-1).collect()} {it.nth(-1)}")
+}

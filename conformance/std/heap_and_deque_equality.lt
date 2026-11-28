@@ -1,0 +1,18 @@
+//~ rule: std.heap, std.deque
+//~ stdout:
+//~ | true false
+//~ | false true
+
+// A heap's `Eq` compares its lists by `Ord.compare`, a deque's by `==`.
+
+use std.collections
+
+fn main() / io {
+  let nan = 0.0 / 0.0
+  let heaps = collections.Heap.from_list([nan]) == collections.Heap.from_list([nan])
+  let deques = collections.Deque.from_list([nan]) == collections.Deque.from_list([nan])
+  print("{heaps} {deques}")
+  let zero_heaps = collections.Heap.from_list([0.0]) == collections.Heap.from_list([-0.0])
+  let zero_deques = collections.Deque.from_list([0.0]) == collections.Deque.from_list([-0.0])
+  print("{zero_heaps} {zero_deques}")
+}

@@ -1,0 +1,14 @@
+//~ rule: std.list-slicing
+//~ stdout:
+//~ | Some(1) Some(4) [1, 2] [1, 2, 3] ([1, 2], [true, false])
+//~ panic: overflow
+//~ panic-at: list_ends_and_joins.lt:13:17
+
+// `first`, `last`, `concat`, `List.flatten`, `List.unzip`, and `enumerate`, which panics with
+// `overflow` when an index plus `start` leaves `i64`, as it builds its list, before the loop runs.
+
+fn main() / io {
+  print("{[1, 2].first()} {[3, 4].last()} {[1].concat([2])} {List.flatten([[1], [], [2, 3]])} {List.unzip([(1, true), (2, false)])}")
+  let start = 9223372036854775806
+  for (i, x) in [1, 2, 3].enumerate(start) { print("{i} {x}") }
+}
