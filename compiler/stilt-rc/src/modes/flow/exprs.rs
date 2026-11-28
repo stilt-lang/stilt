@@ -97,10 +97,10 @@ impl<'a> Walk<'a> {
         });
     }
 
-    /// A modification of a place, where `at` is, at a tick where it ends.
-    fn write(&mut self, place: &Expr, at: TextRange, replaces: bool) {
+    /// A modification of a place, where `at` is, at a tick at `ends`.
+    fn write(&mut self, place: &Expr, at: TextRange, ends: TextSize, replaces: bool) {
         if let Some((binding, path)) = places::place(place) {
-            let tick = self.tick(at.end());
+            let tick = self.tick(ends);
             self.flow.writes.push(Write {
                 binding,
                 path,
@@ -147,7 +147,7 @@ impl<'a> Walk<'a> {
             ..Into::read(END)
         };
         self.expr(place, &into);
-        self.write(place, s.at, false);
+        self.write(place, s.at, s.at.end(), false);
     }
 
     /// A `let` or `var` statement: its value is bound by its pattern, whose bindings last
@@ -209,10 +209,10 @@ impl<'a> Walk<'a> {
                     tick,
                 });
                 if modifies {
-                    self.write(place, s.at, true);
+                    self.write(place, s.at, s.at.end(), true);
                 }
             }
-            _ => self.write(place, s.at, false),
+            _ => self.write(place, s.at, s.at.end(), false),
         }
     }
 

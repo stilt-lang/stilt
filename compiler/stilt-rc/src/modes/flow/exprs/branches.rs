@@ -61,7 +61,8 @@ impl Walk<'_> {
     /// A `when`'s names stand for the places of the shared values, which its block may modify
     /// as a `var` (shared.when): each is bound where the block starts. Its value goes back to the
     /// handle when the block ends, where later `when`s may write it, so what it holds lasts on,
-    /// and the end of the block modifies each name (modes.handles). The block's value is the
+    /// and the end of the block reads each name, then modifies it (modes.handles and
+    /// modes.shared-holders). The block's value is the
     /// `when`'s, held by what holds it, so that a copy of a name the block gives lasts there.
     fn held(&mut self, e: &Expr, held: &[(Expr, LocalId)], b: &Block, into: &Into<'_>) {
         let read = Into::read(e.at.end());
@@ -88,6 +89,8 @@ impl Walk<'_> {
         };
         self.block(b, &given);
         let keyword = TextRange::at(e.at.start(), TextSize::of("when"));
+        let read = self.tick(e.at.end());
+        self.flow.reads.extend(bound.iter().map(|&v| (v, read)));
         let tick = self.tick(e.at.end());
         for v in bound {
             self.flow.writes.push(Write {

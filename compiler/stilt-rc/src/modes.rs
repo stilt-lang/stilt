@@ -74,8 +74,7 @@ pub enum Modification {
 
 /// A modification of a `var` binding or an `inout` parameter while it is shared, as the
 /// checks of facts.writes-in-place, facts.copy-at-call and facts.copy read it: where the walk puts
-/// it relative to its body's start, the statement of an assignment or the call of an `inout`
-/// argument.
+/// it relative to its body's start, the statement of an assignment or an `inout` argument.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SharedWrite {
     /// The binding that is modified.

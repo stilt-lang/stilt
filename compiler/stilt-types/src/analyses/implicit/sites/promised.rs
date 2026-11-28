@@ -50,7 +50,7 @@ impl Finder<'_> {
     /// facts.writes-in-place: whether a call is `view.into` or `view.split` on a list that the body
     /// holds the own storage of, under `without alloc`, which then copies nothing unless it is
     /// shared.
-    pub(super) fn window(&self, e: &Expr, c: &Callee, args: &[Arg]) -> bool {
+    pub(super) fn window(&self, c: &Callee, args: &[Arg]) -> bool {
         if !self.scope.limits.alloc || !is_window(c) {
             return false;
         }
@@ -70,7 +70,7 @@ impl Finder<'_> {
         self.push(Site {
             pending: Some(Pending {
                 binding: v,
-                modified: e.at,
+                modified: a.value.at,
                 callee: None,
             }),
             ..Site::new(a.value.at, Vec::new())
@@ -81,7 +81,7 @@ impl Finder<'_> {
     /// facts.copy-at-call: each argument of a call that goes to an in-place parameter and needs a
     /// copy, which allocates and copies at the argument; and each `inout` argument that needs none
     /// unless modes.shared-writes makes its modification shared.
-    pub(super) fn copies(&self, e: &Expr, c: &Callee, args: &[Arg]) {
+    pub(super) fn copies(&self, c: &Callee, args: &[Arg]) {
         let Some(callee) = called(self.decls, c) else {
             return;
         };
@@ -102,7 +102,7 @@ impl Finder<'_> {
                 (Some(_), ExprKind::Local(v)) if a.mode == Mode::Inout => self.push(Site {
                     pending: Some(Pending {
                         binding: v,
-                        modified: e.at,
+                        modified: a.value.at,
                         callee: Some(callee.clone()),
                     }),
                     ..Site::new(a.value.at, Vec::new())

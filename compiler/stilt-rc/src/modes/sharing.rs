@@ -109,11 +109,6 @@ impl Rules<'_> {
             && self.paths.reaches(&kill, within, c.came, w.tick)
     }
 
-    /// Whether `v` might still read the value it had at the tick `from` after the write `w`: a
-    /// path from `from` reaches `w` with no assignment of `v`'s whole, and no binding of it anew,
-    /// on the way, and goes on to a read of `v`, or `v` is read when the body of `w` ends: an
-    /// `inout` parameter of that body, which goes back to its caller, or a binding of an enclosing
-    /// body that it captures, which the closure's next call reads.
     /// Whether a call of `Shared.new`, `w`, shares the value of a binding that might still read it
     /// after the call: a parameter, which its caller reads, or a binding read on a path from the
     /// call (modes.handles).
@@ -132,6 +127,13 @@ impl Rules<'_> {
                 .any(|&(u, at)| u == w.binding && self.paths.reaches(&kill, None, w.tick, at))
     }
 
+    /// Whether `v` might still read the value it had at the tick `from` after the write `w`: a
+    /// path from `from` reaches `w` with no assignment of `v`'s whole, and no binding of it anew,
+    /// on the way, and goes on to a read of `v`, or `v` is read when the body of `w` ends: an
+    /// `inout` parameter of that body, which goes back to its caller, or a binding of an enclosing
+    /// body that it captures, which the closure's next call reads; or `w` is a modification that
+    /// starts a call, which reads `v` after it when `v` is the root of one of its `inout`
+    /// arguments.
     fn read_after(&self, v: LocalId, from: Tick, w: &Write) -> bool {
         let kill = Kill::Whole(v);
         let frame = self.flow.decls.get(&w.binding).map(|d| d.frame);
@@ -139,8 +141,11 @@ impl Rules<'_> {
             Kind::Param(Mode::Inout) => Some(d.frame) == frame,
             _ => Some(d.frame) != frame,
         });
+        let by_the_call =
+            |&(u, first, read): &(LocalId, Tick, Tick)| u == v && first <= w.tick && w.tick < read;
         self.paths.reaches(&kill, None, from, w.tick)
             && (at_end
+                || self.flow.inout_reads.iter().any(by_the_call)
                 || self
                     .flow
                     .reads

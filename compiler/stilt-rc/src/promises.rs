@@ -195,10 +195,34 @@ pub fn body_errors(db: &dyn Db, program: Program, file: SourceFile, index: u32) 
         .into_iter()
         .filter(|e| e.limited(limits))
         .collect();
-    findings(db, program, (file, index), &wanted)
-        .into_iter()
-        .filter_map(|f| promises::limit_error(db, program, (file, index), f.effect, f.at, &f.error))
-        .collect()
+    // facts.without: the operations of one line beyond one limit are one error, at the first,
+    // which names the others.
+    let start = usize::from(stilt_hir::body_starts(db, program, file)[index as usize]);
+    let bytes = file.bytes(db);
+    let line = |at: TextRange| {
+        let before = bytes.get(..start + usize::from(at.start()));
+        before.map_or(0, |b| b.split(|c| *c == b'\n').count())
+    };
+    let mut lines: Vec<(Effect, usize, Diagnostic)> = Vec::new();
+    for f in findings(db, program, (file, index), &wanted) {
+        let Some(d) = promises::limit_error(db, program, (file, index), f.effect, f.at, &f.error)
+        else {
+            continue;
+        };
+        let at = line(f.at);
+        match lines
+            .iter()
+            .position(|(e, l, _)| (*e, *l) == (f.effect, at))
+        {
+            Some(i) => {
+                let (e, l, first) = lines.remove(i);
+                let merged = first.with_note(f.at, format!("also {}", verb(f.effect)));
+                lines.insert(i, (e, l, merged));
+            }
+            None => lines.push((f.effect, at, d)),
+        }
+    }
+    lines.into_iter().map(|(_, _, d)| d).collect()
 }
 
 /// The program's diagnostics, as `stilt-types` checks them across the machine's cores, with

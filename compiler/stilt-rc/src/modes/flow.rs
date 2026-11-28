@@ -195,6 +195,10 @@ pub(crate) struct Flow {
     /// Each call of `Shared.new`, as a write of the binding whose value it is given
     /// (modes.handles).
     pub(crate) handed: Vec<Write>,
+    /// Each root of a call's `inout` argument, which the call reads after the modifications of
+    /// them all that start it, until it returns: the root, the tick of the first of those
+    /// modifications, and the tick of the read (modes.durations and modes.shared-holders).
+    pub(crate) inout_reads: Vec<(LocalId, Tick, Tick)>,
 }
 
 /// The steps of the paths that execution may take through a body (modes.shared-writes).
@@ -247,6 +251,7 @@ impl Flow {
         };
         let mut writes = Vec::new();
         let mut reads = Vec::new();
+        let mut inout_reads = Vec::new();
         for pair in &pairs {
             for w in &self.writes {
                 if let Some(u) = other(w.binding, pair) {
@@ -261,9 +266,15 @@ impl Flow {
                     reads.push((u, tick));
                 }
             }
+            for &(v, first, tick) in &self.inout_reads {
+                if let Some(u) = other(v, pair) {
+                    inout_reads.push((u, first, tick));
+                }
+            }
         }
         self.writes.extend(writes);
         self.reads.extend(reads);
+        self.inout_reads.extend(inout_reads);
         self.joined = pairs;
     }
 }

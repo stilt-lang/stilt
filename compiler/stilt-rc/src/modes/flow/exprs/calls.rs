@@ -44,7 +44,9 @@ impl Walk<'_> {
     /// (modes.call-stores). The call copies either, or, at its last use, passes on the copies it
     /// holds, as a copy of it would: these last as the call's result does, and as each binding
     /// that an `inout` argument is a part of (modes.copies). An `inout` argument doesn't escape
-    /// (modes.not-escaping): it is modified from the start of the call (modes.durations).
+    /// (modes.not-escaping): it is modified from the start of the call, and read after all those
+    /// modifications until the call returns (modes.durations and modes.shared-holders), a read
+    /// that counts for those modifications, since a later one is shared itself.
     pub(super) fn args(
         &mut self,
         e: &Expr,
@@ -95,9 +97,17 @@ impl Walk<'_> {
             self.copy(binding, path, made, holder, true, None);
         }
         self.stored_in_inouts(args, copies, &result);
+        let first = self.here() + 1;
         for a in args.iter().filter(|a| a.mode == Mode::Inout) {
-            self.write(&a.value, e.at, false);
+            self.write(&a.value, a.value.at, e.at.end(), false);
         }
+        let read = self.tick(e.at.end());
+        let roots = args
+            .iter()
+            .filter(|a| a.mode == Mode::Inout)
+            .filter_map(|a| places::place(&a.value));
+        let reads = roots.map(|(root, _)| (root, first, read));
+        self.flow.inout_reads.extend(reads);
     }
 
     /// The copies from the `copies`th on, those that the arguments made, held by the call's

@@ -332,7 +332,7 @@ impl<'a> Finder<'a> {
     fn call(&self, e: &'a Expr, c: &Callee, targs: &[Ty], args: &'a [Arg]) {
         let names = callee_names(self.decls, c, targs);
         let values: Vec<&Expr> = args.iter().map(|a| &a.value).collect();
-        if self.window(e, c, args) {
+        if self.window(c, args) {
             self.descend(&names, Some(&values));
             self.push(Site {
                 called: true,
@@ -343,7 +343,7 @@ impl<'a> Finder<'a> {
             self.add(e.at, names, Some(&values));
         }
         self.inout_args(args);
-        self.copies(e, c, args);
+        self.copies(c, args);
     }
 
     /// facts.allocation: the expressions that allocate, apart from calls and interpolations.
