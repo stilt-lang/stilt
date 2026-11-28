@@ -234,7 +234,9 @@ and literal st elements into =
    escaping (modes.call-stores). Each lasts as the call's result does, and as each binding
    that an [inout] argument is a part of, where the call may store it
    (modes.copies). An [inout] argument doesn't escape (modes.not-escaping): the
-   call modifies it. *)
+   call modifies it when it starts, and reads it after all those modifications,
+   until it returns (modes.durations and modes.shared-holders): a read that
+   counts for those modifications, since a later one is shared itself. *)
 and args_of st args consumed ~named ~ty into =
   let outer = st.passed in
   st.passed <- [];
@@ -270,7 +272,17 @@ and args_of st args consumed ~named ~ty into =
     st.passed;
   st.passed <- outer;
   stored_in_inouts st args ~before result;
-  List.iter (fun (a : arg) -> if a.mode = Ast.Inout then write st a.value) args
+  let inouts = List.filter (fun (a : arg) -> a.mode = Ast.Inout) args in
+  let first = st.tick + 1 in
+  List.iter (fun (a : arg) -> write st a.value) inouts;
+  let read = (point st).tick in
+  List.iter
+    (fun (a : arg) ->
+      Option.iter
+        (fun ({ root; _ } : Modes_places.place) ->
+          st.flow.inout_reads <- (root.id, first, read) :: st.flow.inout_reads)
+        (Modes_places.place a.value))
+    inouts
 
 (* The copies that the arguments passed to consumed parameters made, held by
    the call's result, held as well by each binding that an [inout] argument is
@@ -308,7 +320,7 @@ and stored_in_inouts st args ~before result =
    block may modify as a [var] (shared.when): each is bound where the block
    starts. Its value goes back to the handle when the block ends, where later
    [when]s may write it, so what it holds lasts on, and the end of the block
-   modifies each name (modes.handles). The block's value is the [when]'s, held
+   reads each name, then modifies it (modes.handles and modes.shared-holders). The block's value is the [when]'s, held
    by what holds it, so that a copy of a name the block gives lasts there. *)
 and held st (e : expr) names b into =
   List.iter (fun (x, _) -> expr st x (read Here)) names;
@@ -318,6 +330,10 @@ and held st (e : expr) names b into =
   bind_at st vars;
   List.iter (fun v -> declare st v Var Rest) vars;
   block ~id st b { into with held_by = Some (keeper into) };
+  let read = point st in
+  List.iter
+    (fun (v : Hir.var) -> st.flow.reads <- (v.id, read) :: st.flow.reads)
+    vars;
   let at = point st in
   List.iter
     (fun (v : Hir.var) ->
@@ -373,8 +389,18 @@ let join flow =
           flow.reads)
       flow.joined
   in
+  let inout_reads =
+    List.concat_map
+      (fun pair ->
+        List.filter_map
+          (fun (v, first, at) ->
+            Option.map (fun u -> (u, first, at)) (other v pair))
+          flow.inout_reads)
+      flow.joined
+  in
   flow.writes <- flow.writes @ writes;
-  flow.reads <- flow.reads @ reads
+  flow.reads <- flow.reads @ reads;
+  flow.inout_reads <- flow.inout_reads @ inout_reads
 
 let walk calls ~params b =
   let st = create calls in

@@ -119,6 +119,11 @@ type t = {
   mutable handed : write list;
       (** Each call of [Shared.new], as a write of the binding whose value it is
           given, which shares it with the handle (modes.handles). *)
+  mutable inout_reads : (int * int * int) list;
+      (** Each root of a call's [inout] argument, which the call reads after the
+          modifications of them all that start it, until it returns: the root,
+          the tick of the first of those modifications, and the tick of the read
+          (modes.durations and modes.shared-holders). *)
 }
 
 type target = {

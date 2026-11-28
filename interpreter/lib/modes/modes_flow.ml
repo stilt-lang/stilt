@@ -55,6 +55,7 @@ type t = {
   mutable ticks : int;
   mutable joined : (int * int) list;
   mutable handed : write list;
+  mutable inout_reads : (int * int * int) list;
 }
 
 type target = {
@@ -242,6 +243,7 @@ let create calls =
         ticks = 0;
         joined = [];
         handed = [];
+        inout_reads = [];
       };
     frame = 0;
     frames = 0;

@@ -195,7 +195,9 @@ let holds_own paths flow copies (u, path, start, tick) =
    no binding of it anew, on the way, and goes on to a read of [v], or [v] is
    read when the body of [w] ends: an [inout] parameter of that body, which
    goes back to its caller, or a binding of an enclosing body that it
-   captures, which the closure's next call reads. *)
+   captures, which the closure's next call reads; or [w] is a modification
+   that starts a call, which reads [v] after it when [v] is the root of one of
+   its [inout] arguments. *)
 let read_after paths flow v ~from (w : write) =
   let kill = Modes_paths.Whole v in
   let frame id =
@@ -207,8 +209,12 @@ let read_after paths flow v ~from (w : write) =
     | Some { frame = f; _ } -> Some f <> frame w.target
     | None -> false
   in
+  let by_the_call (u, first, read) =
+    u = v && first <= w.at.tick && w.at.tick < read
+  in
   Modes_paths.reaches paths ~kill from w.at.tick
   && (at_end
+     || List.exists by_the_call flow.inout_reads
      || List.exists
           (fun (u, (p : point)) ->
             u = v && Modes_paths.reaches paths ~kill w.at.tick p.tick)
