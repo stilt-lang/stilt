@@ -25,6 +25,7 @@ import Stilt.Anonymous
 import Stilt.Arrays
 import Stilt.Handling.WithPaired
 import Stilt.Natives.Theorem
+import Stilt.Analysis.Agree.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -116,6 +117,9 @@ array's size (`Decls.Arrays`), and lets no `with` take a performance that belong
 * every native of the calculus panics only with the kinds its paragraph names, the native sort
   gives the elements again, in order of their keys and stably, and `clamp`'s natives keep a NaN
   (`Natives.kept`, std.no-panics-by-default, std.list-sorting and std.clamp-and-sum).
+* a release build, which drops the checks of the operations that the analysis of a body's
+  integer values proves, runs as the reference interpreter does (`Program.runRelease_eq`,
+  facts.what-proofs-change).
 -/
 
 namespace Stilt
@@ -375,6 +379,11 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   `find` gives the first occurrence (`Natives.kept`). A property of the evaluator, whatever the
   program. -/
   natives : Natives.Kept
+  /-- facts.what-proofs-change: a release build, which drops the checks that the marks of a body
+  name wherever the analysis proves every mark of the body (`Expr.verified`), runs `main` as the
+  reference interpreter does, to the same outcome (`Program.runRelease_eq`): no check it drops
+  fails. A property of the evaluator and the analysis, whether the program is accepted or not. -/
+  release : p.runRelease fuel input = p.runCopy fuel input
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -405,6 +414,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     h.divLimits.kept h.wellTyped h.exclusive input, h.allocLimits.kept fuel input,
     fun n _ _ _ _ _ _ _ _ hf hio hp hγ =>
       call_keeps (h.wellTyped.typedDecls.quiet n) h.wellTyped.typedDecls hf hp hio _ hγ,
-    fun hio => h.wellTyped.quiet hio fuel input, Natives.kept⟩
+    fun hio => h.wellTyped.quiet hio fuel input, Natives.kept,
+    Program.runRelease_eq p fuel input⟩
 
 end Stilt

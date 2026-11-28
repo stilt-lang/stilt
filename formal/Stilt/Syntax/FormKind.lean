@@ -1,10 +1,13 @@
+import Stilt.Operators
+
 /-!
 # The forms of the calculus
 
 The forms of the Reference that the calculus keeps with the code they mean (`Expr.form`): those
 whose typing has rules of its own, those of projections (`Stilt.Projections`), those of
 writable views (`Stilt.Writable`) and those of tasks, scopes, lazy values and `std.par`
-(`Stilt.Typing.Tasks`), and those whose meaning has a shape of its own (`Form.Shaped`).
+(`Stilt.Typing.Tasks`), those whose meaning has a shape of its own (`Form.Shaped`), and the marks
+of the operations that verification proves (`Stilt.Analysis`).
 -/
 
 namespace Stilt
@@ -80,6 +83,9 @@ inductive Form where
   /-- A read of a trait's constant at a type, the value of the constant the program declares
   for it under `name` (`Expr.traitConstOf`). -/
   | traitConst (name : String)
+  /-- An operation marked as one that can't panic with the kinds `kinds`, whose checks of them a
+  release build drops (`Stilt.Analysis.Release`); it runs as the operation does. -/
+  | proved (kinds : List PanicKind)
   deriving DecidableEq, Repr
 
 end Stilt
