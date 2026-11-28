@@ -26,6 +26,21 @@ def Jump.PanicFree (lim : Limited) : Jump → Prop
   | .ret v => v.PanicFree lim
   | _ => True
 
+/-- The panics that code under `lim` may end with: `overflow` where `lim` allows it,
+`deadlock` (shared.when-on-value-already-held), and every other kind where `lim` allows
+panics, as `without overflow` alone does (effects.without-overflow). -/
+def Limited.Allows (lim : Limited) (k : PanicKind) : Prop :=
+  (k = .overflow ∧ lim.overflows = true) ∨ k = .deadlock ∨ (k ≠ .overflow ∧ lim.panics = true)
+
+/-- Where `lim` allows no panic but by overflow, a panic it allows is of the kind
+`overflow`, where it allows that, or `deadlock`. -/
+theorem Limited.Allows.of_panics {lim : Limited} {k : PanicKind} (h : lim.Allows k)
+    (hp : lim.panics = false) : (k = .overflow ∧ lim.overflows = true) ∨ k = .deadlock := by
+  rcases h with h | h | ⟨_, h⟩
+  · exact .inl h
+  · exact .inr h
+  · rw [hp] at h; cases h
+
 /-- How an evaluation that keeps to panic-free code may end. A performance
 passes a panic-free argument, and its rest, resumed with a panic-free value in
 a world whose cells hold panic-free values, ends so again: performing an operation adds no `panic` of its own, since it is
@@ -35,7 +50,7 @@ def Outcome.PanicFree (lim : Limited) {α : Type} (P : α → Prop) : Outcome Co
   | .done a s => P a ∧ State.PanicFree lim s
   | .raised e s => e.PanicFree lim ∧ State.PanicFree lim s
   | .jumped j s => j.PanicFree lim ∧ State.PanicFree lim s
-  | .panicked k s => ((k = .overflow ∧ lim.overflows = true) ∨ k = .deadlock) ∧ State.PanicFree lim s
+  | .panicked k s => lim.Allows k ∧ State.PanicFree lim s
   | .performed _ v s k =>
     v.PanicFree lim ∧ State.PanicFree lim s ∧
       ∀ w x, w.PanicFree lim → x.All (Value.PanicFree lim) → Outcome.PanicFree lim P (k w x)

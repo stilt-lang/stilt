@@ -279,7 +279,8 @@ theorem ListOp.Sig.apply {o : ListOp} {vs : List Value} {τs : List Ty} {τ : Ty
     exact .inl ⟨_, rfl, .str⟩
 
 theorem MapOp.Sig.apply {o : MapOp} {vs : List Value} {τs : List Ty} {τ : Ty} (h : o.Sig τs τ)
-    (hvs : ValuesAt D η vs τs) : Applied D (o.apply vs) (τ.close η) := by
+    (hvs : ValuesAt D η vs τs) (hkey : ∀ κ v, κ ∈ (Op.map o).keyTypes τs τ →
+      Value.Typed D v (κ.close η) → v.keyEq v = true) : Applied D (o.apply vs) (τ.close η) := by
   cases h with
   | new => rw [hvs.nil_inv]; exact .inl ⟨_, rfl, .map (by simp) (by simp) (by simp)⟩
   | withDefault =>
@@ -311,7 +312,7 @@ theorem MapOp.Sig.apply {o : MapOp} {vs : List Value} {τs : List Ty} {τ : Ty} 
   | insert =>
     obtain ⟨m, k, v, rfl, hm, hk, hv⟩ := hvs.three_inv
     obtain ⟨es, d, rfl, hks, hvs, hd⟩ := hm.map_inv
-    simp only [MapOp.apply, onMap_mapOf]
+    simp only [MapOp.apply, onMap_mapOf, hkey _ k (by simp [Op.keyTypes]) hk, ↓reduceIte]
     exact .inl ⟨_, rfl, .map (Entries.insert_keys (Q := (Value.Typed D · _)) hk hks)
       (Entries.insert_values (Q := (Value.Typed D · _)) hv hvs) hd⟩
   | remove =>

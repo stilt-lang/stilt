@@ -55,6 +55,11 @@ theorem check (k : IntTy) (n : Int) : Calm (k.check n) := by
   unfold IntTy.check
   exact ite (ok _) overflow
 
+theorem within (k : IntTy) (a b : Int) {x : Except Fault Int} (h : Calm x ov) :
+    Calm (k.within a b x) ov := by
+  unfold IntTy.within
+  exact ite h stuck
+
 theorem shift (k : IntTy) (o : Shift) (a b : Int) : Calm (k.shift o a b) := by
   unfold IntTy.shift
   exact ite overflow (ok _)
@@ -119,6 +124,7 @@ macro "calm" : tactic => `(tactic| repeat (first
   | exact Calm.check _ _
   | exact Calm.shift _ _ _ _
   | exact Calm.orStuck _
+  | apply Calm.within
   | apply Calm.map
   | (apply Calm.onList; intro)
   | (apply Calm.onMap; intro _ _)
@@ -151,9 +157,9 @@ theorem IntTy.arith_calm_of_ne (k : IntTy) (o : Arith) (a : Int) {b : Int} (hb :
   · exact Calm.check k _
   · exact Calm.check k _
   · exact Calm.check k _
-  · simp only [IntTy.arith, hb, ↓reduceIte]; exact Calm.check k _
+  · simp only [IntTy.arith, hb, ↓reduceIte]; exact Calm.within _ _ _ (Calm.check k _)
   · simp only [IntTy.arith, hb, ↓reduceIte]
-    exact Calm.ite (Calm.ok _) Calm.overflow
+    exact Calm.within _ _ _ (Calm.ite (Calm.ok _) Calm.overflow)
 
 /-- The methods of integer types but `div_euclid` and `rem_euclid` can only overflow. -/
 theorem IntTy.method_calm (k : IntTy) {m : IntMethod} (hm : m.divides = false)
@@ -162,6 +168,7 @@ theorem IntTy.method_calm (k : IntTy) {m : IntMethod} (hm : m.divides = false)
     first
     | exact absurd hm (by decide)
     | exact Calm.check _ _
+    | exact Calm.within _ _ _ (Calm.check _ _)
     | (split
        · exact Calm.check _ _
        · exact Calm.ite Calm.overflow (Calm.check _ _))
@@ -172,10 +179,12 @@ theorem IntTy.method_calm_of_ne (k : IntTy) (m : IntMethod) (a : Int) {b : Int} 
   cases m <;> simp only [IntTy.method] <;>
     first
     | exact Calm.check _ _
+    | exact Calm.within _ _ _ (Calm.check _ _)
     | (split
        · exact Calm.check _ _
        · exact Calm.ite Calm.overflow (Calm.check _ _))
-    | (simp only [IntTy.euclid, hb, ↓reduceIte]; exact Calm.ite Calm.overflow (Calm.check _ _))
+    | (simp only [IntTy.euclid, hb, ↓reduceIte]
+       exact Calm.within _ _ _ (Calm.ite Calm.overflow (Calm.check _ _)))
 
 /-- Whether a function of lists can't panic: every one but `slice`, `insert` and
 `remove`, which panic out of bounds (std.lists). -/

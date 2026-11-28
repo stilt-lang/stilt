@@ -13,8 +13,10 @@ panics with `divide-by-zero`, which the check rules out, and a panic-free
 program may still overflow, which `without panic` doesn't rule out
 (effects.without-overflow), as `Program.PanicFree.runCopy` allows. Under a limit that
 covers `f` alone, a call of `f` adds nothing and one of `g` adds `panic`; under
-`without panic, overflow`, `n / 2`, `i + 1` and `xs.len()` count as overflowing, and
-`i +% 1` doesn't.
+`without panic, overflow`, `i + 1`, `n / -1`, `n / d` on a signed type, `x >> 64`, `a.abs()`
+and `xs.len()` count as overflowing, and `i +% 1`, `n / 2`, `u / d` on an unsigned type,
+`x >> 1` and `a.min(b)` don't (effects.overflow-effect). A store `m = m.insert(k, 1)`, and
+`if !m.contains(k)` whose branch stores, give the code after them the key `k` (facts.keys).
 -/
 
 namespace Stilt.Examples.Panics
@@ -181,19 +183,64 @@ example : (Expr.if (contains (.var "k")) .i64
     (.seq (.assign ⟨"m", []⟩ (.op (.map .remove) [.var "m", .var "k"])) (get (.var "k"))) (.int 0)).panicFree Limited.all =
     false := rfl
 example : (get (.var "k")).panicFree Limited.all = false := rfl
+
+/-- `m[k] = 1`, which the export writes `m = m.insert(k, 1)`, gives the code after it the
+key `k`, and so does `if !m.contains(k) { m[k] = 0 }`, whose paths both give it; a store of
+another key, a write of `k`, or a branch that doesn't store gives none (facts.keys). -/
+private def storeKey (k : Expr) : Expr := .assign ⟨"m", []⟩ (.op (.map .insert) [.var "m", k, .int 1])
+
+example : (Expr.seq (storeKey (.var "k")) (get (.var "k"))).panicFree Limited.all = true := rfl
+example : (Expr.seq (.if (.op .not [contains (.var "k")]) .unit (storeKey (.var "k")) .unit)
+    (get (.var "k"))).panicFree Limited.all = true := rfl
+example : (Expr.seq (storeKey (.var "j")) (get (.var "k"))).panicFree Limited.all = false := rfl
+example : (Expr.seq (storeKey (.var "k")) (.seq (.assign ⟨"k", []⟩ (.var "j")) (get (.var "k")))).panicFree
+    Limited.all = false := rfl
+example : (Expr.seq (.if (.op .not [contains (.var "k")]) .unit .unit .unit)
+    (get (.var "k"))).panicFree Limited.all = false := rfl
 /-- `if m.contains(k) { let t = k; m[t] }`: a binding of the key is a key the map has, as the
 export binds a key before it stores. -/
 example : (Expr.if (contains (.var "k")) .i64 (.letIn "t" .str (.var "k") (get (.var "t"))) (.int 0)).panicFree
     Limited.all = true := rfl
 
 /-- The functions that a limit on `f` alone covers, with overflow or without. -/
-private def onlyF (overflows : Bool) : Limited := ⟨(· == "f"), fun _ _ => false, overflows⟩
+private def onlyF (overflows : Bool) : Limited := ⟨(· == "f"), fun _ _ => false, overflows, false⟩
 
 example : (Expr.call (.fnRef "f" [] []) [] .unit).panicFree (onlyF true) = true := rfl
 example : (Expr.call (.fnRef "g" [] []) [] .unit).panicFree (onlyF true) = false := rfl
 example : (Expr.fnRef "g" [] []).panicFree (onlyF true) = false := rfl
-example : (div (.var "n") (.int 2)).panicFree (onlyF false) = false := rfl
+/-- Under `without overflow`, `n / 2` and `x >> 1` overflow on no run, and neither do `a.min(b)`
+nor `u / d` on an unsigned type, where `n / -1`, `n / d` on a signed type, `x >> 64`, `i + 1`
+and `a.abs()` are sites (effects.overflow-effect). -/
+example : (div (.var "n") (.int 2)).panicFree (onlyF false) = true := rfl
+example : (div (.var "n") (.int (-1))).panicFree (onlyF false) = false := rfl
+example : (Expr.if (.op (.compare .ne .i64) [.var "d", .int 0]) .i64 (div (.var "n") (.var "d"))
+    (.int 0)).panicFree (onlyF false) = false := rfl
+example : (Expr.if (.op (.compare .ne .u64) [.var "d", .int 0]) (.int .u64)
+    (.op (.arith .div .u64) [.var "n", .var "d"]) (.int 0)).panicFree (onlyF false) = true := rfl
+example : (Expr.op (.shift .right .i64 .i64) [.var "x", .int 1]).panicFree (onlyF false) = true := rfl
+example : (Expr.op (.shift .right .i64 .i64) [.var "x", .int 64]).panicFree (onlyF false) = false :=
+  rfl
+example : (Expr.op (.intMethod .min .i64) [.var "a", .var "b"]).panicFree (onlyF false) = true := rfl
+example : (Expr.op (.intMethod .abs .i64) [.var "a"]).panicFree (onlyF false) = false := rfl
 example : (Expr.op (.arith .add .i64) [.var "i", .int 1]).panicFree (onlyF false) = false := rfl
+
+/-- The functions that `without overflow` alone covers, `f` among them: their code may panic,
+but not overflow. -/
+private def overflowF : Limited := ⟨(· == "f"), fun _ _ => false, false, true⟩
+
+/-- Under `without overflow` alone, `xs[i]`, `xs[i] = 1`, `m[k]`, `n / 0` and `n / d` on an
+unsigned type may panic and are accepted, where `xs[i + 1]`, `n / d` on a signed type and a
+call of `g` are sites of `overflow` (effects.without-overflow). -/
+example : (Expr.index (.var "xs") (.var "i")).panicFree overflowF = true := rfl
+example : (Expr.assign ⟨"xs", [.index (.var "i")]⟩ (.int 1)).panicFree overflowF = true := rfl
+example : (get (.var "k")).panicFree overflowF = true := rfl
+example : (div (.var "n") (.int 0)).panicFree overflowF = true := rfl
+example : (Expr.op (.arith .div .u64) [.var "n", .var "d"]).panicFree overflowF = true := rfl
+example : (Expr.index (.var "xs") (.op (.arith .add .i64) [.var "i", .int 1])).panicFree overflowF =
+    false := rfl
+example : (div (.var "n") (.var "d")).panicFree overflowF = false := rfl
+example : (Expr.call (.fnRef "g" [] []) [] .unit).panicFree overflowF = false := rfl
+example : (Expr.call (.fnRef "f" [] []) [] .unit).panicFree overflowF = true := rfl
 example : (Expr.op (.wrapping .add .i64) [.var "i", .int 1]).panicFree (onlyF false) = true := rfl
 example : (Expr.op (.list .len) [.var "xs"]).panicFree (onlyF false) = false := rfl
 example : (Expr.for "i" .i64 (.op (.list (.range false)) [.int 0, .op (.list .len) [.var "xs"]])

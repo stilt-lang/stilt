@@ -22,9 +22,10 @@ What the limits promise, proved from the checks (`Program.PanicKeptBy.kept`,
   functions are panic-free as well, wherever they were made, panics only with `overflow` or
   `deadlock`, and so does a run whose `main` is limited (effects.without-panic);
 * one limited by `without panic, overflow` panics only with `deadlock`
-  (effects.without-overflow). The calculus's values carry no type, so the check counts as
-  overflowing every operation that checks a range (`Op.overflowFree`), and checks
-  `without overflow` only beside `without panic`;
+  (effects.without-overflow). The check counts the operations that can overflow at their
+  types (`Op.overflowFreeOn`), and lengths besides, which the calculus doesn't bound;
+* one limited by `without overflow` alone may panic, but never with `overflow`: its code may
+  index, store at an index and run operations that panic, as `lim.panics` allows;
 * a call of a function limited by `without div` halts, from some fuel on, on arguments whose
   values at its non-escaping parameters are function values that halt, and so does a run whose
   `main` is limited (facts.without-div and facts.div);
@@ -38,23 +39,28 @@ facts.without and effects.without-panic): some set of functions, holding every f
 whose limits `limited` picks, holds no operation that adds `panic` and names only
 functions of the set, and `main`'s body is such code when `limited` picks `main`'s limits.
 With `overflows` false the set holds no operation that can overflow either
-(effects.without-overflow). A function value that limited code calls adds nothing, its
+(effects.without-overflow), and with `panics` true it may hold the operations that add
+`panic`, as `without overflow` alone allows. A function value that limited code calls adds nothing, its
 closure literal's body counted where it is written and a named function where it is named
 (facts.calls-through-function-values). The greatest such set is the functions that the
 inference finds without the fact, solving a recursive group as a fixed point
 (facts.inference). Of the facts, the model infers `panic`, `overflow` and `div`. -/
-def Program.PanicKeptBy (p : Program) (limited : Limits → Bool) (overflows : Bool) : Prop :=
-  ∃ lim : Limited, lim.overflows = overflows ∧ p.decls.PanicCover lim ∧
+def Program.PanicKeptBy (p : Program) (limited : Limits → Bool) (overflows panics : Bool) : Prop :=
+  ∃ lim : Limited, lim.overflows = overflows ∧ lim.panics = panics ∧ p.decls.PanicCover lim ∧
     (∀ d ∈ p.decls.fns, limited d.limits = true → lim.fn d.name = true) ∧
     (limited p.limits = true → p.main.panicFree lim = true)
 
 /-- `without panic`, on each function and `main` it limits (effects.without-panic). -/
-def Program.PanicLimited (p : Program) : Prop := p.PanicKeptBy (·.panic) true
+def Program.PanicLimited (p : Program) : Prop := p.PanicKeptBy (·.panic) true false
 
 /-- `without panic, overflow`, on each function and `main` that both limit
-(effects.without-overflow). The model checks `without overflow` only beside `without panic`. -/
+(effects.without-overflow). -/
 def Program.OverflowLimited (p : Program) : Prop :=
-  p.PanicKeptBy (fun l => l.panic && l.overflow) false
+  p.PanicKeptBy (fun l => l.panic && l.overflow) false false
+
+/-- `without overflow`, on each function and `main` it limits (effects.without-overflow):
+their code may panic, but not with `overflow`. -/
+def Program.OverflowAloneLimited (p : Program) : Prop := p.PanicKeptBy (·.overflow) false true
 
 /-- `without div`, kept as the Reference infers facts (facts.without-div): some set of
 functions, holding every function limited by `without div`, holds no site of `div` and names
@@ -78,9 +84,9 @@ closures panic-free under the set and name only its functions, ends as panic-fre
 (`Outcome.PanicFree`): it panics only with `deadlock`, or with `overflow` when `overflows`
 allows it, and so does the rest of every performance it makes. A run whose `main`'s limits
 `limited` picks panics only so, as the reference interpreter runs it and in place. -/
-def Program.PanicsKeptBy (p : Program) (limited : Limits → Bool) (overflows : Bool) (fuel : Nat)
-    (input : String) : Prop :=
-  (∃ lim : Limited, lim.overflows = overflows ∧
+def Program.PanicsKeptBy (p : Program) (limited : Limits → Bool) (overflows panics : Bool)
+    (fuel : Nat) (input : String) : Prop :=
+  (∃ lim : Limited, lim.overflows = overflows ∧ lim.panics = panics ∧
     (∀ name d, p.decls.fn? name = some d → limited d.limits = true → lim.fn name = true) ∧
     ∀ (n : Nat) (name : Name) (types : List Ty) (rows : List Row) (passed : List Passed)
       (s : Copy.State), lim.fn name = true → (∀ q ∈ passed, q.PanicFree lim) →
@@ -88,9 +94,10 @@ def Program.PanicsKeptBy (p : Program) (limited : Limits → Bool) (overflows : 
         (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) (.function name types rows)
           passed s)) ∧
   (limited p.limits = true →
-    (∀ k s, p.runCopy fuel input = .panicked k s → (k = .overflow ∧ overflows = true) ∨ k = .deadlock) ∧
-    ∀ k, (p.runInPlace fuel input).observe = .panicked k →
-      (k = .overflow ∧ overflows = true) ∨ k = .deadlock)
+    (∀ k s, p.runCopy fuel input = .panicked k s → (k = .overflow ∧ overflows = true) ∨
+      k = .deadlock ∨ (k ≠ .overflow ∧ panics = true)) ∧
+    ∀ k, (p.runInPlace fuel input).observe = .panicked k → (k = .overflow ∧ overflows = true) ∨
+      k = .deadlock ∨ (k ≠ .overflow ∧ panics = true))
 
 /-- What `without div` promises (facts.without-div): the functions limited by it are among a
 set of functions a call of any of which, from any state, on arguments that pass, at its
@@ -121,11 +128,11 @@ theorem Decls.fn?_spec {D : Decls} {name : Name} {d : FnDecl} (h : D.fn? name = 
   ⟨List.mem_of_find?_eq_some h, by simpa using List.find?_some h⟩
 
 /-- The checks of a limit against `panic` keep its promises. -/
-theorem Program.PanicKeptBy.kept {p : Program} {limited : Limits → Bool} {overflows : Bool}
-    (h : p.PanicKeptBy limited overflows) (hwt : p.WellTyped) (hex : p.Exclusive) (fuel : Nat)
-    (input : String) : p.PanicsKeptBy limited overflows fuel input := by
-  obtain ⟨lim, rfl, hD, hfns, hmain⟩ := h
-  refine ⟨⟨lim, rfl, fun name d hd hl => ?_, fun n name _ _ _ s hf hp hs =>
+theorem Program.PanicKeptBy.kept {p : Program} {limited : Limits → Bool} {overflows panics : Bool}
+    (h : p.PanicKeptBy limited overflows panics) (hwt : p.WellTyped) (hex : p.Exclusive)
+    (fuel : Nat) (input : String) : p.PanicsKeptBy limited overflows panics fuel input := by
+  obtain ⟨lim, rfl, rfl, hD, hfns, hmain⟩ := h
+  refine ⟨⟨lim, rfl, rfl, fun name d hd hl => ?_, fun n name _ _ _ s hf hp hs =>
     hD.call .leftToRight n hf hp s hs (Frame.Meets.nil _)⟩, fun hl => ?_⟩
   · obtain ⟨hmem, rfl⟩ := Decls.fn?_spec hd
     exact hfns d hmem hl

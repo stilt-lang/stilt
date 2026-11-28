@@ -4,13 +4,19 @@ import Stilt.Panics.Ops
 # Operations that can't overflow
 
 Which of the calculus's operations add the implicit effect `overflow`
-(effects.overflow-effect): those that check that an integer fits its type. The calculus's
-values carry no type, so an operation can't count on its operands fitting theirs: every
-operation that checks a result's range is a site of `overflow` here, `n / 2` and
-`xs.len()` among them, which the Reference counts as none, and every other one, the
-wrapping operators, comparisons, bitwise operators and floats among them, ends with its
-value or stuck whatever its operands. With `Op.panicFree`, such an operation can't panic
-at all (`Op.apply_serene`).
+(effects.overflow-effect): integer `+`, `-` and `*`, `-` on a value, `/` and `%` on a
+signed type but by a divisor written as an integer literal other than `-1`, `<<` and `>>`
+but by an amount written as an integer literal from 0 to one below the left operand's
+width, `abs`, `pow`, `gcd` and `lcm`, and `div_euclid` and `rem_euclid` but by a divisor
+written as an integer literal other than `0` and `-1` (`Op.overflowFreeOn`). The others
+fit their type whenever their operands fit theirs, which a well-typed program's do
+(`IntTy.within`), so `n / 2`, `x >> 1` and `a.min(b)` overflow on no run
+(`Op.apply_quiet`). The model counts one more kind of site, which the Reference doesn't:
+the lengths and counts that give an `i64`, `xs.len()` among them. The calculus's lists
+have no greatest length (facts.greatest-length), so a length need not fit `i64`. Every
+other operation, the wrapping operators, comparisons, bitwise operators and floats among
+them, ends with its value or stuck whatever its operands. With `Op.panicFree`, an
+operation that can't overflow can't panic at all (`Op.apply_serene`).
 -/
 
 namespace Stilt
@@ -39,7 +45,45 @@ def Op.overflowFree : Op → Bool
   | .list l => l.overflowFree
   | .map m => m.overflowFree
   | .set m => m.overflowFree
+  | .panic k => k != .overflow
   | _ => true
+
+/-- The methods of integer types whose result fits whenever their operands fit their
+type: `min`, `max`, the saturating ones, and the counts of bits. -/
+def IntMethod.bounded : IntMethod → Bool
+  | .min | .max | .saturatingAdd | .saturatingSub | .countOnes | .leadingZeros
+  | .trailingZeros => true
+  | _ => false
+
+/-- The integer that the second of two operands is written as, when it is an integer
+literal: `n / 2`'s divisor, `x << 3`'s amount. A literal constant is its literal in the
+calculus. -/
+def literalOperand : List Expr → Option Int
+  | [_, .int n] => some n
+  | _ => none
+
+/-- Whether an operation whose second operand is written as the literal `d`, if it is
+one, adds no `overflow` (effects.overflow-effect): one that can't overflow whatever its
+operands; `/` and `%` on an unsigned type, or by a literal other than `-1`; a shift by a
+literal from 0 to one below the left operand's width (numbers.shift-amounts); `min`,
+`max`, the saturating methods and the counts of bits; and `div_euclid` and `rem_euclid`
+by a literal other than `0` and `-1` (std.integers). -/
+def Op.overflowFreeBy : Op → Option Int → Bool
+  | .arith .div k, d | .arith .rem k, d => !k.signed || (d.isSome && d != some (-1))
+  | .shift _ k _, some b => decide (0 ≤ b ∧ b < k.bits)
+  | .intMethod .divEuclid _, some b | .intMethod .remEuclid _, some b => b != 0 && b != -1
+  | .intMethod m _, _ => m.bounded
+  | o, _ => o.overflowFree
+
+/-- Whether an operation on the operands `es` adds no `overflow` (effects.overflow-effect
+and effects.without-overflow). -/
+def Op.overflowFreeOn (o : Op) (es : List Expr) : Bool := o.overflowFreeBy (literalOperand es)
+
+/-- An operation that can't overflow whatever its operands can't on any. -/
+theorem Op.overflowFreeBy_of {o : Op} (h : o.overflowFree = true) (d : Option Int) :
+    o.overflowFreeBy d = true := by
+  unfold Op.overflowFreeBy
+  split <;> simp_all [Op.overflowFree]
 
 theorem ListOp.apply_serene {l : ListOp} (hl : l.panicFree = true) (hov : l.overflowFree = true)
     (vs : List Value) : Calm (l.apply vs) false := by

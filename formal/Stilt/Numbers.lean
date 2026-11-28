@@ -65,17 +65,25 @@ def wrap (k : IntTy) (n : Int) : Int := k.ofBits (k.toBits n)
 def check (k : IntTy) (n : Int) : Except Fault Int :=
   if k.Contains n then .ok n else .error (.panic .overflow)
 
+/-- `x`, when the type holds both operands `a` and `b`; otherwise stuck, which no
+well-typed program is, since a value of an integer type is one it holds
+(numbers.numeric-types). So an operation whose result fits whenever its operands fit
+their type, `n / 2` as `MIN / -1` doesn't, overflows on no run. -/
+def within (k : IntTy) (a b : Int) (x : Except Fault Int) : Except Fault Int :=
+  if k.Contains a ∧ k.Contains b then x else .error .stuck
+
 /-- `+`, `-`, `*`, `/` and `%`. `/` truncates toward zero and `%` has the sign
 of the dividend (numbers.division-and-remainder); `MIN / -1` and `MIN % -1`
-overflow (numbers.integer-panics). -/
+overflow (numbers.integer-panics). `/` and `%` take operands of their type
+(`within`). -/
 def arith (k : IntTy) : Arith → Int → Int → Except Fault Int
   | .add, a, b => k.check (a + b)
   | .sub, a, b => k.check (a - b)
   | .mul, a, b => k.check (a * b)
-  | .div, a, b => if b = 0 then .error (.panic .divideByZero) else k.check (a.tdiv b)
-  | .rem, a, b =>
-    if b = 0 then .error (.panic .divideByZero)
-    else if k.Contains (a.tdiv b) then .ok (a.tmod b) else .error (.panic .overflow)
+  | .div, a, b => k.within a b (if b = 0 then .error (.panic .divideByZero) else k.check (a.tdiv b))
+  | .rem, a, b => k.within a b
+    (if b = 0 then .error (.panic .divideByZero)
+    else if k.Contains (a.tdiv b) then .ok (a.tmod b) else .error (.panic .overflow))
 
 /-- `<<` discards the bits it shifts out, and `>>` is arithmetic on a signed
 type and logical on an unsigned one (numbers.shifts). An amount that is negative,
@@ -119,11 +127,12 @@ def euclid (k : IntTy) (a b r : Int) : Except Fault Int :=
 /-- What a method of an integer type computes, its result checked against the
 type it gives: the operand's, or `i64` for a count of bits, so `abs`, `pow`,
 `gcd` and `lcm` panic with `overflow` when the exact result doesn't fit, and
-`div_euclid` and `rem_euclid` with `divide-by-zero` by 0 (std.integers). -/
+`div_euclid` and `rem_euclid` with `divide-by-zero` by 0 (std.integers). `min`, `max`,
+`div_euclid` and `rem_euclid` take operands of the type (`within`). -/
 def method (k : IntTy) : IntMethod → Int → Int → Except Fault Int
   | .abs, a, _ => k.check a.natAbs
-  | .min, a, b => k.check (if a ≤ b then a else b)
-  | .max, a, b => k.check (if a ≥ b then a else b)
+  | .min, a, b => k.within a b (k.check (if a ≤ b then a else b))
+  | .max, a, b => k.within a b (k.check (if a ≥ b then a else b))
   | .saturatingAdd, a, b => k.check (Max.max k.min (Min.min k.max (a + b)))
   | .saturatingSub, a, b => k.check (Max.max k.min (Min.min k.max (a - b)))
   | .pow, a, e =>
@@ -131,8 +140,8 @@ def method (k : IntTy) : IntMethod → Int → Int → Except Fault Int
       if a = 0 then 1 else a.natAbs)
     else if e > 64 then .error (.panic .overflow)
     else k.check (a ^ e.toNat)
-  | .divEuclid, a, b => k.euclid a b (a.ediv b)
-  | .remEuclid, a, b => k.euclid a b (a.emod b)
+  | .divEuclid, a, b => k.within a b (k.euclid a b (a.ediv b))
+  | .remEuclid, a, b => k.within a b (k.euclid a b (a.emod b))
   | .gcd, a, b => k.check (Int.gcd a b)
   | .lcm, a, b => k.check (Int.lcm a b)
   | .countOnes, a, _ => IntTy.i64.check ((List.range k.bits).countP (k.bitsOf a).testBit)

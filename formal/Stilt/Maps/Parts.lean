@@ -317,9 +317,11 @@ theorem mapOp {o : MapOp} {vs : List Value} (hvs : ∀ v ∈ vs, P v) {w : Value
       exact hvs v (by simp)
   next m k v =>
     refine hP.onMap (hvs m (by simp)) h fun _ _ hk hv hd h => ?_
-    cases h
-    exact hP.mapOf (Entries.insert_keys (hvs k (by simp)) hk)
-      (Entries.insert_values (hvs v (by simp)) hv) hd
+    split at h
+    · cases h
+      exact hP.mapOf (Entries.insert_keys (hvs k (by simp)) hk)
+        (Entries.insert_values (hvs v (by simp)) hv) hd
+    · cases h
   next m k =>
     refine hP.onMap (hvs m (by simp)) h fun _ _ hk hv hd h => ?_
     cases h

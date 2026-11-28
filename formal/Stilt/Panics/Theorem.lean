@@ -4,6 +4,8 @@ import Stilt.Panics.Handling
 import Stilt.Panics.Holding
 import Stilt.Panics.SignsHold
 import Stilt.InPlace.Agreement
+import Stilt.Panics.Sites
+import Stilt.Panics.Loose
 
 /-!
 # What `without panic` guarantees
@@ -32,15 +34,24 @@ namespace Stilt
 
 variable {lim : Limited}
 
+theorem literalOperand_spec {es : List Expr} {k : Int} (h : literalOperand es = some k) :
+    ∃ a, es = [a, .int k] := by
+  rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩
+  · simp [literalOperand] at h
+  · simp [literalOperand] at h
+  · cases b <;> first
+      | (simp [literalOperand] at h; done)
+      | exact ⟨a, by simp only [literalOperand, Option.some.injEq] at h; rw [h]⟩
+  · simp [literalOperand] at h
+
 theorem literalDivisor_spec {es : List Expr} (h : literalDivisor es = true) :
     ∃ a k, es = [a, .int k] ∧ k ≠ 0 := by
-  rcases es with _ | ⟨a, _ | ⟨b, _ | _⟩⟩
-  · simp [literalDivisor] at h
-  · simp [literalDivisor] at h
-  · cases b <;> first
-      | (simp [literalDivisor] at h; done)
-      | exact ⟨a, _, rfl, by simpa [literalDivisor] using h⟩
-  · simp [literalDivisor] at h
+  unfold literalDivisor at h
+  cases hl : literalOperand es with
+  | none => simp [hl] at h
+  | some k =>
+    obtain ⟨a, rfl⟩ := literalOperand_spec hl
+    exact ⟨a, k, rfl, by simpa [hl] using h⟩
 
 theorem Op.byDivisor_spec {o : Op} (h : o.byDivisor = true) :
     (∃ a k, o = .arith a k) ∨ ∃ m k, o = .intMethod m k := by
@@ -89,6 +100,36 @@ theorem guardedStore_spec {G : List Known} {x : Name} {ps : List Projection} {va
   · cases h
 
 open Eval.PanicFree in
+/-- An operation's operands give panic-free values, the second of two the integer it is
+written as when it is a literal. -/
+theorem operands_panicFree {D : Decls} {w : WriteBack} {n : Nat}
+    (ih : PanicFreeRun lim (eval D (Copy.memoryWith w) n)) (hk : KeepsRun (eval D (Copy.memoryWith w) n))
+    {G : List Known} (es : List Expr) (hes : exprsPanicFree lim G es = true) :
+    Eval.PanicFree lim G (fun vs => (∀ v ∈ vs, v.PanicFree lim) ∧
+      ∀ k, literalOperand es = some k → ∃ u, vs = [u, .int k])
+      (Eval.list (eval D (Copy.memoryWith w) n) es) := by
+  cases hl : literalOperand es with
+  | none => exact map (list ih hk es hes) fun _ hvs => ⟨hvs, fun _ h => nomatch h⟩
+  | some k =>
+    obtain ⟨a, rfl⟩ := literalOperand_spec hl
+    simp only [exprsPanicFree, Bool.and_eq_true] at hes
+    exact map (pair (ih G a hes.1) (hk a _ _ (List.Subset.refl _) (List.Subset.refl _))
+        (intLit w n k) (hk _ _ _ (List.Subset.refl _) (List.Subset.refl _)))
+      fun vs ⟨u, v, hvs, hu, hv⟩ => by
+        subst hvs hv
+        exact ⟨by simp [hu, Value.PanicFree.int], fun _ h => ⟨u, by cases h; rfl⟩⟩
+
+/-- An operation that can only overflow is calm where overflow is allowed, or where it
+overflows at its types on no run. -/
+theorem calm_overflowFree {o : Op} {es : List Expr} {vs : List Value}
+    (hov : lim.overflows = true ∨ o.overflowFreeOn es = true)
+    (hl : ∀ k, literalOperand es = some k → ∃ u, vs = [u, .int k]) (hc : Calm (o.apply vs)) :
+    Calm (o.apply vs) lim.overflows := by
+  rcases hov with hlo | hq
+  · exact hc.allowing hlo
+  · exact NoOverflow.calm hc (Op.apply_quiet hq hl)
+
+open Eval.PanicFree in
 /-- Evaluating a panic-free expression, with any fuel, ends as panic-free code may. -/
 theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
     ∀ n, PanicFreeRun lim (eval D (Copy.memoryWith w) n)
@@ -116,32 +157,31 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
     case op o es =>
       have kl := Eval.Keeps.list hk es (List.Subset.refl _) (List.Subset.refl _)
       simp only [Op.panicFreeOn, Bool.or_eq_true, Bool.and_eq_true] at he
-      rcases he with ⟨⟨(ho | ⟨hb, hl | hg⟩) | ⟨hi, hgk⟩, hov⟩, hes⟩
-      · exact bind (list ih hk es hes) kl fun vs hvs =>
-          run w (Op.apply_calmIn ho (by simpa using hov) vs) hvs fun _ _ _ h =>
+      rcases he with ⟨⟨hpan | ((ho | ⟨hb, hl | hg⟩) | ⟨hi, hgk⟩), hov⟩, hes⟩
+      · exact bind (operands_panicFree ih hk es hes) kl fun vs ⟨hvs, hlit⟩ =>
+          runA w (lim.allowed_of hpan (hov.imp id fun hq => Op.apply_quiet hq hlit)) hvs
+            fun _ _ _ h => Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
+      · exact bind (operands_panicFree ih hk es hes) kl fun vs ⟨hvs, hlit⟩ =>
+          run w (calm_overflowFree hov hlit (Op.apply_calm ho vs)) hvs fun _ _ _ h =>
             Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
-      · have hlo : lim.overflows = true :=
-          hov.resolve_right (by simp [Op.overflowFree_of_byDivisor hb])
-        obtain ⟨a, k, rfl, hk0⟩ := literalDivisor_spec hl
+      · obtain ⟨a, k, rfl, hk0⟩ := literalDivisor_spec hl
         simp only [exprsPanicFree, Bool.and_eq_true] at hes
         exact bind (pair (ih G a hes.1) (keep a) (intLit w n k) (keep _)) kl
           fun vs ⟨u, v, hvs, hu, hv⟩ => by
             subst hvs hv
             have hvs : ∀ x ∈ [u, Value.int k], x.PanicFree lim := by simp [hu, Value.PanicFree.int]
-            exact run w ((Op.apply_calm_divisor (Op.byDivisor_spec hb) u hk0).allowing hlo) hvs
-              fun _ _ _ h =>
+            exact run w (calm_overflowFree hov (fun _ h => ⟨u, by cases h; rfl⟩)
+              (Op.apply_calm_divisor (Op.byDivisor_spec hb) u hk0)) hvs fun _ _ _ h =>
               Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
-      · have hlo : lim.overflows = true :=
-          hov.resolve_right (by simp [Op.overflowFree_of_byDivisor hb])
-        obtain ⟨a, d, rfl, hd, hda⟩ := guardedDivisor_spec hg
+      · obtain ⟨a, d, rfl, hd, hda⟩ := guardedDivisor_spec hg
         simp only [exprsPanicFree, Bool.and_eq_true] at hes
         exact bind (pair (ih G a hes.1) (keep a) (readNonzero w n (mem_withoutNames.2 ⟨hd, fun y hy => by
               simp only [Known.reads, List.mem_singleton] at hy; exact hy ▸ hda⟩))
             (keep _)) kl fun vs ⟨u, v, hvs, hu, ⟨k, hv, hk0⟩⟩ => by
             subst hvs hv
             have hvs : ∀ x ∈ [u, Value.int k], x.PanicFree lim := by simp [hu, Value.PanicFree.int]
-            exact run w ((Op.apply_calm_divisor (Op.byDivisor_spec hb) u hk0).allowing hlo) hvs
-              fun _ _ _ h =>
+            exact run w (calm_overflowFree hov (fun _ h => nomatch h)
+              (Op.apply_calm_divisor (Op.byDivisor_spec hb) u hk0)) hvs fun _ _ _ h =>
               Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
       · obtain ⟨m, k, kt, rfl, hkt, hm⟩ := guardedKey_spec hgk
         simp only [beq_iff_eq] at hi
@@ -150,7 +190,13 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
           fun vs ⟨hvs, hc⟩ => run w hc hvs fun _ _ _ h =>
             Op.run_hereditary Value.PanicFree.hereditary .unit hvs h
     case view es =>
-      simp only [beq_iff_eq] at he
+      simp only [Bool.or_eq_true, beq_iff_eq] at he
+      rcases he with ⟨hpan | hlen, hes⟩
+      · exact bind (list ih hk es hes)
+          (Eval.Keeps.list hk es (List.Subset.refl _) (List.Subset.refl _)) fun vs hvs =>
+          ofExceptA (lim.allowed_of hpan (.inr (Op.apply_noOverflow rfl vs))) fun _ h =>
+            Op.apply_hereditary Value.PanicFree.hereditary hvs h
+      have he : es.length = 1 ∧ exprsPanicFree lim G es = true := ⟨hlen, hes⟩
       exact bind (listSized ih hk es he.2)
         (Eval.Keeps.list hk es (List.Subset.refl _) (List.Subset.refl _)) fun vs hvs => by
           obtain ⟨hvs, hl⟩ := hvs
@@ -162,8 +208,13 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
       exact bind (ih G e he) (keep e) fun _ hv =>
         ofExcept (Value.PanicFree.get hv fun s hs => ⟨f, List.mem_singleton.1 hs⟩)
     case index e i =>
-      obtain ⟨xs, j, k, rfl, hi, hb⟩ := guardedIndex_spec he.1
-      exact index (n + 1) hi hb he.2
+      rcases Bool.or_eq_true_iff.mp he with he | he
+      · have he := Bool.and_eq_true_iff.mp he
+        obtain ⟨xs, j, k, rfl, hi, hb⟩ := guardedIndex_spec he.1
+        exact index (n + 1) hi hb he.2
+      · obtain ⟨hpe, hi⟩ := Bool.and_eq_true_iff.mp he
+        obtain ⟨hpan, he⟩ := Bool.and_eq_true_iff.mp hpe
+        exact indexA ih hk hpan he hi
     case fnRef f types rows => exact pure (.function he)
     case method t m τ =>
       show Eval.PanicFree lim G (Value.PanicFree lim) (Eval.method D t m τ)
@@ -185,6 +236,13 @@ theorem eval_panicFree {D : Decls} (hD : D.PanicCover lim) (w : WriteBack) :
     case varIn x τ init body => exact bindInit (ih G init he.1) (ih _ body he.2)
     case assign p value =>
       obtain ⟨x, ps⟩ := p
+      simp only [Expr.panicFreeIn] at he
+      rcases Bool.or_eq_true_iff.mp he with he | he
+      rotate_left
+      · obtain ⟨hpp, hv⟩ := Bool.and_eq_true_iff.mp he
+        obtain ⟨hpan, hps⟩ := Bool.and_eq_true_iff.mp hpp
+        exact assignA ih hk w hpan x hps hv
+      have he := Bool.and_eq_true_iff.mp he
       have hor := he.1
       rw [Bool.or_eq_true] at hor
       rcases hor with hf | hg
@@ -250,7 +308,7 @@ and effects.without-overflow). -/
 theorem Program.runCopyWith_panicked {p : Program} (hD : p.decls.PanicCover lim)
     (hm : p.main.panicFree lim = true) (w : WriteBack) (fuel : Nat) (input : String)
     {k : PanicKind} {s : Copy.State} (h : p.runCopyWith w fuel input = .panicked k s) :
-    (k = .overflow ∧ lim.overflows = true) ∨ k = .deadlock := by
+    lim.Allows k := by
   have hr := eval_panicFree hD w fuel [] p.main hm ([], World.start input)
     ⟨(fun _ h => nomatch h), World.All.start input⟩ (Frame.Meets.nil _)
   unfold Program.runCopyWith Program.run at h
@@ -267,7 +325,7 @@ exclusivity, in-place mutation shows what copy-in, copy-out does. -/
 theorem Program.runInPlace_panicked {p : Program} (hD : p.decls.PanicCover lim)
     (hm : p.main.panicFree lim = true) (hwt : p.WellTyped) (hex : p.Exclusive) (fuel : Nat)
     (input : String) {k : PanicKind} (h : (p.runInPlace fuel input).observe = .panicked k) :
-    (k = .overflow ∧ lim.overflows = true) ∨ k = .deadlock := by
+    lim.Allows k := by
   rw [← inPlaceAgreement_observe p fuel input hwt hex] at h
   cases ho : p.runCopy fuel input <;> rw [ho] at h <;> simp only [Outcome.observe] at h
   case panicked k' s =>
@@ -280,7 +338,7 @@ panic-free program panics only with `overflow` or `deadlock` (effects.without-pa
 theorem Program.PanicFree.runCopyWith {p : Program} (hp : p.PanicFree) (w : WriteBack) (fuel : Nat)
     (input : String) {k : PanicKind} {s : Copy.State} (h : p.runCopyWith w fuel input = .panicked k s) :
     k = .overflow ∨ k = .deadlock :=
-  (p.runCopyWith_panicked hp.cover hp.2 w fuel input h).imp_left And.left
+  ((p.runCopyWith_panicked hp.cover hp.2 w fuel input h).of_panics rfl).imp_left And.left
 
 /-- **Without panic**, as the reference interpreter runs programs. -/
 theorem Program.PanicFree.runCopy {p : Program} (hp : p.PanicFree) (fuel : Nat) (input : String)
@@ -293,6 +351,6 @@ exclusivity, in-place mutation shows what copy-in, copy-out does. -/
 theorem Program.PanicFree.runInPlace {p : Program} (hp : p.PanicFree) (hwt : p.WellTyped)
     (hex : p.Exclusive) (fuel : Nat) (input : String) {k : PanicKind}
     (h : (p.runInPlace fuel input).observe = .panicked k) : k = .overflow ∨ k = .deadlock :=
-  (p.runInPlace_panicked hp.cover hp.2 hwt hex fuel input h).imp_left And.left
+  ((p.runInPlace_panicked hp.cover hp.2 hwt hex fuel input h).of_panics rfl).imp_left And.left
 
 end Stilt

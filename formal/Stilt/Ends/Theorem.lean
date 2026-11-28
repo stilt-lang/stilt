@@ -167,8 +167,8 @@ ranked functions, ends with `()`, with an error of the type its row allows, or w
 of the kind `overflow` or `deadlock`, as the reference interpreter runs it, with every fuel
 from some fuel on (facts.without-div). -/
 theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} {desc : Name → Descent}
-    (hwt : p.WellTyped) (hD : p.decls.PanicCover lim) (hpm : p.main.panicFree lim = true)
-    {H : Name → List Nat} (hR : p.decls.Ranked lim' B desc H)
+    (hwt : p.WellTyped) (hD : p.decls.PanicCover lim) (hlp : lim.panics = false)
+    (hpm : p.main.panicFree lim = true) {H : Name → List Nat} (hR : p.decls.Ranked lim' B desc H)
     (hdm : p.main.divFree lim' B H none [] = true) (input : String) : ∃ N, ∀ fuel, N ≤ fuel →
       (p.runCopy fuel input).observe = .returned .unit ∨
       (∃ e E, (p.runCopy fuel input).observe = .raised e ∧ p.row.raise = some E ∧
@@ -190,7 +190,7 @@ theorem Program.total_of {p : Program} {lim lim' : Limited} {B : Name → Nat} {
     exact .inr (.inl ⟨e, E, rfl, hE, ht⟩)
   | jumped j s => rw [ho] at hs; exact absurd hs id
   | panicked k s =>
-    rcases p.runCopyWith_panicked hD hpm .leftToRight fuel input ho with ⟨rfl, _⟩ | rfl
+    rcases (p.runCopyWith_panicked hD hpm .leftToRight fuel input ho).of_panics hlp with ⟨rfl, _⟩ | rfl
     · exact .inr (.inr (.inl rfl))
     · exact .inr (.inr (.inr rfl))
   | performed => rw [ho] at hs; exact absurd hs id
@@ -208,6 +208,6 @@ theorem Program.total {p : Program} (hwt : p.WellTyped) (hpanic : p.PanicFree) (
       (p.runCopy fuel input).observe = .panicked .overflow ∨
       (p.runCopy fuel input).observe = .panicked .deadlock :=
   let ⟨_, _, hR, hm⟩ := hdiv
-  p.total_of hwt hpanic.cover hpanic.2 hR hm input
+  p.total_of hwt hpanic.cover rfl hpanic.2 hR hm input
 
 end Stilt

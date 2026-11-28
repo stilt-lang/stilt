@@ -1,5 +1,6 @@
 import Stilt.Soundness.Forms
 import Stilt.Soundness.Maps
+import Stilt.Soundness.Keys
 
 /-!
 # Built-in operations
@@ -22,9 +23,9 @@ theorem ValuesAt.elems {η : REnv} :
   | _, _, .nil => .nil
   | _, _, .cons hv hvs => .cons hv hvs.elems
 
-theorem IntOk.arith (k : IntTy) (o : Arith) {a b : Int} (ha : k.Contains a) :
+theorem IntOk.arith (k : IntTy) (o : Arith) {a b : Int} (ha : k.Contains a) (hb : k.Contains b) :
     IntOk k (k.arith o a b) := by
-  cases o <;> simp only [IntTy.arith]
+  cases o <;> simp only [IntTy.arith, IntTy.within, ha, hb, and_self, ↓reduceIte]
   · exact .check k _
   · exact .check k _
   · exact .check k _
@@ -91,11 +92,13 @@ theorem IntOk.euclid (k : IntTy) (a b r : Int) : IntOk k (k.euclid a b r) := by
     · exact .inr ⟨_, rfl⟩
     · exact .check _ _
 
-theorem IntOk.method (k : IntTy) (m : IntMethod) (a b : Int) :
-    IntOk (m.result k) (k.method m a b) := by
+theorem IntOk.method (k : IntTy) (m : IntMethod) {a b : Int} (ha : k.Contains a)
+    (hb : m.second k = some k → k.Contains b) : IntOk (m.result k) (k.method m a b) := by
   cases m <;> simp only [IntTy.method, IntMethod.result] <;>
     first
     | exact .check _ _
+    | (simp only [IntTy.within, ha, hb rfl, and_self, ↓reduceIte]
+       first | exact .check _ _ | exact .euclid _ _ _ _)
     | exact .euclid _ _ _ _
     | (split
        · exact .check _ _
@@ -106,14 +109,15 @@ theorem IntOk.method (k : IntTy) (m : IntMethod) (a b : Int) :
        · exact .inr ⟨_, rfl⟩
        · exact .check _ _)
 
-/-- Two integer operands, the first of its type. -/
+/-- Two integer operands, each of its type. -/
 theorem ints_apply {k k' : IntTy} (h : ValuesAt D η vs [.int k, .int k'])
-    (f : ∀ a b, k.Contains a → Applied D (o.apply ([Scalar.int a, .int b].map Scalar.value)) σ) :
+    (f : ∀ a b, k.Contains a → k'.Contains b →
+      Applied D (o.apply ([Scalar.int a, .int b].map Scalar.value)) σ) :
     Applied D (o.apply vs) σ := by
   obtain ⟨v, v', rfl, hv, hv'⟩ := h.two_inv
   obtain ⟨a, rfl, ha⟩ := hv.int_inv
-  obtain ⟨b, rfl, -⟩ := hv'.int_inv
-  exact f a b ha
+  obtain ⟨b, rfl, hb⟩ := hv'.int_inv
+  exact f a b ha hb
 
 theorem int_apply {k : IntTy} (h : ValuesAt D η vs [.int k])
     (f : ∀ a, k.Contains a → Applied D (o.apply ([Scalar.int a].map Scalar.value)) σ) :
@@ -261,7 +265,8 @@ theorem Op.panic_apply {k : PanicKind} {σ : STy} : Applied D ((Op.panic k).appl
 /-- An operation applied to operands of its signature's types gives a value of
 the type it gives, or panics. -/
 theorem Op.Sig.apply {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hio : ∀ k, o ≠ .world k)
-    (hvs : ValuesAt D η vs τs) : Applied D (o.apply vs) (τ.close η) := by
+    (hvs : ValuesAt D η vs τs) (hkey : ∀ κ v, κ ∈ o.keyTypes τs τ →
+      Value.Typed D v (κ.close η) → v.keyEq v = true) : Applied D (o.apply vs) (τ.close η) := by
   have ofBits := IntTy.ofBits_contains
   cases h with
   | world _ => exact absurd rfl (hio _)
@@ -278,12 +283,12 @@ theorem Op.Sig.apply {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hio : ∀ k, 
     rw [hvs.nil_inv]
     exact Applied.float (ss := []) rfl rfl (FloatVal.type_ofScientific ..)
   | neg _ => exact int_apply hvs fun _ _ => Applied.int rfl rfl (.check _ _)
-  | arith => exact ints_apply hvs fun _ _ ha => Applied.int rfl rfl (.arith _ _ ha)
-  | wrapping => exact ints_apply hvs fun _ _ _ => Applied.scalar rfl rfl (.int (ofBits _ _))
-  | shift => exact ints_apply hvs fun _ _ _ => Applied.int rfl rfl (.shift _ _ _ _)
-  | bitwise => exact ints_apply hvs fun _ _ _ => Applied.scalar rfl rfl (.int (ofBits _ _))
+  | arith => exact ints_apply hvs fun _ _ ha hb => Applied.int rfl rfl (.arith _ _ ha hb)
+  | wrapping => exact ints_apply hvs fun _ _ _ _ => Applied.scalar rfl rfl (.int (ofBits _ _))
+  | shift => exact ints_apply hvs fun _ _ _ _ => Applied.int rfl rfl (.shift _ _ _ _)
+  | bitwise => exact ints_apply hvs fun _ _ _ _ => Applied.scalar rfl rfl (.int (ofBits _ _))
   | complement => exact int_apply hvs fun _ _ => Applied.scalar rfl rfl (.int (ofBits _ _))
-  | compare => exact ints_apply hvs fun _ _ _ => Applied.scalar rfl rfl .bool
+  | compare => exact ints_apply hvs fun _ _ _ _ => Applied.scalar rfl rfl .bool
   | convert hmin hmax =>
     exact int_apply hvs fun _ ha => Applied.scalar rfl rfl
       (.int ⟨Int.le_trans hmin ha.1, Int.le_trans ha.2 hmax⟩)
@@ -312,10 +317,11 @@ theorem Op.Sig.apply {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hio : ∀ k, 
     cases hs : m.second k with
     | none =>
       simp only [hs, Option.map_none, Option.toList_none] at hvs
-      exact int_apply hvs fun a _ => Applied.int rfl rfl (.method k m a 0)
+      exact int_apply hvs fun a ha => Applied.int rfl rfl (.method k m ha fun h => by simp [hs] at h)
     | some k' =>
       simp only [hs, Option.map_some, Option.toList_some] at hvs
-      exact ints_apply hvs fun a b _ => Applied.int rfl rfl (.method k m a b)
+      exact ints_apply hvs fun a b ha hb => Applied.int rfl rfl (.method k m ha fun h => by
+        rw [hs, Option.some.injEq] at h; exact h ▸ hb)
   | parses => exact str_apply hvs fun _ => Applied.scalar rfl rfl .bool
   | parsed => exact str_apply hvs fun s => Applied.scalar rfl rfl (.int (IntTy.contains_parsedOrZero _ s))
   | fparses => exact str_apply hvs fun _ => Applied.scalar rfl rfl .bool
@@ -358,7 +364,7 @@ theorem Op.Sig.apply {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hio : ∀ k, 
     obtain ⟨xs, rfl, hxs⟩ := hw.list_inv
     exact .inl ⟨_, rfl, .list fun v hv => hxs v (mem_sortByKeys hv)⟩
   | list h => exact h.apply hvs
-  | map h => exact h.apply hvs
+  | map h => exact h.apply hvs hkey
   | set h => exact h.apply hvs
 
 /-- An operation on the world, on operands of its signature's types, gives a value of the
@@ -392,6 +398,7 @@ theorem WorldOp.Sig.run {k : WorldOp} {τs : List Ty} {τ : Ty} (h : k.Sig τs �
 /-- An operation applied to operands of its signature's types, in any typed world, gives a
 value of the type it gives in a typed world, or panics. -/
 theorem Op.Sig.run {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hvs : ValuesAt D η vs τs) {x : World}
+    (hkey : ∀ κ v, κ ∈ o.keyTypes τs τ → Value.Typed D v (κ.close η) → v.keyEq v = true)
     (hx : World.Typed D x) :
     (∃ v x', o.run vs x = .ok (v, x') ∧ Value.Typed D v (τ.close η) ∧ World.Typed D x') ∨
       ∃ k, o.run vs x = .error (.panic k) := by
@@ -401,7 +408,7 @@ theorem Op.Sig.run {τs : List Ty} {τ : Ty} (h : o.Sig τs τ) (hvs : ValuesAt 
     | world hk => exact .inl (hk.run hvs hx)
   · have ho : ∀ k, o ≠ .world k := fun k hk => hio ⟨k, hk⟩
     rw [Op.run_of_ne ho]
-    rcases h.apply ho hvs with ⟨a, ha, hat⟩ | ⟨k, hk⟩
+    rcases h.apply ho hvs hkey with ⟨a, ha, hat⟩ | ⟨k, hk⟩
     · exact .inl ⟨a, x, by rw [ha]; rfl, hat, hx⟩
     · exact .inr ⟨k, by rw [hk]; rfl⟩
 
@@ -436,17 +443,20 @@ variable {D : Decls} {n : Nat} (hs : Sound D n) {scope : RowScope} {η : REnv}
   (hη : η.Respects scope) (θ : RowSubst) {Γ : Ctx} {fx : Effects}
 include hs hη
 
-theorem op_ok {o : Op} {es : List Expr} {τs : List Ty} {τ : Ty} (ho : o.Sig τs τ)
-    (hes : ExprsFit D scope Γ fx es τs) :
+/-- An operation that finds keys finds them of key types, whose values equal themselves. -/
+theorem op_ok {o : Op} {es : List Expr} {τs : List Ty} {τ : Ty} (hD : D.WellFormed)
+    (ho : o.Sig τs τ) (hes : ExprsFit D scope Γ fx es τs) (hk : o.KeysIn D τs τ) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
       (eval D Copy.memory (n + 1) ((Expr.op o es).substRows θ)) :=
-  Eval.Ok.bind (ExprsFit.ok hs hη θ hes) fun _ hvs => Eval.Ok.world fun _ hx => ho.run hvs hx
+  Eval.Ok.bind (ExprsFit.ok hs hη θ hes) fun _ hvs => Eval.Ok.world fun _ hx =>
+    ho.run hvs (fun _ _ hκ hv => hv.keyEq_of_key hD (hk _ hκ)) hx
 
 theorem view_ok {es : List Expr} {τs : List Ty} {τ : Ty} (ho : Op.view.Sig τs τ)
     (hes : ExprsFit D scope Γ fx es τs) :
     Eval.Ok D Γ η (fx.exits D η) (fun v => Value.Typed D v (τ.close η))
       (eval D Copy.memory (n + 1) ((Expr.view es).substRows θ)) :=
-  Eval.Ok.bind (ExprsFit.ok hs hη θ hes) fun _ hvs => Eval.Ok.ofExcept_panic (ho.apply (fun _ h => by cases h) hvs)
+  Eval.Ok.bind (ExprsFit.ok hs hη θ hes) fun _ hvs => Eval.Ok.ofExcept_panic (ho.apply (fun _ h => by cases h) hvs
+    fun _ _ h => by simp [Op.keyTypes] at h)
 
 theorem elem_ok {e : Expr} {τs : List Ty} {f : Name} {τ : Ty}
     (he : HasType D scope Γ fx e (.tuple τs)) (hf : (positions τs).lookup f = some τ) :

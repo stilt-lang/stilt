@@ -104,7 +104,7 @@ theorem held {block : Eval Copy.State Value} (names : List Name) (handles : List
       rw [show Eval.world (Copy.memoryWith w) (fun x => (World.take cells x).map
           fun p => (Value.list p.1, p.2)) (fr, x) = .fault e (fr, x) from
         Eval.world_error (by rw [ht]; rfl), World.take_error ht]
-      exact ⟨.inr rfl, hs⟩
+      exact ⟨.inr (.inl rfl), hs⟩
     | ok p =>
       obtain ⟨vs, x'⟩ := p
       rw [show Eval.world (Copy.memoryWith w) (fun x => (World.take cells x).map

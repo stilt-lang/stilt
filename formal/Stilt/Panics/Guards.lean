@@ -460,10 +460,28 @@ theorem armsAlwaysJump_mem : ∀ {arms : List Arm} {arm : Arm}, armsAlwaysJump a
     · exact h.1
     · exact armsAlwaysJump_mem h.2 hm
 
-/-- The facts that an `if` whose then-branch always jumps gives the code after it:
-its condition's negation's, but those of the variables its else-branch writes. -/
-def Expr.after : Expr → List Known
-  | .if c _ t e => if t.alwaysJumps then withoutNames c.negFacts e.writes else []
+/-- The map and the key of a store `m = m.insert(k, v)`, as the export writes `m[k] = v` and
+`m.insert(k, v)`, when `k` is a variable or a literal that neither `m` nor `v` writes. -/
+def Expr.storedKey? : Expr → Option (Name × KeyTerm)
+  | .assign ⟨m, []⟩ (.op (.map .insert) [a, k, v]) => match a.readVar?, k.keyTerm? with
+    | some m', some kt =>
+      if m' = m ∧ m ∉ kt.reads ∧ kt.reads.all (· ∉ v.writes) then some (m, kt) else none
+    | _, _ => none
+  | _ => none
+
+/-- The facts that code gives the code after it (facts.keys and facts.guarding-tests): a
+store `m = m.insert(k, v)` that the map has the key `k`; an `if` whose then-branch always
+jumps its condition's negation's, but those of the variables its else-branch writes, and
+another `if` those that both its paths give; and a sequence its second part's and those of
+its first part's that the second part doesn't write. -/
+def Expr.after (e : Expr) : List Known :=
+  (match e.storedKey? with
+    | some (m, kt) => [.has m kt]
+    | none => []) ++
+  match e with
+  | .if c _ t e => if t.alwaysJumps then withoutNames c.negFacts e.writes
+    else t.after.filter (· ∈ withoutNames c.negFacts e.writes ++ e.after)
+  | .seq a b => b.after ++ withoutNames a.after b.writes
   | _ => []
 
 /-- What the facts of a test against `0` say, from the comparison it shows. -/

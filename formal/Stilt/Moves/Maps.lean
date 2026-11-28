@@ -193,7 +193,8 @@ theorem MapOp.apply_erase (o : MapOp) (vs : List Value) :
        intro es d
        simp [Entries.has_erase, Entries.find_erase, Entries.insert_erase, Entries.remove_erase,
          Entries.index_erase, Value.erase_mapOf, Value.erase_tuple, Value.erase,
-         eraseValues_eq_map, eraseEntry, Option.getD_map])
+         eraseValues_eq_map, eraseEntry, Option.getD_map, Value.keyEq_erase]
+       try (split <;> simp_all [Except.map, Value.erase_mapOf]))
     | simp [Value.erase_mapOf]
     | (apply onMap_erase
        intro es d

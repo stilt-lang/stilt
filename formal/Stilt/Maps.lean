@@ -234,7 +234,9 @@ def SetRelation.test : SetRelation → List Value → List Value → Bool
 /-! ## The functions -/
 
 /-- What a function of maps computes from its operands' values, the map first.
-Lengths are `i64`s (numbers.lengths-are-i64). -/
+Lengths are `i64`s (numbers.lengths-are-i64). A key that doesn't equal itself, which no
+value of a key type is (std.map-key-bounds), is stuck where it would be inserted, so a
+store leaves a map that finds its key (facts.keys). -/
 def MapOp.apply : MapOp → List Value → Except Fault Value
   | .new, [] => .ok (.mapOf [] none)
   | .withDefault, [d] => .ok (.mapOf [] (some d))
@@ -243,7 +245,8 @@ def MapOp.apply : MapOp → List Value → Except Fault Value
   | .contains, [m, k] => onMap m fun es _ => .ok (.bool (Entries.has k es))
   | .index, [m, k] => onMap m fun es d => Entries.index k es d
   | .getOr, [m, k, v] => onMap m fun es _ => .ok ((Entries.find k es).getD v)
-  | .insert, [m, k, v] => onMap m fun es d => .ok (.mapOf (Entries.insert k v es) d)
+  | .insert, [m, k, v] => onMap m fun es d =>
+    if k.keyEq k then .ok (.mapOf (Entries.insert k v es) d) else .error .stuck
   | .remove, [m, k] => onMap m fun es d => .ok (.mapOf (Entries.remove k es) d)
   | .keys, [m] => onMap m fun es _ => .ok (.list (es.map Prod.fst))
   | .values, [m] => onMap m fun es _ => .ok (.list (es.map Prod.snd))

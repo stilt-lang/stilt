@@ -24,8 +24,10 @@ Naming a function, to call it or as a value, adds `panic` unless it is one of th
 functions `lim` covers, which are without `panic` wherever they are named
 (effects.without-panic): `Decls.PanicCover` says that they are, and a program is
 panic-free when every function it declares is covered (`Program.PanicFree`). Where `lim`
-rules out `overflow` too, no operation that can overflow is allowed (`Op.overflowFree`), and
-no index computed by arithmetic (effects.without-overflow).
+rules out `overflow` too, no operation that can overflow at its types is allowed
+(`Op.overflowFreeOn`), and no index computed by arithmetic (effects.without-overflow). Where
+`lim` allows panics, as `without overflow` alone does, an operation that panics, an index of
+a value and a store at an index of a place are allowed, with their indexes checked as code.
 -/
 
 namespace Stilt
@@ -36,10 +38,6 @@ def Op.byDivisor : Op → Bool
   | .arith _ _ | .intMethod _ _ => true
   | _ => false
 
-/-- `/`, `%` and the integer methods can overflow. -/
-theorem Op.overflowFree_of_byDivisor {o : Op} (h : o.byDivisor = true) : o.overflowFree = false := by
-  cases o <;> first | rfl | (simp [Op.byDivisor] at h)
-
 /-- Whether an expression is a variable, which reads its value with no arithmetic. -/
 def Expr.isVar : Expr → Bool
   | .var _ => true
@@ -47,9 +45,7 @@ def Expr.isVar : Expr → Bool
 
 /-- Whether the operands of an operation end in a divisor written as an integer
 literal other than zero, `n / 2`'s. -/
-def literalDivisor : List Expr → Bool
-  | [_, .int n] => n != 0
-  | _ => false
+def literalDivisor (es : List Expr) : Bool := (literalOperand es).any (· != 0)
 
 /-- Whether the operands of an operation end in a divisor that a test guards: a
 variable of `G` that the operand before it doesn't write. -/
@@ -168,8 +164,8 @@ it or as a value, adds `panic` unless `lim` covers it: a function limited by
 (effects.without-panic). A call through a function value adds nothing: a closure
 literal's body is checked where it is written, a named function where it is named
 (facts.calls-through-function-values). Where `lim` rules out `overflow`, an operation that
-can overflow is a site too, and so is an index that arithmetic computes
-(effects.without-overflow). -/
+can overflow at its types is a site too (`Op.overflowFreeOn`), and so is an index that
+arithmetic computes (effects.without-overflow). -/
 def Expr.panicFreeIn : List Known → Expr → Bool
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
   | _, .fnRef f _ _ => lim.fn f
@@ -177,10 +173,12 @@ def Expr.panicFreeIn : List Known → Expr → Bool
   | G, .record _ _ fields => fieldsPanicFree G fields
   | G, .variant _ _ _ es => exprsPanicFree G es
   | G, .list _ es => exprsPanicFree G es
-  | G, .op o es => o.panicFreeOn G es && (lim.overflows || o.overflowFree) && exprsPanicFree G es
-  | G, .view es => es.length == 1 && exprsPanicFree G es
+  | G, .op o es =>
+    (lim.panics || o.panicFreeOn G es) && (lim.overflows || o.overflowFreeOn es) && exprsPanicFree G es
+  | G, .view es => (lim.panics || es.length == 1) && exprsPanicFree G es
   | G, .field e _ => e.panicFreeIn G
-  | G, .index e i => guardedIndex G e i && (lim.overflows || i.isVar)
+  | G, .index e i => guardedIndex G e i && (lim.overflows || i.isVar) ||
+    lim.panics && e.panicFreeIn G && i.panicFreeIn (withoutNames G e.writes)
   | _, .closure _ _ _ body => body.panicFreeIn []
   | G, .call callee args _ =>
     callee.panicFreeIn G && argsPanicFree (withoutNames G callee.writes) args
@@ -190,9 +188,10 @@ def Expr.panicFreeIn : List Known → Expr → Bool
   | G, .varIn x _ init body =>
     init.panicFreeIn G &&
       body.panicFreeIn (withoutNames (withoutNames G init.writes) [x] ++ init.bindFacts G x)
-  | G, .assign p value =>
-    (p.indexFree || guardedStore G p value && (lim.overflows || p.path.all Projection.byVar)) &&
-      value.panicFreeIn G
+  | G, .assign ⟨x, ps⟩ value =>
+    (Place.indexFree ⟨x, ps⟩ || guardedStore G ⟨x, ps⟩ value && (lim.overflows || ps.all Projection.byVar)) &&
+      value.panicFreeIn G ||
+    lim.panics && pathPanicFree G ps && value.panicFreeIn (withoutNames G (pathWrites ps))
   | G, .seq a b => a.panicFreeIn G && b.panicFreeIn (withoutWrites G a.writes a.resizes ++ a.after)
   | G, .if c _ a b =>
     c.panicFreeIn G && a.panicFreeIn (withoutNames G c.writes ++ c.facts) &&
@@ -224,6 +223,13 @@ def exprsPanicFree : List Known → List Expr → Bool
 def fieldsPanicFree : List Known → List (Name × Expr) → Bool
   | _, [] => true
   | G, (_, e) :: fields => e.panicFreeIn G && fieldsPanicFree (withoutNames G e.writes) fields
+
+/-- Whether the indexes of a place's path add no `panic`, where `lim` allows the index
+itself to panic, each guarded by what the ones before it don't write. -/
+def pathPanicFree : List Known → List Projection → Bool
+  | _, [] => true
+  | G, .field _ :: ps => pathPanicFree G ps
+  | G, .index i :: ps => i.panicFreeIn G && pathPanicFree (withoutNames G i.writes) ps
 
 /-- Whether no argument of a call adds `panic`: an `inout` argument's place holds
 no index. -/

@@ -38,7 +38,7 @@ theorem Sound.step (hs : Sound D n) (hD : D.Typed) {scope : RowScope} :
   | _, _, _, _, .record hR hlen _ hperm hf, _, hη, θ => record_ok hs hD.wf hη θ hR hlen hperm hf
   | _, _, _, _, .variant hT hlen _ hC hp, _, hη, θ => variant_ok hs hD.wf hη θ hT hlen hC hp
   | _, _, _, _, .list _ hes, _, hη, θ => list_ok hs hη θ hes
-  | _, _, _, _, .op ho hes _ _ _, _, hη, θ => op_ok hs hη θ ho hes
+  | _, _, _, _, .op ho hes hk _ _, _, hη, θ => op_ok hs hη θ hD.wf ho hes hk
   | _, _, _, _, .view ho hes, _, hη, θ => view_ok hs hη θ ho hes
   | _, _, _, _, .field he hR _ hf, _, hη, θ => field_ok hs hη θ hD.wf he hR hf
   | _, _, _, _, .elem he hf, _, hη, θ => elem_ok hs hη θ he hf

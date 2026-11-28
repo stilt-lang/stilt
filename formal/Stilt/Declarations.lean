@@ -55,14 +55,16 @@ structure Limits where
 method `m` of the trait `t`'s impls when `method t m` covers it, each a function
 without the fact the limit rules out, wherever it is named (facts.without). Under
 `without panic`, `overflows` says whether the code may still overflow: it may not when
-`without overflow` limits it too (effects.without-overflow). -/
+`without overflow` limits it too (effects.without-overflow). `panics` says whether it may
+panic otherwise, as code limited by `without overflow` alone may. -/
 structure Limited where
   fn : Name → Bool
   method : Name → Name → Bool
   overflows : Bool := true
+  panics : Bool := false
 
 /-- Every function: a limit on the whole program covers each of its functions. -/
-def Limited.all : Limited := ⟨fun _ => true, fun _ _ => true, true⟩
+def Limited.all : Limited := ⟨fun _ => true, fun _ _ => true, true, false⟩
 
 /-- `fn name<T: B, …, e, …>(params) -> result / row { body } without …`
 (declarations.function-declarations): its type parameters, with their bounds, its row

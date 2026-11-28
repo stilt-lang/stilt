@@ -73,7 +73,8 @@ rules of projections (projections.once-on-every-path), and puts no `fixed` value
 * a handler's clause runs the same from whatever frames the calls it ends left, and gives them
   back, so it sees no place of those calls (`callAs_unseen`, handlers.when-place-is-seen);
 * a call of a function limited by `without panic`, on panic-free arguments, panics only with
-  `overflow` or `deadlock`, and only with `deadlock` when `without overflow` limits it too; a
+  `overflow` or `deadlock`, and only with `deadlock` when `without overflow` limits it too; one
+  limited by `without overflow` alone never panics with `overflow`; a
   call of one limited by `without div`, on arguments whose values at its non-escaping
   parameters are function values that halt, halts; and so does a run whose `main` is limited
   (`Program.PanicKeptBy.kept`, `Program.DivLimited.kept`, effects.without-panic,
@@ -117,6 +118,8 @@ structure Program.Accepted (p : Program) : Prop where
   panicLimits : p.PanicLimited
   /-- Each function and `main` limited by `without panic, overflow` keeps both (E0204). -/
   overflowLimits : p.OverflowLimited
+  /-- Each function and `main` limited by `without overflow` keeps the limit (E0204). -/
+  overflowAloneLimits : p.OverflowAloneLimited
   /-- Each function and `main` limited by `without div` keeps the limit (E0204). -/
   divLimits : p.DivLimited
   /-- The rules of projections: every path through a projection's body runs one `yield` to its
@@ -248,10 +251,13 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
         [.value v] (fr, w) = o.atFrame fr
   /-- effects.without-panic: a call of a function limited by `without panic`, and a run whose
   `main` is, panics only with `overflow` or `deadlock` (`Program.PanicsKeptBy`). -/
-  panics : p.PanicsKeptBy (·.panic) true fuel input
+  panics : p.PanicsKeptBy (·.panic) true false fuel input
   /-- effects.without-overflow: a call of a function limited by `without panic, overflow`,
   and a run whose `main` is, panics only with `deadlock` (`Program.PanicsKeptBy`). -/
-  overflows : p.PanicsKeptBy (fun l => l.panic && l.overflow) false fuel input
+  overflows : p.PanicsKeptBy (fun l => l.panic && l.overflow) false false fuel input
+  /-- effects.without-overflow: a call of a function limited by `without overflow`, and a run
+  whose `main` is, never panics with `overflow` (`Program.PanicsKeptBy`). -/
+  overflowsAlone : p.PanicsKeptBy (·.overflow) false true fuel input
   /-- facts.without-div: a call of a function limited by `without div`, on arguments whose
   values at its non-escaping parameters are function values that halt, through which its body
   may call with no `div` of its own (facts.div), and a run whose `main` is limited, halts
@@ -299,6 +305,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun _ control c v w => callAs_unseen p.decls _ control c v w,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
     Program.PanicKeptBy.kept h.overflowLimits h.wellTyped h.exclusive fuel input,
+    Program.PanicKeptBy.kept h.overflowAloneLimits h.wellTyped h.exclusive fuel input,
     h.divLimits.kept h.wellTyped h.exclusive input, h.allocLimits.kept fuel input,
     fun n _ _ _ _ _ _ _ _ hf hio hp hγ =>
       call_keeps (h.wellTyped.typedDecls.quiet n) h.wellTyped.typedDecls hf hp hio _ hγ,

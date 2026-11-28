@@ -1,4 +1,5 @@
 import Stilt.Panics.Conds
+import Stilt.Panics.Stored
 import Stilt.Selection
 
 /-!
@@ -71,33 +72,58 @@ theorem eval_not_reaches {σ : Type} {D : Decls} {M : Memory σ} :
       · exact eval_not_reaches n b he.2 s'' v s' h₂
       · exact eval_not_reaches n a he.1 s'' v s' h₂
 
-/-- After an `if` whose then-branch always jumps reaches a value, the facts of
-its condition's negation hold, but those of what its else-branch writes. -/
-theorem after_holds {D : Decls} (w : WriteBack) (n : Nat) (a : Expr) (s : Copy.State) {v : Value}
-    {s' : Copy.State} (h : (eval D (Copy.memoryWith w) n a s).Reaches v s') :
-    Frame.Meets a.after s'.1 := by
-  cases a
-  case «if» c τ t e =>
-    simp only [Expr.after]
-    split
-    · rename_i ht
-      cases n with
-      | zero => cases h
-      | succ m =>
-        change (Eval.bind (Eval.bind (eval D (Copy.memoryWith w) m c) Eval.asBool)
-          (fun b => if b then eval D (Copy.memoryWith w) m t else eval D (Copy.memoryWith w) m e) s).Reaches
-            _ _ at h
-        obtain ⟨b, s₁, h₁, h₂⟩ := Eval.bind_reaches h
-        obtain ⟨u, s₂, h₃, h₄⟩ := Eval.bind_reaches h₁
-        obtain ⟨hu, hs⟩ := Eval.asBool_reaches h₄
-        subst hu
+/-- After code reaches a value, the facts it gives the code after it hold: a store's key, the
+negation of the condition of an `if` whose then-branch always jumps, but for what its
+else-branch writes, the facts both paths of another `if` give, and those of a sequence's
+parts, the first part's that the second doesn't write. -/
+theorem after_holds {D : Decls} (w : WriteBack) : ∀ (n : Nat) (a : Expr) (s : Copy.State) {v : Value}
+    {s' : Copy.State}, (eval D (Copy.memoryWith w) n a s).Reaches v s' → Frame.Meets a.after s'.1
+  | 0, _, _, _, _, h => nomatch h
+  | n + 1, a, s, v, s', h => by
+    unfold Expr.after
+    refine Frame.Meets.append ?_ ?_
+    · split
+      · rename_i m kt hk
+        intro f hf
+        simp only [List.mem_singleton] at hf
+        subst hf
+        exact eval_stored_holds hk h
+      · exact Frame.Meets.nil _
+    cases a
+    case «if» c τ t e =>
+      change (Eval.bind (Eval.bind (eval D (Copy.memoryWith w) n c) Eval.asBool)
+        (fun b => if b then eval D (Copy.memoryWith w) n t else eval D (Copy.memoryWith w) n e) s).Reaches
+          _ _ at h
+      obtain ⟨b, s₁, h₁, h₂⟩ := Eval.bind_reaches h
+      obtain ⟨u, s₂, h₃, h₄⟩ := Eval.bind_reaches h₁
+      obtain ⟨hu, hs⟩ := Eval.asBool_reaches h₄
+      subst hu
+      have hneg : b = false → Frame.Meets (withoutNames c.negFacts e.writes ++ e.after) s'.1 := by
+        intro hb
+        subst hb
+        have k := h₂.keeps (eval_keeps D w n e e.writes e.resizes (List.Subset.refl _)
+          (List.Subset.refl _) s₁)
+        exact ((eval_facts w n c false s s₁ (by rw [hs]; exact h₃)).keep k.2).append
+          (after_holds w n e s₁ h₂)
+      dsimp only
+      split
+      · rename_i ht
         cases b
-        · have k := h₂.keeps (eval_keeps D w m e e.writes e.resizes (List.Subset.refl _)
-            (List.Subset.refl _) s₁)
-          exact (eval_facts w m c false s s₁ (by rw [hs]; exact h₃)).keep k.2
-        · exact absurd h₂ (eval_not_reaches m t ht s₁ v s')
-    · exact Frame.Meets.nil _
-  case assign p _ => obtain ⟨_, _⟩ := p; exact Frame.Meets.nil _
-  all_goals exact Frame.Meets.nil _
+        · exact (hneg rfl).mono (List.subset_append_left _ _)
+        · exact absurd h₂ (eval_not_reaches n t ht s₁ v s')
+      · intro f hf
+        rw [List.mem_filter] at hf
+        cases b
+        · exact hneg rfl f (by simpa using hf.2)
+        · exact after_holds w n t s₁ h₂ f hf.1
+    case seq a b =>
+      change ((Eval.bind (eval D (Copy.memoryWith w) n a) fun _ => eval D (Copy.memoryWith w) n b) s).Reaches
+        _ _ at h
+      obtain ⟨_, s₁, h₁, h₂⟩ := Eval.bind_reaches h
+      have k := h₂.keeps (eval_keeps D w n b b.writes b.resizes (List.Subset.refl _)
+        (List.Subset.refl _) s₁)
+      exact (after_holds w n b s₁ h₂).append ((after_holds w n a s h₁).keep k.2)
+    case assign p _ => obtain ⟨_, _⟩ := p; exact Frame.Meets.nil _
+    all_goals (dsimp only; exact Frame.Meets.nil _)
 
 end Stilt
