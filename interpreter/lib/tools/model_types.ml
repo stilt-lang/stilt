@@ -475,6 +475,14 @@ let with_args = function [] -> [] | args -> [ Arr args ]
 (* The list of an array's elements, the field of its record (generics.array-elements). *)
 let elements a = tag "field" [ a; Str array_field ]
 
+(* [len] and [to_list] of an array, read from its list (generics.arrays). *)
+let array_call name args =
+  match (name, args) with
+  | "len", [ a ] ->
+      Some (tag "op" [ tag "list" [ Str "len" ]; Arr [ elements a ] ])
+  | "to_list", [ a ] -> Some (elements a)
+  | _ -> None
+
 (* The array of type [t] whose elements are the list literal of [es]
    (generics.array-literals). *)
 let array_of cx t es =

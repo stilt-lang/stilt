@@ -110,6 +110,22 @@ let structural_by cx name t =
 
 let structural cx t = structural_by cx "Show" t
 
+(* [==] and the ordering operators on a type other than the numeric types,
+   [bool] and [str], through the prelude's structural impls (traits.operators). *)
+let structural_cmp cx b t =
+  let scalar =
+    int_kind t <> None
+    || float_kind t <> None
+    ||
+    match norm t with
+    | Con ({ home = "std.prelude"; name = "bool" | "str" }, []) -> true
+    | _ -> false
+  in
+  match cmp b with
+  | Some ("eq" | "ne") when not scalar -> structural_by cx "Eq" t
+  | Some _ when not scalar -> structural_by cx "Ord" t
+  | _ -> false
+
 (* The constructors of each variant type that a type holds, in declaration
    order, by the names the calculus declares them under (traits.structural-calls). *)
 let ctor_orders cx t =

@@ -50,7 +50,7 @@ abbrev U : Ty := .param "U"
 abbrev A : Ty := .param "A"
 
 /-- A type parameter without bounds. -/
-def tp (n : Name) : TypeParam := ⟨n, [], []⟩
+def tp (n : Name) : TypeParam := { name := n, bounds := [] }
 
 /-- A `let` parameter that is not a non-escaping one. -/
 def arg (n : Name) (τ : Ty) : Param := ⟨.let, n, τ, none⟩

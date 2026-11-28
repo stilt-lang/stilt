@@ -65,22 +65,6 @@ let rec expr cx (e : Tast.expr) =
   | Comptime x -> expr cx x
   | _ -> control cx e
 
-(* [==] and the ordering operators on a type other than the numeric types,
-   [bool] and [str], through the prelude's structural impls (traits.operators). *)
-and structural_cmp cx b t =
-  let scalar =
-    int_kind t <> None
-    || float_kind t <> None
-    ||
-    match norm t with
-    | Con ({ home = "std.prelude"; name = "bool" | "str" }, []) -> true
-    | _ -> false
-  in
-  match cmp b with
-  | Some ("eq" | "ne") when not scalar -> structural_by cx "Eq" t
-  | Some _ when not scalar -> structural_by cx "Ord" t
-  | _ -> false
-
 and control cx (e : Tast.expr) =
   let otherwise = function None -> unit_e | Some x -> expr cx x in
   match e.desc with
@@ -185,15 +169,11 @@ and call cx (e : Tast.expr) callee targs args =
   | Member (owner, name)
     when owner = map_item && List.mem name Model_lists.map_natives ->
       Model_lists.map_call (callbacks cx) cx e name args
-  | Member ({ home = "std.array"; name = "Array" }, "len") -> (
-      match args with
-      | [ a ] -> op (tag "list" [ Str "len" ]) [ elements (expr cx a.value) ]
-      | _ -> outside "the function std.array.Array.len")
-  | Member ({ home = "std.array"; name = "Array" }, "to_list") -> (
-      (* generics.arrays: the elements in order, which the array's list is. *)
-      match args with
-      | [ a ] -> elements (expr cx a.value)
-      | _ -> outside "the function std.array.Array.to_list")
+  | Member ({ home = "std.array"; name = "Array" }, name) -> (
+      let values = List.map (fun (a : Tast.arg) -> expr cx a.value) args in
+      match array_call name values with
+      | Some m -> m
+      | None -> outside "the function std.array.Array.%s" name)
   | Member (owner, name)
     when owner = list_item && List.mem name Model_lists.natives ->
       Model_lists.list_call (callbacks cx) cx e name args

@@ -141,6 +141,9 @@ val is_array : Types.ty -> bool
 val elements : Model_json.t -> Model_json.t
 (** The list of an array's elements, the field of its record. *)
 
+val array_call : string -> Model_json.t list -> Model_json.t option
+(** [len] or [to_list] of an array, given its arguments' meanings. *)
+
 val array_of : cx -> Types.ty -> Model_json.t list -> Model_json.t
 (** The array of the type whose elements are the list literal of the
     expressions. *)

@@ -60,6 +60,11 @@ val structural_by : Model_types.cx -> string -> Types.ty -> bool
 (** Whether the prelude's structural impls of the trait named give a type's impl
     of it, maps only for [Show]. *)
 
+val structural_cmp : Model_types.cx -> Ast.binary -> Types.ty -> bool
+(** Whether [==] or an ordering operator at a type goes through the prelude's
+    structural impls: a type other than the numeric types, [bool] and [str]
+    (traits.operators). *)
+
 val structural : Model_types.cx -> Types.ty -> bool
 (** Whether the prelude's structural impls of [Show] show a type. *)
 
