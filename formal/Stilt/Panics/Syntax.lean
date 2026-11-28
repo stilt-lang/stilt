@@ -71,7 +71,8 @@ def Known.bounds (G : List Known) (j xs : Name) (k : Int) : Bool :=
 /-- Whether `xs[i]` reads a list within its bounds: `xs` is a variable and `i` is a
 variable `j`, `j + k` or `j - k` with `k` a literal, and the facts around it give
 `0 <= i` and `i < xs.len()`: tests, as `j >= 0 && j < xs.len()` gives them
-(facts.guards), or a range loop (facts.range-loops). -/
+(facts.guards), or a range loop (facts.range-loops). A literal index, `xs[0]`, is left out,
+and so is the test `!xs.is_empty()`. -/
 def guardedIndex (G : List Known) (e i : Expr) : Bool :=
   match e.readVar?, i.offset? with
   | some xs, some (j, k) => Known.bounds G j xs k
@@ -120,7 +121,7 @@ def Expr.rangeFacts (G : List Known) : Expr → Name → Expr → List Known
 /-- Whether `xs[e] = value` stores within the list's bounds: the place is one index
 below its root, `e` is proved an index of the root's list as `guardedIndex` proves
 one, and `value`, which runs after `e`, doesn't resize the list (facts.guards and
-facts.range-loops). -/
+facts.range-loops). A store through an index and then fields, `xs[i].f = v`, is left out. -/
 def guardedStore (G : List Known) (p : Place) (value : Expr) : Bool :=
   match p.path with
   | [.index e] => match e.offset? with

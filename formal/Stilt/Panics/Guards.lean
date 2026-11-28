@@ -17,7 +17,7 @@ its variables, and a binding of one of their names hides it.
 namespace Stilt
 
 /-- A key that verification can follow from a test to an access: the name of a
-binding, or an integer or Boolean literal (facts.keys). -/
+binding, or an integer or Boolean literal (facts.keys); a string literal is left out. -/
 inductive KeyTerm where
   | var (x : Name)
   | int (k : Int)
