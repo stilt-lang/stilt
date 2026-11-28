@@ -79,7 +79,7 @@ private def call (f : Name) (args : List Expr) (result : Ty :=
 
 /-- A program whose `main` raises the list of `es`' values. -/
 private def program (es : List Expr) : Program :=
-  ⟨decls, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩, {}⟩
+  ⟨decls, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩, {}, {}⟩
 
 /-- Whether values are the integers `ks`. -/
 private def areInts : List Value → List Int → Bool
@@ -152,7 +152,7 @@ example : ¬ (program [.withH "Ask" false byZero (.perform ask .unit)]).PanicFre
 
 /-- A program without functions, whose `main` raises the list of `es`' values. -/
 private def bare (es : List Expr) : Program :=
-  ⟨{ decls with functions := [] }, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩, {}⟩
+  ⟨{ decls with functions := [] }, .raise (.list .i64 es), ⟨false, some (.list .i64), [], [], none⟩, {}, {}⟩
 
 /-- A `with` whose block performs nothing adds no `div`, and its program, free of
 `panic` too, is total; a performance is a site of `div`. -/

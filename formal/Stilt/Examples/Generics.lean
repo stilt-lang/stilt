@@ -46,7 +46,7 @@ private def twice : FnDecl :=
 private def decls : Decls := ⟨[point], [], [twice], [], [size], [sizeI64, sizePoint], [], []⟩
 
 /-- A program whose `main` raises an `i64`. -/
-private def program (main : Expr) : Program := ⟨decls, main, ⟨false, some .i64, [], [], none⟩, {}⟩
+private def program (main : Expr) : Program := ⟨decls, main, ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 /-- Both models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=

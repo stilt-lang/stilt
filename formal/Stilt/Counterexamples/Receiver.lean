@@ -33,7 +33,7 @@ def receiverAliased : Program :=
   ⟨⟨[aType], [], [], [aImpl], [], [], [], []⟩,
     .varIn "a" (.record "A" []) (.record "A" [] [("b", .int 0)])
       (.raise (Expr.methodCall "A" "f" [] (.inout ⟨"a", []⟩) [.inout ⟨"a", [.field "b"]⟩] .i64)),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 theorem receiverAliased_receivers : receiverAliased.decls.Receivers where
   types := by decide

@@ -56,7 +56,7 @@ private def callInout (f : Name) : Expr := .call (.fnRef f [] []) [.inout ⟨"n"
 
 /-- A program whose `main` binds `var n = 1` and raises the list of `es`' values. -/
 private def program (es : List Expr) : Program :=
-  ⟨decls, .varIn "n" .i64 (.int 1) (.raise (.list .i64 es)), ⟨false, some (.list .i64), [], [], none⟩, {}⟩
+  ⟨decls, .varIn "n" .i64 (.int 1) (.raise (.list .i64 es)), ⟨false, some (.list .i64), [], [], none⟩, {}, {}⟩
 
 private def areInts : List Value → List Int → Bool
   | [], [] => true

@@ -24,7 +24,7 @@ def aliased : Program :=
   ⟨⟨[], [], [alias], [], [], [], [], []⟩,
     .varIn "a" .i64 (.int 0)
       (.raise (.call (.fnRef "alias" [] []) [.inout ⟨"a", []⟩, .inout ⟨"a", []⟩] .i64)),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 theorem aliased_wellTyped : aliased.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [aliased]) ⟨rfl, rfl, rfl, rfl⟩

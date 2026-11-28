@@ -26,7 +26,7 @@ namespace Stilt.Examples.Panics
 /-- `a / b` on `i64`s. -/
 private def div (a b : Expr) : Expr := .op (.arith .div .i64) [a, b]
 
-private def program (main : Expr) : Program := ⟨⟨[], [], [], [], [], [], [], []⟩, main, Row.pure, {}⟩
+private def program (main : Expr) : Program := ⟨⟨[], [], [], [], [], [], [], []⟩, main, Row.pure, {}, {}⟩
 
 example : (div (.var "n") (.int 2)).panicFree Limited.all = true := rfl
 example : (div (.var "n") (.var "d")).panicFree Limited.all = false := rfl

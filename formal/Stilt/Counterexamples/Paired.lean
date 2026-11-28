@@ -105,11 +105,11 @@ def callRaisingBool (f : Name) : Expr :=
 
 /-- The program whose row is formed by an annotation. -/
 def annotated : Program :=
-  ⟨⟨[box], [], [annotatedF], [], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
+  ⟨⟨[box], [], [annotatedF], [], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}, {}⟩
 
 /-- The program whose row is formed by an instantiation. -/
 def generic : Program :=
-  ⟨⟨[box], [], [apply, genericF], [], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}⟩
+  ⟨⟨[box], [], [apply, genericF], [], [], [], [], []⟩, callRaisingBool "f", raisesBool, {}, {}⟩
 
 /-! ## effects.no-escape as it was written is unsound -/
 
@@ -289,7 +289,7 @@ abbrev raisesI64 : Row := ⟨false, some .i64, [], [], none⟩
 def paired : Program :=
   ⟨⟨[box], [], [orZero], [], [], [], [], []⟩,
     .raise (.call (.fnRef "or_zero" [] [Row.pure]) [.value (.closure [] .i64 raisesBox raiseBox)] .i64),
-    raisesI64, {}⟩
+    raisesI64, {}, {}⟩
 
 /-- The model accepts `paired`: the signature of `or_zero` pairs `f'` with
 `Box`, the type its `catch` handles, in `f`'s row (effects.paired-row-variables and effects.catch-around-row-variables). -/

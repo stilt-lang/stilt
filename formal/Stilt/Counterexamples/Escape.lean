@@ -57,7 +57,7 @@ whose row is pure. -/
 def escaped : Program :=
   ⟨⟨[], [], [keep], [], [], [], [], []⟩,
     .letIn "h" (.fn [] .unit Row.pure) keepRaisingBool (.call (.var "h") [] .unit),
-    Row.pure, {}⟩
+    Row.pure, {}, {}⟩
 
 /-! ## The checker needs the no-escape rule -/
 

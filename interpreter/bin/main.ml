@@ -90,9 +90,11 @@ let outside_model = 77
    executable semantics (formal/Stilt/Run), one with errors as [run] runs it. *)
 let model path =
   with_program path @@ fun { sources; packages } ->
-  let diagnostics, (env, _, program) = Stilt.Driver.for_run ~packages sources in
+  let diagnostics, (env, hir, program) =
+    Stilt.Driver.for_run ~packages sources
+  in
   let erroneous = List.exists Stilt.Diagnostic.is_error diagnostics in
-  match Stilt.Model.export ~erroneous env program with
+  match Stilt.Model.export ~erroneous ~hir env program with
   | Ok json ->
       print_endline json;
       0

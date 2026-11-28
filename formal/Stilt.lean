@@ -10,7 +10,9 @@ import Stilt.Projections.Runs
 import Stilt.Projections.Yield
 import Stilt.Projections.Once
 import Stilt.Projections.Theorem
+import Stilt.Syntax.Kinds
 import Stilt.Declarations
+import Stilt.Kinds
 import Stilt.Rows.Types
 import Stilt.Rows
 import Stilt.Generics
@@ -356,6 +358,7 @@ import Stilt.Guards.Soundness
 import Stilt.Guards.Theorem
 import Stilt.Guards.Examples
 import Stilt.Run.Decode
+import Stilt.Run.Kinds
 import Stilt.Run.Program
 import Stilt.Traits.Syntax
 import Stilt.Traits.Members

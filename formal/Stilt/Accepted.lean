@@ -26,6 +26,7 @@ import Stilt.Arrays
 import Stilt.Handling.WithPaired
 import Stilt.Natives.Theorem
 import Stilt.Analysis.Agree.Theorem
+import Stilt.Kinds
 
 /-!
 # Accepted programs and their soundness
@@ -119,7 +120,10 @@ array's size (`Decls.Arrays`), and lets no `with` take a performance that belong
   (`Natives.kept`, std.no-panics-by-default, std.list-sorting and std.clamp-and-sum).
 * a release build, which drops the checks of the operations that the analysis of a body's
   integer values proves, runs as the reference interpreter does (`Program.runRelease_eq`,
-  facts.what-proofs-change).
+  facts.what-proofs-change);
+* each use of a function with constructor parameters, which runs as an instance, is made of
+  types, and finds for each method of its bounds the member of its constructor's one impl, of the
+  trait's signature at the constructor (`Kinds.Checked.kept`).
 -/
 
 namespace Stilt
@@ -205,6 +209,9 @@ structure Program.Accepted (p : Program) : Prop where
   enclosing function that its signature doesn't pair with the handler's effect
   (handlers.with-pairing, E0516). No promise rests on it. -/
   withPaired : p.WithPaired
+  /-- The kinds of the traits over type constructors, their impls and the functions they bound,
+  as the program writes them (`Kinds.Checked`, E0337, E0338, E0304, E0311 and E0318). -/
+  kinds : p.kinds.Checked
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where
@@ -384,6 +391,10 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   reference interpreter does, to the same outcome (`Program.runRelease_eq`): no check it drops
   fails. A property of the evaluator and the analysis, whether the program is accepted or not. -/
   release : p.runRelease fuel input = p.runCopy fuel input
+  /-- Each use of a function with constructor parameters, an instance, is made of types, and
+  each constructor parameter's constructor has one impl of each trait of its bounds, which holds
+  the trait's members at the constructor (`Kinds.Checked.kept`). -/
+  kinds : p.kinds.Kept
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -415,6 +426,6 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun n _ _ _ _ _ _ _ _ hf hio hp hγ =>
       call_keeps (h.wellTyped.typedDecls.quiet n) h.wellTyped.typedDecls hf hp hio _ hγ,
     fun hio => h.wellTyped.quiet hio fuel input, Natives.kept,
-    Program.runRelease_eq p fuel input⟩
+    Program.runRelease_eq p fuel input, h.kinds.kept⟩
 
 end Stilt

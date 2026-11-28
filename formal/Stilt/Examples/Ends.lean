@@ -40,7 +40,7 @@ private def summed : Program :=
   ⟨decls, .varIn "s" .i64 (.int 0) (.seq
     (.for "x" .i64 (.list .i64 [.int 1, .int 2, .int 3])
       (.assign ⟨"s", []⟩ (add (.var "s") (call "quad" (.var "x")))))
-    (.raise (.var "s"))), ⟨false, some .i64, [], [], none⟩, {}⟩
+    (.raise (.var "s"))), ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 example : summed.divFree = true := rfl
 example : summed.DivFree := Program.divFree_spec rfl
@@ -49,7 +49,7 @@ example : (summed.runCopy 9).observe = .outOfFuel := rfl
 
 /-- `fn f(n: i64) -> i64 { f(n) }`. -/
 private def forever : Program :=
-  ⟨⟨[], [], [fn "f" (call "f" (.var "n"))], [], [], [], [], []⟩, call "f" (.int 0), ⟨false, some .i64, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [fn "f" (call "f" (.var "n"))], [], [], [], [], []⟩, call "f" (.int 0), ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 example : forever.divFree = false := rfl
 example : (forever.runCopy 12).observe = .outOfFuel := rfl
@@ -102,7 +102,7 @@ private def onTree (onNode : Expr) : Expr :=
 
 private def treeProgram (body : Expr) (arg : Expr) : Program :=
   ⟨⟨[], [tree], [treeFn "sum" body], [], [], [], [], []⟩, .raise (call "sum" arg),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 /-- `Node(Node(Leaf, 1, Leaf), 2, Node(Leaf, 3, Leaf))`. -/
 private def three : Expr := node (node leaf (.int 1) leaf) (.int 2) (node leaf (.int 3) leaf)
@@ -152,7 +152,7 @@ private def sub (a b : Expr) : Expr := .op (.arith .sub .i64) [a, b]
 /-- `fn count(n: i64) -> i64 { if test { 0 } else { count(step) } }`, and `count(5)`. -/
 private def counting (test step : Expr) : Program :=
   ⟨⟨[], [], [fn "count" (.if test .i64 (.int 0) (call "count" step))], [], [], [], [], []⟩,
-    .raise (call "count" (.int 5)), ⟨false, some .i64, [], [], none⟩, {}⟩
+    .raise (call "count" (.int 5)), ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 /-- `if n <= 0 { 0 } else { count(n - 1) }` shrinks: the `else` branch of `n <= 0` gives
 `n > 0`. -/
@@ -172,7 +172,7 @@ private def going (next : Expr) : Program :=
         (.call (.fnRef "go" [] []) [.value (add (.var "i") (.int 1)), .value next] .i64) (.var "i"),
       {}⟩], [], [], [], [], []⟩,
     .raise (.call (.fnRef "go" [] []) [.value (.int 0), .value (.int 3)] .i64),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 example : (going (.var "n")).divFree = true := rfl
 example : ((going (.var "n")).runCopy 40).observe = .raised (.int 3) := rfl
@@ -186,7 +186,7 @@ with `n = 10` it ends at fuel 18 and not 17, and with `n = 20` it needs more, as
 turn costs a fuel. -/
 private def counted (n : Int) (cond : Expr) (body : Expr) : Program :=
   ⟨⟨[], [], [], [], [], [], [], []⟩, .letIn "n" .i64 (.int n) (.varIn "i" .i64 (.int 0) (.varIn "s" .i64 (.int 0)
-    (.seq (.while cond body) (.raise (.var "s"))))), ⟨false, some .i64, [], [], none⟩, {}⟩
+    (.seq (.while cond body) (.raise (.var "s"))))), ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 private def loopBody : Expr := .seq (.assign ⟨"s", []⟩ (add (.var "s") (.var "i"))) (step "i" .add 1)
 

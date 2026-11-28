@@ -57,7 +57,7 @@ private def swap : FnDecl :=
 private def decls : Decls := ⟨[], [], [atFor "at" Row.pure, atFor "atRaising" raising, atThreading, swap],
   [], [], [], [], []⟩
 
-private def program (main : Expr) : Program := ⟨decls, main, raising, {}⟩
+private def program (main : Expr) : Program := ⟨decls, main, raising, {}, {}⟩
 
 /-- `var xs = [1, 2, 3]` around `body`. -/
 private def withList (body : Expr) : Expr :=

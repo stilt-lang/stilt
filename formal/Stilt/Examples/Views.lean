@@ -19,7 +19,7 @@ namespace Stilt.Examples.Views
 /-- A program from the type of the value it shows and `main`, whose row is
 `raise<shown>`. -/
 private def program (shown : Ty) (main : Expr) : Program :=
-  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}, {}⟩
 
 /-- The three models give the same observation, a raised window observed as its part. -/
 private def agree (p : Program) (o : Observation) : Prop :=

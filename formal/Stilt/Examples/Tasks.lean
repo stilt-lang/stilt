@@ -80,7 +80,7 @@ private def passed : FnDecl :=
   ⟨"passed", [], [], [⟨.let, "s", .record scopeName [.i64], none⟩], .i64, ioRaise, .int 2, {}⟩
 
 private def program (fns : List FnDecl) (f : Expr) : Program :=
-  ⟨decls fns, .scopeOf scopeName .i64 f .i64, ioRaise, {}⟩
+  ⟨decls fns, .scopeOf scopeName .i64 f .i64, ioRaise, {}, {}⟩
 
 example : (program [] receiver).ScopesKept := by unfold Program.ScopesKept; decide
 
@@ -100,7 +100,7 @@ example : ¬ (program [⟨"kept", [], [], [⟨.let, "s", .unit, none⟩], .i64, 
 /-- `when a { () }`. -/
 private def hold : Expr := .held [("a", .i64)] [.var "a"] .unit
 
-private def lazyProgram (main : Expr) : Program := ⟨decls, main, Row.pure, {}⟩
+private def lazyProgram (main : Expr) : Program := ⟨decls, main, Row.pure, {}, {}⟩
 
 /-- E0435: `Lazy.new(|| { when a { () }; 1 })`. -/
 example : ¬ (lazyProgram (.lazyNewOf lazyName .i64

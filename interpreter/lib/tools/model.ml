@@ -192,7 +192,7 @@ let written env program =
 let const_decl cx (name, (value : Tast.expr)) =
   Arr [ Str name; ty cx value.ty; Model_exprs.expr cx value ]
 
-let export ?(erroneous = false) env (program : Tast.program) =
+let export ?(erroneous = false) ?hir env (program : Tast.program) =
   if Env.function_sig env main_item = None then Ok nothing_to_run
   else
     try
@@ -213,6 +213,14 @@ let export ?(erroneous = false) env (program : Tast.program) =
       in
       (* The input the run reads, which the model's world starts with (std.io). *)
       let input = if cx.reads_input then stdin () else "" in
+      (* traits.constructor-traits: the declarations as kinds read them, which hold their
+         checks in a program without errors. *)
+      let kinds =
+        match hir with
+        | Some hir when not erroneous ->
+            [ ("kinds", Model_kinds.written env hir cx.fns) ]
+        | _ -> []
+      in
       let fields =
         [
           ("decls", decls);
@@ -220,6 +228,7 @@ let export ?(erroneous = false) env (program : Tast.program) =
           ("row", main_row);
           ("input", Str input);
         ]
+        @ kinds
       in
       Ok
         (to_string

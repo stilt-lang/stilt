@@ -34,7 +34,7 @@ private def decls : Decls :=
 example : decls.locks = ["inner", "outer", "stored"] := by decide
 
 /-- A `when` whose block holds the block `b`, in `main`. -/
-private def program (b : Expr) : Program := ⟨decls, .held [("a", .i64)] [.var "a"] b, Row.pure, {}⟩
+private def program (b : Expr) : Program := ⟨decls, .held [("a", .i64)] [.var "a"] b, Row.pure, {}, {}⟩
 
 /-- `when a { outer() }` is E0430. -/
 example : ¬ (program (callOf (.fnRef "outer" [] []))).Locks := by

@@ -60,7 +60,7 @@ private def call (f : Name) (e : Expr) (result : Ty :=
   .i64) : Expr := .call (.fnRef f [] []) [.value e] result
 
 /-- A program whose `main` raises an `i64`. -/
-private def program (main : Expr) : Program := ⟨decls, .raise main, ⟨false, some .i64, [], [], none⟩, {}⟩
+private def program (main : Expr) : Program := ⟨decls, .raise main, ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 /-- Whether a run shows the raise of the integer `k`. -/
 private def raisedInt (k : Int) : Observation → Bool
@@ -84,7 +84,7 @@ example : raises (program (call "first" (call "sum" (.int 5)))) 13 := by decide 
 
 /-- A `return` in `main` ends it with `()` (program.main): `return; raise 1`
 raises nothing. -/
-example : (Program.mk decls (.seq (.return .unit) (.raise (.int 1))) ⟨false, some .i64, [], [], none⟩ {}
+example : (Program.mk decls (.seq (.return .unit) (.raise (.int 1))) ⟨false, some .i64, [], [], none⟩ {} {}
     |>.runCopy 8).observe = .returned .unit := rfl
 
 /-! ## Typing -/

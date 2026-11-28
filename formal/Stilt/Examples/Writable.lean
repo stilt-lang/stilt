@@ -24,7 +24,7 @@ private def ints : Ty := .list .i64
 
 /-- A program from `main`, whose row is `raise<i64>`. -/
 private def program (main : Expr) : Program :=
-  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some .i64, [], [], none⟩, {}⟩
+  ⟨⟨[], [], [], [], [], [], [], []⟩, main, ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 /-- The three models give the same observation. -/
 private def agree (p : Program) (o : Observation) : Prop :=

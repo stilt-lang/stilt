@@ -18,7 +18,7 @@ and `main`, whose row is `raise<shown>`. The examples run programs without
 typing them. -/
 private def program (fns : List FnDecl) (shown : Ty) (main : Expr)
     (records : List RecordDecl := []) (impls : List ImplDecl := []) : Program :=
-  ⟨⟨records, [], fns, impls, [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}⟩
+  ⟨⟨records, [], fns, impls, [], [], [], []⟩, main, ⟨false, some shown, [], [], none⟩, {}, {}⟩
 
 /-- A call of a function declared at the top level. -/
 private def call (f : Name) (args : List Arg) (result : Ty :=

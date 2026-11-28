@@ -1,4 +1,6 @@
 import Stilt.Run.Decode
+import Stilt.Run.Kinds
+import Stilt.Kinds
 import Stilt.Semantics
 import Stilt.Windows.Eval
 import Stilt.Sharing.Eval
@@ -99,10 +101,11 @@ def decls (j : Json) : Except String Decls := do
       | _ => throw s!"a constant, not {c.compress}") }
 
 /-- A program: an object of its declarations, `main`, `main`'s row and, when given,
-the limits `main`'s body keeps. -/
+the limits `main`'s body keeps and its declarations as kinds read them. -/
 def program (j : Json) : Except String Program := do
   return ⟨← j.getObjVal? "decls" >>= decls, ← j.getObjVal? "main" >>= expr,
-    ← j.getObjVal? "row" >>= row, ← (j.getObjVal? "limits").toOption.getD (.arr #[]) |> limits⟩
+    ← j.getObjVal? "row" >>= row, ← (j.getObjVal? "limits").toOption.getD (.arr #[]) |> limits,
+    ← (j.getObjVal? "kinds").toOption.getD (.obj {}) |> kinds⟩
 
 /-- What a process shows of a run. -/
 structure Shown where
@@ -246,6 +249,9 @@ in-place mutation, windows when the program makes a view, and sharing when it ma
 program that makes no view, the model of windows is in-place mutation, and so is the model of
 sharing in one that doesn't share. -/
 def run (p : Program) (input : String) (fuel : Nat) : Except Problem Shown := do
+  -- The checks of kinds (`Kinds.Checked`) hold of every program the checker accepts.
+  if !decide p.kinds.Checked then
+    throw (.fails "the declarations as written fail the checks of kinds")
   let copy ← shown (p.runCopy fuel input)
   let agrees (o : Except Problem Shown) : Bool := match o with
     | .ok s => s == copy

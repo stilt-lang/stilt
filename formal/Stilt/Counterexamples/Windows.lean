@@ -36,7 +36,7 @@ def viewChanged : Program :=
       (.letIn "v" (.view listTy) (.view [.var "xs", .int 0, .int 3])
         (.seq (.assign ⟨"xs", [.index (.int 0)]⟩ (.int 9))
           (.raise (.index (.op .copy [.var "v"]) (.int 0))))),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 theorem viewChanged_wellTyped : viewChanged.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [viewChanged]) ⟨rfl, rfl, rfl, rfl⟩
@@ -101,7 +101,7 @@ def escaping : FnDecl :=
 def viewEscaped : Program :=
   ⟨⟨[], [], [escaping], [], [], [], [], []⟩,
     .raise (.op .copy [.call (.fnRef "f" [] []) [] (.view listTy)]),
-    ⟨false, some listTy, [], [], none⟩, {}⟩
+    ⟨false, some listTy, [], [], none⟩, {}, {}⟩
 
 theorem viewEscaped_wellTyped : viewEscaped.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [viewEscaped]) ⟨rfl, rfl, rfl, rfl⟩

@@ -146,7 +146,7 @@ def indexed : Program :=
     .varIn "xs" (.list .i64) (.list .i64 [.int 0, .int 0])
       (.call (.fnRef "alias" [] [])
         [.inout ⟨"xs", [.index (.int 0)]⟩, .inout ⟨"xs", [.index (.int 1)]⟩] .unit),
-    Row.pure, {}⟩
+    Row.pure, {}, {}⟩
 
 theorem indexed_wellTyped : indexed.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [indexed]) ⟨rfl, rfl, rfl, rfl⟩

@@ -113,7 +113,7 @@ def decls (a b : Nat) (extra : List Name) : Decls :=
 
 /-- The witness: `main` returns the call's result, `()`, and its row is pure. -/
 def witness (a b : Nat) (extra : List Name) : Program :=
-  ⟨decls ss a b extra, main ss, Row.pure, {}⟩
+  ⟨decls ss a b extra, main ss, Row.pure, {}, {}⟩
 
 /-- What the call binds: each parameter's name, with its place (values.inout-argument-order). -/
 def bound : List (Name × Passed) := ss.mapIdx fun i s => (nameOf 'p' i, placePassed s)

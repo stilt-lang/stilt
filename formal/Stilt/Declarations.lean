@@ -1,5 +1,6 @@
 import Stilt.Syntax
 import Stilt.Syntax.Limits
+import Stilt.Syntax.Kinds
 
 /-!
 # Declarations
@@ -412,6 +413,8 @@ structure Program where
   row : Row
   /-- The limits `main`'s body keeps, its own clause's and its module's (facts.without). -/
   limits : Limits := {}
+  /-- Its traits, impls and functions as it writes them, as kinds read them. -/
+  kinds : Kinds := {}
 
 /-! ## The functions of declarations -/
 

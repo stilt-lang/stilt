@@ -42,7 +42,7 @@ def writtenBack : Program :=
     .varIn "xs" listTy (ints [0])
       (.seq (.call (.fnRef "grow" [] []) [.inout ⟨"xs", []⟩] .unit)
         (.raise (.index (.var "xs") (.int 0)))),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 theorem writtenBack_wellTyped : writtenBack.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by simp [writtenBack]) ⟨rfl, rfl, rfl, rfl⟩
@@ -114,7 +114,7 @@ x = x.kids[0]; x.items[0] = 9; raise z.kids[0].items[0]`, in a `main` whose row 
 def selfPart : Program :=
   ⟨⟨[treeDecl], [], [], [], [], [], [], []⟩,
     .varIn "x" treeTy (tree 1 [tree 2 []]) (.letIn "z" treeTy (.var "x") descend),
-    ⟨false, some .i64, [], [], none⟩, {}⟩
+    ⟨false, some .i64, [], [], none⟩, {}, {}⟩
 
 theorem selfPart_wellTyped : selfPart.WellTyped where
   decls := declsWellFormed (by decide) (by decide) (by unfold Ty.Closed; decide)

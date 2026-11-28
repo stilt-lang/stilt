@@ -44,7 +44,7 @@ private def bump : FnDecl :=
 private def decls : Decls := ⟨[⟨"Account", [("balance", .i64)], []⟩], [], [bump], [], [], [], [], []⟩
 
 private def program (body : Expr) : Program :=
-  ⟨decls, body, ⟨false, Option.some .i64, [], [], .none⟩, {}⟩
+  ⟨decls, body, ⟨false, Option.some .i64, [], [], .none⟩, {}, {}⟩
 
 private def raisesBoth (p : Program) (k : Int) : Bool :=
   (match (p.runCopy 64).observe with | .raised (.int k') => k == k' | _ => false) &&
