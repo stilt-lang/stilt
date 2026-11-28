@@ -176,9 +176,9 @@ Some(15) [33]
 
 Three things differ from an ordinary trait:
 
-- Each method writes its receiver's type, as `self: Self<A>`, and each impl writes it with its constructor, as `self: Option<A>`. A missing receiver type here, or a written one anywhere else, is E0338 ([traits.receiver-types](../../reference/11-traits.md#traits.receiver-types)).
+- Each method writes its receiver's type, as `self: Self<A>`, and each impl writes it with its constructor, as `self: Option<A>`. A missing receiver type, in the trait or in an impl, a receiver type in the trait that isn't `Self` with arguments, or a written one anywhere else, is E0338 ([traits.receiver-types](../../reference/11-traits.md#traits.receiver-types)).
 - An impl names the bare constructor: `impl Mappable for Option`, not `Option<T>`.
-- A generic it bounds takes arguments: under `F: Mappable`, `F<i64>` is a type, and `halved(Some(30))` takes `F` to be `Option`.
+- A generic it bounds takes arguments: under `F: Mappable`, `F<i64>` is a type, and `halved(Some(30))` takes `F` to be `Option`. Alone, it names the functions without `self` and the constants of its bounds, as a type parameter does: were `N` a constant of `Mappable`, `F.N` in `halved(Some(30))` would be the `N` of `impl Mappable for Option`.
 
 The number of type arguments must agree everywhere. `Self` alone in `Mappable`, an impl for `Map`, which takes two, an impl for `List<i64>`, `F` without its argument, and a bound such as `F: Mappable + Show` that mixes a constructor trait with an ordinary one are E0337, *type of the wrong kind* ([traits.constructor-parameters](../../reference/11-traits.md#traits.constructor-parameters)).
 

@@ -76,6 +76,8 @@ A constructor trait abstracts over `List` and `Option` alike ([traits.constructo
 
 The other choice names a constructor in the trait's header, as in `trait Functor<F<_>> { fn map<A, B>(fa: F<A>, …) }`, close to Haskell's `class Functor f`. The trait's functions then have no `self`, so `xs.map(f)` can't find them, and `Self` already names what a trait abstracts over.
 
+A receiver's type is written in a constructor trait and its impls because `Self` alone is a constructor there, not a type ([traits.receiver-types](../11-traits.md#traits.receiver-types)). A receiver left without one has no type to fall back on, so it has the error type, and the one mistake is one error rather than one more at each use of `self`. A constructor parameter is otherwise a type parameter that takes arguments, so it names its bounds' functions without `self` and constants as `T.empty()` does, and `F.N` needs no rule of its own.
+
 Two things are left out:
 
 - Partial application of constructors, as `impl Mappable for Result<_, E>`. It needs a syntax for the missing argument and a rule for which one is missing.

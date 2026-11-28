@@ -268,13 +268,13 @@ Tests: [checking/bound_on_a_broken_trait.lt](../conformance/checking/bound_on_a_
 <a id="traits.functions-without-self"></a>
 A trait may declare functions that take no `self`, and constants, `const NAME: T`. Each may have a default, `= expr`, or not, and an impl holds them as it holds methods ([traits.impl-members](#traits.impl-members)). They are named on a type:
 
-- `T.empty()` and `T.ZERO` on a type parameter bounded by the trait
+- `T.empty()` and `T.ZERO` on a type parameter bounded by the trait, and `F.empty()` and `F.ZERO` on a constructor parameter bounded by it ([traits.constructor-parameters](#traits.constructor-parameters))
 - `i64.empty()` and `i64.ZERO` on a type with an impl, found as [traits.qualified-calls](#traits.qualified-calls) finds `Type.m`
 - `Self.empty()` in the trait's own members
 
 `T.empty` is a function value, as `Type.m` is. `Trait.f(…)` for a function without `self`, and `Trait.NAME`, are E0330, *trait function or constant named without a type*, whose fix writes the type. No call is resolved from the type it is expected to have ([traits.no-overloading](#traits.no-overloading)). In a module that names `std.meta`, `T.shape()` and `T.name()` are found after these ([meta.shape-and-name](16-meta.md#meta.shape-and-name)). Trait functions without `self` and trait constants are part of the advanced tier.
 
-Tests: [parameters/trait_function_errors.lt](../conformance/parameters/trait_function_errors.lt), [parameters/trait_functions.lt](../conformance/parameters/trait_functions.lt).
+Tests: [parameters/constructor_members.lt](../conformance/parameters/constructor_members.lt), [parameters/trait_function_errors.lt](../conformance/parameters/trait_function_errors.lt), [parameters/trait_functions.lt](../conformance/parameters/trait_functions.lt).
 
 <a id="traits.trait-constants"></a>
 A trait constant's type may name `Self` and the trait's parameters. It has one value for each impl, unlike a constant of a generic block ([declarations.impl-constants](10-declarations.md#declarations.impl-constants)). It is evaluated as the constants of a type are ([declarations.constant-evaluation](10-declarations.md#declarations.constant-evaluation)). Trait constants that refer to one another in a cycle are E0327, *constants in a cycle*.
@@ -296,10 +296,13 @@ Tests: [parameters/constructor_errors.lt](../conformance/parameters/constructor_
 <a id="traits.receiver-types"></a>
 Each method of a constructor trait writes the type of its receiver, as `self: Self<A>` or `inout self: Self<A>`, and that type is `Self` applied to types. A method of an impl writes it with the impl's constructor, as `self: Option<A>` ([traits.constructor-impls](#traits.constructor-impls)). Each of these is E0338, *receiver's type written or missing*:
 
-- a method of a constructor trait whose receiver's type isn't written
+- a method of a constructor trait or of one of its impls whose receiver's type isn't written
+- a method of a constructor trait whose receiver's written type isn't `Self` applied to types
 - a receiver with a written type anywhere but in a constructor trait and its impls
 
-Tests: [parameters/constructor_errors.lt](../conformance/parameters/constructor_errors.lt), [parameters/inherent_receiver_type.lt](../conformance/parameters/inherent_receiver_type.lt).
+A constructor trait's `Self` isn't a type, so in a constructor trait and its impls a receiver with E0338 has the error type ([errors.error-type](18-errors.md#errors.error-type)), and nothing that reads it is another error.
+
+Tests: [parameters/constructor_errors.lt](../conformance/parameters/constructor_errors.lt), [parameters/constructor_receiver_errors.lt](../conformance/parameters/constructor_receiver_errors.lt), [parameters/inherent_receiver_type.lt](../conformance/parameters/inherent_receiver_type.lt).
 
 <a id="traits.constructor-impls"></a>
 `impl Name for Con { … }` implements a constructor trait for a type constructor of the trait's arity. The impl writes `Con` without arguments and has no impl parameters, as in `impl Mappable for Option`. Each of these is E0337, *type of the wrong kind*, and the members of such an impl aren't checked:
@@ -319,9 +322,9 @@ A generic of a function bounded by a constructor trait is a **constructor parame
 - a bound list that mixes a constructor trait with another trait, or two constructor traits of different arities
 - a constructor trait bounding a generic of an impl block
 
-At a call, a constructor parameter is inferred from the head of the argument's type, so `doubled(Some(2))` takes `F` to be `Option`. A type whose head has no impl of the trait, as a tuple, is E0318, *unsatisfied bound*. A type that isn't headed by a constructor applied to that many arguments, as `i64` where `F<i64>` is expected, is E0311, *mismatched types*. A method call whose receiver's type is headed by a constructor parameter finds the methods of its bounds ([traits.method-resolution](#traits.method-resolution)).
+At a call, a constructor parameter is inferred from the head of the argument's type, so `doubled(Some(2))` takes `F` to be `Option`. A type whose head has no impl of the trait, as a tuple, is E0318, *unsatisfied bound*. A type that isn't headed by a constructor applied to that many arguments, as `i64` where `F<i64>` is expected, is E0311, *mismatched types*. A method call whose receiver's type is headed by a constructor parameter finds the methods of its bounds ([traits.method-resolution](#traits.method-resolution)). A constructor parameter names the functions without `self` and the constants of its bounds as a type parameter does, so under `F: Mappable` with a trait constant `N`, `F.N` is the `N` of the impl for the constructor that `F` stands for ([traits.functions-without-self](#traits.functions-without-self)).
 
-Tests: [parameters/constructor_errors.lt](../conformance/parameters/constructor_errors.lt), [parameters/constructors.lt](../conformance/parameters/constructors.lt), [parameters/constructors_several.lt](../conformance/parameters/constructors_several.lt).
+Tests: [parameters/constructor_errors.lt](../conformance/parameters/constructor_errors.lt), [parameters/constructor_members.lt](../conformance/parameters/constructor_members.lt), [parameters/constructors.lt](../conformance/parameters/constructors.lt), [parameters/constructors_several.lt](../conformance/parameters/constructors_several.lt).
 
 <a id="traits.advanced-tier"></a>
 A module is in the advanced tier ([program.module-tier](04-programs.md#program.module-tier)) when it does any of these:

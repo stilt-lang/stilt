@@ -1,0 +1,30 @@
+//~ tier: advanced
+//~ rule: traits.receiver-types
+
+// A receiver with E0338 in a constructor trait or one of its impls has the error type, so
+// neither the impl's signature (E0307) nor a use of `self` (E0311) is another error.
+
+trait Mappable {
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+  fn grow<A>(inout self: Self<A>, x: A)
+  // A method of the trait whose receiver's type isn't written.
+  fn size(self) -> i64 { self.transform(|x| x).count() } //~ ERROR E0338
+  // A written receiver type that isn't `Self` applied.
+  fn first(self: i64) -> i64 //~ ERROR E0338
+}
+
+impl Mappable for Option {
+  // A method of an impl whose receiver's type isn't written.
+  fn transform<A, B>(self, f: fn(A) -> B) -> Option<B> { //~ ERROR E0338
+    match self {
+      Some(x) => Some(f(x))
+      None => None
+    }
+  }
+  fn grow<A>(inout self, x: A) { self = Some(x) } //~ ERROR E0338
+  fn first(self: i64) -> i64 { self }
+}
+
+fn main() / io {
+  print("{Some(1).transform(|x| x + 1)}")
+}

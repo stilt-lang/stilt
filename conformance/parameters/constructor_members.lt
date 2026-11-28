@@ -1,0 +1,49 @@
+//~ tier: advanced
+//~ rule: traits.functions-without-self, traits.constructor-parameters
+//~ stdout:
+//~ | 1 None
+//~ | 2 []
+//~ | 10 20
+//~ | 1 2
+
+trait Container {
+  const N: i64
+  fn empty<A>() -> Self<A>
+  fn transform<A, B>(self: Self<A>, f: fn(A) -> B) -> Self<B>
+  // The trait's own members name its constant on `Self`.
+  fn scaled<A>(self: Self<A>) -> i64 { Self.N * 10 }
+}
+
+impl Container for Option {
+  const N: i64 = 1
+  fn empty<A>() -> Option<A> { None }
+  fn transform<A, B>(self: Option<A>, f: fn(A) -> B) -> Option<B> {
+    match self {
+      Some(x) => Some(f(x))
+      None => None
+    }
+  }
+}
+
+impl Container for List {
+  const N: i64 = 2
+  fn empty<A>() -> List<A> { [] }
+  fn transform<A, B>(self: List<A>, f: fn(A) -> B) -> List<B> {
+    var out: List<B> = []
+    for x in self { out.push(f(x)) }
+    out
+  }
+}
+
+// `F.N` is the constant of the impl for the constructor that `F` stands for.
+fn count<F: Container>(xs: F<i64>) -> i64 { F.N }
+
+// `F.empty()` takes its `A` from the type it returns.
+fn cleared<F: Container>(xs: F<i64>) -> F<i64> { F.empty() }
+
+fn main() / io {
+  print("{count(Some(5))} {cleared(Some(5))}")
+  print("{count([5, 6])} {cleared([5, 6])}")
+  print("{Some(1).scaled()} {[1].scaled()}")
+  print("{Option.N} {List.N}")
+}
