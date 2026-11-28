@@ -104,16 +104,25 @@ let param_type ctx signature mode (n : name) (t : Ast.ty) escaping =
   | _ -> resolve_ty ~poly:true signature t
 
 (* traits.receiver-types: a method of a constructor trait, or of an impl of one,
-   writes its receiver's type, and no other method does. *)
+   writes its receiver's type, and no other method does; the trait's is [Self]
+   applied. Its `Self` is no type, so a receiver with E0338 there has the error
+   type, and nothing that reads it reports another error. *)
 let receiver_type ctx signature loc (t : Ast.ty option) =
   match t with
   | None when ctx.ctor > 0 ->
       errorf ctx Code.e0338 loc
         "a method of a trait over type constructors writes its receiver's \
          type, as `self: Self<A>`";
-      None
+      Some { desc = Ty_error; loc }
   | None -> None
-  | Some t when ctx.ctor > 0 -> Some (resolve_ty signature t)
+  | Some t when ctx.ctor > 0 -> (
+      match (ctx.self, resolve_ty signature t) with
+      | Trait_self, ({ desc = Ty_self_app _ | Ty_error; _ } as ty) -> Some ty
+      | Trait_self, _ ->
+          errorf ctx Code.e0338 t.loc
+            "a receiver's type is `Self` applied to types, as `Self<A>`";
+          Some { desc = Ty_error; loc = t.loc }
+      | _, ty -> Some ty)
   | Some _ ->
       errorf ctx Code.e0338 loc
         "a receiver's type is `Self`, which isn't written: write `self`";
