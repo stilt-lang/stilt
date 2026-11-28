@@ -409,6 +409,8 @@ partial def expr (j : Json) : Except String Expr := do
   | "intFloat" => .form .intFloat <$> (f 0 >>= expr)
   -- `["optionField", m]`: `e.f` through an `Option`, written as the `match` it means.
   | "optionField" => .form .optionField <$> (f 0 >>= expr)
+  -- `["update", m]`: `{ ..base, f: e }`, written as the bindings and record it means.
+  | "update" => .form .update <$> (f 0 >>= expr)
   -- `["projection", res, type, body]`: a projection's body written for an access whose value
   -- has `type`, which keeps the access's values in `res` (`Expr.projectionBody`).
   | "projection" => return .projectionBody (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)

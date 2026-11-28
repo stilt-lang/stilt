@@ -335,7 +335,8 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   `place op= e` runs as values.compound-assignment-order orders it, an integer literal takes a
   float type that represents it exactly (numbers.integer-literals), and `e.f` reads the field
   of the value inside the `Option` of `e`, evaluated once (types.fields-through-option), at
-  `Option<U>` (types.option-field-types). -/
+  `Option<U>` (types.option-field-types); a record update builds its record from `base` and
+  the fields written, evaluated in that order (`Expr.Update`). -/
   | shaped {Γ fx k m τ} : k.Shaped m → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
   /-- A form of tasks, scopes or lazy values is typed as the code it means in the sequential
   run, which its own rules shape (`TaskForm`, tasks.sequential-run). -/

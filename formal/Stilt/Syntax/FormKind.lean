@@ -40,6 +40,8 @@ inductive Form where
   /-- `place op= e` (`Expr.Compound`), an integer literal at a float type, and `e.f` through an
   `Option` (`Form.Shaped`). -/
   | compound | intFloat | optionField
+  /-- `{ ..base, f: e }`, a record update (`Expr.Update`). -/
+  | update
   /-- `task.spawn(f)`, which runs the task's function to its end (`Expr.spawnOf`). -/
   | spawn
   /-- `t.await()`, the value the task ended with (`Expr.awaitOf`). -/

@@ -37,4 +37,5 @@ let update ~expr cx (e : Tast.expr) (base : Tast.expr) written =
         tag "letIn" [ Str n; ty cx x.ty; expr x; acc ])
       named built
   in
-  tag "letIn" [ Str b; ty cx base.ty; expr base; body ]
+  (* records.update-fields: the calculus's form of [{ ..base, f: e }]. *)
+  tag "update" [ tag "letIn" [ Str b; ty cx base.ty; expr base; body ] ]

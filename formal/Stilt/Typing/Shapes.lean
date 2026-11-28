@@ -78,15 +78,32 @@ inductive Expr.ThroughOption (f : Name) : Expr → Expr → Prop
   | through {e m : Expr} {U : Ty} {x : Name} : Expr.ThroughOption f (.var x) m →
       Expr.ThroughOption f e (e.throughOption U x (.form .optionField m))
 
+/-- A field of an update's record: a written one, read from the temporary that holds its value,
+or another, read from the temporary `b` that holds the base (records.update). -/
+def Expr.UpdateField (ts : List Name) (b : Name) (fe : Name × Expr) : Prop :=
+  (∃ t ∈ ts, fe.2 = .var t) ∨ fe.2 = .field (.var b) fe.1
+
+/-- `{ ..base, f: e }` and `Name { ..base, f: e }` as they run (records.update-fields): `base` is
+evaluated first, into `b`, then the fields written, in written order, into the temporaries `ts`;
+the record of `base`'s type, `R` at `args`, is then built from them, each field written from its
+temporary and every other copied from `b`. So the update's type is `base`'s, it adds and removes
+no field, and with no field written it is a copy of `base` (records.update). -/
+inductive Expr.Update : Expr → Prop
+  | mk {b R : Name} {args : List Ty} {base : Expr} {ts : List (Name × Ty × Expr)}
+      {fields : List (Name × Expr)} :
+      (∀ fe ∈ fields, Expr.UpdateField (ts.map (·.1)) b fe) →
+      Expr.Update (.letIn b (.record R args) base (Expr.lets ts (.record R args fields)))
+
 /-- The meaning that each form typed by `HasType.shaped` must have. A compound assignment is
 `Expr.Compound`. An integer literal at a float type is the float literal of its value, which
 the type must represent exactly, so `9007199254740993` can't be an `f64`
 (numbers.integer-literals); a negative one is that literal negated
-(numbers.negative-literals). -/
+(numbers.negative-literals). A record update is `Expr.Update`. -/
 def Form.Shaped : Form → Expr → Prop
   | .compound, m => m.Compound
   | .intFloat, m => ∃ k n, m = .op (.float k n false 0) [] ∧ k.Represents n
   | .optionField, m => ∃ f e, m.ThroughOption f e
+  | .update, m => m.Update
   | _, _ => False
 
 /-- What a form of a written body, before any instance replaces its type parameters, asks of
@@ -158,10 +175,33 @@ theorem Expr.ThroughOption.substTys (s : TySubst) {f : Name} :
   | _, _, .some => .some
   | _, _, .through h => .through (h.substTys s)
 
+theorem mem_substFieldTys (s : TySubst) : ∀ {fields : List (Name × Expr)} {fe : Name × Expr},
+    fe ∈ substFieldTys s fields → ∃ g ∈ fields, fe = (g.1, g.2.substTys s)
+  | (f, e) :: fields, fe, h => by
+    simp only [substFieldTys, List.mem_cons] at h
+    rcases h with h | h
+    · exact ⟨(f, e), .head _, h⟩
+    · obtain ⟨g, hg, he⟩ := mem_substFieldTys s h
+      exact ⟨g, .tail _ hg, he⟩
+
+theorem Expr.Update.substTys (s : TySubst) {m : Expr} (h : m.Update) : (m.substTys s).Update := by
+  cases h with
+  | @mk b R args base ts fields hf =>
+    simp only [Expr.substTys]
+    rw [Expr.lets_substTys]
+    simp only [Expr.substTys]
+    refine .mk fun fe hfe => ?_
+    obtain ⟨⟨f, e⟩, hg, rfl⟩ := mem_substFieldTys s hfe
+    rw [names_map]
+    rcases hf (f, e) hg with ⟨t, ht, he⟩ | he
+    · exact .inl ⟨t, ht, by simp only at he ⊢; rw [he]; rfl⟩
+    · exact .inr (by simp only at he ⊢; rw [he]; rfl)
+
 theorem Form.Shaped.substTys (s : TySubst) : ∀ {k : Form} {m : Expr},
     k.Shaped m → k.Shaped (m.substTys s)
   | .compound, _, h => Expr.Compound.substTys s h
   | .intFloat, _, ⟨k, n, hm, hn⟩ => ⟨k, n, by rw [hm]; rfl, hn⟩
   | .optionField, _, ⟨f, e, h⟩ => ⟨f, e.substTys s, h.substTys s⟩
+  | .update, _, h => Expr.Update.substTys s h
 
 end Stilt
