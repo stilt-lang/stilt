@@ -22,6 +22,15 @@ fn twice(a: sync.Shared<Account>) {
   f(a, 2) //~ DIV
 }
 
+// The end of a `when` reads each name as it gives its value back to its handle, so a write to a
+// copy of the name's value in the block is shared (modes.handles and modes.shared-holders).
+fn poke(a: sync.Shared<List<i64>>) {
+  when a { //~ LOCKS ATOMIC
+    var z = a
+    z[0] = 9 //~ SHARED z PANIC ALLOC COPY
+  }
+}
+
 // The closure captures `a` by copy, so it is stored in a value (values.consumed-parameters).
 fn later(a: sync.Shared<Account>) -> fn() {
   || when a { a.balance = 0 } //~ CONSUMES a ALLOC LOCKS ATOMIC

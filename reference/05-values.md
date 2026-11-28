@@ -7,7 +7,7 @@ This chapter says what a value is and how it moves through a program. It gives c
 <a id="values.value-semantics"></a>
 Every core value has **value semantics**. A value can appear to change only through a binding the program names as mutable: a `var` binding or an `inout` parameter ([modes.what-can-be-modified](13-modes.md#modes.what-can-be-modified)).
 
-Tests: [values/independent_copies.lt](../conformance/values/independent_copies.lt), [values/let_immutable.lt](../conformance/values/let_immutable.lt).
+Tests: [modes/shared_storage_read_after.lt](../conformance/modes/shared_storage_read_after.lt), [values/independent_copies.lt](../conformance/values/independent_copies.lt), [values/let_immutable.lt](../conformance/values/let_immutable.lt).
 
 <a id="values.independent-copies"></a>
 Each of these makes a copy that is independent of the original:

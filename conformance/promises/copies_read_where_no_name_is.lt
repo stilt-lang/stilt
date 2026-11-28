@@ -1,0 +1,77 @@
+//~ tier: advanced
+//~ rule: modes.shared-holders, modes.handles, modes.durations, modes.shared-writes, facts.copy, facts.without-copy
+
+// A binding is read where no name spells it: at the end of a `when`, which gives each name's value
+// back to its handle, and by a call, which reads each of its `inout` arguments until it returns. A
+// write to a copy that such a binding holds is shared there.
+
+use std.sync
+
+fn both(inout p: List<i64>, inout q: List<i64>) -> i64 {
+  p[0] = 5
+  q[0]
+}
+
+// The end of the `when` reads `a` after the write to `z`.
+fn when_end(a: sync.Shared<List<i64>>) without copy {
+  when a {
+    var z = a
+    z[0] = 9 //~ ERROR E0204
+  }
+}
+
+// Once `a`'s whole is assigned, the end gives back the value assigned, which `z` doesn't share.
+fn when_end_replaced(a: sync.Shared<List<i64>>) without copy {
+  when a {
+    var z = a
+    a = [0]
+    z[0] = 9
+  }
+}
+
+// The call modifies `a` and `b` when it starts, and reads each of them until it returns, so each
+// write reaches what the other reads.
+fn two_arguments() -> i64 without copy {
+  let t = [1, 2]
+  var a = t
+  var b = t
+  both(inout a, inout b) //~ ERROR E0204
+}
+
+// `a` and `b` hold copies of different values, so neither write reaches what the other reads.
+fn two_values(t: List<i64>, u: List<i64>) -> i64 without copy {
+  var a = t
+  var b = u
+  both(inout a, inout b)
+}
+
+// `o` reads the value assigned to it, not the one `z` copied.
+fn source_replaced() -> i64 without copy {
+  var o = [1, 2]
+  var z = o
+  o = [7, 8]
+  z[0] = 9
+  z[0] + o[0]
+}
+
+// `w` holds a copy of the value that `z` copied.
+fn holder_of_that_value() -> i64 without copy {
+  var o = [1, 2]
+  var z = o
+  let w = o
+  o = [7, 8]
+  z[0] = 9 //~ ERROR E0204
+  w[0] + z[0]
+}
+
+// `w` holds a copy of `o`'s later value, which counts as well.
+fn holder_of_a_later_value() -> i64 without copy {
+  var o = [1, 2]
+  var z = o
+  o = [7, 8]
+  let w = o
+  z[0] = 9 //~ ERROR E0204
+  w[0] + z[0]
+}
+
+fn main() {}

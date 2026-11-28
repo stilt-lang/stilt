@@ -1,0 +1,3 @@
+kind: language
+
+A write to a copy that a binding holds is now shared when the end of a `when` or a call reads the storage after it: the end of `when a { var z = a; z[0] = 9 }` gives `a` back to its handle, and `both(inout b, inout c)` reads both arguments until it returns after `var b = t` and `var c = t`. `stilt show` marks these writes `copy`, and `without copy` rejects them with E0204: write the name itself, as `a[0] = 9`, or pass arguments that hold different values. Under `without copy`, an error at an `inout` argument now points at the argument rather than the call, and several on one line are one error.

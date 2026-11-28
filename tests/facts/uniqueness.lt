@@ -208,6 +208,20 @@ fn copied_inout(inout xs: List<i64>) {
   ys.push(2) //~ SHARED ys ALLOC COPY
 }
 
+fn both(inout p: List<i64>, inout q: List<i64>) -> i64 {
+  p[0] = 5 //~ PANIC ALLOC
+  q[0] //~ PANIC
+}
+
+// A call reads each of its `inout` arguments until it returns, after the modifications of them all
+// that start it, so the modification of each reaches what the other reads.
+fn two_arguments() -> i64 {
+  let t = [1, 2] //~ ALLOC
+  var a = t
+  var b = t
+  both(inout a, inout b) //~ SHARED a SHARED b PANIC ALLOC COPY
+}
+
 // A closure's next call reads what it captures.
 fn copied_capture() -> i64 {
   let xs = [1] //~ ALLOC
