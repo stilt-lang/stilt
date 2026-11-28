@@ -50,7 +50,12 @@ def Program.PanicKeptBy (p : Program) (limited : Limits → Bool) (overflows pan
     (∀ d ∈ p.decls.fns, limited d.limits = true → lim.fn d.name = true) ∧
     (limited p.limits = true → p.main.panicFree lim = true)
 
-/-- `without panic`, on each function and `main` it limits (effects.without-panic). -/
+/-- `without panic`, on each function and `main` it limits (effects.without-panic). Each body is
+proved alone, reading only the limits of the functions it names (facts.verification): an
+element read or write of a list, an integer division or remainder, and a read of `m[k]` that a
+rule of acceptance proves can't panic, and no other panic, `assert`, `unreachable`,
+`explicit` and `hole` among them. Verification's analysis of a body's integer values, which
+proves more for release builds, is left out, as README's departures say. -/
 def Program.PanicLimited (p : Program) : Prop := p.PanicKeptBy (·.panic) true false
 
 /-- `without panic, overflow`, on each function and `main` that both limit
@@ -68,7 +73,9 @@ only functions of the set, which call each other without recursion, but for self
 descend (facts.descending-self-calls) or shrink (facts.shrinking-recursion), and `main`'s body
 is such code when `main` is limited. A function's body may call through its non-escaping
 parameters at the positions `H` gives, which adds no `div`: each call of the function passes
-there an argument whose sites are counted where it is written (facts.div). -/
+there an argument whose sites are counted where it is written (facts.div). Its counting loops
+and its shrinking self-calls are the other two rules of acceptance, read from the body's text
+(facts.rules-of-acceptance). -/
 def Program.DivLimited (p : Program) : Prop :=
   ∃ (lim : Limited) (B : Name → Nat) (desc : Name → Descent) (H : Name → List Nat),
     p.decls.Ranked lim B desc H ∧

@@ -110,7 +110,8 @@ inductive Op where
   /-- `true` or `false` (std.show-output). -/
   | showBool
   /-- A string padded with copies of a character to a width, by a format
-  spec's fill, alignment and width (std.width-fill-and-alignment). -/
+  spec's fill, alignment and width (std.width-fill-and-alignment): a spec changes what an
+  interpolation shows (numbers.format-specs). -/
   | pad (fill : Char) (align : Align) (width : Nat)
   /-- An integer in base 16, 8 or 2, in uppercase when `upper` says so, by the
   kinds `x`, `X`, `o` and `b` (std.integer-kinds). -/

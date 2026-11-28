@@ -15,7 +15,11 @@ namespace Stilt
 
 mutual
 
-/-- The variables that `e` may change. -/
+/-- The variables that `e` may change: those it assigns, modifies or passes `inout`, which
+is what facts.acceptance-places calls writing a binding. A closure literal's body writes only
+its own copies of what it captures, so a closure literal writes nothing of the code around it.
+The model reads a whole variable where the Reference reads a place, a name with fields after
+it: a write of `g.cells` writes `g`, which accepts less. -/
 def Expr.writes : Expr → List Name
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => []
@@ -73,9 +77,12 @@ end
 
 mutual
 
-/-- The variables whose lists `e` may change the length of: those it stores whole,
-and those it passes `inout` whole. A store or an `inout` argument below a
-variable, `xs[i] = v` or `f(inout xs[i])`, keeps its list's length (`Value.set_sameLen`). -/
+/-- The variables whose lists `e` may change the length of (facts.acceptance-places): those it
+stores whole, and those it passes `inout` whole, a method's `inout` receiver and a projection's
+yield among them, whose meaning passes the place to the access `inout`. A store or an `inout`
+argument below a variable, `xs[i] = v` or `f(inout xs[i])`, keeps its list's length
+(`Value.set_sameLen`). The model reads whole variables, not places with fields, and an array is
+a list in the calculus, so a store of an array's binding counts as changing its length. -/
 def Expr.resizes : Expr → List Name
   | .var _ | .move _ | .int _ | .bool _ | .unit | .break | .continue | .fnRef _ _ _
   | .method _ _ _ | .closure _ _ _ _ => []

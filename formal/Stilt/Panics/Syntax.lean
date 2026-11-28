@@ -165,7 +165,10 @@ it or as a value, adds `panic` unless `lim` covers it: a function limited by
 literal's body is checked where it is written, a named function where it is named
 (facts.calls-through-function-values). Where `lim` rules out `overflow`, an operation that
 can overflow at its types is a site too (`Op.overflowFreeOn`), and so is an index that
-arithmetic computes (effects.without-overflow). -/
+arithmetic computes (effects.without-overflow). Its tests are four of the rules of acceptance
+(facts.rules-of-acceptance), the range loop, the guard, the divisor and the key, each a shape
+of the body's text and of the names it binds, read with no fact of an analysis; the counting
+loop and shrinking recursion are `Program.DivLimited`'s. -/
 def Expr.panicFreeIn : List Known → Expr → Bool
   | _, .var _ | _, .move _ | _, .int _ | _, .bool _ | _, .unit | _, .break | _, .continue => true
   | _, .fnRef f _ _ => lim.fn f
