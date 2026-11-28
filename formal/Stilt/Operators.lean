@@ -170,6 +170,8 @@ inductive PanicKind where
   | explicit
   | unreachable
   | unwrap
+  /-- The kind of a false `assert e`, which the export writes as `if e { } else` this panic, so
+  it panics with this kind exactly when `e` is false (program.assert-expr). -/
   | assert
   | deadlock
   | checkError

@@ -47,7 +47,8 @@ The other limits, `locks` and `unsafe`, name facts that the calculus doesn't hav
 
 `panic`, `overflow`, `alloc`, `div` and `copy` are the implicit effects (facts.implicit-effects):
 facts the checks infer from bodies, written in no signature and no part of a function's type,
-since a `Row` has no element for them. E0501, at `panic` or `alloc` written in a row, and the
+since a `Row` has no element for them: no row writes `panic` or `alloc` (effects.other-effects,
+whose tiers are outside the calculus). E0501, at `panic` or `alloc` written in a row, and the
 reading of `overflow`, `div` and `copy` there as row variables, are the export's. -/
 structure Limits where
   panic : Bool := false
