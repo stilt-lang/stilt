@@ -9,6 +9,15 @@ writable views (`Stilt.Writable`) and those of tasks, scopes, lazy values and `s
 
 namespace Stilt
 
+/-- A function of `std.view`'s `Iter<T>` that the calculus writes as a call of the function the
+export declares for it (`Stilt.Typing.IterForms`): the makers `Iter.of` and `view.range`, the
+adapters and the consumers. -/
+inductive IterFn where
+  | of | range
+  | map | filter | take | skip | takeWhile | skipWhile | enumerate | zip | chain
+  | collect | fold | count | any | all | find | first | last | nth | max | min
+  deriving DecidableEq, Repr
+
 /-- A form of the Reference whose typing has rules of its own beside those of the `match`
 it means, which `Expr.form` keeps with it: `let P = e else x` with a refutable `P`, a
 let-else (patterns.let-else), and `e₁ else e₂`, the `Option` fallback
@@ -65,6 +74,12 @@ inductive Form where
   | parMap | parEach | parBoth | parFold
   /-- `v[i]` on a view of a list, the element `i` of the part it reads (`Form.Shaped`). -/
   | viewIndex
+  /-- A function of an iterator, a call of the function the export declares for it
+  (`Expr.iterOf`). -/
+  | iter (f : IterFn)
+  /-- A read of a trait's constant at a type, the value of the constant the program declares
+  for it under `name` (`Expr.traitConstOf`). -/
+  | traitConst (name : String)
   deriving DecidableEq, Repr
 
 end Stilt

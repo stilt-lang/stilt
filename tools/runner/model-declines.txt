@@ -145,10 +145,5 @@ conformance/variadics/effects.lt
 conformance/variadics/recursion.lt
 conformance/variadics/row_recursion.lt
 conformance/variadics/spreads.lt
-conformance/views/consumer_callback_raises.lt
-conformance/views/for_over_views.lt
-conformance/views/iterators.lt
-conformance/views/laziness.lt
 conformance/views/stored_accepted.lt
-conformance/views/temporaries.lt
 conformance/views/view_basics.lt

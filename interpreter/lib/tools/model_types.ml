@@ -167,7 +167,9 @@ let rec ty cx (t : Types.ty) =
   | Con ({ home = "std.prelude"; name = "Set" }, _) ->
       outside
         "a set whose elements the calculus may not compare as the program does"
-  | Con (({ home = "std.lazy" | "std.task"; _ } as i), [ t ]) -> library cx i t
+  | Con (({ home = "std.lazy" | "std.task"; _ } as i), [ t ])
+  | Con (({ home = "std.view"; name = "Iter" } as i), [ t ]) ->
+      library cx i t
   | Tuple [] -> Str "unit"
   | Tuple ts -> tag "tuple" [ Arr (List.map (ty cx) ts) ]
   | Fn (ps, r, rw) -> fn_ty cx ps r rw
@@ -210,6 +212,17 @@ and library cx (i : Hir.item) t =
     | "Lazy" ->
         cx.lazy_met <- true;
         [ ("get", tag "fn" [ Arr []; param; pure ]) ]
+    | "Iter" ->
+        (* views.laziness: an iterator is the record of the function that asks for its next
+           element and the iterator of the rest (formal/Stilt/Typing/Iters.lean). *)
+        let option = { Hir.home = "std.prelude"; name = "Option" } in
+        let name = declared cx option [ Types.Tuple [] ] in
+        let rest = tag "record" [ Str (item_name i); Arr [ param ] ] in
+        let step =
+          tag "variant"
+            [ Str name; Arr [ tag "tuple" [ Arr [ param; rest ] ] ] ]
+        in
+        [ ("next", tag "fn" [ Arr []; step; pure ]) ]
     | _ -> outside "the type %s" (item_name i)
   in
   let name = item_name i in

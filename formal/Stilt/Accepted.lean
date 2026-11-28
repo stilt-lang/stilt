@@ -23,6 +23,7 @@ import Stilt.Tasks.Lazy
 import Stilt.Tasks.Unobservable
 import Stilt.Anonymous
 import Stilt.Arrays
+import Stilt.Handling.WithPaired
 
 /-!
 # Accepted programs and their soundness
@@ -43,8 +44,8 @@ rules of projections (projections.once-on-every-path), puts no `fixed` value in 
 (par.what-runs-in-parallel), lets no scope escape (tasks.scope-that-escapes), gives
 `Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing), keeps the limits of
 capabilities (facts.capabilities), declares each anonymous record type once, with no home
-(`Decls.AnonymousRecords`), and declares arrays as the records of their elements, each literal
-of the array's size (`Decls.Arrays`).
+(`Decls.AnonymousRecords`), declares arrays as the records of their elements, each literal of the
+array's size (`Decls.Arrays`), and lets no `with` take a performance that belongs to a caller.
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -192,6 +193,10 @@ structure Program.Accepted (p : Program) : Prop where
   /-- A list literal that makes an array has as many elements as its size (E0311,
   `Program.ArrayLiterals`). -/
   arrayLiterals : p.ArrayLiterals
+  /-- No call in a `with`'s block passes the handler a performance through a row variable of the
+  enclosing function that its signature doesn't pair with the handler's effect
+  (handlers.with-pairing, E0516). No promise rests on it. -/
+  withPaired : p.WithPaired
 
 /-- What an accepted program's run at a fuel, on an input, keeps of the Reference's promises. -/
 structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop where

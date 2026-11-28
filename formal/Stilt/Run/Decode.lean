@@ -315,7 +315,6 @@ def op (j : Json) : Except String Op := do
   | "copy" => pure .copy
   | _ => throw s!"no operation is named {tag}"
 
-
 /-- A parameter: `[mode, name, type, implicit]`. -/
 def param : Decoder Param
   | .arr #[m, n, t, i] => return ⟨← mode m, ← str n, ← ty t, ← option str i⟩
@@ -423,10 +422,9 @@ partial def expr (j : Json) : Except String Expr := do
     return .form .yield (.assign ⟨res, []⟩ (.op (.list .push) [.var res, .try (← f 1 >>= expr)]))
   -- `["yielded", res]`: the access's value, which a projection's `return` gives.
   | "yielded" => return .yieldedOf (← f 0 >>= str)
-  -- `["project", call]`: a call of a projection where a place is (`Expr.projectCall`).
+  -- `["project", call]`: a projection's call where a place is (`Expr.projectCall`); `["writes",
+  -- call]`: a writable binding and its block's rest, a closure's call (`Form.writes`).
   | "project" => return .form .project (← f 0 >>= expr)
-  -- `["writes", call]`: a writable binding and the rest of its block, the call of a closure
-  -- that takes its source `inout` (`Form.writes`).
   | "writes" => return .form .writes (← f 0 >>= expr)
   -- `["through", j, start, end, i]`: the index of a place through a writable binding whose
   -- part runs from `start` up to `end` of its source (`Expr.throughOf`).
@@ -446,12 +444,16 @@ partial def expr (j : Json) : Except String Expr := do
   | "asyncWith" => return .asyncWith (← f 0 >>= expr) (← f 1 >>= expr)
   | "lazyNew" => return .lazyNewOf lazyName (← f 0 >>= ty) (← f 1 >>= expr)
   | "lazyGet" => return .lazyGetOf lazyName (← f 0 >>= str) (← f 1 >>= ty) (← f 2 >>= expr)
-  -- The functions of `std.par` (`Stilt.Typing.Par`): `["parMap", n, g, acc, x, T, U, xs, f]`,
-  -- `["parEach", g, i, T, place, f]`, `["parBoth", a, b, A, B, f, g]` and `["parFold", n, d, g, T,
-  -- xs, empty, f]`, the names those of the temporaries their code binds, and the types those of
-  -- the elements and of the functions' results.
-  -- `["viewIndex", v, i]`: `v[i]` on a view of a list, the index of its `copy` (`Form.Shaped`).
+  -- `std.par` (`Stilt.Typing.Par`): `["parMap", n, g, acc, x, T, U, xs, f]`, `["parEach", g, i, T,
+  -- place, f]`, `["parBoth", a, b, A, B, f, g]` and `["parFold", n, d, g, T, xs, empty, f]`, names
+  -- those of the temporaries their code binds, types those of elements and functions' results.
+  -- `["viewIndex", v, i]`: `v[i]` on a view of a list, the index of its `copy`; `["traitConst",
+  -- name, value]`, `Expr.traitConstOf`; `["iter", name, types, rows, args, type]`, `Expr.iterOf`.
   | "viewIndex" => return .form .viewIndex (.index (.op .copy [← f 0 >>= expr]) (← f 1 >>= expr))
+  | "traitConst" => return .traitConstOf (← f 0 >>= str) (← f 1 >>= expr)
+  | "iter" =>
+    let k ← (IterFn.named? (← f 0 >>= str)).elim (throw "no such iterator") pure
+    return .iterOf k (← f 1 >>= list ty) (← f 2 >>= list row) (← f 3 >>= list arg) (← f 4 >>= ty)
   | "parMap" =>
     return .parMapOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= str) (← f 3 >>= str)
       (← f 4 >>= ty) (← f 5 >>= ty) (← f 6 >>= expr) (← f 7 >>= expr)

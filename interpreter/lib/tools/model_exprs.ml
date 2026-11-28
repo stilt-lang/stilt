@@ -101,7 +101,15 @@ and control cx (e : Tast.expr) =
   | Float text -> float_lit e.ty text
   | Constant _ | Member_constant _ -> expr cx (constant cx e)
   | Trait_constant (trait, name, self) ->
-      expr cx (Model_forms.trait_constant cx e trait name self)
+      (* traits.trait-constants: the form that reads the constant the program declares for
+         the trait's constant at [self], the expression of its value. *)
+      let v = Model_forms.trait_constant cx e trait name self in
+      let key =
+        item_name trait ^ " for " ^ Check_state.show self ^ "." ^ name
+      in
+      if not (List.mem_assoc key cx.consts) then
+        cx.consts <- (key, v) :: cx.consts;
+      tag "traitConst" [ Str key; expr cx v ]
   | Value_param _ -> outside "a constant"
   | Callee (Function i, targs) when Model_fns.code cx (Function i) <> None ->
       if Model_writes.target_writes cx (Function i) <> None then
@@ -164,6 +172,8 @@ and call cx (e : Tast.expr) callee targs args =
       Model_shared.member_call (shared cx) cx e owner name args
   | Member (owner, name) when owner = Model_views.view_item ->
       Model_views.call ~expr:(expr cx) e name args
+  | Member (owner, name) when owner = Model_iters.iter_item ->
+      Model_iters.call ~expr:(expr cx) cx e name args
   | Member (owner, name) when gives_option owner name e.ty ->
       option_call cx e owner name
         (List.map (fun (a : Tast.arg) -> expr cx a.value) args)
@@ -207,6 +217,12 @@ and function_call cx (e : Tast.expr) (i : Hir.item) targs args =
       Model_writes.call (writing cx) cx e i args
   | None, { home = "std.task" | "std.par"; _ } ->
       Model_shared.std_call (shared cx) cx e i args
+  | ( None,
+      {
+        home = "std.view";
+        name = ("range" | "of_map" | "chars" | "bytes") as name;
+      } ) ->
+      Model_iters.view_call cx e name args (exported ())
   | None, { home = "std.array"; name = "fill" } -> (
       match args with
       | [ x ] -> Model_lists.array_fill (callbacks cx) cx e x.value

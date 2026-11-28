@@ -1,5 +1,7 @@
 import Stilt.Generics.Commute
 import Stilt.Typing.Par
+import Stilt.Typing.IterForms
+import Stilt.Typing.TraitConsts
 
 /-!
 # Tasks, scopes and lazy values
@@ -183,6 +185,20 @@ inductive TaskForm (D : Decls) : Form → Expr → Ty → Prop
       TaskForm D .parFold (.letIn n (.list T) xs (.letIn d T e (.letIn g (Ty.parFoldFn T) f
         (.if (.op (.compare .eq .i64) [.op (.list .len) [.var n], .int 0]) T (.var d)
           (Expr.foldTreeCall T (.var n) (.var g)))))) T
+  /-- A function of `std.view`'s `Iter<T>`, the call of the function the export declares for it
+  (`IterForm`). -/
+  | iter {k m τ} : IterForm D k m τ → TaskForm D k m τ
+  /-- traits.trait-constants: a read of a trait's constant at a type is the value of the constant
+  that the program declares under `name` for the impl of the trait at that type's head, at the
+  type's arguments: the impl's constant, or the trait's default with `Self` the type and the
+  trait's parameters the impl's arguments. So the constant's type names `Self` and the trait's
+  parameters as the impl gives them, the constant has one value for each impl, and its value is a
+  constant expression checked at its type, read where the constant is read, which gives the value
+  a first evaluation would (`Decls.ConstsTyped`, declarations.constant-evaluation). The program
+  declares the value with the constants it reads replaced by their values, as every read of a
+  constant is, so E0327, trait constants in a cycle, is left out, as is a read on a type parameter
+  that a body generic in it makes: the export writes every body at its instances. -/
+  | traitConst {n c m τ} : D.const? n = some c → ConstRead c m → TaskForm D (.traitConst n) m τ
 
 /-- A task's row keeps its shape once its type parameters are replaced, which leaves rows as
 they are. -/
@@ -213,5 +229,7 @@ theorem TaskForm.substTys {D : Decls} (s : TySubst) :
     exact .parEach hP
   | _, _, _, .parBoth => .parBoth
   | _, _, _, .parFold hF => .parFold hF
+  | _, _, _, .iter h => .iter (h.substTys s)
+  | _, _, _, .traitConst hc hm => .traitConst hc (.inst s hm)
 
 end Stilt

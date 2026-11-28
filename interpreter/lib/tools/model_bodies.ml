@@ -31,7 +31,10 @@ let for_loop cb cx (e : Tast.expr) (p : Tast.pattern) (it : Tast.iterable) b =
     | Iter it when is_array it.ty ->
         (* generics.array-iteration: the elements of the array's list, in order. *)
         (elements (cb.expr it), elem it.ty)
-    | Iter it -> (cb.expr it, elem it.ty)
+    | Iter it -> (
+        match Model_iters.element it.ty with
+        | Some t -> (cb.expr it, t)
+        | None -> (cb.expr it, elem it.ty))
     | Range (a, z, fin) ->
         let incl = fin = Ast.Inclusive in
         let range = tag "list" [ tag "range" [ Bool incl ] ] in
@@ -45,7 +48,10 @@ let for_loop cb cx (e : Tast.expr) (p : Tast.pattern) (it : Tast.iterable) b =
         let n = temp "for" e.loc in
         (n, tag "match" [ var_e n; ty cx (block_ty b); Arr [ arm cx p body ] ])
   in
-  tag "for" [ Str name; ty cx elem_ty; iterable; body ]
+  match it with
+  | Iter i when Model_iters.element i.ty <> None ->
+      Model_iters.loop cx e.loc elem_ty iterable name body
+  | _ -> tag "for" [ Str name; ty cx elem_ty; iterable; body ]
 
 let closure cb cx (e : Tast.expr) ps body =
   match norm e.ty with

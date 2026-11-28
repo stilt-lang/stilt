@@ -47,11 +47,13 @@ def limits (j : Json) : Except String Limits := do
 
 /-- A function: `[name, typeParams, rowParams, params, result, row, body]`, and after
 them the limits its body keeps, none when they are left out; or `"foldTree"`, the function of
-`par.fold`. -/
+`par.fold`, or the name of a function of iterators (`IterFn.decl`). -/
 def fnDecl (j : Json) : Except String FnDecl :=
   match j with
   -- `"foldTree"`: the function the export declares for `par.fold` (`FnDecl.foldTree`).
   | .str "foldTree" => return FnDecl.foldTree
+  -- `"std.view.Iter.f"`: the function the export declares for a function of iterators.
+  | .str n => (IterFn.named? n).elim (throw s!"a function, not {n}") (pure ·.decl)
   | .arr #[n, tps, rps, ps, r, rw, b] => decode n tps rps ps r rw b (.arr #[])
   | .arr #[n, tps, rps, ps, r, rw, b, ls] => decode n tps rps ps r rw b ls
   | j => throw s!"a function, not {j.compress}"
