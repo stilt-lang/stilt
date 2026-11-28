@@ -113,8 +113,8 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
       HasType Γ fx (.field e f) τ
   /-- `xs[i]` takes an `i64` index (std.lists). Only a list is indexed so, and a map through
   `MapOp.index` at its key type; an array is a list in the calculus. Nothing else has an index
-  rule (expressions.indexing, E0317), a view of a list included, which the Reference indexes and
-  the calculus doesn't, as README's departures say. -/
+  rule (expressions.indexing, E0317): `v[i]` on a view of a list is a form, the index of the
+  view's `copy` (`Form.Shaped`). -/
   | index {Γ fx e i τ σ} :
       HasType Γ fx e (.list τ) →
       HasType Γ fx i σ → Fits σ .i64 →
@@ -341,7 +341,8 @@ inductive HasType : Ctx → Effects → Expr → Ty → Prop
   `Option<U>` (types.option-field-types); a record update builds its record from `base` and
   the fields written, evaluated in that order (`Expr.Update`); and an assignment through a map's
   element reads the element as `m[k]` does and stores the changed copy back
-  (`Expr.ThroughElement`). -/
+  (`Expr.ThroughElement`); and `v[i]` on a view of a list reads the element of the viewed part,
+  as the index of its `copy`. -/
   | shaped {Γ fx k m τ} : k.Shaped m → HasType Γ fx m τ → HasType Γ fx (.form k m) τ
   /-- A form of tasks, scopes or lazy values is typed as the code it means in the sequential
   run, which its own rules shape (`TaskForm`, tasks.sequential-run). -/

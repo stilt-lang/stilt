@@ -32,18 +32,16 @@ let copied (x : Tast.expr) =
       }
   | None -> x
 
-(* An expression whose operands are views, read through their parts: [v[i]], a [for]
-   over [v], a splice of [v] and an operator on views, each of which reads the viewed
-   part as the same form of the part's type does (views.functions-of-views,
-   views.for-over-view). *)
+(* An expression whose operands are views, read through their parts: a [for] over [v], a
+   splice of [v] and an operator on views, each of which reads the viewed part as the same
+   form of the part's type does (views.functions-of-views, views.for-over-view). [v[i]] is a
+   form of the calculus of its own ([index]). *)
 let desugar (e : Tast.expr) =
   let splice = function
     | Tast.Splice (x, spec) -> Tast.Splice (copied x, spec)
     | s -> s
   in
   match e.desc with
-  | Index (b, i) when viewed b.ty <> None ->
-      { e with desc = Index (copied b, i) }
   | For (p, Iter it, b) when viewed it.ty <> None ->
       { e with desc = For (p, Iter (copied it), b) }
   | Interpolated segs -> { e with desc = Interpolated (List.map splice segs) }
@@ -83,3 +81,8 @@ let call ~expr (e : Tast.expr) name (args : Tast.arg list) =
   | "is_empty", [ v ], _ -> of_part (part ()) "isEmpty" [ copy v ]
   | "copy", [ v ], _ -> copy v
   | _ -> outside "the function std.view.View.%s" name
+
+(* [v[i]] on a [View<List<U>>]: the calculus's form whose meaning reads the element [i] of the
+   viewed part, panicking with [bounds] as [xs[i]] does (expressions.indexing and
+   views.functions-of-views). *)
+let index v i = tag "viewIndex" [ v; i ]

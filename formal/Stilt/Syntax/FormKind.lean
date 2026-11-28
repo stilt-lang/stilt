@@ -63,6 +63,8 @@ inductive Form where
   each its sequential run (`Expr.parMapOf`, `Expr.parEachOf`, `Expr.parBothOf` and
   `Expr.parFoldOf`). -/
   | parMap | parEach | parBoth | parFold
+  /-- `v[i]` on a view of a list, the element `i` of the part it reads (`Form.Shaped`). -/
+  | viewIndex
   deriving DecidableEq, Repr
 
 end Stilt

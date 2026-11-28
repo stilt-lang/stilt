@@ -131,13 +131,21 @@ inductive Expr.ThroughElement : Expr → Prop
 the type must represent exactly, so `9007199254740993` can't be an `f64`
 (numbers.integer-literals); a negative one is that literal negated
 (numbers.negative-literals). A record update is `Expr.Update`, and an assignment through a map's
-element `Expr.ThroughElement`. -/
+element `Expr.ThroughElement`.
+
+`v[i]` on a `View<List<U>>` (expressions.indexing and views.functions-of-views) is the index of
+the view's `copy`, which reads the element `i` of the viewed part and panics with `bounds` as
+`xs[i]` does: in copies a view is its part, and with windows `copy` reads the part through the
+window. The `copy` holds the view inline in the Reference, where the calculus counts the
+allocation of a `copy`, so `without alloc` rejects an index of a view that the Reference
+accepts. -/
 def Form.Shaped : Form → Expr → Prop
   | .compound, m => m.Compound
   | .intFloat, m => ∃ k n, m = .op (.float k n false 0) [] ∧ k.Represents n
   | .optionField, m => ∃ f e, m.ThroughOption f e
   | .update, m => m.Update
   | .element, m => m.ThroughElement
+  | .viewIndex, m => ∃ v i, m = .index (.op .copy [v]) i
   | _, _ => False
 
 /-- What a form of a written body, before any instance replaces its type parameters, asks of
@@ -283,5 +291,6 @@ theorem Form.Shaped.substTys (s : TySubst) : ∀ {k : Form} {m : Expr},
   | .optionField, _, ⟨f, e, h⟩ => ⟨f, e.substTys s, h.substTys s⟩
   | .update, _, h => Expr.Update.substTys s h
   | .element, _, h => Expr.ThroughElement.substTys s h
+  | .viewIndex, _, ⟨v, i, h⟩ => ⟨v.substTys s, i.substTys s, by rw [h]; rfl⟩
 
 end Stilt

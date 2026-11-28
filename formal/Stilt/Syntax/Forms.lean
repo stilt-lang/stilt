@@ -14,7 +14,7 @@ def Form.ofProjection : Form → Bool
   | .projection | .yield | .yielded | .project => true
   | .letElse | .orElse | .writes | .through | .compound | .intFloat | .optionField | .update | .element => false
   | .spawn | .await | .scope | .scopeSpawn | .async | .lazyNew | .lazyGet => false
-  | .parMap | .parEach | .parBoth | .parFold => false
+  | .parMap | .parEach | .parBoth | .parFold | .viewIndex => false
 
 /-- The forms of writable views, which typing checks as the code each means (`HasType.form`) and
 `Program.ViewsWrite` checks the rules of (`Stilt.Writable`). -/
@@ -22,7 +22,7 @@ def Form.ofWritable : Form → Bool
   | .writes | .through => true
   | .letElse | .orElse | .projection | .yield | .yielded | .project | .compound | .intFloat | .optionField | .update | .element => false
   | .spawn | .await | .scope | .scopeSpawn | .async | .lazyNew | .lazyGet => false
-  | .parMap | .parEach | .parBoth | .parFold => false
+  | .parMap | .parEach | .parBoth | .parFold | .viewIndex => false
 
 /-- The forms that typing checks as the code each means: those of projections and those of
 writable views (`HasType.form`). -/

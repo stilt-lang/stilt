@@ -37,6 +37,8 @@ let rec expr cx (e : Tast.expr) =
       let kt, v = Option.get (Model_keys.keyed cx b.ty) in
       Model_keys.index (Model_composed.at cx) cx kt v (expr cx b) (expr cx k)
   | Index (b, k) when is_map b.ty -> map_op "index" [ expr cx b; expr cx k ]
+  | Index (b, i) when Model_views.viewed b.ty <> None ->
+      Model_views.index (expr cx b) (expr cx i)
   | Index (b, i) -> tag "index" [ expr cx b; expr cx i ]
   | Call (callee, targs, args, _) -> call cx e callee targs args
   | Call_value (f, args) -> call_value cx f args e.ty

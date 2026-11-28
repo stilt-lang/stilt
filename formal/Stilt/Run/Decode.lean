@@ -450,6 +450,8 @@ partial def expr (j : Json) : Except String Expr := do
   -- `["parEach", g, i, T, place, f]`, `["parBoth", a, b, A, B, f, g]` and `["parFold", n, d, g, T,
   -- xs, empty, f]`, the names those of the temporaries their code binds, and the types those of
   -- the elements and of the functions' results.
+  -- `["viewIndex", v, i]`: `v[i]` on a view of a list, the index of its `copy` (`Form.Shaped`).
+  | "viewIndex" => return .form .viewIndex (.index (.op .copy [← f 0 >>= expr]) (← f 1 >>= expr))
   | "parMap" =>
     return .parMapOf (← f 0 >>= str) (← f 1 >>= str) (← f 2 >>= str) (← f 3 >>= str)
       (← f 4 >>= ty) (← f 5 >>= ty) (← f 6 >>= expr) (← f 7 >>= expr)
