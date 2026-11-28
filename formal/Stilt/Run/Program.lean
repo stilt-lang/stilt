@@ -26,8 +26,8 @@ def typeParam : Decoder TypeParam
   | .arr #[n, bs] => return ⟨← str n, ← list str bs, []⟩
   | j => throw s!"a type parameter, not {j.compress}"
 
-/-- Limits: an array of their names, `"panic"`, `"overflow"`, `"div"`, `"alloc"` and `"copy"`
-(facts.without). -/
+/-- Limits: an array of their names, `"panic"`, `"overflow"`, `"div"`, `"alloc"` and `"copy"`,
+and the capabilities' (facts.without). -/
 def limits (j : Json) : Except String Limits := do
   (← list str j).foldlM (init := {}) fun l n => match n with
     | "panic" => pure { l with panic := true }
@@ -35,6 +35,14 @@ def limits (j : Json) : Except String Limits := do
     | "div" => pure { l with div := true }
     | "alloc" => pure { l with alloc := true }
     | "copy" => pure { l with copy := true }
+    | "fs" => pure { l with caps := .fs :: l.caps }
+    | "net" => pure { l with caps := .net :: l.caps }
+    | "clock" => pure { l with caps := .clock :: l.caps }
+    | "env" => pure { l with caps := .env :: l.caps }
+    | "console" => pure { l with caps := .console :: l.caps }
+    | "rand" => pure { l with caps := .rand :: l.caps }
+    | "spawn" => pure { l with caps := .spawn :: l.caps }
+    | "exec" => pure { l with caps := .exec :: l.caps }
     | _ => throw s!"a limit, not {n}"
 
 /-- A function: `[name, typeParams, rowParams, params, result, row, body]`, and after

@@ -25,6 +25,7 @@ import Stilt.Examples.Projections
 import Stilt.Examples.OneShot
 import Stilt.Examples.Locks
 import Stilt.Examples.Tasks
+import Stilt.Examples.Par
 import Stilt.Examples.Quiet
 import Stilt.Examples.SharedWrites
 import Stilt.Examples.SharedWritesFlow

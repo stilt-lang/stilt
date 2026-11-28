@@ -159,7 +159,8 @@ inductive TaskForm (D : Decls) : Form → Expr → Ty → Prop
   a list at a place `P` and a function of type `fn(inout T)`, with an empty row, and calls it on
   each element of the list in place, from the first index to the last: each call takes the place
   `P[i]` `inout`, so it writes that element and no other, into the storage of `xs` in the model
-  of in-place mutation. The model has the form for a place of fields alone, `P` read once for its
+  of in-place mutation, and another binding that shares the list keeps its own value, as every
+  value of the calculus is an independent copy (values.independent-copies). The model has the form for a place of fields alone, `P` read once for its
   length; the parallel run of `view.split`'s parts with `par.both` is the run of two calls that
   take writable bindings, which the model doesn't state apart. -/
   | parEach {g i T f} {P : Place} : (∀ q ∈ P.path, q.IndexedBy []) →

@@ -17,6 +17,7 @@ import Stilt.Quiet.Theorem
 import Stilt.Writable
 import Stilt.Modes.Demands
 import Stilt.Modes.ParDemands
+import Stilt.Capabilities
 import Stilt.Tasks.Scopes
 import Stilt.Tasks.Lazy
 import Stilt.Tasks.Unobservable
@@ -37,8 +38,9 @@ lives (views.change-while-viewed) and keeps every view inside its sources' scope
 (handlers.resume-at-most-once), runs no `when` inside a `when` (shared.locks), keeps the
 rules of projections (projections.once-on-every-path), puts no `fixed` value in a
 `Shared<T>` (modes.demands), gives `std.par` only `calm` and `portable` functions
-(par.what-runs-in-parallel), lets no scope escape (tasks.scope-that-escapes) and gives
-`Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing).
+(par.what-runs-in-parallel), lets no scope escape (tasks.scope-that-escapes), gives
+`Lazy.new` no function that locks (polymorphism.lazy-waits-for-nothing) and keeps the limits of
+capabilities (facts.capabilities).
 `soundness` says what that gives every run, at every fuel and on every input:
 
 * the run of the reference interpreter's model gets stuck nowhere, and raises
@@ -149,6 +151,10 @@ structure Program.Accepted (p : Program) : Prop where
   allocLimits : p.AllocLimited
   /-- Each function and `main` limited by `without copy` keeps the limit (E0204). -/
   copyLimits : p.CopyLimited
+  /-- Each function and `main` limited by `without` a capability keeps the limit: its body holds
+  no native of the capability, no function that has it and no closure literal whose body does
+  (facts.capabilities, E0204). No promise rests on it. -/
+  capLimits : p.CapLimited
   /-- The rules of writable bindings: while one writes a source, nothing else reaches it
   (projections.reaching-written-source, E0429), and a view given to a `var` writes every source
   it has (projections.writable-bindings, E0428). No promise below rests on it: a writable binding
