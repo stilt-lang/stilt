@@ -134,7 +134,7 @@ inductive TaskForm (D : Decls) : Form → Expr → Ty → Prop
   /-- polymorphism.lazy-values: `l.get()` gives the value of the function `l` keeps, at its
   type. The model calls the function at each `get`, where the Reference computes the value once,
   at the first, and keeps it for every copy: it states less than that rule, a difference the
-  Reference makes no program able to observe, which the model doesn't prove.
+  Reference makes no program able to observe, of which `lazy_unobservable` proves a part.
   polymorphism.lazy-implicit-effects: the call is one through a stored function value, so a site
   of `div` (`Expr.divFree`), and it adds none of the function's `panic` or `div`, which count
   where its closure literal is written or its function named; the allocation of `new` and `get`

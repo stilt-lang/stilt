@@ -19,6 +19,7 @@ import Stilt.Modes.Demands
 import Stilt.Modes.ParDemands
 import Stilt.Tasks.Scopes
 import Stilt.Tasks.Lazy
+import Stilt.Tasks.Unobservable
 
 /-!
 # Accepted programs and their soundness
@@ -79,6 +80,10 @@ rules of projections (projections.once-on-every-path), puts no `fixed` value in 
 * the call of a function given to `Lazy.new`, from a frame whose function values are lock-free,
   takes no cell, E0435 having rejected every site of `locks` in it (`Program.LazyLocks.call`,
   polymorphism.lazy-waits-for-nothing);
+* a call of a lazy value's function, of a type with an empty row, from a typed state, runs the
+  same from whatever frames it is called from, giving them back, ends as no performance and no
+  raise, and keeps the world's output and input, so the code around a `get` sees only its value
+  or its panic (`lazy_unobservable`, polymorphism.lazy-unobservable);
 * every path through the body of a projection runs one `yield` to its end or a `return`, and
   at most one to a raise or a performance, so the caller's access runs once
   (`Program.Projections.yields`, projections.once-on-every-path);
@@ -271,6 +276,20 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
       (s : Copy.State), Frame.LockFree p.decls p.decls.locks s.1 →
       (eval p.decls (Copy.memoryWith w) n (((Expr.call f [] τ).substTys ts).substRows rs) s).TakesNone
         p.decls p.decls.locks (Value.LockFree p.decls p.decls.locks) s.2
+  /-- polymorphism.lazy-unobservable: a call of a function value of the type a lazy value's
+  function has, which takes nothing and whose row is empty, from any typed state, is one outcome
+  from whatever frames it is called from, with them given back, ends as no performance and no
+  raise, and keeps the world's output, standard error and input (`lazy_unobservable`). So the
+  code around a `get`, which the calculus runs the function at, sees only its value or its panic.
+  That two runs give one value is left out. -/
+  lazyUnseen : ∀ (n : Nat) {Γ : Ctx} {η : REnv} {f : Value} {τ : Ty} {γ : Copy.State},
+      Value.Typed p.decls f ((Ty.fn [] τ Row.pure).close η) → State.Typed p.decls γ Γ η →
+      (∃ o : Outcome Copy.State Value, ∀ fr : Copy.Frame,
+        Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f [] (fr, γ.2) = o.atFrame fr) ∧
+      (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f [] γ).Settled ∧
+      (∀ e s, Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f [] γ ≠ .raised e s) ∧
+      (Eval.call p.decls Copy.memory (eval p.decls Copy.memory n) f [] γ).KeepsIo p.decls
+        ⟨Row.pure.close η, fun _ => False, performsOf p.decls (Row.pure.close η)⟩ γ.2.io
   /-- projections.once-on-every-path: the body of every projection, run with any fuel from where
   the list its function keeps the access's values in is empty, ends with one value kept, the
   access's, on every path to its end or to a `return`, and with at most one on every path to a
@@ -343,6 +362,7 @@ theorem soundness : Soundness := fun p fuel input h =>
     fun w => ⟨fun hc hv hs => h.oneShot.clause w fuel hc hv hs, h.oneShot.main w fuel⟩,
     fun w n _ hb ts rs _ hs => h.locks.block w n hb ts rs hs,
     fun w n _ hf τ ts rs _ hs => h.lazyLocks.call w n hf τ ts rs hs,
+    fun n _ _ _ _ _ hf hγ => lazy_unobservable h.wellTyped.typedDecls n hf hγ,
     fun rb hrb n s hs => h.projections.yields rb hrb n s hs,
     fun _ control c v w => callAs_unseen p.decls _ control c v w,
     Program.PanicKeptBy.kept h.panicLimits h.wellTyped h.exclusive fuel input,
