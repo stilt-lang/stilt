@@ -70,30 +70,7 @@ import Stilt.Exhaustive
 import Stilt.Exhaustive.Decide
 import Stilt.Fuel
 import Stilt.Theorems
-import Stilt.Examples
-import Stilt.Examples.Tuples
-import Stilt.Examples.Patterns
-import Stilt.Examples.Numbers
-import Stilt.Examples.Strings
-import Stilt.Examples.Maps
-import Stilt.Examples.Generics
-import Stilt.Examples.Bounds
-import Stilt.Examples.Loops
-import Stilt.Examples.LastUses
-import Stilt.Examples.Structural
-import Stilt.Examples.Panics
-import Stilt.Examples.Ends
-import Stilt.Examples.FormatSpecs
-import Stilt.Examples.Parsing
-import Stilt.Examples.Lists
-import Stilt.Examples.IntMethods
-import Stilt.Examples.StrNatives
-import Stilt.Examples.Views
-import Stilt.Examples.Writable
-import Stilt.Examples.ViewChecks
-import Stilt.Examples.Handlers
-import Stilt.Examples.Shared
-import Stilt.Examples.Projections
+import Stilt.Examples.All
 import Stilt.Counterexamples.Checks
 import Stilt.Counterexamples.Paired
 import Stilt.Counterexamples.PassedOn
@@ -398,7 +375,6 @@ import Stilt.OneShot.Instances
 import Stilt.OneShot.Runs
 import Stilt.OneShot.Calls
 import Stilt.OneShot.Theorem
-import Stilt.Examples.OneShot
 import Stilt.Whens
 import Stilt.Rename
 import Stilt.HeldNames
@@ -412,8 +388,6 @@ import Stilt.Locks.Steps
 import Stilt.Locks.Runs
 import Stilt.Locks.Calls
 import Stilt.Locks.Theorem
-import Stilt.Examples.Locks
-import Stilt.Examples.Tasks
 import Stilt.Quiet.Outcome
 import Stilt.Quiet.Steps
 import Stilt.Quiet.Calls
@@ -423,7 +397,6 @@ import Stilt.Quiet.Cases
 import Stilt.Quiet.Forms
 import Stilt.Quiet.Handlers
 import Stilt.Quiet.Theorem
-import Stilt.Examples.Quiet
 import Stilt.Shared.Deadlock
 import Stilt.Shared.Fold
 import Stilt.Cycles.Holds
@@ -464,9 +437,6 @@ import Stilt.Sharing.Enter
 import Stilt.Sharing.Leave
 import Stilt.Sharing.Call
 import Stilt.Sharing.Agreement
-import Stilt.Examples.SharedWrites
-import Stilt.Examples.SharedWritesFlow
-import Stilt.Examples.SharedHandles
 
 /-!
 # Stilt
