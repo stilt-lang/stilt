@@ -138,6 +138,13 @@ val array_field : string
 val is_array : Types.ty -> bool
 (** Whether the type is an array type. *)
 
+val elements : Model_json.t -> Model_json.t
+(** The list of an array's elements, the field of its record. *)
+
+val array_of : cx -> Types.ty -> Model_json.t list -> Model_json.t
+(** The array of the type whose elements are the list literal of the
+    expressions. *)
+
 val declared_record : Hir.item -> bool
 (** Whether the calculus declares the record [i] as the program writes it: every
     record but the library's [Set], which the calculus has as a type of its own

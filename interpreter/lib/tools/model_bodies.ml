@@ -30,7 +30,7 @@ let for_loop cb cx (e : Tast.expr) (p : Tast.pattern) (it : Tast.iterable) b =
         | _ -> outside "an iteration over something other than a list")
     | Iter it when is_array it.ty ->
         (* generics.array-iteration: the elements of the array's list, in order. *)
-        (tag "field" [ cb.expr it; Str array_field ], elem it.ty)
+        (elements (cb.expr it), elem it.ty)
     | Iter it -> (cb.expr it, elem it.ty)
     | Range (a, z, fin) ->
         let incl = fin = Ast.Inclusive in

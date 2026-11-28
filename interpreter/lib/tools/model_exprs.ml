@@ -30,13 +30,7 @@ let rec expr cx (e : Tast.expr) =
       let t, targs, name = ctor_args cx c e.ty in
       tag "variant"
         ((Str t :: targs) @ [ Str name; Arr (List.map (expr cx) args) ])
-  | List es when is_array e.ty ->
-      (* generics.array-literals: the record of the array, of the literal's list. *)
-      let elems =
-        tag "list" [ ty cx (elem e.ty); Arr (List.map (expr cx) es) ]
-      in
-      tag "record"
-        [ Str (record_name cx e.ty); Arr [ Arr [ Str array_field; elems ] ] ]
+  | List es when is_array e.ty -> array_of cx e.ty (List.map (expr cx) es)
   | List es -> tag "list" [ ty cx (elem e.ty); Arr (List.map (expr cx) es) ]
   | Field (b, f) -> tag "field" [ expr cx b; Str f ]
   | Tuple_field (b, i) -> tag "field" [ expr cx b; Str (string_of_int i) ]
@@ -47,8 +41,7 @@ let rec expr cx (e : Tast.expr) =
   | Index (b, i) when Model_views.viewed b.ty <> None ->
       Model_views.index (expr cx b) (expr cx i)
   | Index (b, i) when is_array b.ty ->
-      (* generics.array-elements: the element of the array's list. *)
-      tag "index" [ tag "field" [ expr cx b; Str array_field ]; expr cx i ]
+      tag "index" [ elements (expr cx b); expr cx i ]
   | Index (b, i) -> tag "index" [ expr cx b; expr cx i ]
   | Call (callee, targs, args, _) -> call cx e callee targs args
   | Call_value (f, args) -> call_value cx f args e.ty
@@ -184,14 +177,12 @@ and call cx (e : Tast.expr) callee targs args =
       Model_lists.map_call (callbacks cx) cx e name args
   | Member ({ home = "std.array"; name = "Array" }, "len") -> (
       match args with
-      | [ a ] ->
-          op (tag "list" [ Str "len" ])
-            [ tag "field" [ expr cx a.value; Str array_field ] ]
+      | [ a ] -> op (tag "list" [ Str "len" ]) [ elements (expr cx a.value) ]
       | _ -> outside "the function std.array.Array.len")
   | Member ({ home = "std.array"; name = "Array" }, "to_list") -> (
       (* generics.arrays: the elements in order, which the array's list is. *)
       match args with
-      | [ a ] -> tag "field" [ expr cx a.value; Str array_field ]
+      | [ a ] -> elements (expr cx a.value)
       | _ -> outside "the function std.array.Array.to_list")
   | Member (owner, name)
     when owner = list_item && List.mem name Model_lists.natives ->

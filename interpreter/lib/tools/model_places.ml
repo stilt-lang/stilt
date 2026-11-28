@@ -89,32 +89,32 @@ let compound_place cx (p : Tast.expr) =
    how a value is stored into it, and the expression that reads it. A place
    through a map's element stores the changed element back with [m[k] = …],
    reading [m[k]] first when the place goes on past it (std.map-element-places). *)
-let rec receiver ~expr cx (e : Tast.expr) =
-  let extend (lets, store, read) (b : Tast.expr) step get =
-    let store =
-      match store with
-      | Path (Arr [ root; Arr steps ]) ->
-          Path (Arr [ root; Arr (steps @ [ step ]) ])
-      | Path _ -> outside "a place the model lacks"
-      | Through write_b ->
-          let n = temp "element" b.loc in
-          Through
-            (fun w ->
-              write_b
-                (tag "varIn"
-                   [
-                     Str n;
-                     ty cx b.ty;
-                     read;
-                     tag "seq"
-                       [
-                         tag "assign" [ Arr [ Str n; Arr [ step ] ]; w ];
-                         var_e n;
-                       ];
-                   ]))
-    in
-    (lets, store, get read)
+(* A place [b] extended by the projection [step], whose part [get] reads from [b]'s. *)
+let extend cx (lets, store, read) (b : Tast.expr) step get =
+  let store =
+    match store with
+    | Path (Arr [ root; Arr steps ]) ->
+        Path (Arr [ root; Arr (steps @ [ step ]) ])
+    | Path _ -> outside "a place the model lacks"
+    | Through write_b ->
+        let n = temp "element" b.loc in
+        Through
+          (fun w ->
+            write_b
+              (tag "varIn"
+                 [
+                   Str n;
+                   ty cx b.ty;
+                   read;
+                   tag "seq"
+                     [
+                       tag "assign" [ Arr [ Str n; Arr [ step ] ]; w ]; var_e n;
+                     ];
+                 ]))
   in
+  (lets, store, get read)
+
+let rec receiver ~expr cx (e : Tast.expr) =
   match e.desc with
   | Local v when writable_of cx v <> None ->
       outside "a writable binding as a place of its own"
@@ -125,11 +125,11 @@ let rec receiver ~expr cx (e : Tast.expr) =
         Path (Arr [ Str (var_name v); Arr [] ]),
         tag "var" [ Str (var_name v) ] )
   | Field (b, f) ->
-      extend (receiver ~expr cx b) b (tag "field" [ Str f ]) (fun r ->
+      extend cx (receiver ~expr cx b) b (tag "field" [ Str f ]) (fun r ->
           tag "field" [ r; Str f ])
   | Tuple_field (b, i) ->
       let f = string_of_int i in
-      extend (receiver ~expr cx b) b (tag "field" [ Str f ]) (fun r ->
+      extend cx (receiver ~expr cx b) b (tag "field" [ Str f ]) (fun r ->
           tag "field" [ r; Str f ])
   | Index (b, k) when is_map b.ty ->
       let n = temp "key" k.loc in
@@ -147,12 +147,12 @@ let rec receiver ~expr cx (e : Tast.expr) =
           (match store with
           | Through _ -> outside "an array's element through a map's element"
           | Path _ -> ());
-          extend (lets, store, read) b (tag "field" [ Str array_field ])
+          extend cx (lets, store, read) b (tag "field" [ Str array_field ])
             (fun r -> tag "field" [ r; Str array_field ]))
         else (lets, store, read)
       in
       let var = tag "var" [ Str n ] in
-      extend
+      extend cx
         (lets @ [ (n, ty cx i.ty, expr i) ], store, read)
         b (tag "index" [ var ])
         (fun r -> tag "index" [ r; var ])

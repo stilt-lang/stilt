@@ -388,19 +388,7 @@ let array_fill (on : callbacks) cx (e : Tast.expr) (x : Tast.expr) =
           Str v;
           ty cx x.ty;
           on.expr x;
-          tag "record"
-            [
-              Str (record_name cx e.ty);
-              Arr
-                [
-                  Arr
-                    [
-                      Str array_field;
-                      tag "list"
-                        [ ty cx x.ty; Arr (List.init n (fun _ -> var_e v)) ];
-                    ];
-                ];
-            ];
+          array_of cx e.ty (List.init n (fun _ -> var_e v));
         ]
   | _ -> outside "an array of a length the model doesn't hold"
 

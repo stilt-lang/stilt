@@ -458,3 +458,12 @@ and handler_record cx (h : Types.handler) =
   key
 
 let with_args = function [] -> [] | args -> [ Arr args ]
+
+(* The list of an array's elements, the field of its record (generics.array-elements). *)
+let elements a = tag "field" [ a; Str array_field ]
+
+(* The array of type [t] whose elements are the list literal of [es]
+   (generics.array-literals). *)
+let array_of cx t es =
+  let list = tag "list" [ ty cx (elem t); Arr es ] in
+  tag "record" [ Str (record_name cx t); Arr [ Arr [ Str array_field; list ] ] ]
