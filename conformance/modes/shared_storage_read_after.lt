@@ -1,0 +1,69 @@
+//~ tier: advanced
+//~ rule: values.value-semantics, modes.shared-holders, modes.handles, modes.durations, expressions.capture
+//~ stdout:
+//~ | 1 9 7
+//~ | 1
+//~ | 1
+//~ | 1
+
+// A write to one binding never changes what another reads, wherever their values came from: each
+// of these writes reaches storage that another binding reads after it, in an implementation that
+// shares the storage of copies, so it copies first.
+
+use std.sync
+
+// `z` and `w` hold copies of `o`'s first value after `o` takes another.
+fn former_value() -> str {
+  var o = [1, 2]
+  var z = o
+  let w = o
+  let t = [7, 8]
+  o = t
+  z[0] = 9
+  "{w[0]} {z[0]} {o[0]}"
+}
+
+// The end of the `when` gives `a`'s value back to its handle.
+fn poke(a: sync.Shared<List<i64>>) {
+  when a {
+    var z = a
+    z[0] = 9
+  }
+}
+
+fn when_end() -> i64 {
+  let h = sync.Shared.new([1, 2])
+  poke(h)
+  when h { h[0] }
+}
+
+// The call writes `p` and reads `q`, which hold copies of one value.
+fn both(inout p: List<i64>, inout q: List<i64>) -> i64 {
+  p[0] = 5
+  q[0]
+}
+
+fn two_arguments() -> i64 {
+  let t = [1, 2]
+  var a = t
+  var b = t
+  both(inout a, inout b)
+}
+
+// The closure reads `xs`, which it captures, after writing a copy of it.
+fn captured() -> i64 {
+  let xs = [1, 2]
+  let f = || {
+    var z = xs
+    z[0] = 9
+    xs[0]
+  }
+  f()
+}
+
+fn main() / io {
+  print(former_value())
+  print("{when_end()}")
+  print("{two_arguments()}")
+  print("{captured()}")
+}

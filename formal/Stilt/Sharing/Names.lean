@@ -36,10 +36,12 @@ namespace ModeEnv
 variable (M : ModeEnv)
 
 /-- The bindings of a body with parameters `ps` that the inference calls shared, and those of
-the closure literals in it, each a body of its own. -/
+the closure literals in it, each a body of its own, which reads the variables it captures of the
+bindings around it (expressions.capture) as parameters. -/
 def allShared (ps : List Param) (body : Expr) : List Name :=
+  let outer := ps.map (·.name) ++ body.binders
   M.bodyShared ps body ++ body.gather (fun _ _ _ => ()) (fun _ e => match e with
-    | .closure qs _ _ b => M.bodyShared qs b
+    | .closure qs _ _ b => M.bodyShared qs b (outer.filter (Expr.captures qs b))
     | _ => []) ()
 
 end ModeEnv

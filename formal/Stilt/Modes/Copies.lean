@@ -31,17 +31,19 @@ namespace Stilt
 
 /-- A part of `x` that a value holds: the part `sels`, whether the value is a
 copy of it already (`copied`), whether the value holds it inside rather
-than being it (`inside`), and the place inside the value where it is, if it
-is one there (`place`), empty when the value is the part. -/
+than being it (`inside`), the place inside the value where it is, if it
+is one there (`place`), empty when the value is the part, and whether it is a part of a value
+that `x` no longer has, since an assignment of its whole replaced it (`former`). -/
 structure Part where
   sels : List Sel
   copied : Bool
   inside : Bool
   place : Option (List Sel)
+  former : Bool
   deriving DecidableEq, Repr
 
 /-- `x` itself. -/
-def Part.whole : Part := ⟨[], false, false, some []⟩
+def Part.whole : Part := ⟨[], false, false, some [], false⟩
 
 /-- The part that a value one step further holds, if it holds one: a part of
 the part when the value is the part; the part, at the rest of its place, when
@@ -214,9 +216,12 @@ def meet (k : Leave) (s : Copies) : Copies :=
   { s.land k with pending := s.pending }
 
 /-- The whole of `x` is assigned: no copy made before shares its new value
-(modes.shared-writes), and no binding holds a part of it. -/
+(modes.shared-writes), and `x` reads none of them again. The bindings that hold them still
+do, and share them with one another (modes.shared-holders): each part they hold is a part of
+a former value of `x`. -/
 def replace (s : Copies) : Copies :=
-  { s with live := [], aliases := s.aliases.map fun a => { a with parts := [] } }
+  { s with live := [], aliases := s.aliases.map fun a =>
+      { a with parts := a.parts.map fun p => { p with former := true } } }
 
 /-- The whole of `x` is assigned a value that holds a part of `x`'s own value: the
 assignment is no assignment of the whole for the rule, and each copy made before it, or held
@@ -254,9 +259,10 @@ place with it. -/
 def laterX (W : Writes) (later : Name → Bool) : Bool := later W.x || W.alike.any later
 
 /-- The part `p` of `x` is copied, held by the scope at depth `h`, if its type
-is copy-on-write (modes.copies). -/
+is copy-on-write (modes.copies) and it is a part of `x`'s value: a copy of a former value of `x`
+shares nothing with `x`'s modifications. -/
 def hold (W : Writes) (h : Nat) (s : Copies) (p : Part) : Copies :=
-  if W.decls.cowPart W.τ p.sels then
+  if W.decls.cowPart W.τ p.sels && !p.former then
     { s with live := ⟨h, Sel.shape p.sels⟩ :: s.live, made := Sel.shape p.sels :: s.made }
   else s
 
@@ -275,17 +281,19 @@ which `replaces` says assigns the place: shared when it reaches inside a
 copy of a part of `x` that `z` holds, as its value or at a place inside it,
 while `x`, or another binding holding a copy of an overlapping part, is used
 after it, as `later` says (modes.shared-writes). An assignment replaces a copy
-at its own place rather than writing inside it. -/
+at its own place rather than writing inside it. `x` reads a copy of a former value of its own
+no more, but the other bindings that hold copies of it still do (modes.shared-holders). -/
 def mirror (W : Writes) (later : Name → Bool) (s : Copies) (z : Name) (path : List Sel)
     (replaces : Bool) : Copies :=
   let hit := fun (c f : List Name) => c.isPrefixOf f || f.isPrefixOf c
   let inside := fun (place : List Sel) =>
     place.isPrefixOf path && !(replaces && path.length ≤ place.length)
-  let reached := ((s.partsOf z).filter fun p => p.copied && p.place.any inside).map fun p =>
+  let found := (s.partsOf z).filter fun p => p.copied && p.place.any inside
+  let reached := found.map fun p =>
     Sel.shape (p.sels ++ path.drop ((p.place.map List.length).getD 0))
   let other := s.holders.any fun w => w != z && later w &&
     (s.partsOf w).any fun q => reached.any (hit (Sel.shape q.sels))
-  if z != W.x && !reached.isEmpty && (W.laterX later || other) then
+  if z != W.x && !reached.isEmpty && ((W.laterX later && found.any (!·.former)) || other) then
     { s with mirrored := z :: s.mirrored }
   else s
 

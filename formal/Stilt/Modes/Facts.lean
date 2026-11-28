@@ -86,13 +86,16 @@ def cowOf (τ : Option Ty) : Bool := M.decls.cow (τ.getD .str)
 modification, which the walk of the binding finds, or whose value is a copy of a part of
 another binding that it reads after the modification, which that binding's walk finds; and any
 binding whose value `Shared.new` takes while it might still read it, which its walk finds. A
-`when`'s names are `var` bindings. Each binding's walk reads the body from its start (`walk`). -/
-def bodyShared (ps : List Param) (body : Expr) : List Name :=
-  let bs := binders ps body
+`when`'s names are `var` bindings. Each binding's walk reads the body from its start (`walk`).
+A closure literal's body reads the variables it captures, `captured`, as `let` parameters whose
+types the core doesn't carry, which may still be read after it, by the closure's next call. -/
+def bodyShared (ps : List Param) (body : Expr) (captured : List Name := []) : List Name :=
+  let bs := binders ps body ++ captured.map fun y => (y, none, false)
   let modifiable := fun z => bs.any fun (y, τ, m) => y == z && m && M.cowOf τ
   bs.flatMap fun (x, τ, m) =>
     if M.cowOf τ then
-      let w := walk M.decls M.consumed (inoutNames ps) x (τ.getD .str) body (ps.map (·.name))
+      let w := walk M.decls M.consumed (inoutNames ps) x (τ.getD .str) body
+        (ps.map (·.name) ++ captured)
       (if m && w.shared then [x] else []) ++ w.mirrored.filter fun z => z == x || modifiable z
     else []
 

@@ -32,6 +32,7 @@ import Stilt.Examples.Quiet
 import Stilt.Examples.SharedWrites
 import Stilt.Examples.SharedWritesFlow
 import Stilt.Examples.SharedHandles
+import Stilt.Examples.SharedReaders
 
 /-!
 # The examples

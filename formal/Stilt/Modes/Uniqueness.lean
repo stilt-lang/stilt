@@ -21,8 +21,9 @@ follows, a result, a stored value, a call's result or `inout` arguments. A **mod
 shared when a copy of the modified part may still last, or when it is inside
 a loop whose body, or a `while`'s condition, makes one. An assignment of the whole binding
 replaces its value: it is no shared write, and copies made before it, and the
-copies of those, no longer count, unless the value assigned holds a part of `x`,
-when they count as copies of every part of it.
+copies of those, no longer count for `x`'s modifications, unless the value assigned holds a
+part of `x`, when they count as copies of every part of it. The bindings that hold them still
+share them with one another (modes.shared-holders).
 
 The walk also finds the writes that `x` makes shared from the other side
 (`mirrorsOf`): a modification that reaches inside a copy of a part of `x`
@@ -30,7 +31,8 @@ that another binding holds, as its value or at the place of a field, an
 element or a part assigned to, which no assignment to that place has
 replaced since, while `x`, or another binding holding a copy of an
 overlapping part, is used after it, which `later` says of every binding: an `inout`
-parameter is used after every point, by the caller its value goes back to. `x`'s scope holds
+parameter is used after every point, by the caller its value goes back to, and a call reads each
+of its `inout` arguments until it returns, after it modifies them all when it starts. `x`'s scope holds
 every use of `x` after the copy, so the walk sees them all. The bindings it
 finds are named, so in a scope that binds one name twice both count.
 
@@ -39,7 +41,9 @@ values have the same type may be one place, so in the walk of one of them a writ
 a write of it that replaces nothing, and a point that names another names it. The end of a
 `when` writes each of its names (modes.handles): it is shared when a copy of a part of the name
 lasts past the `when`, the `when`'s value among them, and when the name holds a copy of a part
-of a binding that may still read it (`Writes.heldIn`). What a name holds lasts on, held by the
+of a binding that may still read it (`Writes.heldIn`). The end gives each name's value back to its
+handle, so each name is read after every point of the block, as an `inout` parameter is after
+every point of its body. What a name holds lasts on, held by the
 handle, for the rest of the function. `Shared.new` gives its value to a handle in the same way
 (`Writes.handOver`): a copy that lasts for the rest of the function, and a shared write of a
 binding that may still read it after the call, as a parameter's caller may. An operation whose
@@ -72,6 +76,11 @@ def pathOccurs (x : Name) (path : List Projection) : Bool :=
 whether a value passed there is passed twice. -/
 def otherArgs (x : Name) (args : List Arg) (n : Nat) : Bool :=
   (args.zipIdx.filter (·.2 != n)).any fun (a, _) => a.occurs x
+
+/-- Whether `y` is the root of an `inout` argument of a call: the call reads it until it
+returns, after it modifies each `inout` argument when it starts (modes.durations). -/
+def inoutRoot (y : Name) (args : List Arg) : Bool :=
+  args.any fun | .inout ⟨z, _⟩ => z == y | .value _ => false
 
 /-- The bindings used after a point, as `later` says, and those that `e` uses. -/
 def thenUses (later : Name → Bool) (e : Expr) : Name → Bool := fun y => later y || e.occurs y
@@ -304,8 +313,8 @@ def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
     let r := f.copies W (d + 1) (d + 1) (fun y => later y || args.any (·.occurs y)) s
     let r := argsCopies W (d + 1) h later (fun n => W.laterX later || otherArgs W.x args n)
       (consumesArg W.consumed f) (W.callStores f args τ) 0 r.1 args
-    (W.escape ((W.keptIn (W.modifyArgs later r.1 args) args r.2).close (d + 1)),
-      r.2.map (Part.stored none))
+    (W.escape ((W.keptIn (W.modifyArgs (fun y => later y || inoutRoot y args) r.1 args) args
+      r.2).close (d + 1)), r.2.map (Part.stored none))
   | .letIn y _ init body | .varIn y _ init body =>
     W.bindIn y d (d + 1) (init.copies W (d + 1) (d + 1) (fun z => later z || (y != z && body.occurs z)) s)
       fun W s => body.copies W (d + 1) h later s
@@ -353,7 +362,8 @@ def Expr.copies (W : Writes) (d h : Nat) (later : Name → Bool) (s : Copies) :
     W.withIn d (hd.copies W (d + 1) (d + 1) (thenUses later b) s) fun W s => b.copies W d h later s
   | .held ns hs body =>
     let s := (exprsCopies W (d + 1) (d + 1) (thenUses later body) (fun _ => none) 0 s hs).1.close (d + 1)
-    W.heldIn d later ns s fun W s => body.copies W d h later s
+    W.heldIn d later ns s fun W s =>
+      body.copies W d h (fun z => later z || ns.any (·.1 == z)) s
 
 /-- Walks expressions whose values are stored in a value, which the scope at
 depth `h` holds, from the one at position `n`: each part of `x` they hold is a
