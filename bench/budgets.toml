@@ -6,8 +6,11 @@
 # by its Rust baseline's under Rust's release profile, measured without profiles, which the baselines
 # don't use. A program that allocates much is measured against its baseline linked with
 # mimalloc (compare/alloc/), and the mean must hold with any one program left out. Set on
-# 2026-11-23 from the --long sizes: 0.94, and 0.97 with binary-trees left out.
-geomean = 1.0
+# 2026-11-28, once the baselines of binary-trees and pipeline stopped making work their Stilt
+# programs don't (a box for each leaf, a clone of each kept item), from the --long sizes: 1.01,
+# and 1.04 with string-heavy left out; 1.00 and 1.03 at the default sizes. Those two baselines
+# alone moved the mean by 6%, from the 0.94 measured on 2026-11-23.
+geomean = 1.06
 
 [no-outliers]
 # The largest such ratio of one program.
