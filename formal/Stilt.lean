@@ -439,6 +439,14 @@ import Stilt.Sharing.Enter
 import Stilt.Sharing.Leave
 import Stilt.Sharing.Call
 import Stilt.Sharing.Agreement
+import Stilt.Natives.Kinds
+import Stilt.Natives.Panics
+import Stilt.Natives.Sorting
+import Stilt.Natives.Keys
+import Stilt.Natives.Clamp
+import Stilt.Natives.Maps
+import Stilt.Natives.Search
+import Stilt.Natives.Theorem
 
 /-!
 # Stilt

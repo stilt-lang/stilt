@@ -24,6 +24,7 @@ import Stilt.Tasks.Unobservable
 import Stilt.Anonymous
 import Stilt.Arrays
 import Stilt.Handling.WithPaired
+import Stilt.Natives.Theorem
 
 /-!
 # Accepted programs and their soundness
@@ -111,7 +112,10 @@ array's size (`Decls.Arrays`), and lets no `with` take a performance that belong
   types, from any typed state, leaves the world's output, standard error and input as they
   were, and so does the rest of each of its performances, from the world it is resumed in; so
   a run whose `main`'s row holds no `io` writes nothing and reads nothing (`call_keeps`,
-  `Program.WellTyped.quiet`, facts.io-and-capabilities).
+  `Program.WellTyped.quiet`, facts.io-and-capabilities);
+* every native of the calculus panics only with the kinds its paragraph names, the native sort
+  gives the elements again, in order of their keys and stably, and `clamp`'s natives keep a NaN
+  (`Natives.kept`, std.no-panics-by-default, std.list-sorting and std.clamp-and-sum).
 -/
 
 namespace Stilt
@@ -364,6 +368,13 @@ structure Program.Promises (p : Program) (fuel : Nat) (input : String) : Prop wh
   (`Program.WellTyped.quiet`). -/
   quiet : p.row.io = false →
     ∀ w ∈ (p.runCopy fuel input).world, w.out = "" ∧ w.err = "" ∧ w.input = input
+  /-- std.no-panics-by-default, std.list-sorting and std.clamp-and-sum: the natives of the
+  calculus panic only with the kinds their paragraphs name; the native sort gives the elements
+  again, in order of their keys and stably; `clamp`'s natives keep a NaN, and on integers let
+  `hi` win when `lo > hi`; and, of std.maps and std.str-search, `insert` keeps a map's order and
+  `find` gives the first occurrence (`Natives.kept`). A property of the evaluator, whatever the
+  program. -/
+  natives : Natives.Kept
 
 /-- **Soundness**: every run of an accepted program, on every input, keeps the promises. -/
 def Soundness : Prop :=
@@ -394,6 +405,6 @@ theorem soundness : Soundness := fun p fuel input h =>
     h.divLimits.kept h.wellTyped h.exclusive input, h.allocLimits.kept fuel input,
     fun n _ _ _ _ _ _ _ _ hf hio hp hγ =>
       call_keeps (h.wellTyped.typedDecls.quiet n) h.wellTyped.typedDecls hf hp hio _ hγ,
-    fun hio => h.wellTyped.quiet hio fuel input⟩
+    fun hio => h.wellTyped.quiet hio fuel input, Natives.kept⟩
 
 end Stilt
